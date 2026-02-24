@@ -6,6 +6,7 @@ import {
     Users,
     Settings,
     CheckSquare,
+    Map,
 } from "lucide-react";
 import { usePage } from "@inertiajs/react";
 
@@ -48,6 +49,22 @@ const adminNavMain = [
             {
                 title: "Payments",
                 url: "/admin/payments",
+            },
+        ],
+    },
+    {
+        title: "GIS & Zoning",
+        url: "#",
+        icon: Map,
+        isActive: false,
+        items: [
+            {
+                title: "Zoning Map",
+                url: "/admin/zoning-map",
+            },
+            {
+                title: "Add Property",
+                url: "/admin/properties/add",
             },
         ],
     },

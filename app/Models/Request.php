@@ -93,4 +93,28 @@ class Request extends Model
     {
         return $this->hasMany(Certificate::class, 'request_id');
     }
+
+    /**
+     * Get the property location for this request.
+     */
+    public function propertyLocation(): HasOne
+    {
+        return $this->hasOne(PropertyLocation::class);
+    }
+
+    /**
+     * Get the DSS evaluations for this request.
+     */
+    public function dssEvaluations(): HasMany
+    {
+        return $this->hasMany(DssEvaluation::class);
+    }
+
+    /**
+     * Get the latest DSS evaluation.
+     */
+    public function latestDssEvaluation(): HasOne
+    {
+        return $this->hasOne(DssEvaluation::class)->latestOfMany();
+    }
 }

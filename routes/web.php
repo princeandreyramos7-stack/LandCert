@@ -151,6 +151,15 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/audit-logs', [AdminController::class, 'auditLogs'])->name('audit-logs');
     Route::get('/audit-logs/export', [AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
     Route::get('/audit-logs/{id}', [AdminController::class, 'viewAuditLog'])->name('audit-logs.view');
+    
+    // DSS and GIS routes
+    Route::get('/zoning-map', [\App\Http\Controllers\DssController::class, 'zoningMap'])->name('zoning-map');
+    Route::post('/requests/{request}/evaluate', [\App\Http\Controllers\DssController::class, 'evaluate'])->name('requests.evaluate');
+    Route::get('/dss-evaluation/{evaluation}', [\App\Http\Controllers\DssController::class, 'show'])->name('dss-evaluation.show');
+    
+    // Property management routes
+    Route::get('/properties/add', [\App\Http\Controllers\DssController::class, 'addProperty'])->name('properties.add');
+    Route::post('/properties', [\App\Http\Controllers\DssController::class, 'storeProperty'])->name('properties.store');
 });
 
 // Notification routes
