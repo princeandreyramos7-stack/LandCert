@@ -1,19 +1,19 @@
-import { AdminSidebar } from "@/components/admin-sidebar";
+import { AdminSidebar } from "@/Components/admin-sidebar";
 import { Head } from "@inertiajs/react";
-import { AdminRequestList } from "@/components/Admin/Request";
+import { AdminRequestList } from "@/Components/Admin/Request";
 import {
     Breadcrumb,
     BreadcrumbItem,
     BreadcrumbList,
     BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
+} from "@/Components/ui/breadcrumb";
+import { Separator } from "@/Components/ui/separator";
 import {
     SidebarInset,
     SidebarProvider,
     SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { Toaster } from "@/components/ui/toaster";
+} from "@/Components/ui/sidebar";
+import { Toaster } from "@/Components/ui/toaster";
 
 export default function AdminRequestPage({ requests = [], flash = {} }) {
     return (

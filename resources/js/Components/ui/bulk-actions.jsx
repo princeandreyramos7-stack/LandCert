@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/Components/ui/button';
+import { Card, CardContent } from '@/Components/ui/card';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -10,7 +10,7 @@ import {
   AlertTriangle,
   Loader2
 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/Components/ui/use-toast';
 
 function BulkActions({ 
   selectedItems = [], 

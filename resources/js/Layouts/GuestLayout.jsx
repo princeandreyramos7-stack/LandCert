@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Toaster } from '@/components/ui/toaster';
+import { Toaster } from '@/Components/ui/toaster';
 
 export default function GuestLayout({ children }) {
     return (

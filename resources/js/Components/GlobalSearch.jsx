@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Search, X, FileText, DollarSign, Users, Calendar } from "lucide-react";
 import { router } from "@inertiajs/react";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/Components/ui/input";
+import { Badge } from "@/Components/ui/badge";
 
 export function GlobalSearch() {
     const [isOpen, setIsOpen] = useState(false);

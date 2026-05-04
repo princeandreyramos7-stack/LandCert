@@ -7,7 +7,7 @@ import {
     PaginationLink,
     PaginationNext,
     PaginationPrevious,
-} from "@/components/ui/pagination";
+} from "@/Components/ui/pagination";
 
 export function RequestPagination({ paginationData, onPageChange }) {
     if (!paginationData?.links || paginationData.links.length <= 3) {

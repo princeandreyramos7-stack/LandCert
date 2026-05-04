@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/Components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
     DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
+} from '@/Components/ui/dropdown-menu';
+import { Badge } from '@/Components/ui/badge';
 import { router } from '@inertiajs/react';
 
 export function NotificationBell() {

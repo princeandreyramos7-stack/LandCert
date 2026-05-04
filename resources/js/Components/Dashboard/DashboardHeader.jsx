@@ -1,5 +1,5 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/Components/ui/button";
 import { FileText, Eye, Activity } from "lucide-react";
 
 export function DashboardHeader({ showStatistics, onToggleStatistics }) {

@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import {
     Dialog,
     DialogContent,
@@ -6,8 +6,8 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@/Components/ui/dialog";
+import { Button } from "@/Components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 
 export function ApproveConfirmDialog({ isOpen, onClose, request, onConfirm }) {

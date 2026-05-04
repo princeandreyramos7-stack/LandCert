@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import { AdminSidebar } from '@/Components/admin-sidebar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Label } from '@/Components/ui/label';
+import { Input } from '@/Components/ui/input';
+import { Button } from '@/Components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
+import { Separator } from '@/Components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
 import { MapPin, Save, X, FileText, Edit3 } from 'lucide-react';
 import {
     Breadcrumb,
@@ -19,8 +19,8 @@ import {
     SidebarInset,
     SidebarProvider,
     SidebarTrigger,
-} from '@/components/ui/sidebar';
-import { useToast } from '@/components/ui/use-toast';
+} from '@/Components/ui/sidebar';
+import { useToast } from '@/Components/ui/use-toast';
 
 export default function AddProperty({ zoningRules, requests = [] }) {
     const { toast } = useToast();

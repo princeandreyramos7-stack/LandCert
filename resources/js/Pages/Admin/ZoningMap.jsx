@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { AdminSidebar } from '@/Components/admin-sidebar';
 import MapView from '@/Components/GIS/MapView';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Badge } from '@/Components/ui/badge';
+import { Separator } from '@/Components/ui/separator';
 import { MapPin, Building2, Ruler, Navigation } from 'lucide-react';
 import {
     Breadcrumb,
@@ -16,7 +16,7 @@ import {
     SidebarInset,
     SidebarProvider,
     SidebarTrigger,
-} from '@/components/ui/sidebar';
+} from '@/Components/ui/sidebar';
 
 export default function ZoningMap({ auth, zoningRules, properties }) {
     const [selectedProperty, setSelectedProperty] = useState(null);

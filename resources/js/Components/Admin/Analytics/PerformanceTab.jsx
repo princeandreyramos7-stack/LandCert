@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Badge } from '@/Components/ui/badge';
 import { calculateApprovalRate, calculateVerificationRate } from './utils';
 
 export function PerformanceTab({ avg_processing_time, certificate_stats, statusData, payment_stats }) {

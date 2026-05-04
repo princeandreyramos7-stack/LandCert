@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/Components/ui/card";
 import { router } from "@inertiajs/react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/Components/ui/use-toast";
 import { ReceiptCard } from "./ReceiptCard";
 import { UploadDialog } from "./UploadDialog";
 import { ConfirmDialog } from "./ConfirmDialog";

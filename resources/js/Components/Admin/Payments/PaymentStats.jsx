@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/Components/ui/card";
 import { DollarSign, Clock, CheckCircle2, XCircle } from "lucide-react";
 
 export function PaymentStats({ stats, onFilterChange }) {

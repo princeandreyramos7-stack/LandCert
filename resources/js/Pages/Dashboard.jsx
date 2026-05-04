@@ -1,20 +1,20 @@
-import { AppSidebar } from "@/components/app-sidebar"
-import { AdminSidebar } from "@/components/admin-sidebar"
-import { Dashboard } from "@/components/Dashboard"
+import { AppSidebar } from "@/Components/app-sidebar"
+import { AdminSidebar } from "@/Components/admin-sidebar"
+import { Dashboard } from "@/Components/Dashboard"
 import { Head, usePage } from '@inertiajs/react'
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
+} from "@/Components/ui/breadcrumb"
+import { Separator } from "@/Components/ui/separator"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { Toaster } from "@/components/ui/toaster"
+} from "@/Components/ui/sidebar"
+import { Toaster } from "@/Components/ui/toaster"
 
 export default function Page({ requests = [] }) {
   const { auth } = usePage().props;

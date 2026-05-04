@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/Components/ui/card";
+import { Input } from "@/Components/ui/input";
 import BulkActions from "@/Components/ui/bulk-actions";
 import { useForm, router } from "@inertiajs/react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/Components/ui/use-toast";
 
 // Local Components
 import { RequestStats } from "./RequestStats";

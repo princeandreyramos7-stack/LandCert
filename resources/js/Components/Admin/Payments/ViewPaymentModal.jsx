@@ -4,7 +4,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/Components/ui/dialog";
 import { formatDate, formatCurrency } from "./utils";
 import { Download, ZoomIn, X, FileText } from "lucide-react";
 

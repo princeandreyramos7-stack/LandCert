@@ -1,12 +1,12 @@
 import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/Components/ui/badge";
+import { Button } from "@/Components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/Components/ui/dropdown-menu";
 import { MoreVertical, Eye, ThumbsUp, ThumbsDown } from "lucide-react";
 import { getStatusColor, getStatusIcon, formatDate, formatCurrency } from "./utils";
 

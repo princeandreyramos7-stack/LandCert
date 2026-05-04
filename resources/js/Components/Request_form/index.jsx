@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm, usePage } from "@inertiajs/react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/Components/ui/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { FileText } from "lucide-react";
 

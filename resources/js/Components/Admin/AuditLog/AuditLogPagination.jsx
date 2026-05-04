@@ -7,7 +7,7 @@ import {
     PaginationLink,
     PaginationNext,
     PaginationPrevious,
-} from "@/components/ui/pagination";
+} from "@/Components/ui/pagination";
 
 export function AuditLogPagination({ logs, onPageChange }) {
     if (!logs?.links || logs.links.length <= 3) return null;

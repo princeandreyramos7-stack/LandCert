@@ -1,11 +1,11 @@
 import React from "react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/Components/ui/badge";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/Components/ui/dialog";
 import { Eye, User, Activity } from "lucide-react";
 import { getActionBadge, formatDate, formatActionLabel } from "./utils";
 

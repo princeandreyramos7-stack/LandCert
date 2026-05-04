@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card } from '@/Components/ui/card';
+import { Badge } from '@/Components/ui/badge';
 
 export default function MapView({ 
     center = { lat: 16.9754, lng: 121.8947 }, // Ilagan City, Isabela, Philippines

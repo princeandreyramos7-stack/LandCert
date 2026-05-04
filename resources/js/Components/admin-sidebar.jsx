@@ -10,9 +10,9 @@ import {
 } from "lucide-react";
 import { usePage } from "@inertiajs/react";
 
-import { NavMain } from "@/components/nav-main";
-import { NavUser } from "@/components/nav-user";
-import { TeamSwitcher } from "@/components/team-switcher";
+import { NavMain } from "@/Components/nav-main";
+import { NavUser } from "@/Components/nav-user";
+import { TeamSwitcher } from "@/Components/team-switcher";
 import { NotificationBell } from "@/Components/NotificationBell";
 import { GlobalSearch } from "@/Components/GlobalSearch";
 import {
@@ -21,7 +21,7 @@ import {
     SidebarFooter,
     SidebarHeader,
     SidebarRail,
-} from "@/components/ui/sidebar";
+} from "@/Components/ui/sidebar";
 
 const teams = [
     {

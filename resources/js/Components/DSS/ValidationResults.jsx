@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card } from '@/Components/ui/card';
+import { Badge } from '@/Components/ui/badge';
 import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
 export default function ValidationResults({ validationResults }) {
