@@ -10,4 +10,14 @@ export default defineConfig({
         }),
         react(),
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: undefined,
+            },
+        },
+    },
+    optimizeDeps: {
+        include: ['leaflet'],
+    },
 });
