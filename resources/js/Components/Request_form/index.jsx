@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { useForm, usePage } from "@inertiajs/react";
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
+import { Button } from "@/Components/ui/button";
 import { FileText } from "lucide-react";
 
 // Local Components
+import { CategorySelection } from "./CategorySelection";
 import { StepIndicator } from "./StepIndicator";
 import { Step1ApplicantInfo } from "./Step1ApplicantInfo";
 import { Step2ProjectDetails } from "./Step2ProjectDetails";
@@ -14,6 +16,7 @@ import { ConfirmationDialog } from "./ConfirmationDialog";
 import { validateStep1, validateStep2, validateStep3 } from "./utils";
 
 export default function RequestForm() {
+    const [selectedCategory, setSelectedCategory] = useState(null);
     const [currentStep, setCurrentStep] = useState(1);
     const [completedSteps, setCompletedSteps] = useState([]);
     const [hasRepresentative, setHasRepresentative] = useState(false);
@@ -23,6 +26,9 @@ export default function RequestForm() {
     const flash = page.props.flash || {};
 
     const { data, setData, post, processing, errors, reset } = useForm({
+        // Category
+        application_category: "",
+        
         // Step 1: Applicant Information
         applicant_name: "",
         corporation_name: "",
@@ -39,8 +45,8 @@ export default function RequestForm() {
         project_location_number: "",
         project_location_street: "",
         project_location_barangay: "",
-        project_location_municipality: "",
-        project_location_province: "",
+        project_location_municipality: "City of Ilagan",
+        project_location_province: "Isabela",
         project_area_sqm: "",
         lot_area_sqm: "",
         bldg_improvement_sqm: "",
@@ -78,6 +84,12 @@ export default function RequestForm() {
             });
         }
     }, [flash]);
+
+    // Handle category selection
+    const handleCategorySelect = (category) => {
+        setSelectedCategory(category);
+        setData("application_category", category);
+    };
 
     // Handle data changes
     const handleDataChange = (field, value) => {
@@ -180,6 +192,7 @@ export default function RequestForm() {
                 setCurrentStep(1);
                 setCompletedSteps([]);
                 setHasRepresentative(false);
+                setSelectedCategory(null);
                 setIsConfirmDialogOpen(false);
             },
             onError: (errors) => {
@@ -195,73 +208,96 @@ export default function RequestForm() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto p-6">
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-full">
-                            <FileText className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <CardTitle className="text-2xl">
-                            Land Certification Request Form
-                        </CardTitle>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {/* Step Indicator */}
-                    <StepIndicator
-                        currentStep={currentStep}
-                        completedSteps={completedSteps}
-                    />
+        <div>
+            {!selectedCategory ? (
+                <CategorySelection onSelectCategory={handleCategorySelect} />
+            ) : (
+                <div className="max-w-4xl mx-auto p-6">
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-100 rounded-full">
+                                        <FileText className="h-6 w-6 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-2xl">
+                                            Land Certification Request Form
+                                        </CardTitle>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            Application Type: <span className="font-semibold text-blue-600">{selectedCategory}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        setSelectedCategory(null);
+                                        setData("application_category", "");
+                                    }}
+                                >
+                                    Change Category
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {/* Step Indicator */}
+                            <StepIndicator
+                                currentStep={currentStep}
+                                completedSteps={completedSteps}
+                            />
 
-                    {/* Step Content */}
-                    {currentStep === 1 && (
-                        <Step1ApplicantInfo
-                            data={data}
-                            errors={errors}
-                            hasRepresentative={hasRepresentative}
-                            onDataChange={handleDataChange}
-                            onRepresentativeToggle={handleRepresentativeToggle}
-                        />
-                    )}
+                            {/* Step Content */}
+                            {currentStep === 1 && (
+                                <Step1ApplicantInfo
+                                    data={data}
+                                    errors={errors}
+                                    hasRepresentative={hasRepresentative}
+                                    onDataChange={handleDataChange}
+                                    onRepresentativeToggle={handleRepresentativeToggle}
+                                />
+                            )}
 
-                    {currentStep === 2 && (
-                        <Step2ProjectDetails
-                            data={data}
-                            errors={errors}
-                            onDataChange={handleDataChange}
-                        />
-                    )}
+                            {currentStep === 2 && (
+                                <Step2ProjectDetails
+                                    data={data}
+                                    errors={errors}
+                                    onDataChange={handleDataChange}
+                                />
+                            )}
 
-                    {currentStep === 3 && (
-                        <Step3LandUse
-                            data={data}
-                            errors={errors}
-                            hasRepresentative={hasRepresentative}
-                            onDataChange={handleDataChange}
-                            onToast={toast}
-                        />
-                    )}
+                            {currentStep === 3 && (
+                                <Step3LandUse
+                                    data={data}
+                                    errors={errors}
+                                    hasRepresentative={hasRepresentative}
+                                    onDataChange={handleDataChange}
+                                    onToast={toast}
+                                />
+                            )}
 
-                    {/* Navigation */}
-                    <FormNavigation
-                        currentStep={currentStep}
-                        totalSteps={3}
+                            {/* Navigation */}
+                            <FormNavigation
+                                currentStep={currentStep}
+                                totalSteps={3}
+                                processing={processing}
+                                onPrevious={handlePrevious}
+                                onNext={handleNext}
+                                onSubmit={handleSubmit}
+                            />
+                        </CardContent>
+                    </Card>
+
+                    {/* Confirmation Dialog */}
+                    <ConfirmationDialog
+                        isOpen={isConfirmDialogOpen}
+                        onClose={() => setIsConfirmDialogOpen(false)}
+                        onConfirm={confirmSubmit}
                         processing={processing}
-                        onPrevious={handlePrevious}
-                        onNext={handleNext}
-                        onSubmit={handleSubmit}
                     />
-                </CardContent>
-            </Card>
-
-            {/* Confirmation Dialog */}
-            <ConfirmationDialog
-                isOpen={isConfirmDialogOpen}
-                onClose={() => setIsConfirmDialogOpen(false)}
-                onConfirm={confirmSubmit}
-                processing={processing}
-            />
+                </div>
+            )}
         </div>
     );
 }

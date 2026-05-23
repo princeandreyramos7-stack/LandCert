@@ -9,6 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('payments', function (Blueprint $table) {
+            // Drop foreign key constraint first before dropping the column
+            if (Schema::hasColumn('payments', 'payment_completed_by')) {
+                $table->dropForeign(['payment_completed_by']);
+                $table->dropColumn('payment_completed_by');
+            }
+            
             if (Schema::hasColumn('payments', 'payment_order_number')) {
                 $table->dropColumn('payment_order_number');
             }
@@ -23,9 +29,6 @@ return new class extends Migration
             }
             if (Schema::hasColumn('payments', 'payment_completed_at')) {
                 $table->dropColumn('payment_completed_at');
-            }
-            if (Schema::hasColumn('payments', 'payment_completed_by')) {
-                $table->dropColumn('payment_completed_by');
             }
         });
     }

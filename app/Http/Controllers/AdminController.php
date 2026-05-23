@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Application;
 use App\Models\Report;
 use App\Models\Request as RequestModel;
-use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,7 +12,6 @@ use Inertia\Response;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Mail\ApplicationRejected;
-use App\Mail\PaymentRejected;
 use App\Services\DashboardCacheService;
 use App\Services\AuditLogService;
 use App\Jobs\GeneratePdfExport;
@@ -22,6 +20,7 @@ use App\Models\AuditLog;
 class AdminController extends Controller
 {
     // Middleware is applied in routes/web.php
+
 
     /**
      * Display admin dashboard with all applications
@@ -319,6 +318,37 @@ class AdminController extends Controller
     }
 
     /**
+     * View a single request details
+     */
+    public function viewRequest($id): Response
+    {
+        $request = RequestModel::with('user')->findOrFail($id);
+        
+        // Get application data
+        $key = $request->applicant_name . '|' . $request->applicant_address;
+        $application = Application::with('report')
+            ->where('applicant_name', $request->applicant_name)
+            ->where('applicant_address', $request->applicant_address)
+            ->first();
+        
+        $report = $application?->report;
+        
+        // Convert to array and add additional fields
+        $requestData = $request->toArray();
+        $requestData['application_id'] = $application?->id;
+        $requestData['authorization_letter_path'] = $application?->authorization_letter_path;
+        $requestData['report_id'] = $report?->getKey();
+        $requestData['evaluation'] = $report?->evaluation;
+        $requestData['user_name'] = $request->user?->name;
+        $requestData['user_email'] = $request->user?->email;
+        $requestData['status'] = $report?->evaluation ?? $request->status;
+        
+        return Inertia::render('Admin/RequestDetails', [
+            'request' => $requestData,
+        ]);
+    }
+
+    /**
      * Delete a request
      */
     public function deleteRequest($requestId)
@@ -338,7 +368,7 @@ class AdminController extends Controller
         \Log::info('Request data: ' . json_encode($request->all()));
         
         $validated = $request->validate([
-            'evaluation' => 'required|in:pending,approved,rejected',
+            'evaluation' => 'required|in:pending,approved,rejected,reviewed',
             'description' => 'nullable|string',
             'amount' => 'nullable|numeric',
             'date_certified' => 'nullable|date',
@@ -1673,5 +1703,95 @@ class AdminController extends Controller
         $log = AuditLog::with('user')->findOrFail($id);
 
         return response()->json($log);
+    }
+
+    /**
+     * Display zoning map with GIS features (Admin)
+     */
+    public function zoningMapAdmin(Request $request): Response
+    {
+        // Get all property locations with zoning information
+        $properties = \App\Models\PropertyLocation::with(['zoningRule'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($property) {
+                return [
+                    'id' => $property->id,
+                    'address' => $property->address,
+                    'barangay' => $property->barangay,
+                    'district' => $property->district,
+                    'latitude' => $property->latitude,
+                    'longitude' => $property->longitude,
+                    'lot_area' => $property->lot_area,
+                    'lot_number' => $property->lot_number,
+                    'title_number' => $property->title_number,
+                    'zone_classification' => $property->zoningRule?->zone_type ?? 'Unclassified',
+                    'zone_name' => $property->zoningRule?->zone_name ?? 'N/A',
+                    'zone_code' => $property->zoningRule?->zone_code ?? 'N/A',
+                    'zoning_rule' => $property->zoningRule,
+                ];
+            });
+
+        // Get all zoning rules
+        $zoningRules = \App\Models\ZoningRule::where('is_active', true)->get();
+
+        // Get statistics
+        $propertiesByZone = \App\Models\PropertyLocation::with('zoningRule')
+            ->get()
+            ->groupBy(function ($property) {
+                return $property->zoningRule?->zone_type ?? 'Unclassified';
+            })
+            ->map(function ($group) {
+                return $group->count();
+            });
+
+        $stats = [
+            'total_properties' => \App\Models\PropertyLocation::count(),
+            'total_zones' => \App\Models\ZoningRule::where('is_active', true)->count(),
+            'properties_by_zone' => $propertiesByZone,
+        ];
+
+        return Inertia::render('Admin/ZoningMap', [
+            'properties' => $properties,
+            'zoningRules' => $zoningRules,
+            'stats' => $stats,
+        ]);
+    }
+
+    /**
+     * Store a new property location (Admin)
+     */
+    public function storePropertyAdmin(Request $request)
+    {
+        $validated = $request->validate([
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'address' => 'required|string|max:500',
+            'barangay' => 'required|string|max:255',
+            'zone_type' => 'required|string|in:residential,commercial,industrial,agricultural,institutional,mixed',
+            'lot_area' => 'nullable|numeric|min:0',
+        ]);
+
+        // Find the first active zoning rule based on zone type
+        $zoningRule = \App\Models\ZoningRule::where('zone_type', $validated['zone_type'])
+            ->where('is_active', true)
+            ->first();
+
+        if (!$zoningRule) {
+            return back()->with('error', 'No active zoning rule found for ' . $validated['zone_type']);
+        }
+
+        // Create the property
+        $property = \App\Models\PropertyLocation::create([
+            'latitude' => $validated['latitude'],
+            'longitude' => $validated['longitude'],
+            'address' => $validated['address'],
+            'barangay' => $validated['barangay'],
+            'district' => 'District 1', // Default, can be made dynamic
+            'zoning_rule_id' => $zoningRule->id,
+            'lot_area' => $validated['lot_area'] ?? null,
+        ]);
+
+        return back()->with('success', 'Property added successfully with zone: ' . $zoningRule->zone_name);
     }
 }

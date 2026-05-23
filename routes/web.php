@@ -26,94 +26,33 @@ Route::middleware(['auth', 'throttle:60,1'])->group(function () {
     // Request routes
     Route::get('/request', [RequestController::class, 'index'])->name('request.index');
     Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:10,1')->name('request.store');
+    Route::get('/my-applications', [RequestController::class, 'myApplications'])->name('my-applications');
+});
+
+// Super Admin routes (highest privilege)
+Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('super-admin.')->group(function () {
+    Route::get('/dashboard', [\App\Http\Controllers\SuperAdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/requests', [\App\Http\Controllers\SuperAdminController::class, 'requests'])->name('requests');
     
-    // Payment routes
-    Route::get('/receipt', [\App\Http\Controllers\PaymentController::class, 'index'])->name('receipt.index');
-    Route::post('/receipt', [\App\Http\Controllers\PaymentController::class, 'store'])->name('receipt.store');
+    // GIS & Zoning
+    Route::get('/zoning-map', [\App\Http\Controllers\SuperAdminController::class, 'zoningMap'])->name('zoning-map');
+    Route::post('/properties', [\App\Http\Controllers\SuperAdminController::class, 'storeProperty'])->name('properties.store');
     
-    // Certificate download
-    Route::get('/certificate/{certificateId}/download', [\App\Http\Controllers\PaymentController::class, 'downloadCertificate'])->name('certificate.download');
+    // Management
+    Route::get('/users', [\App\Http\Controllers\SuperAdminController::class, 'users'])->name('users');
+    Route::get('/users/create', function () {
+        return Inertia::render('SuperAdmin/CreateUser');
+    })->name('users.create');
+    Route::get('/users/{userId}/edit', [\App\Http\Controllers\SuperAdminController::class, 'editUser'])->name('users.edit');
+    Route::get('/audit-logs', [\App\Http\Controllers\SuperAdminController::class, 'auditLogs'])->name('audit-logs');
+    Route::get('/settings', [\App\Http\Controllers\SuperAdminController::class, 'settings'])->name('settings');
     
-    // Certificate preview routes (for design testing)
-    Route::get('/certificate/preview', function() {
-        $data = [
-            'certificateNumber' => 'CERT-2024-00001',
-            'applicantName' => 'Juan Dela Cruz',
-            'projectLocation' => 'Barangay Alibagu, Ilagan City, Isabela',
-            'projectType' => 'Residential Building',
-            'projectNature' => 'Single Family Dwelling',
-            'lotArea' => '500.00',
-            'projectCost' => 2500000,
-            'issuedDate' => now()->format('F d, Y'),
-            'validUntil' => now()->addYears(5)->format('F d, Y'),
-            'issuedBy' => 'Admin User',
-        ];
-        return view('certificates.professional-template', $data);
-    })->name('certificate.preview');
-    
-    Route::get('/certificate/preview/professional', function() {
-        $data = [
-            'certificateNumber' => 'CERT-2024-00001',
-            'applicantName' => 'Juan Dela Cruz',
-            'projectLocation' => 'Barangay Alibagu, Ilagan City, Isabela',
-            'projectType' => 'Residential Building',
-            'projectNature' => 'Single Family Dwelling',
-            'lotArea' => '500.00',
-            'projectCost' => 2500000,
-            'issuedDate' => now()->format('F d, Y'),
-            'validUntil' => now()->addYears(5)->format('F d, Y'),
-            'issuedBy' => 'Admin User',
-        ];
-        return view('certificates.professional-template', $data);
-    })->name('certificate.preview.professional');
-    
-    Route::get('/certificate/preview/simple', function() {
-        $data = [
-            'certificateNumber' => 'CERT-2024-00002',
-            'applicantName' => 'Maria Santos',
-            'projectLocation' => 'Barangay San Juan, Ilagan City, Isabela',
-            'projectType' => 'Commercial Building',
-            'projectNature' => 'Office Building',
-            'lotArea' => '750.00',
-            'projectCost' => 5000000,
-            'issuedDate' => now()->format('F d, Y'),
-            'validUntil' => now()->addYears(5)->format('F d, Y'),
-            'issuedBy' => 'Admin User',
-        ];
-        return view('certificates.simple-template', $data);
-    })->name('certificate.preview.simple');
-    
-    Route::get('/certificate/preview/basic', function() {
-        $data = [
-            'certificateNumber' => 'CERT-2024-00003',
-            'applicantName' => 'Pedro Reyes',
-            'projectLocation' => 'Barangay Centro, Ilagan City, Isabela',
-            'projectType' => 'Industrial Building',
-            'projectNature' => 'Warehouse',
-            'lotArea' => '1200.00',
-            'projectCost' => 8000000,
-            'issuedDate' => now()->format('F d, Y'),
-            'validUntil' => now()->addYears(5)->format('F d, Y'),
-            'issuedBy' => 'Admin User',
-        ];
-        return view('certificates.template', $data);
-    })->name('certificate.preview.basic');
-    
-    Route::get('/certificate/preview/text-logo', function() {
-        $data = [
-            'certificateNumber' => 'CERT-2024-00004',
-            'applicantName' => 'Ana Garcia',
-            'projectLocation' => 'Barangay Maligaya, Ilagan City, Isabela',
-            'projectType' => 'Mixed-Use Building',
-            'projectNature' => 'Residential-Commercial',
-            'lotArea' => '600.00',
-            'projectCost' => 3500000,
-            'issuedDate' => now()->format('F d, Y'),
-            'validUntil' => now()->addYears(5)->format('F d, Y'),
-            'issuedBy' => 'Admin User',
-        ];
-        return view('certificates.text-logo-template', $data);
-    })->name('certificate.preview.text-logo');
+    // Super Admin specific actions
+    Route::post('/approve-request/{reportId}', [\App\Http\Controllers\SuperAdminController::class, 'approveRequest'])->name('approve-request');
+    Route::post('/reject-request/{reportId}', [\App\Http\Controllers\SuperAdminController::class, 'rejectRequest'])->name('reject-request');
+    Route::post('/create-admin', [\App\Http\Controllers\SuperAdminController::class, 'createAdmin'])->name('create-admin');
+    Route::put('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'updateUser'])->name('users.update');
+    Route::delete('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'deleteUser'])->name('users.delete');
 });
 
 // Admin routes
@@ -121,6 +60,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/search', [AdminController::class, 'search'])->name('search');
     Route::get('/requests', [AdminController::class, 'requests'])->name('requests');
+    Route::get('/requests/{id}', [AdminController::class, 'viewRequest'])->name('requests.view');
     Route::get('/applications', [AdminController::class, 'applications'])->name('applications');
     Route::get('/reports', function () {
         return Inertia::render('Admin/Reports');
@@ -131,13 +71,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/update-evaluation/{reportId}', [AdminController::class, 'updateEvaluation'])->name('update-evaluation');
     Route::delete('/delete-request/{requestId}', [AdminController::class, 'deleteRequest'])->name('delete-request');
     
-    // Payment verification routes
-    Route::get('/payments', [AdminController::class, 'payments'])->name('payments');
-    Route::post('/payments/{paymentId}/verify', [AdminController::class, 'verifyPayment'])->name('payments.verify');
-    Route::post('/payments/{paymentId}/reject', [AdminController::class, 'rejectPayment'])->name('payments.reject');
-    
     // Export routes
-    Route::get('/export/payments', [AdminController::class, 'exportPayments'])->name('export.payments');
     Route::get('/export/applications', [AdminController::class, 'exportApplications'])->name('export.applications');
     Route::get('/export/requests', [AdminController::class, 'exportRequests'])->name('export.requests');
     Route::get('/export/users', [AdminController::class, 'exportUsers'])->name('export.users');
@@ -153,18 +87,20 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/audit-logs/{id}', [AdminController::class, 'viewAuditLog'])->name('audit-logs.view');
     
     // DSS and GIS routes
-    Route::get('/zoning-map', [\App\Http\Controllers\DssController::class, 'zoningMap'])->name('zoning-map');
+    Route::get('/zoning-map', [AdminController::class, 'zoningMapAdmin'])->name('zoning-map');
+    Route::post('/properties', [AdminController::class, 'storePropertyAdmin'])->name('properties.store');
     Route::post('/requests/{request}/evaluate', [\App\Http\Controllers\DssController::class, 'evaluate'])->name('requests.evaluate');
     Route::get('/dss-evaluation/{evaluation}', [\App\Http\Controllers\DssController::class, 'show'])->name('dss-evaluation.show');
     
     // Property management routes
     Route::get('/properties/add', [\App\Http\Controllers\DssController::class, 'addProperty'])->name('properties.add');
-    Route::post('/properties', [\App\Http\Controllers\DssController::class, 'storeProperty'])->name('properties.store');
+    Route::post('/properties/store-old', [\App\Http\Controllers\DssController::class, 'storeProperty'])->name('properties.store-old');
 });
 
 // Notification routes
 Route::middleware('auth')->prefix('notifications')->name('notifications.')->group(function () {
-    Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index'])->name('index');
+    Route::get('/', [\App\Http\Controllers\NotificationController::class, 'page'])->name('page');
+    Route::get('/list', [\App\Http\Controllers\NotificationController::class, 'index'])->name('index');
     Route::get('/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount'])->name('unread-count');
     Route::post('/mark-read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-read');
     Route::post('/mark-all-read', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('mark-all-read');

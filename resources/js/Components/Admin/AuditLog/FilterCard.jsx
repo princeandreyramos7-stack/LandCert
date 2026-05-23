@@ -17,9 +17,9 @@ export function FilterCard({
     setShowFilters,
     localFilters,
     setLocalFilters,
-    users,
-    actions,
-    modelTypes,
+    users = [],
+    actions = [],
+    modelTypes = [],
     onApplyFilters,
     onClearFilters,
 }) {

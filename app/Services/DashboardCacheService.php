@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Cache;
 use App\Models\Request as RequestModel;
 use App\Models\Application;
 use App\Models\Report;
-use App\Models\Payment;
-use App\Models\Certificate;
-use App\Models\StatusHistory;
 use Illuminate\Support\Facades\DB;
 
 class DashboardCacheService
@@ -70,41 +67,6 @@ class DashboardCacheService
         ->orderBy('month')
         ->get();
         
-        // Payment statistics
-        $paymentStats = [
-            'total_revenue' => Payment::where('payment_status', 'verified')->sum('amount'),
-            'pending_payments' => Payment::where('payment_status', 'pending')->count(),
-            'verified_payments' => Payment::where('payment_status', 'verified')->count(),
-            'rejected_payments' => Payment::where('payment_status', 'rejected')->count(),
-            'average_payment' => Payment::where('payment_status', 'verified')->avg('amount'),
-        ];
-        
-        // Monthly payment revenue (last 6 months)
-        $monthlyRevenue = Payment::select(
-            DB::raw('DATE_FORMAT(payment_date, "%Y-%m") as month'),
-            DB::raw('SUM(amount) as revenue'),
-            DB::raw('COUNT(*) as count')
-        )
-        ->where('payment_status', 'verified')
-        ->where('payment_date', '>=', now()->subMonths(6))
-        ->groupBy('month')
-        ->orderBy('month')
-        ->get();
-        
-        // Payment methods distribution
-        $paymentMethods = Payment::select('payment_method', DB::raw('COUNT(*) as count'))
-            ->where('payment_status', 'verified')
-            ->groupBy('payment_method')
-            ->get();
-        
-        // Certificate statistics
-        $certificateStats = [
-            'total_issued' => Certificate::count(),
-            'issued_this_month' => Certificate::whereMonth('issued_at', now()->month)->count(),
-            'collected' => Certificate::where('status', 'collected')->count(),
-            'sent' => Certificate::where('status', 'sent')->count(),
-        ];
-        
         // Application status breakdown
         $statusBreakdown = Report::select('evaluation', DB::raw('COUNT(*) as count'))
             ->groupBy('evaluation')
@@ -116,24 +78,6 @@ class DashboardCacheService
             ->join('applications', 'reports.app_id', '=', 'applications.id')
             ->selectRaw('AVG(DATEDIFF(reports.date_reported, applications.created_at)) as avg_days')
             ->value('avg_days');
-        
-        // Recent activity (limited to 10)
-        $recentActivity = StatusHistory::with('user')
-            ->latest()
-            ->take(10)
-            ->get()
-            ->map(function($history) {
-                return [
-                    'id' => $history->id,
-                    'request_id' => $history->request_id,
-                    'entity_type' => $history->entity_type,
-                    'old_status' => $history->old_status,
-                    'new_status' => $history->new_status,
-                    'changed_by' => $history->user?->name ?? 'System',
-                    'notes' => $history->notes,
-                    'created_at' => $history->created_at,
-                ];
-            });
         
         // Project type distribution
         $projectTypes = RequestModel::select('project_type', DB::raw('COUNT(*) as count'))
@@ -169,13 +113,8 @@ class DashboardCacheService
         
         return [
             'monthly_submissions' => $monthlyData,
-            'monthly_revenue' => $monthlyRevenue,
-            'payment_stats' => $paymentStats,
-            'payment_methods' => $paymentMethods,
-            'certificate_stats' => $certificateStats,
             'status_breakdown' => $statusBreakdown,
             'avg_processing_time' => round($avgProcessingTime ?? 0, 1),
-            'recent_activity' => $recentActivity,
             'project_types' => $projectTypes,
             'top_users' => $topUsers,
             'weekly_activity' => $weeklyActivity,

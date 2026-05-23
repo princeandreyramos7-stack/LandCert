@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import BulkActions from "@/Components/ui/bulk-actions";
 import { useForm, router } from "@inertiajs/react";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -10,11 +9,8 @@ import { RequestStats } from "./RequestStats";
 import { RequestTable } from "./RequestTable";
 import { RequestTableHeader } from "./RequestTableHeader";
 import { RequestPagination } from "./RequestPagination";
-import { ViewRequestModal } from "./ViewRequestModal";
 import { EditRequestModal } from "./EditRequestModal";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
-import { ApproveConfirmDialog } from "./ApproveConfirmDialog";
-import { RejectDialog } from "./RejectDialog";
 import { generateCSV, downloadCSV } from "./utils";
 
 export function AdminRequestList({ requests, flash = {} }) {
@@ -22,16 +18,10 @@ export function AdminRequestList({ requests, flash = {} }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
     const [selectedRequest, setSelectedRequest] = useState(null);
-    const [selectedItems, setSelectedItems] = useState([]);
-    const [bulkLoading, setBulkLoading] = useState(false);
 
     // Modal States
-    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
-    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-    const [rejectionFeedback, setRejectionFeedback] = useState("");
 
     const { toast } = useToast();
 
@@ -109,8 +99,8 @@ export function AdminRequestList({ requests, flash = {} }) {
 
     // Event Handlers
     const handleView = (request) => {
-        setSelectedRequest(request);
-        setIsViewModalOpen(true);
+        // Navigate to request details page
+        router.visit(route('admin.requests.view', request.id));
     };
 
     const handleEdit = (request) => {
@@ -161,7 +151,7 @@ export function AdminRequestList({ requests, flash = {} }) {
         );
     };
 
-    const handleApprove = (request) => {
+    const handleMarkReviewed = (request) => {
         if (!request.report_id) {
             toast({
                 variant: "destructive",
@@ -170,91 +160,27 @@ export function AdminRequestList({ requests, flash = {} }) {
             });
             return;
         }
-        setSelectedRequest(request);
-        setIsApproveDialogOpen(true);
-    };
-
-    const confirmApprove = () => {
-        if (!selectedRequest) return;
 
         router.post(
-            route("admin.update-evaluation", selectedRequest.report_id),
+            route("admin.update-evaluation", request.report_id),
             {
-                evaluation: "approved",
+                evaluation: "reviewed",
+                description: "Request marked as reviewed by admin",
                 issued_by: "Admin",
             },
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    setIsApproveDialogOpen(false);
-                    setSelectedRequest(null);
                     toast({
-                        title: "Request Approved!",
-                        description: `Request #${selectedRequest.id} from ${selectedRequest.applicant_name} has been approved successfully.`,
+                        title: "Marked as Reviewed!",
+                        description: `Request #${request.id} has been marked as reviewed.`,
                     });
                 },
                 onError: (errors) => {
-                    setIsApproveDialogOpen(false);
                     toast({
                         variant: "destructive",
-                        title: "Approval Failed!",
-                        description: "Failed to approve the request.",
-                    });
-                },
-            }
-        );
-    };
-
-    const handleReject = (request) => {
-        if (!request.report_id) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "No report found for this request.",
-            });
-            return;
-        }
-        setSelectedRequest(request);
-        setRejectionFeedback("");
-        setIsRejectDialogOpen(true);
-    };
-
-    const confirmReject = () => {
-        if (!selectedRequest) return;
-
-        if (!rejectionFeedback.trim()) {
-            toast({
-                variant: "destructive",
-                title: "Feedback Required",
-                description: "Please provide feedback for rejection.",
-            });
-            return;
-        }
-
-        router.post(
-            route("admin.update-evaluation", selectedRequest.report_id),
-            {
-                evaluation: "rejected",
-                description: rejectionFeedback.trim(),
-                issued_by: "Admin",
-            },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setIsRejectDialogOpen(false);
-                    setSelectedRequest(null);
-                    setRejectionFeedback("");
-                    toast({
-                        title: "Request Declined!",
-                        description: `Request #${selectedRequest.id} has been declined.`,
-                    });
-                },
-                onError: (errors) => {
-                    setIsRejectDialogOpen(false);
-                    toast({
-                        variant: "destructive",
-                        title: "Decline Failed!",
-                        description: "Failed to decline the request.",
+                        title: "Update Failed!",
+                        description: "Failed to update the request status.",
                     });
                 },
             }
@@ -302,102 +228,6 @@ export function AdminRequestList({ requests, flash = {} }) {
         });
     };
 
-    // Selection Handlers
-    const handleSelectAll = (checked) => {
-        if (checked) {
-            setSelectedItems(filteredRequests.map((request) => request.id));
-        } else {
-            setSelectedItems([]);
-        }
-    };
-
-    const handleSelectItem = (requestId, checked) => {
-        if (checked) {
-            setSelectedItems((prev) => [...prev, requestId]);
-        } else {
-            setSelectedItems((prev) => prev.filter((id) => id !== requestId));
-        }
-    };
-
-    const handleClearSelection = () => {
-        setSelectedItems([]);
-    };
-
-    // Bulk Actions
-    const handleBulkApprove = async (selectedIds) => {
-        setBulkLoading(true);
-        try {
-            await new Promise((resolve, reject) => {
-                router.post(
-                    route("admin.bulk.approve"),
-                    { request_ids: selectedIds },
-                    {
-                        preserveScroll: true,
-                        onSuccess: () => resolve(),
-                        onError: (errors) =>
-                            reject(new Error("Failed to approve requests")),
-                    }
-                );
-            });
-        } catch (error) {
-            throw error;
-        } finally {
-            setBulkLoading(false);
-        }
-    };
-
-    const handleBulkReject = async (selectedIds, reason) => {
-        setBulkLoading(true);
-        try {
-            await new Promise((resolve, reject) => {
-                router.post(
-                    route("admin.bulk.reject"),
-                    { request_ids: selectedIds, reason: reason },
-                    {
-                        preserveScroll: true,
-                        onSuccess: () => resolve(),
-                        onError: (errors) =>
-                            reject(new Error("Failed to reject requests")),
-                    }
-                );
-            });
-        } catch (error) {
-            throw error;
-        } finally {
-            setBulkLoading(false);
-        }
-    };
-
-    const handleBulkDelete = async (selectedIds) => {
-        setBulkLoading(true);
-        try {
-            await new Promise((resolve, reject) => {
-                router.delete(route("admin.bulk.delete"), {
-                    data: { request_ids: selectedIds },
-                    preserveScroll: true,
-                    onSuccess: () => resolve(),
-                    onError: (errors) =>
-                        reject(new Error("Failed to delete requests")),
-                });
-            });
-        } catch (error) {
-            throw error;
-        } finally {
-            setBulkLoading(false);
-        }
-    };
-
-    const handleBulkExport = (selectedIds) => {
-        const selectedRequests = filteredRequests.filter((req) =>
-            selectedIds.includes(req.id)
-        );
-        const csvContent = generateCSV(selectedRequests);
-        downloadCSV(
-            csvContent,
-            `selected-requests-${new Date().toISOString().split("T")[0]}.csv`
-        );
-    };
-
     const handlePageChange = (url) => {
         if (url) {
             router.get(url, {}, { preserveState: true, preserveScroll: true });
@@ -421,28 +251,12 @@ export function AdminRequestList({ requests, flash = {} }) {
 
             <Card>
                 <CardContent>
-                    {/* Bulk Actions */}
-                    <BulkActions
-                        selectedItems={selectedItems}
-                        onClearSelection={handleClearSelection}
-                        onBulkApprove={handleBulkApprove}
-                        onBulkReject={handleBulkReject}
-                        onBulkDelete={handleBulkDelete}
-                        onBulkExport={handleBulkExport}
-                        isLoading={bulkLoading}
-                        className="mb-6"
-                    />
-
                     {/* Table */}
                     <RequestTable
                         requests={filteredRequests}
-                        selectedItems={selectedItems}
-                        onSelectAll={handleSelectAll}
-                        onSelectItem={handleSelectItem}
                         onView={handleView}
                         onEdit={handleEdit}
-                        onApprove={handleApprove}
-                        onReject={handleReject}
+                        onMarkReviewed={handleMarkReviewed}
                         onDelete={handleDelete}
                     />
 
@@ -455,12 +269,6 @@ export function AdminRequestList({ requests, flash = {} }) {
             </Card>
 
             {/* Modals and Dialogs */}
-            <ViewRequestModal
-                isOpen={isViewModalOpen}
-                onClose={() => setIsViewModalOpen(false)}
-                request={selectedRequest}
-            />
-
             <EditRequestModal
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
@@ -476,22 +284,6 @@ export function AdminRequestList({ requests, flash = {} }) {
                 onClose={() => setIsDeleteDialogOpen(false)}
                 request={selectedRequest}
                 onConfirm={confirmDelete}
-            />
-
-            <ApproveConfirmDialog
-                isOpen={isApproveDialogOpen}
-                onClose={() => setIsApproveDialogOpen(false)}
-                request={selectedRequest}
-                onConfirm={confirmApprove}
-            />
-
-            <RejectDialog
-                isOpen={isRejectDialogOpen}
-                onClose={() => setIsRejectDialogOpen(false)}
-                request={selectedRequest}
-                feedback={rejectionFeedback}
-                onFeedbackChange={setRejectionFeedback}
-                onConfirm={confirmReject}
             />
         </div>
     );

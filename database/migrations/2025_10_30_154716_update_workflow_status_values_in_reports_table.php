@@ -12,7 +12,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // First, update existing records to use new status values
+        // First, expand the enum to include both old and new values
+        DB::statement("ALTER TABLE reports MODIFY COLUMN workflow_status ENUM(
+            'pending_approval',
+            'approved_pending_payment',
+            'payment_submitted',
+            'payment_verified',
+            'certificate_issued',
+            'payment_order_generated',
+            'payment_completed',
+            'certificate_ready_for_collection',
+            'certificate_collected'
+        ) DEFAULT 'pending_approval'");
+
+        // Now update existing records to use new status values
         DB::table('reports')
             ->where('workflow_status', 'payment_submitted')
             ->update(['workflow_status' => 'payment_order_generated']);
@@ -25,8 +38,7 @@ return new class extends Migration
             ->where('workflow_status', 'certificate_issued')
             ->update(['workflow_status' => 'certificate_ready_for_collection']);
 
-        // Drop the existing enum column and recreate with new values
-        // Note: In MySQL, we need to use raw SQL to modify enum values
+        // Finally, remove the old enum values
         DB::statement("ALTER TABLE reports MODIFY COLUMN workflow_status ENUM(
             'pending_approval',
             'approved_pending_payment',

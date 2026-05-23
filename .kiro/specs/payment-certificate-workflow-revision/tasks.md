@@ -8,7 +8,7 @@ This implementation plan transitions the land certification system from digital/
 
 ### Phase 1: Database Schema Updates and Data Migration
 
-- [-] 1. Create database migrations for new workflow fields
+- [ ] 1. Create database migrations for new workflow fields
   - [ ] 1.1 Create migration for payment order fields in payments table
     - Add fields: payment_order_number, payment_order_generated_at, payment_order_pdf_path, treasury_receipt_number, payment_completed_at, payment_completed_by, is_legacy_payment
     - Add indexes for payment_order_number and payment_completed_at

@@ -238,12 +238,6 @@ export const validateStep3 = (data) => {
         }
     }
 
-    // Conditional validation for mail delivery
-    if (data.preferred_release_mode && data.preferred_release_mode.includes("mail")) {
-        const releaseAddressError = validateAddress(data.release_address, "Release Address");
-        if (releaseAddressError) errors.push(releaseAddressError);
-    }
-
     return errors;
 };
 

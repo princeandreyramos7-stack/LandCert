@@ -14,7 +14,6 @@ import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import { TeamSwitcher } from "@/components/team-switcher";
 import { NotificationBell } from "@/Components/NotificationBell";
-import { GlobalSearch } from "@/Components/GlobalSearch";
 import {
     Sidebar,
     SidebarContent,
@@ -45,10 +44,6 @@ const adminNavMain = [
             {
                 title: "Requests",
                 url: "/admin/requests",
-            },
-            {
-                title: "Payments",
-                url: "/admin/payments",
             },
         ],
     },
@@ -101,9 +96,6 @@ export function AdminSidebar({ ...props }) {
                 <TeamSwitcher teams={teams} />
             </SidebarHeader>
             <SidebarContent>
-                <div className="px-2 pb-2">
-                    <GlobalSearch />
-                </div>
                 <NavMain items={adminNavMain} />
             </SidebarContent>
             <SidebarFooter>
