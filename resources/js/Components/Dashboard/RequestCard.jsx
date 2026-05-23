@@ -20,42 +20,45 @@ export function RequestCard({ request, onClick }) {
     
     return (
         <Card
-            className={`group hover:shadow-xl transition-all duration-300 cursor-pointer bg-white rounded-lg border ${
+            className={`group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white rounded-xl border-2 shadow-lg ${
                 hasVerifiedPayment
-                    ? "shadow-emerald-100 border-transparent hover:border-transparent"
+                    ? "shadow-emerald-200 border-emerald-300 hover:border-emerald-400 hover:shadow-emerald-300"
                     : request?.status === "approved"
-                    ? "border-emerald-200 hover:border-emerald-300"
+                    ? "border-emerald-200 hover:border-emerald-400 hover:shadow-emerald-200"
                     : request?.status === "rejected"
-                    ? "border-rose-200 hover:border-rose-300"
-                    : "border-gray-200 hover:border-blue-300"
+                    ? "border-rose-200 hover:border-rose-400 hover:shadow-rose-200"
+                    : "border-blue-200 hover:border-blue-400 hover:shadow-blue-200"
             }`}
             onClick={onClick}
         >
-            <CardHeader className="pb-3 space-y-3">
+            <CardHeader className="pb-4 space-y-3 bg-gradient-to-r from-gray-50 to-white rounded-t-xl border-b border-gray-100">
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="p-1.5 bg-blue-100 rounded-lg">
+                                <Award className="h-4 w-4 text-blue-600" />
+                            </div>
                             <CardTitle className="text-lg font-bold text-gray-900">
                                 Request #{request?.id}
                             </CardTitle>
                             {hasVerifiedPayment && (
-                                <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full">
-                                    <Award className="h-3 w-3 text-emerald-600" />
+                                <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full shadow-sm">
+                                    <Award className="h-3.5 w-3.5 text-emerald-600" />
                                     <span className="text-xs font-semibold text-emerald-700">
                                         Certified
                                     </span>
                                 </div>
                             )}
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
                             <CalendarDays className="h-3.5 w-3.5" />
-                            <span>{formatDate(request?.created_at)}</span>
+                            <span className="font-medium">{formatDate(request?.created_at)}</span>
                         </div>
                     </div>
                     <Badge
                         className={`${getStatusColor(
                             request?.status || "pending"
-                        )} shadow-sm flex-shrink-0`}
+                        )} shadow-md flex-shrink-0`}
                     >
                         <span className="flex items-center gap-1.5">
                             {getStatusIcon(request?.status || "pending")}

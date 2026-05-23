@@ -79,22 +79,6 @@ class Request extends Model
     }
 
     /**
-     * Get the payments for this request.
-     */
-    public function payments()
-    {
-        return $this->hasMany(Payment::class, 'request_id');
-    }
-
-    /**
-     * Get the certificates for this request.
-     */
-    public function certificates()
-    {
-        return $this->hasMany(Certificate::class, 'request_id');
-    }
-
-    /**
      * Get the property location for this request.
      */
     public function propertyLocation(): HasOne

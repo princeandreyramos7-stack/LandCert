@@ -9,6 +9,8 @@ export const getStatusColor = (status) => {
             return "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-300";
         case "rejected":
             return "bg-rose-100 text-rose-800 hover:bg-rose-200 border-rose-300";
+        case "reviewed":
+            return "bg-green-100 text-green-800 hover:bg-green-200 border-green-300";
         default:
             return "bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300";
     }

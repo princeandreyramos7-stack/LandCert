@@ -211,71 +211,6 @@ export function Step3LandUse({
                             />
                             <span>Pickup</span>
                         </label>
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                                type="radio"
-                                name="preferred_release_mode"
-                                value="mail_applicant"
-                                checked={data.preferred_release_mode === "mail_applicant"}
-                                onChange={(e) =>
-                                    onDataChange("preferred_release_mode", e.target.value)
-                                }
-                                className="w-4 h-4"
-                            />
-                            <span>By mail, address to Applicant</span>
-                        </label>
-                        <label
-                            className={`flex items-center space-x-2 ${
-                                !hasRepresentative
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : "cursor-pointer"
-                            }`}
-                        >
-                            <input
-                                type="radio"
-                                name="preferred_release_mode"
-                                value="mail_representative"
-                                checked={
-                                    data.preferred_release_mode === "mail_representative"
-                                }
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    if (value === "mail_representative" && !hasRepresentative) {
-                                        onToast({
-                                            variant: "destructive",
-                                            title: "No Authorized Representative",
-                                            description:
-                                                "You cannot select 'By mail, address to Authorized Representative' because you have not added an authorized representative in Step 1 (Applicant Information).\n\nPlease either:\n• Go back to Step 1 and add an authorized representative, or\n• Choose a different release mode option.",
-                                        });
-                                        return;
-                                    }
-                                    onDataChange("preferred_release_mode", value);
-                                }}
-                                disabled={!hasRepresentative}
-                                className="w-4 h-4"
-                            />
-                            <span className="flex items-center gap-2">
-                                By mail, address to Authorized Representative
-                                {!hasRepresentative && (
-                                    <span className="text-xs text-amber-600 font-medium">
-                                        (No representative added)
-                                    </span>
-                                )}
-                            </span>
-                        </label>
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                                type="radio"
-                                name="preferred_release_mode"
-                                value="mail_other"
-                                checked={data.preferred_release_mode === "mail_other"}
-                                onChange={(e) =>
-                                    onDataChange("preferred_release_mode", e.target.value)
-                                }
-                                className="w-4 h-4"
-                            />
-                            <span>By mail, address to other</span>
-                        </label>
                     </div>
                     {errors.preferred_release_mode && (
                         <p className="text-sm text-red-500">
@@ -283,29 +218,6 @@ export function Step3LandUse({
                         </p>
                     )}
                 </div>
-
-                {data.preferred_release_mode &&
-                    data.preferred_release_mode.includes("mail") && (
-                        <div className="space-y-2 pl-6 border-l-2">
-                            <Label htmlFor="release_address">
-                                Mailing Address <span className="text-red-500">*</span>
-                            </Label>
-                            <Textarea
-                                id="release_address"
-                                value={data.release_address}
-                                onChange={(e) =>
-                                    onDataChange("release_address", e.target.value)
-                                }
-                                placeholder="Enter complete mailing address"
-                                rows={3}
-                            />
-                            {errors.release_address && (
-                                <p className="text-sm text-red-500">
-                                    {errors.release_address}
-                                </p>
-                            )}
-                        </div>
-                    )}
             </div>
         </div>
     );

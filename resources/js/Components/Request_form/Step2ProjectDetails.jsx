@@ -86,14 +86,109 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
                 <Label htmlFor="project_location_barangay">
                     Barangay <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                    id="project_location_barangay"
+                <Select
                     value={data.project_location_barangay}
-                    onChange={(e) =>
-                        onDataChange("project_location_barangay", e.target.value)
+                    onValueChange={(value) =>
+                        onDataChange("project_location_barangay", value)
                     }
-                    placeholder="Barangay"
-                />
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select barangay" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                        <SelectItem value="Aggasian">Aggasian</SelectItem>
+                        <SelectItem value="Alibagu">Alibagu</SelectItem>
+                        <SelectItem value="Alinguigan 1st">Alinguigan 1st</SelectItem>
+                        <SelectItem value="Alinguigan 2nd">Alinguigan 2nd</SelectItem>
+                        <SelectItem value="Alinguigan 3rd">Alinguigan 3rd</SelectItem>
+                        <SelectItem value="Arusip">Arusip</SelectItem>
+                        <SelectItem value="Baculud">Baculud</SelectItem>
+                        <SelectItem value="Bagong Silang">Bagong Silang</SelectItem>
+                        <SelectItem value="Bagumbayan">Bagumbayan</SelectItem>
+                        <SelectItem value="Baligatan">Baligatan</SelectItem>
+                        <SelectItem value="Ballacong">Ballacong</SelectItem>
+                        <SelectItem value="Bangag">Bangag</SelectItem>
+                        <SelectItem value="Batong-Labang">Batong-Labang</SelectItem>
+                        <SelectItem value="Bigao">Bigao</SelectItem>
+                        <SelectItem value="Cabannungan 1st">Cabannungan 1st</SelectItem>
+                        <SelectItem value="Cabannungan 2nd">Cabannungan 2nd</SelectItem>
+                        <SelectItem value="Cabeseria 2 (Dappat)">Cabeseria 2 (Dappat)</SelectItem>
+                        <SelectItem value="Cabeseria 3 (San Fernando)">Cabeseria 3 (San Fernando)</SelectItem>
+                        <SelectItem value="Cabeseria 4 (San Manuel)">Cabeseria 4 (San Manuel)</SelectItem>
+                        <SelectItem value="Cabeseria 5 (Baribad)">Cabeseria 5 (Baribad)</SelectItem>
+                        <SelectItem value="Cabeseria 6 and 24 (Villa Marcos)">Cabeseria 6 and 24 (Villa Marcos)</SelectItem>
+                        <SelectItem value="Cabeseria 7 (Nangalisan)">Cabeseria 7 (Nangalisan)</SelectItem>
+                        <SelectItem value="Cabeseria 9 and 11 (Capogotan)">Cabeseria 9 and 11 (Capogotan)</SelectItem>
+                        <SelectItem value="Cabeseria 10 (Lupigui)">Cabeseria 10 (Lupigui)</SelectItem>
+                        <SelectItem value="Cabeseria 14 and 16 (Casilagan)">Cabeseria 14 and 16 (Casilagan)</SelectItem>
+                        <SelectItem value="Cabeseria 17 and 21 (San Rafael)">Cabeseria 17 and 21 (San Rafael)</SelectItem>
+                        <SelectItem value="Cabeseria 19 (Villa Suerte)">Cabeseria 19 (Villa Suerte)</SelectItem>
+                        <SelectItem value="Cabeseria 22 (Sablang)">Cabeseria 22 (Sablang)</SelectItem>
+                        <SelectItem value="Cabeseria 23 (San Francisco)">Cabeseria 23 (San Francisco)</SelectItem>
+                        <SelectItem value="Cabeseria 25 (Santa Lucia)">Cabeseria 25 (Santa Lucia)</SelectItem>
+                        <SelectItem value="Cabeseria 27 (Abuan)">Cabeseria 27 (Abuan)</SelectItem>
+                        <SelectItem value="Cadu">Cadu</SelectItem>
+                        <SelectItem value="Calamagui 1st">Calamagui 1st</SelectItem>
+                        <SelectItem value="Calamagui 2nd">Calamagui 2nd</SelectItem>
+                        <SelectItem value="Camunatan">Camunatan</SelectItem>
+                        <SelectItem value="Capellan">Capellan</SelectItem>
+                        <SelectItem value="Capo">Capo</SelectItem>
+                        <SelectItem value="Carikkikan Norte">Carikkikan Norte</SelectItem>
+                        <SelectItem value="Carikkikan Sur">Carikkikan Sur</SelectItem>
+                        <SelectItem value="Centro - San Antonio">Centro - San Antonio</SelectItem>
+                        <SelectItem value="Centro Poblacion">Centro Poblacion</SelectItem>
+                        <SelectItem value="Fugu">Fugu</SelectItem>
+                        <SelectItem value="Fuyo">Fuyo</SelectItem>
+                        <SelectItem value="Gayong-Gayong Norte">Gayong-Gayong Norte</SelectItem>
+                        <SelectItem value="Gayong-Gayong Sur">Gayong-Gayong Sur</SelectItem>
+                        <SelectItem value="Guinatan">Guinatan</SelectItem>
+                        <SelectItem value="Imelda Bliss Village">Imelda Bliss Village</SelectItem>
+                        <SelectItem value="Lullutan">Lullutan</SelectItem>
+                        <SelectItem value="Malalam">Malalam</SelectItem>
+                        <SelectItem value="Malasin (Angeles)">Malasin (Angeles)</SelectItem>
+                        <SelectItem value="Manaring">Manaring</SelectItem>
+                        <SelectItem value="Mangcuram">Mangcuram</SelectItem>
+                        <SelectItem value="Marana I">Marana I</SelectItem>
+                        <SelectItem value="Marana II">Marana II</SelectItem>
+                        <SelectItem value="Marana III">Marana III</SelectItem>
+                        <SelectItem value="Minabang">Minabang</SelectItem>
+                        <SelectItem value="Morado">Morado</SelectItem>
+                        <SelectItem value="Naguilian Norte">Naguilian Norte</SelectItem>
+                        <SelectItem value="Naguilian Sur">Naguilian Sur</SelectItem>
+                        <SelectItem value="Namnam">Namnam</SelectItem>
+                        <SelectItem value="Nanaguan">Nanaguan</SelectItem>
+                        <SelectItem value="Osmeña (Sinippil)">Osmeña (Sinippil)</SelectItem>
+                        <SelectItem value="Paliueg">Paliueg</SelectItem>
+                        <SelectItem value="Pasa">Pasa</SelectItem>
+                        <SelectItem value="Pilar">Pilar</SelectItem>
+                        <SelectItem value="Quimalabasa">Quimalabasa</SelectItem>
+                        <SelectItem value="Rang-ayan (Bintacan)">Rang-ayan (Bintacan)</SelectItem>
+                        <SelectItem value="Rugao">Rugao</SelectItem>
+                        <SelectItem value="Salindingan">Salindingan</SelectItem>
+                        <SelectItem value="San Andres (Angarilla)">San Andres (Angarilla)</SelectItem>
+                        <SelectItem value="San Felipe">San Felipe</SelectItem>
+                        <SelectItem value="San Ignacio (Canapi)">San Ignacio (Canapi)</SelectItem>
+                        <SelectItem value="San Isidro">San Isidro</SelectItem>
+                        <SelectItem value="San Juan">San Juan</SelectItem>
+                        <SelectItem value="San Lorenzo">San Lorenzo</SelectItem>
+                        <SelectItem value="San Pablo">San Pablo</SelectItem>
+                        <SelectItem value="San Rodrigo">San Rodrigo</SelectItem>
+                        <SelectItem value="San Vicente">San Vicente</SelectItem>
+                        <SelectItem value="Santa Barbara">Santa Barbara</SelectItem>
+                        <SelectItem value="Santa Catalina">Santa Catalina</SelectItem>
+                        <SelectItem value="Santa Isabel Norte">Santa Isabel Norte</SelectItem>
+                        <SelectItem value="Santa Isabel Sur">Santa Isabel Sur</SelectItem>
+                        <SelectItem value="Santa Maria">Santa Maria</SelectItem>
+                        <SelectItem value="Santa Victoria">Santa Victoria</SelectItem>
+                        <SelectItem value="Santo Tomas">Santo Tomas</SelectItem>
+                        <SelectItem value="Siffu">Siffu</SelectItem>
+                        <SelectItem value="Sindon Bayabo">Sindon Bayabo</SelectItem>
+                        <SelectItem value="Sindon Maride">Sindon Maride</SelectItem>
+                        <SelectItem value="Sipay">Sipay</SelectItem>
+                        <SelectItem value="Tangcul">Tangcul</SelectItem>
+                        <SelectItem value="Villa Imelda (Maplas)">Villa Imelda (Maplas)</SelectItem>
+                    </SelectContent>
+                </Select>
                 {errors.project_location_barangay && (
                     <p className="text-sm text-red-500">
                         {errors.project_location_barangay}
@@ -103,15 +198,13 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
 
             <div className="space-y-2">
                 <Label htmlFor="project_location_municipality">
-                    Municipality <span className="text-red-500">*</span>
+                    Municipality/City <span className="text-red-500">*</span>
                 </Label>
                 <Input
                     id="project_location_municipality"
-                    value={data.project_location_municipality}
-                    onChange={(e) =>
-                        onDataChange("project_location_municipality", e.target.value)
-                    }
-                    placeholder="Municipality"
+                    value="City of Ilagan"
+                    disabled
+                    className="bg-gray-100 cursor-not-allowed"
                 />
                 {errors.project_location_municipality && (
                     <p className="text-sm text-red-500">
@@ -126,11 +219,9 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
                 </Label>
                 <Input
                     id="project_location_province"
-                    value={data.project_location_province}
-                    onChange={(e) =>
-                        onDataChange("project_location_province", e.target.value)
-                    }
-                    placeholder="Province"
+                    value="Isabela"
+                    disabled
+                    className="bg-gray-100 cursor-not-allowed"
                 />
                 {errors.project_location_province && (
                     <p className="text-sm text-red-500">

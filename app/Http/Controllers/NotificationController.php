@@ -8,6 +8,20 @@ use Illuminate\Http\Request;
 class NotificationController extends Controller
 {
     /**
+     * Display the notifications page
+     */
+    public function page()
+    {
+        $notifications = Notification::where('user_id', auth()->id())
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+        
+        return inertia('Notifications/Index', [
+            'notifications' => $notifications,
+        ]);
+    }
+
+    /**
      * Get notifications for the authenticated user
      */
     public function index()

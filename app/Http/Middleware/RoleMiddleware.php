@@ -15,10 +15,27 @@ class RoleMiddleware
      */
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        if (!$request->user() || !$request->user()->hasRole($role)) {
+        $user = $request->user();
+        
+        if (!$user) {
             abort(403, 'Unauthorized access.');
         }
+        
+        // Check if user has the exact role required
+        if ($user->user_type === $role) {
+            return $next($request);
+        }
+        
+        // Super admin can access admin routes, but not vice versa
+        if ($role === 'admin' && $user->user_type === 'super_admin') {
+            return $next($request);
+        }
+        
+        // Check if user has the required role using Spatie
+        if ($user->hasRole($role)) {
+            return $next($request);
+        }
 
-        return $next($request);
+        abort(403, 'Unauthorized access.');
     }
 }

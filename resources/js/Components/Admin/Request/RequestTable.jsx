@@ -12,39 +12,23 @@ import {
     MoreVertical,
     Eye,
     Edit,
-    ThumbsUp,
-    ThumbsDown,
+    CheckCircle,
     Trash2,
 } from "lucide-react";
 import { getStatusColor, getStatusIcon, formatDate, formatLocation } from "./utils";
 
 export function RequestTable({
     requests,
-    selectedItems,
-    onSelectAll,
-    onSelectItem,
     onView,
     onEdit,
-    onApprove,
-    onReject,
+    onMarkReviewed,
     onDelete,
 }) {
-    const allSelected =
-        selectedItems.length === requests.length && requests.length > 0;
-
     return (
         <div className="overflow-x-auto">
             <table className="w-full">
                 <thead>
                     <tr className="border-b">
-                        <th className="text-left p-3 font-semibold w-12">
-                            <input
-                                type="checkbox"
-                                checked={allSelected}
-                                onChange={(e) => onSelectAll(e.target.checked)}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                        </th>
                         <th className="text-left p-3 font-semibold">ID</th>
                         <th className="text-left p-3 font-semibold">
                             Applicant
@@ -66,7 +50,7 @@ export function RequestTable({
                 <tbody>
                     {requests.length === 0 ? (
                         <tr>
-                            <td colSpan="9" className="p-8 text-center text-gray-500">
+                            <td colSpan="8" className="p-8 text-center text-gray-500">
                                 No requests found
                             </td>
                         </tr>
@@ -76,21 +60,6 @@ export function RequestTable({
                                 key={request.id}
                                 className="border-b hover:bg-gray-50 transition-colors"
                             >
-                                <td className="p-3">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedItems.includes(
-                                            request.id
-                                        )}
-                                        onChange={(e) =>
-                                            onSelectItem(
-                                                request.id,
-                                                e.target.checked
-                                            )
-                                        }
-                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                    />
-                                </td>
                                 <td className="p-3 font-mono text-sm">
                                     #{request.id}
                                 </td>
@@ -164,34 +133,16 @@ export function RequestTable({
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
-                                                onClick={() =>
-                                                    onApprove(request)
-                                                }
-                                                disabled={
-                                                    request.status === "approved"
-                                                }
-                                                className="text-emerald-600"
+                                                onClick={() => onMarkReviewed(request)}
+                                                disabled={request.status === "reviewed"}
+                                                className="text-blue-600"
                                             >
-                                                <ThumbsUp className="h-4 w-4 mr-2" />
-                                                Accept
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() =>
-                                                    onReject(request)
-                                                }
-                                                disabled={
-                                                    request.status === "rejected"
-                                                }
-                                                className="text-rose-600"
-                                            >
-                                                <ThumbsDown className="h-4 w-4 mr-2" />
-                                                Decline
+                                                <CheckCircle className="h-4 w-4 mr-2" />
+                                                Mark as Reviewed
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
-                                                onClick={() =>
-                                                    onDelete(request)
-                                                }
+                                                onClick={() => onDelete(request)}
                                                 className="text-red-600"
                                             >
                                                 <Trash2 className="h-4 w-4 mr-2" />

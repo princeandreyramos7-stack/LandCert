@@ -48,8 +48,12 @@ const navMain = [
                 url: "/request",
             },
             {
-                title: "Receipt",
-                url: "/receipt",
+                title: "My Applications",
+                url: "/my-applications",
+            },
+            {
+                title: "Notifications",
+                url: "/notifications",
             },
         ],
     },

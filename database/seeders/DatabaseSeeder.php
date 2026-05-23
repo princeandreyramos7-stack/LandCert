@@ -19,6 +19,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
             AdminUserSeeder::class,
+            ZoningRuleSeeder::class,
+            PropertyLocationSeeder::class,
             // RequestSeeder::class, // Uncomment to seed 100 test requests
         ]);
     }
