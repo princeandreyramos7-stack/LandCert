@@ -79,26 +79,18 @@ class Request extends Model
     }
 
     /**
-     * Get the property location for this request.
+     * Get the payments for this request.
      */
-    public function propertyLocation(): HasOne
+    public function payments(): HasMany
     {
-        return $this->hasOne(PropertyLocation::class);
+        return $this->hasMany(Payment::class);
     }
 
     /**
-     * Get the DSS evaluations for this request.
+     * Get the certificates for this request.
      */
-    public function dssEvaluations(): HasMany
+    public function certificates(): HasMany
     {
-        return $this->hasMany(DssEvaluation::class);
-    }
-
-    /**
-     * Get the latest DSS evaluation.
-     */
-    public function latestDssEvaluation(): HasOne
-    {
-        return $this->hasOne(DssEvaluation::class)->latestOfMany();
+        return $this->hasMany(Certificate::class);
     }
 }

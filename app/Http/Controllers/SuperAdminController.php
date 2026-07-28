@@ -6,6 +6,9 @@ use App\Models\Application;
 use App\Models\Report;
 use App\Models\Request as RequestModel;
 use App\Models\User;
+use App\Models\Certificate;
+use App\Models\CertificateRelease;
+use App\Models\Payment;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -363,92 +366,234 @@ class SuperAdminController extends Controller
     }
 
     /**
-     * Display zoning map with GIS features
+     * Display all certificates for super admin management
      */
-    public function zoningMap(Request $request): Response
+    public function certificates(Request $request): Response
     {
-        // Get all property locations with zoning information
-        $properties = \App\Models\PropertyLocation::with(['zoningRule'])
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($property) {
-                return [
-                    'id' => $property->id,
-                    'address' => $property->address,
-                    'barangay' => $property->barangay,
-                    'district' => $property->district,
-                    'latitude' => $property->latitude,
-                    'longitude' => $property->longitude,
-                    'lot_area' => $property->lot_area,
-                    'lot_number' => $property->lot_number,
-                    'title_number' => $property->title_number,
-                    'zone_classification' => $property->zoningRule?->zone_type ?? 'Unclassified',
-                    'zone_name' => $property->zoningRule?->zone_name ?? 'N/A',
-                    'zone_code' => $property->zoningRule?->zone_code ?? 'N/A',
-                    'zoning_rule' => $property->zoningRule,
-                ];
+        $perPage = $request->input('per_page', 25);
+        
+        $query = Certificate::with([
+            'request.user',
+            'payment',
+            'issuedBy',
+            'release.releasedBy'
+        ])->orderBy('created_at', 'desc');
+
+        // Apply filters
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('certificate_number', 'like', "%{$search}%")
+                  ->orWhereHas('request', function($q) use ($search) {
+                      $q->where('applicant_name', 'like', "%{$search}%");
+                  });
             });
+        }
 
-        // Get all zoning rules
-        $zoningRules = \App\Models\ZoningRule::where('is_active', true)->get();
+        $certificates = $query->paginate($perPage);
 
-        // Get statistics
-        $propertiesByZone = \App\Models\PropertyLocation::with('zoningRule')
-            ->get()
-            ->groupBy(function ($property) {
-                return $property->zoningRule?->zone_type ?? 'Unclassified';
-            })
-            ->map(function ($group) {
-                return $group->count();
-            });
-
-        $stats = [
-            'total_properties' => \App\Models\PropertyLocation::count(),
-            'total_zones' => \App\Models\ZoningRule::where('is_active', true)->count(),
-            'properties_by_zone' => $propertiesByZone,
-        ];
-
-        return Inertia::render('SuperAdmin/ZoningMap', [
-            'properties' => $properties,
-            'zoningRules' => $zoningRules,
-            'stats' => $stats,
+        return Inertia::render('SuperAdmin/Certificates', [
+            'certificates' => $certificates,
+            'filters' => $request->only(['status', 'search']),
         ]);
     }
 
     /**
-     * Store a new property location
+     * Update certificate status or details
      */
-    public function storeProperty(Request $request)
+    public function updateCertificate(Request $request, $certificateId)
     {
         $validated = $request->validate([
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
-            'address' => 'required|string|max:500',
-            'barangay' => 'required|string|max:255',
-            'zone_type' => 'required|string|in:residential,commercial,industrial,agricultural,institutional,mixed',
-            'lot_area' => 'nullable|numeric|min:0',
+            'status' => 'required|in:generated,ready_for_collection,collected',
+            'certificate_number' => 'required|string|max:255',
+            'issued_by' => 'nullable|exists:users,id',
+            'valid_until' => 'nullable|date',
+            'notes' => 'nullable|string',
         ]);
 
-        // Find the first active zoning rule based on zone type
-        $zoningRule = \App\Models\ZoningRule::where('zone_type', $validated['zone_type'])
-            ->where('is_active', true)
-            ->first();
+        $certificate = Certificate::findOrFail($certificateId);
+        
+        $certificate->update([
+            'status' => $validated['status'],
+            'certificate_number' => $validated['certificate_number'],
+            'issued_by' => $validated['issued_by'] ?? auth()->id(),
+            'valid_until' => $validated['valid_until'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+        ]);
 
-        if (!$zoningRule) {
-            return back()->with('error', 'No active zoning rule found for ' . $validated['zone_type']);
+        return back()->with('success', 'Certificate updated successfully!');
+    }
+
+    /**
+     * Mark certificate as ready for collection
+     */
+    public function markCertificateReady(Request $request, $certificateId)
+    {
+        $validated = $request->validate([
+            'certificate_number' => 'required|string|max:255',
+            'notes' => 'nullable|string',
+        ]);
+
+        $certificate = Certificate::findOrFail($certificateId);
+        
+        $certificate->update([
+            'status' => 'ready_for_collection',
+            'certificate_number' => $validated['certificate_number'],
+            'issued_by' => auth()->id(),
+            'issued_at' => now(),
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        return back()->with('success', 'Certificate marked as ready for collection!');
+    }
+
+    /**
+     * Record certificate collection/release
+     */
+    public function releaseCertificate(Request $request, $certificateId)
+    {
+        $validated = $request->validate([
+            'collected_by_name' => 'required|string|max:255',
+            'release_date' => 'required|date',
+            'release_time' => 'required|date_format:H:i',
+            'valid_id_type' => 'required|string|max:100',
+            'valid_id_number' => 'required|string|max:100',
+            'relationship_to_applicant' => 'required|string|max:100',
+            'remarks' => 'nullable|string',
+        ]);
+
+        $certificate = Certificate::findOrFail($certificateId);
+        
+        // Create release record
+        CertificateRelease::create([
+            'certificate_id' => $certificate->id,
+            'released_by' => auth()->id(),
+            'collected_by_name' => $validated['collected_by_name'],
+            'release_date' => $validated['release_date'],
+            'release_time' => $validated['release_time'],
+            'valid_id_type' => $validated['valid_id_type'],
+            'valid_id_number' => $validated['valid_id_number'],
+            'relationship_to_applicant' => $validated['relationship_to_applicant'],
+            'remarks' => $validated['remarks'] ?? null,
+        ]);
+
+        // Update certificate status
+        $certificate->update([
+            'status' => 'collected',
+        ]);
+
+        return back()->with('success', 'Certificate collection recorded successfully!');
+    }
+
+    /**
+     * Display all payments for super admin management
+     */
+    public function payments(Request $request): Response
+    {
+        $perPage = $request->input('per_page', 25);
+        
+        $query = Payment::with([
+            'request.user',
+            'verifiedBy'
+        ])->orderBy('created_at', 'desc');
+
+        // Apply filters
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
         }
 
-        // Create the property
-        $property = \App\Models\PropertyLocation::create([
-            'latitude' => $validated['latitude'],
-            'longitude' => $validated['longitude'],
-            'address' => $validated['address'],
-            'barangay' => $validated['barangay'],
-            'district' => 'District 1', // Default, can be made dynamic
-            'zoning_rule_id' => $zoningRule->id,
-            'lot_area' => $validated['lot_area'] ?? null,
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('receipt_number', 'like', "%{$search}%")
+                  ->orWhereHas('request', function($q) use ($search) {
+                      $q->where('applicant_name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $payments = $query->paginate($perPage);
+
+        return Inertia::render('SuperAdmin/Payments', [
+            'payments' => $payments,
+            'filters' => $request->only(['payment_status', 'payment_method', 'search']),
+        ]);
+    }
+
+    /**
+     * Verify payment
+     */
+    public function verifyPayment(Request $request, $paymentId)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'receipt_number' => 'required|string|max:255',
+            'payment_date' => 'required|date',
+            'notes' => 'nullable|string',
         ]);
 
-        return back()->with('success', 'Property added successfully with zone: ' . $zoningRule->zone_name);
+        $payment = Payment::findOrFail($paymentId);
+        
+        $payment->update([
+            'payment_status' => 'verified',
+            'amount' => $validated['amount'],
+            'receipt_number' => $validated['receipt_number'],
+            'payment_date' => $validated['payment_date'],
+            'verified_by' => auth()->id(),
+            'verified_at' => now(),
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        return back()->with('success', 'Payment verified successfully!');
+    }
+
+    /**
+     * Reject payment
+     */
+    public function rejectPayment(Request $request, $paymentId)
+    {
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string',
+        ]);
+
+        $payment = Payment::findOrFail($paymentId);
+        
+        $payment->update([
+            'payment_status' => 'rejected',
+            'rejection_reason' => $validated['rejection_reason'],
+            'verified_by' => auth()->id(),
+            'verified_at' => now(),
+        ]);
+
+        return back()->with('success', 'Payment rejected successfully!');
+    }
+
+    /**
+     * Update payment details
+     */
+    public function updatePayment(Request $request, $paymentId)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|string|in:cash,check,bank_transfer',
+            'receipt_number' => 'required|string|max:255',
+            'payment_date' => 'required|date',
+            'payment_status' => 'required|in:pending,verified,rejected',
+            'notes' => 'nullable|string',
+        ]);
+
+        $payment = Payment::findOrFail($paymentId);
+        
+        $payment->update($validated);
+
+        return back()->with('success', 'Payment updated successfully!');
     }
 }

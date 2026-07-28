@@ -7,6 +7,8 @@ import {
     Settings,
     CheckSquare,
     Map,
+    CreditCard,
+    Award,
 } from "lucide-react";
 import { usePage } from "@inertiajs/react";
 
@@ -25,7 +27,7 @@ import {
 const teams = [
     {
         name: "CPDO - Ilagan City",
-        logo: "/images/ilagan1.png",
+        logo: "/images/Ilagan.png",
         plan: "Administrator",
     },
 ];
@@ -48,18 +50,18 @@ const adminNavMain = [
         ],
     },
     {
-        title: "GIS & Zoning",
+        title: "Processing",
         url: "#",
-        icon: Map,
+        icon: CheckSquare,
         isActive: false,
         items: [
             {
-                title: "Zoning Map",
-                url: "/admin/zoning-map",
+                title: "Payments",
+                url: "/admin/payments",
             },
             {
-                title: "Add Property",
-                url: "/admin/properties/add",
+                title: "Certificates",
+                url: "/admin/certificates",
             },
         ],
     },

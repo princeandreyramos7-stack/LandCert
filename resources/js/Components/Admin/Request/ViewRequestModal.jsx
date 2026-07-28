@@ -6,6 +6,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/Components/ui/dialog";
+import { Button } from "@/Components/ui/button";
+import { Badge } from "@/Components/ui/badge";
 import {
     User,
     Building2,
@@ -22,8 +24,8 @@ export function ViewRequestModal({ isOpen, onClose, request }) {
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-[98vw] w-full max-h-[95vh] bg-white border border-blue-300 rounded-lg overflow-hidden">
-                <DialogHeader className="pb-3 bg-blue-600 text-white p-4 -m-6 mb-4 rounded-t-lg">
+            <DialogContent className="max-w-[99vw] w-full max-h-[98vh] bg-white border border-blue-300 rounded-lg overflow-hidden">
+                <DialogHeader className="pb-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 -m-6 mb-6 rounded-t-lg shadow-md">
                     <DialogTitle className="text-lg font-bold text-white">
                         Request Details #{request.id}
                     </DialogTitle>
@@ -34,10 +36,9 @@ export function ViewRequestModal({ isOpen, onClose, request }) {
                     </DialogDescription>
                 </DialogHeader>
 
-                {/* Content Grid - 2 Column Layout */}
-                <div className="grid grid-cols-2 gap-6 overflow-y-auto max-h-[calc(90vh-120px)] px-1">
-                    {/* Left Column */}
-                    <div className="space-y-4">
+                {/* Content - Horizontal Single Column Layout */}
+                <div className="overflow-y-auto max-h-[calc(98vh-180px)] px-6 py-2">
+                    <div className="space-y-6 max-w-[95vw] mx-auto">
                         {/* Applicant Information */}
                         <InfoSection icon={User} title="Applicant Information">
                             <InfoField
@@ -132,10 +133,7 @@ export function ViewRequestModal({ isOpen, onClose, request }) {
                                 value={request.project_location_province}
                             />
                         </InfoSection>
-                    </div>
 
-                    {/* Right Column */}
-                    <div className="space-y-4">
                         {/* Project Area Details */}
                         <InfoSection icon={Building2} title="Project Area">
                             <InfoField
@@ -274,22 +272,24 @@ export function ViewRequestModal({ isOpen, onClose, request }) {
 
 // Helper Components
 function InfoSection({ icon: Icon, title, children }) {
-    return (
-        <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <Icon className="h-4 w-4" />
-                {title}
-            </h3>
-            <div className="space-y-3">{children}</div>
-        </div>
+return (
+    <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6 border border-gray-200 shadow-sm">
+        <h3 className="text-lg font-bold text-gray-800 mb-5 flex items-center gap-3 border-b border-gray-300 pb-3">
+            <div className="bg-blue-600 p-2 rounded-lg">
+                <Icon className="h-5 w-5 text-white" />
+            </div>
+            {title}
+        </h3>
+        <div className="grid grid-cols-3 gap-x-8 gap-y-4">{children}</div>
+    </div>
     );
 }
 
 function InfoField({ label, value }) {
     return (
         <div>
-            <p className="text-xs text-gray-500">{label}</p>
-            <p className="text-sm font-semibold text-gray-900">
+            <p className="text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">{label}</p>
+            <p className="text-base font-semibold text-gray-900 break-words">
                 {value || "N/A"}
             </p>
         </div>

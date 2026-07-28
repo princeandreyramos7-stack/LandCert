@@ -50,6 +50,50 @@ class ReminderService
         
         if ($mailable) {
             Mail::to($reminder->user->email)->send($mailable);
+            
+            // Send SMS notification
+            if ($reminder->user->contact_number) {
+                $this->sendSmsReminder($reminder);
+            }
+        }
+    }
+    
+    /**
+     * Send SMS reminder based on type
+     */
+    private function sendSmsReminder(Reminder $reminder): void
+    {
+        $smsService = app(SmsService::class);
+        $user = $reminder->user;
+        
+        switch ($reminder->type) {
+            case 'payment_due':
+                $metadata = $reminder->metadata ?? [];
+                $daysRemaining = $metadata['days_remaining'] ?? 0;
+                $smsService->sendPaymentReminder(
+                    $user->contact_number,
+                    $user->name,
+                    $reminder->related_id,
+                    $daysRemaining
+                );
+                break;
+                
+            case 'document_pending':
+                $smsService->sendDocumentReminder(
+                    $user->contact_number,
+                    $user->name,
+                    $reminder->related_id
+                );
+                break;
+                
+            case 'certificate_expiry':
+                $metadata = $reminder->metadata ?? [];
+                $certificateNumber = $metadata['certificate_number'] ?? '';
+                if ($certificateNumber) {
+                    $message = "{$user->name}, your certificate #{$certificateNumber} will expire soon. Please visit CPDO office for renewal.";
+                    $smsService->sendCustomMessage($user->contact_number, $message);
+                }
+                break;
         }
     }
 

@@ -19,8 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
             AdminUserSeeder::class,
-            ZoningRuleSeeder::class,
-            PropertyLocationSeeder::class,
+            DocumentTypeSeeder::class, // Seed document types
             // RequestSeeder::class, // Uncomment to seed 100 test requests
         ]);
     }

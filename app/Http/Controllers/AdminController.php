@@ -285,8 +285,10 @@ class AdminController extends Controller
     {
         $perPage = $request->input('per_page', 25); // Increased default pagination
         
-        // Get all requests with their related data
-        $requestsData = RequestModel::with('user')->orderBy('created_at', 'desc')->paginate($perPage);
+        // Get all requests with their related data including property location and DSS evaluation
+        $requestsData = RequestModel::with([
+            'user'
+        ])->orderBy('created_at', 'desc')->paginate($perPage);
         
         // Get applications and reports data
         $applicationsData = Application::with('report')->get()->keyBy(function($app) {
@@ -322,7 +324,8 @@ class AdminController extends Controller
      */
     public function viewRequest($id): Response
     {
-        $request = RequestModel::with('user')->findOrFail($id);
+        $request = RequestModel::with(['user'])
+            ->findOrFail($id);
         
         // Get application data
         $key = $request->applicant_name . '|' . $request->applicant_address;
@@ -413,7 +416,7 @@ class AdminController extends Controller
             "Updated evaluation status from '{$oldEvaluation}' to '{$report->evaluation}'"
         );
 
-        // Send email notification if status changed
+        // Send email and SMS notification if status changed
         if ($validated['evaluation'] !== $oldEvaluation) {
             try {
                 // Get the application and request details
@@ -445,6 +448,15 @@ class AdminController extends Controller
                                 );
                                 \Log::info('Application approval email sent to: ' . $user->email . ' for request ID: ' . $requestModel->id);
                                 
+                                // Send SMS notification
+                                if ($user->contact_number) {
+                                    app(\App\Services\SmsService::class)->sendApplicationApproved(
+                                        $user->contact_number,
+                                        $user->name,
+                                        $requestModel->id
+                                    );
+                                }
+                                
                                 // Schedule automatic payment reminder for 3 days
                                 try {
                                     app(\App\Services\ReminderService::class)->schedulePaymentReminder(
@@ -457,15 +469,27 @@ class AdminController extends Controller
                                     \Log::error('Failed to schedule payment reminder: ' . $e->getMessage());
                                 }
                             } elseif ($validated['evaluation'] === 'rejected') {
+                                $rejectionReason = $validated['description'] ?? 'Your application has been rejected. Please review and resubmit with the necessary corrections.';
+                                
                                 // Send rejection email immediately (not queued)
                                 \Mail::to($user->email)->send(
                                     new ApplicationRejected(
                                         $application,
                                         $application->applicant_name,
                                         $requestModel->id,
-                                        $validated['description'] ?? 'Your application has been rejected. Please review and resubmit with the necessary corrections.'
+                                        $rejectionReason
                                     )
                                 );
+                                
+                                // Send SMS notification
+                                if ($user->contact_number) {
+                                    app(\App\Services\SmsService::class)->sendApplicationRejected(
+                                        $user->contact_number,
+                                        $user->name,
+                                        $requestModel->id,
+                                        $rejectionReason
+                                    );
+                                }
                                 
                                 // Log the email sending for debugging
                                 \Log::info('Application rejection email sent to: ' . $user->email . ' for request ID: ' . $requestModel->id);
@@ -538,35 +562,266 @@ class AdminController extends Controller
      */
     public function payments(Request $request): Response
     {
-        $perPage = $request->input('per_page', 25); // Increased default pagination
+        $search = $request->input('search', '');
+        $statusFilter = $request->input('payment_status', '');
+        $methodFilter = $request->input('payment_method', '');
         
-        $payments = \App\Models\Payment::with(['request', 'application', 'verifier'])
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage)
+        $query = \App\Models\Payment::with(['request.user', 'verifiedByUser']);
+        
+        // Apply filters
+        if ($search) {
+            $query->whereHas('request', function($q) use ($search) {
+                $q->where('applicant_name', 'like', '%' . $search . '%')
+                  ->orWhere('receipt_number', 'like', '%' . $search . '%');
+            });
+        }
+        
+        if ($statusFilter) {
+            $query->where('payment_status', $statusFilter);
+        }
+        
+        if ($methodFilter) {
+            $query->where('payment_method', $methodFilter);
+        }
+        
+        $payments = $query->orderBy('created_at', 'desc')
+            ->paginate(15)
             ->through(function($payment) {
-                $request = $payment->request;
                 return [
                     'id' => $payment->id,
                     'request_id' => $payment->request_id,
-                    'applicant_name' => $request->applicant_name,
-                    'applicant_email' => $request->user?->email,
                     'amount' => $payment->amount,
                     'payment_method' => $payment->payment_method,
                     'receipt_number' => $payment->receipt_number,
                     'receipt_file_path' => $payment->receipt_file_path,
                     'payment_date' => $payment->payment_date,
                     'payment_status' => $payment->payment_status,
-                    'verified_by_name' => $payment->verifier?->name,
+                    'verified_by' => $payment->verified_by,
                     'verified_at' => $payment->verified_at,
                     'rejection_reason' => $payment->rejection_reason,
                     'notes' => $payment->notes,
                     'created_at' => $payment->created_at,
+                    'request' => $payment->request ? [
+                        'id' => $payment->request->id,
+                        'applicant_name' => $payment->request->applicant_name,
+                        'project_type' => $payment->request->project_type,
+                    ] : null,
+                    'verified_by_user' => $payment->verifiedByUser ? [
+                        'name' => $payment->verifiedByUser->name,
+                    ] : null,
                 ];
             });
 
         return Inertia::render('Admin/Payments', [
             'payments' => $payments,
+            'filters' => [
+                'search' => $search,
+                'payment_status' => $statusFilter,
+                'payment_method' => $methodFilter,
+            ],
         ]);
+    }
+
+    /**
+     * Verify a payment
+     */
+    public function verifyPayment(Request $request, $paymentId)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'receipt_number' => 'required|string',
+            'payment_date' => 'required|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        $payment = \App\Models\Payment::findOrFail($paymentId);
+        
+        $payment->update([
+            'payment_status' => 'verified',
+            'amount' => $validated['amount'],
+            'receipt_number' => $validated['receipt_number'],
+            'payment_date' => $validated['payment_date'],
+            'notes' => $validated['notes'] ?? $payment->notes,
+            'verified_by' => auth()->id(),
+            'verified_at' => now(),
+        ]);
+
+        // Log audit
+        AuditLogService::logUpdate(
+            'Payment',
+            $payment->id,
+            ['payment_status' => 'pending'],
+            ['payment_status' => 'verified'],
+            'Payment verified by admin'
+        );
+
+        return back()->with('success', 'Payment verified successfully!');
+    }
+
+    /**
+     * Reject a payment
+     */
+    public function rejectPayment(Request $request, $paymentId)
+    {
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string',
+        ]);
+
+        $payment = \App\Models\Payment::findOrFail($paymentId);
+        
+        $payment->update([
+            'payment_status' => 'rejected',
+            'rejection_reason' => $validated['rejection_reason'],
+            'verified_by' => auth()->id(),
+            'verified_at' => now(),
+        ]);
+
+        // Log audit
+        AuditLogService::logUpdate(
+            'Payment',
+            $payment->id,
+            ['payment_status' => $payment->getOriginal('payment_status')],
+            ['payment_status' => 'rejected'],
+            'Payment rejected by admin: ' . $validated['rejection_reason']
+        );
+
+        return back()->with('success', 'Payment rejected!');
+    }
+
+    /**
+     * Display all certificates
+     */
+    public function certificates(Request $request): Response
+    {
+        $search = $request->input('search', '');
+        $statusFilter = $request->input('status', '');
+        
+        $query = \App\Models\Certificate::with(['request.user', 'release']);
+        
+        // Apply filters
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('certificate_number', 'like', '%' . $search . '%')
+                  ->orWhereHas('request', function($rq) use ($search) {
+                      $rq->where('applicant_name', 'like', '%' . $search . '%');
+                  });
+            });
+        }
+        
+        if ($statusFilter) {
+            $query->where('status', $statusFilter);
+        }
+        
+        $certificates = $query->orderBy('issued_at', 'desc')
+            ->paginate(15)
+            ->through(function($certificate) {
+                return [
+                    'id' => $certificate->id,
+                    'request_id' => $certificate->request_id,
+                    'certificate_number' => $certificate->certificate_number,
+                    'status' => $certificate->status,
+                    'issued_at' => $certificate->issued_at,
+                    'valid_until' => $certificate->valid_until,
+                    'created_at' => $certificate->created_at,
+                    'request' => $certificate->request ? [
+                        'id' => $certificate->request->id,
+                        'applicant_name' => $certificate->request->applicant_name,
+                        'project_type' => $certificate->request->project_type,
+                    ] : null,
+                    'release' => $certificate->release ? [
+                        'collected_by_name' => $certificate->release->collected_by_name,
+                        'relationship_to_applicant' => $certificate->release->relationship_to_applicant,
+                        'valid_id_type' => $certificate->release->valid_id_type,
+                        'valid_id_number' => $certificate->release->valid_id_number,
+                        'release_date' => $certificate->release->release_date,
+                        'release_time' => $certificate->release->release_time,
+                    ] : null,
+                ];
+            });
+
+        return Inertia::render('Admin/Certificates', [
+            'certificates' => $certificates,
+            'filters' => [
+                'search' => $search,
+                'status' => $statusFilter,
+            ],
+        ]);
+    }
+
+    /**
+     * Mark certificate as ready for collection
+     */
+    public function markCertificateReady(Request $request, $certificateId)
+    {
+        $validated = $request->validate([
+            'certificate_number' => 'required|string',
+            'notes' => 'nullable|string',
+        ]);
+
+        $certificate = \App\Models\Certificate::findOrFail($certificateId);
+        
+        $certificate->update([
+            'status' => 'ready_for_collection',
+            'certificate_number' => $validated['certificate_number'],
+        ]);
+
+        // Log audit
+        AuditLogService::logUpdate(
+            'Certificate',
+            $certificate->id,
+            ['status' => $certificate->getOriginal('status')],
+            ['status' => 'ready_for_collection'],
+            'Certificate marked as ready for collection by admin'
+        );
+
+        return back()->with('success', 'Certificate marked as ready for collection!');
+    }
+
+    /**
+     * Record certificate collection
+     */
+    public function releaseCertificate(Request $request, $certificateId)
+    {
+        $validated = $request->validate([
+            'collected_by_name' => 'required|string',
+            'relationship_to_applicant' => 'required|string',
+            'valid_id_type' => 'required|string',
+            'valid_id_number' => 'required|string',
+            'release_date' => 'required|date',
+            'release_time' => 'required',
+            'remarks' => 'nullable|string',
+        ]);
+
+        $certificate = \App\Models\Certificate::findOrFail($certificateId);
+        
+        // Create release record
+        \App\Models\CertificateRelease::create([
+            'certificate_id' => $certificate->id,
+            'collected_by_name' => $validated['collected_by_name'],
+            'relationship_to_applicant' => $validated['relationship_to_applicant'],
+            'valid_id_type' => $validated['valid_id_type'],
+            'valid_id_number' => $validated['valid_id_number'],
+            'release_date' => $validated['release_date'],
+            'release_time' => $validated['release_time'],
+            'released_by' => auth()->id(),
+            'remarks' => $validated['remarks'] ?? null,
+        ]);
+
+        // Update certificate status
+        $certificate->update([
+            'status' => 'collected',
+        ]);
+
+        // Log audit
+        AuditLogService::logUpdate(
+            'Certificate',
+            $certificate->id,
+            ['status' => 'ready_for_collection'],
+            ['status' => 'collected'],
+            'Certificate collection recorded by admin'
+        );
+
+        return back()->with('success', 'Certificate collection recorded successfully!');
     }
     
     /**
@@ -828,229 +1083,6 @@ class AdminController extends Controller
         return $pdf->download($filename);
     }
 
-    /**
-     * Verify a payment
-     */
-    public function verifyPayment(Request $request, $paymentId)
-    {
-        $payment = \App\Models\Payment::findOrFail($paymentId);
-        
-        $payment->update([
-            'payment_status' => 'verified',
-            'verified_by' => auth()->id(),
-            'verified_at' => now(),
-        ]);
-
-        // Update workflow status
-        if ($payment->application_id) {
-            $report = Report::where('app_id', $payment->application_id)->first();
-            if ($report) {
-                $report->update(['workflow_status' => 'payment_verified']);
-            }
-        }
-
-        // Log status change
-        \App\Models\StatusHistory::logChange(
-            $payment->request_id,
-            'payment',
-            'pending',
-            'verified',
-            auth()->id(),
-            'Payment verified by admin'
-        );
-
-        // Generate certificate automatically
-        try {
-            \Log::info('Starting certificate generation for payment: ' . $payment->id);
-            $this->generateCertificate($payment);
-            \Log::info('Certificate generation completed for payment: ' . $payment->id);
-        } catch (\Exception $e) {
-            \Log::error('Failed to generate certificate: ' . $e->getMessage(), [
-                'payment_id' => $payment->id,
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-
-        return back()->with('success', 'Payment verified and certificate generated successfully!');
-    }
-
-    /**
-     * Generate certificate PDF
-     */
-    private function generateCertificate($payment)
-    {
-        \Log::info('generateCertificate called', ['payment_id' => $payment->id]);
-        
-        $requestModel = RequestModel::find($payment->request_id);
-        $application = Application::find($payment->application_id);
-        
-        \Log::info('Found models', [
-            'request_model' => $requestModel ? $requestModel->id : 'null',
-            'application' => $application ? $application->id : 'null'
-        ]);
-        
-        if (!$requestModel || !$application) {
-            \Log::error('Missing required models for certificate generation', [
-                'payment_id' => $payment->id,
-                'request_id' => $payment->request_id,
-                'application_id' => $payment->application_id
-            ]);
-            return;
-        }
-
-        // Generate certificate number
-        $certificateNumber = \App\Models\Certificate::generateCertificateNumber();
-
-        // Prepare certificate data
-        $projectLocation = collect([
-            $requestModel->project_location_street,
-            $requestModel->project_location_barangay,
-            $requestModel->project_location_city ?? $requestModel->project_location_municipality,
-            $requestModel->project_location_province
-        ])->filter()->implode(', ');
-
-        $data = [
-            'certificateNumber' => $certificateNumber,
-            'applicantName' => $requestModel->applicant_name,
-            'projectLocation' => $projectLocation ?: 'N/A',
-            'projectType' => $requestModel->project_type ?? 'N/A',
-            'projectNature' => $requestModel->project_nature ?? 'N/A',
-            'lotArea' => $requestModel->lot_area_sqm ? number_format($requestModel->lot_area_sqm, 2) : 'N/A',
-            'projectCost' => $requestModel->project_cost,
-            'issuedDate' => now()->format('F d, Y'),
-            'validUntil' => now()->addYears(5)->format('F d, Y'),
-            'issuedBy' => auth()->user()->name,
-        ];
-
-        \Log::info('Generating PDF with data', ['certificate_number' => $certificateNumber]);
-        
-        // Generate PDF
-        try {
-            $pdf = Pdf::loadView('certificates.professional-template', $data);
-            $pdf->setPaper('a4', 'landscape');
-            \Log::info('PDF generated successfully');
-        } catch (\Exception $e) {
-            \Log::error('PDF generation failed: ' . $e->getMessage());
-            throw $e;
-        }
-        
-        // Save PDF
-        $filename = 'certificates/' . $certificateNumber . '.pdf';
-        try {
-            \Storage::disk('public')->put($filename, $pdf->output());
-            \Log::info('PDF saved successfully', ['filename' => $filename]);
-        } catch (\Exception $e) {
-            \Log::error('PDF save failed: ' . $e->getMessage());
-            throw $e;
-        }
-
-        // Create certificate record
-        $certificate = \App\Models\Certificate::create([
-            'request_id' => $payment->request_id,
-            'application_id' => $payment->application_id,
-            'payment_id' => $payment->id,
-            'certificate_number' => $certificateNumber,
-            'certificate_file_path' => $filename,
-            'issued_by' => auth()->id(),
-            'issued_at' => now(),
-            'valid_until' => now()->addYears(5),
-            'status' => 'generated',
-        ]);
-
-        // Update workflow status
-        if ($payment->application_id) {
-            $report = Report::where('app_id', $payment->application_id)->first();
-            if ($report) {
-                $report->update(['workflow_status' => 'certificate_issued']);
-            }
-        }
-
-        // Log status change
-        \App\Models\StatusHistory::logChange(
-            $payment->request_id,
-            'certificate',
-            null,
-            'generated',
-            auth()->id(),
-            'Certificate generated: ' . $certificateNumber
-        );
-
-        // Send email with certificate
-        try {
-            $user = \App\Models\User::find($requestModel->user_id);
-            if ($user) {
-                \Mail::to($user->email)->send(
-                    new \App\Mail\CertificateIssued(
-                        $certificate,
-                        $requestModel->applicant_name,
-                        $certificateNumber
-                    )
-                );
-                
-                // Update certificate status to sent
-                $certificate->update(['status' => 'sent']);
-            }
-        } catch (\Exception $e) {
-            \Log::error('Failed to send certificate email: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Reject a payment
-     */
-    public function rejectPayment(Request $request, $paymentId)
-    {
-        $validated = $request->validate([
-            'rejection_reason' => 'required|string',
-        ]);
-
-        $payment = \App\Models\Payment::findOrFail($paymentId);
-        
-        $payment->update([
-            'payment_status' => 'rejected',
-            'verified_by' => auth()->id(),
-            'verified_at' => now(),
-            'rejection_reason' => $validated['rejection_reason'],
-        ]);
-
-        // Log status change
-        \App\Models\StatusHistory::logChange(
-            $payment->request_id,
-            'payment',
-            'pending',
-            'rejected',
-            auth()->id(),
-            'Payment rejected: ' . $validated['rejection_reason']
-        );
-
-        // Send rejection email to applicant
-        try {
-            $requestModel = RequestModel::find($payment->request_id);
-            if ($requestModel && $requestModel->user_id) {
-                $user = \App\Models\User::find($requestModel->user_id);
-                if ($user) {
-                    // Send payment rejection email immediately (not queued)
-                    \Mail::to($user->email)->send(
-                        new PaymentRejected(
-                            $payment,
-                            $requestModel->applicant_name,
-                            $requestModel->id,
-                            $validated['rejection_reason']
-                        )
-                    );
-                    
-                    // Log the email sending for debugging
-                    \Log::info('Payment rejection email sent to: ' . $user->email . ' for payment ID: ' . $payment->id);
-                }
-            }
-        } catch (\Exception $e) {
-            // Log the error but don't fail the request
-            \Log::error('Failed to send payment rejection email: ' . $e->getMessage());
-        }
-
-        return back()->with('success', 'Payment rejected and notification sent to applicant.');
-    }
-    
     /**
      * Global search across all modules
      */
@@ -1703,95 +1735,5 @@ class AdminController extends Controller
         $log = AuditLog::with('user')->findOrFail($id);
 
         return response()->json($log);
-    }
-
-    /**
-     * Display zoning map with GIS features (Admin)
-     */
-    public function zoningMapAdmin(Request $request): Response
-    {
-        // Get all property locations with zoning information
-        $properties = \App\Models\PropertyLocation::with(['zoningRule'])
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($property) {
-                return [
-                    'id' => $property->id,
-                    'address' => $property->address,
-                    'barangay' => $property->barangay,
-                    'district' => $property->district,
-                    'latitude' => $property->latitude,
-                    'longitude' => $property->longitude,
-                    'lot_area' => $property->lot_area,
-                    'lot_number' => $property->lot_number,
-                    'title_number' => $property->title_number,
-                    'zone_classification' => $property->zoningRule?->zone_type ?? 'Unclassified',
-                    'zone_name' => $property->zoningRule?->zone_name ?? 'N/A',
-                    'zone_code' => $property->zoningRule?->zone_code ?? 'N/A',
-                    'zoning_rule' => $property->zoningRule,
-                ];
-            });
-
-        // Get all zoning rules
-        $zoningRules = \App\Models\ZoningRule::where('is_active', true)->get();
-
-        // Get statistics
-        $propertiesByZone = \App\Models\PropertyLocation::with('zoningRule')
-            ->get()
-            ->groupBy(function ($property) {
-                return $property->zoningRule?->zone_type ?? 'Unclassified';
-            })
-            ->map(function ($group) {
-                return $group->count();
-            });
-
-        $stats = [
-            'total_properties' => \App\Models\PropertyLocation::count(),
-            'total_zones' => \App\Models\ZoningRule::where('is_active', true)->count(),
-            'properties_by_zone' => $propertiesByZone,
-        ];
-
-        return Inertia::render('Admin/ZoningMap', [
-            'properties' => $properties,
-            'zoningRules' => $zoningRules,
-            'stats' => $stats,
-        ]);
-    }
-
-    /**
-     * Store a new property location (Admin)
-     */
-    public function storePropertyAdmin(Request $request)
-    {
-        $validated = $request->validate([
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
-            'address' => 'required|string|max:500',
-            'barangay' => 'required|string|max:255',
-            'zone_type' => 'required|string|in:residential,commercial,industrial,agricultural,institutional,mixed',
-            'lot_area' => 'nullable|numeric|min:0',
-        ]);
-
-        // Find the first active zoning rule based on zone type
-        $zoningRule = \App\Models\ZoningRule::where('zone_type', $validated['zone_type'])
-            ->where('is_active', true)
-            ->first();
-
-        if (!$zoningRule) {
-            return back()->with('error', 'No active zoning rule found for ' . $validated['zone_type']);
-        }
-
-        // Create the property
-        $property = \App\Models\PropertyLocation::create([
-            'latitude' => $validated['latitude'],
-            'longitude' => $validated['longitude'],
-            'address' => $validated['address'],
-            'barangay' => $validated['barangay'],
-            'district' => 'District 1', // Default, can be made dynamic
-            'zoning_rule_id' => $zoningRule->id,
-            'lot_area' => $validated['lot_area'] ?? null,
-        ]);
-
-        return back()->with('success', 'Property added successfully with zone: ' . $zoningRule->zone_name);
     }
 }

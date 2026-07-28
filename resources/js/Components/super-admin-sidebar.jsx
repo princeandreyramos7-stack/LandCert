@@ -7,6 +7,9 @@ import {
     ScrollText,
     Map,
     FolderKanban,
+    Plus,
+    CreditCard,
+    Award,
 } from "lucide-react";
 
 import { NavMain } from "@/Components/nav-main";
@@ -49,19 +52,6 @@ export function SuperAdminSidebar({ ...props }) {
                 ],
             },
             {
-                title: "GIS & ZONING",
-                url: "#",
-                icon: Map,
-                isActive: false,
-                items: [
-                    {
-                        title: "Zoning Map",
-                        url: route("super-admin.zoning-map"),
-                        icon: Map,
-                    },
-                ],
-            },
-            {
                 title: "Management",
                 url: "#",
                 icon: FolderKanban,
@@ -71,6 +61,16 @@ export function SuperAdminSidebar({ ...props }) {
                         title: "Users Management",
                         url: route("super-admin.users"),
                         icon: Users,
+                    },
+                    {
+                        title: "Payments",
+                        url: route("super-admin.payments"),
+                        icon: CreditCard,
+                    },
+                    {
+                        title: "Certificates",
+                        url: route("super-admin.certificates"),
+                        icon: Award,
                     },
                     {
                         title: "Audit Logs",
@@ -86,8 +86,12 @@ export function SuperAdminSidebar({ ...props }) {
         <Sidebar collapsible="icon" {...props}>
             <SidebarHeader>
                 <div className="flex items-center gap-2 px-2 py-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-lg">
-                        <Shield className="h-6 w-6" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden">
+                        <img 
+                            src="/images/Ilagan.png" 
+                            alt="CPDO Logo" 
+                            className="h-full w-full object-contain"
+                        />
                     </div>
                     <div className="flex flex-col group-data-[collapsible=icon]:hidden">
                         <span className="text-sm font-semibold">CPDO - Ilagan City</span>

@@ -11,16 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Drop foreign keys first
-        Schema::table('certificates', function (Blueprint $table) {
-            $table->dropForeign(['payment_id']);
-        });
+        // NOTE: We do NOT drop certificates and payments tables - they are needed for physical document tracking
+        // These tables were moved to a separate workflow outside of the online payment gateway
+        
+        // Drop foreign keys first if tables exist
+        if (Schema::hasTable('certificates')) {
+            Schema::table('certificates', function (Blueprint $table) {
+                // Check if foreign key exists before dropping
+                try {
+                    $table->dropForeign(['payment_id']);
+                } catch (\Exception $e) {
+                    // Foreign key might not exist, continue
+                }
+            });
+        }
 
-        // Drop certificates table (depends on payments)
-        Schema::dropIfExists('certificates');
+        // DO NOT drop certificates table - it's used for physical document tracking
+        // Schema::dropIfExists('certificates');
 
-        // Drop payments table
-        Schema::dropIfExists('payments');
+        // DO NOT drop payments table - it's used for physical payment tracking
+        // Schema::dropIfExists('payments');
 
         // Remove payment-related columns from requests table if they exist
         if (Schema::hasTable('requests')) {

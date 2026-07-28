@@ -21,8 +21,15 @@ class RequestController extends Controller
      */
     public function dashboard()
     {
-        // Check if user has admin role and redirect to admin dashboard
-        if (auth()->user()->hasRole('admin')) {
+        $user = auth()->user();
+        
+        // Check if user is super admin and redirect to super admin dashboard
+        if ($user->user_type === 'super_admin' || $user->hasRole('super_admin')) {
+            return redirect()->route('super-admin.dashboard');
+        }
+        
+        // Check if user is admin and redirect to admin dashboard
+        if ($user->user_type === 'admin' || $user->hasRole('admin')) {
             return redirect()->route('admin.dashboard');
         }
 
@@ -220,6 +227,15 @@ class RequestController extends Controller
             Mail::to(auth()->user()->email)->send(
                 new ApplicationSubmitted($result['application'], auth()->user()->name)
             );
+            
+            // Send SMS notification
+            if (auth()->user()->contact_number) {
+                app(\App\Services\SmsService::class)->sendApplicationSubmitted(
+                    auth()->user()->contact_number,
+                    auth()->user()->name,
+                    $result['request']->id
+                );
+            }
         } catch (\Exception $e) {
             // Log the error but don't fail the request
             \Log::error('Failed to send application email: ' . $e->getMessage());

@@ -3,6 +3,8 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RequestController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\CertificateController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -34,10 +36,6 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
     Route::get('/dashboard', [\App\Http\Controllers\SuperAdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/requests', [\App\Http\Controllers\SuperAdminController::class, 'requests'])->name('requests');
     
-    // GIS & Zoning
-    Route::get('/zoning-map', [\App\Http\Controllers\SuperAdminController::class, 'zoningMap'])->name('zoning-map');
-    Route::post('/properties', [\App\Http\Controllers\SuperAdminController::class, 'storeProperty'])->name('properties.store');
-    
     // Management
     Route::get('/users', [\App\Http\Controllers\SuperAdminController::class, 'users'])->name('users');
     Route::get('/users/create', function () {
@@ -53,6 +51,18 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
     Route::post('/create-admin', [\App\Http\Controllers\SuperAdminController::class, 'createAdmin'])->name('create-admin');
     Route::put('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'deleteUser'])->name('users.delete');
+    
+    // Certificate Management Routes (Physical Certificates)
+    Route::get('/certificates', [\App\Http\Controllers\SuperAdminController::class, 'certificates'])->name('certificates');
+    Route::put('/certificates/{certificate}', [\App\Http\Controllers\SuperAdminController::class, 'updateCertificate'])->name('certificates.update');
+    Route::post('/certificates/{certificate}/mark-ready', [\App\Http\Controllers\SuperAdminController::class, 'markCertificateReady'])->name('certificates.mark-ready');
+    Route::post('/certificates/{certificate}/release', [\App\Http\Controllers\SuperAdminController::class, 'releaseCertificate'])->name('certificates.release');
+    
+    // Payment Management Routes (Physical Payments)
+    Route::get('/payments', [\App\Http\Controllers\SuperAdminController::class, 'payments'])->name('payments');
+    Route::put('/payments/{payment}', [\App\Http\Controllers\SuperAdminController::class, 'updatePayment'])->name('payments.update');
+    Route::post('/payments/{payment}/verify', [\App\Http\Controllers\SuperAdminController::class, 'verifyPayment'])->name('payments.verify');
+    Route::post('/payments/{payment}/reject', [\App\Http\Controllers\SuperAdminController::class, 'rejectPayment'])->name('payments.reject');
 });
 
 // Admin routes
@@ -71,6 +81,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/update-evaluation/{reportId}', [AdminController::class, 'updateEvaluation'])->name('update-evaluation');
     Route::delete('/delete-request/{requestId}', [AdminController::class, 'deleteRequest'])->name('delete-request');
     
+    // Payment Management Routes (Admin can verify/reject)
+    Route::get('/payments', [AdminController::class, 'payments'])->name('payments');
+    Route::post('/payments/{payment}/verify', [AdminController::class, 'verifyPayment'])->name('payments.verify');
+    Route::post('/payments/{payment}/reject', [AdminController::class, 'rejectPayment'])->name('payments.reject');
+    
+    // Certificate Management Routes (Admin can mark ready and record collection)
+    Route::get('/certificates', [AdminController::class, 'certificates'])->name('certificates');
+    Route::post('/certificates/{certificate}/mark-ready', [AdminController::class, 'markCertificateReady'])->name('certificates.mark-ready');
+    Route::post('/certificates/{certificate}/release', [AdminController::class, 'releaseCertificate'])->name('certificates.release');
+    
     // Export routes
     Route::get('/export/applications', [AdminController::class, 'exportApplications'])->name('export.applications');
     Route::get('/export/requests', [AdminController::class, 'exportRequests'])->name('export.requests');
@@ -85,16 +105,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/audit-logs', [AdminController::class, 'auditLogs'])->name('audit-logs');
     Route::get('/audit-logs/export', [AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
     Route::get('/audit-logs/{id}', [AdminController::class, 'viewAuditLog'])->name('audit-logs.view');
-    
-    // DSS and GIS routes
-    Route::get('/zoning-map', [AdminController::class, 'zoningMapAdmin'])->name('zoning-map');
-    Route::post('/properties', [AdminController::class, 'storePropertyAdmin'])->name('properties.store');
-    Route::post('/requests/{request}/evaluate', [\App\Http\Controllers\DssController::class, 'evaluate'])->name('requests.evaluate');
-    Route::get('/dss-evaluation/{evaluation}', [\App\Http\Controllers\DssController::class, 'show'])->name('dss-evaluation.show');
-    
-    // Property management routes
-    Route::get('/properties/add', [\App\Http\Controllers\DssController::class, 'addProperty'])->name('properties.add');
-    Route::post('/properties/store-old', [\App\Http\Controllers\DssController::class, 'storeProperty'])->name('properties.store-old');
 });
 
 // Notification routes
