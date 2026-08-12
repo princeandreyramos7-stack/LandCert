@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\Request;
 use App\Services\DashboardCacheService;
 use App\Services\AuditLogService;
+use App\Services\NotificationService;
 use App\Mail\ApplicationSubmitted;
 use Illuminate\Support\Facades\Mail;
 
@@ -24,12 +25,20 @@ class RequestObserver
     {
         $this->cacheService->clearCache();
         
+        // Load relationships to access normalized data
+        $request->load(['applicant.corporation', 'applicant.representative', 'project', 'location', 'property', 'user']);
+        
+        $applicantName = $request->applicant->applicant_name ?? 'Applicant';
+        
         AuditLogService::logCreate(
             'Request',
             $request->id,
             $request->toArray(),
-            "Created new request for {$request->applicant_name}"
+            "Created new request for {$applicantName}"
         );
+        
+        // Create notifications for application submission
+        NotificationService::applicationSubmitted($request);
         
         // Send email notification to the user
         if ($request->user && $request->user->email) {
@@ -38,10 +47,10 @@ class RequestObserver
                     new ApplicationSubmitted(
                         (object)[
                             'id' => $request->id,
-                            'applicant_name' => $request->applicant_name,
-                            'applicant_address' => $request->applicant_address,
-                            'project_type' => $request->project_type,
-                            'project_nature' => $request->project_nature,
+                            'applicant_name' => $applicantName,
+                            'applicant_address' => $request->applicant->applicant_address ?? 'N/A',
+                            'project_type' => $request->project->project_type ?? 'N/A',
+                            'project_nature' => $request->project->project_nature ?? 'N/A',
                         ],
                         $request->user->name
                     )
@@ -60,13 +69,30 @@ class RequestObserver
     {
         $this->cacheService->clearCache();
         
+        // Load relationships to access normalized data
+        $request->load(['applicant']);
+        $applicantName = $request->applicant->applicant_name ?? 'Applicant';
+        
         AuditLogService::logUpdate(
             'Request',
             $request->id,
             $request->getOriginal(),
             $request->getChanges(),
-            "Updated request for {$request->applicant_name}"
+            "Updated request for {$applicantName}"
         );
+        
+        // Check if status changed to create appropriate notifications
+        if ($request->isDirty('status')) {
+            $newStatus = $request->status;
+            $oldStatus = $request->getOriginal('status');
+            
+            if ($newStatus === 'approved' && $oldStatus !== 'approved') {
+                NotificationService::applicationApproved($request, auth()->user());
+            } elseif ($newStatus === 'rejected' && $oldStatus !== 'rejected') {
+                $reason = $request->rejection_reason ?? 'Application did not meet the requirements';
+                NotificationService::applicationRejected($request, $reason, auth()->user());
+            }
+        }
     }
 
     /**
@@ -76,11 +102,15 @@ class RequestObserver
     {
         $this->cacheService->clearCache();
         
+        // Load relationships to access normalized data
+        $request->load(['applicant']);
+        $applicantName = $request->applicant->applicant_name ?? 'Applicant';
+        
         AuditLogService::logDelete(
             'Request',
             $request->id,
             $request->toArray(),
-            "Deleted request for {$request->applicant_name}"
+            "Deleted request for {$applicantName}"
         );
     }
 }

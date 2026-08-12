@@ -33,15 +33,22 @@ class RequestController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
-        // Get requests for the currently logged-in user only
+        // Get requests for the currently logged-in user with related data from normalized tables
         $requests = RequestModel::where('requests.user_id', auth()->id())
-            ->leftJoin('applications', function($join) {
-                $join->on('requests.applicant_name', '=', 'applications.applicant_name')
-                     ->on('requests.applicant_address', '=', 'applications.applicant_address');
-            })
-            ->leftJoin('reports', 'applications.id', '=', 'reports.app_id')
+            ->leftJoin('reports', 'requests.id', '=', 'reports.request_id')
+            ->leftJoin('applicants', 'requests.applicant_id', '=', 'applicants.id')
+            ->leftJoin('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
+            ->leftJoin('locations', 'requests.id', '=', 'locations.request_id')
             ->select(
-                'requests.*',
+                'requests.id',
+                'requests.user_id',
+                'requests.status as request_status',
+                'requests.created_at',
+                'requests.updated_at',
+                'applicants.applicant_name',
+                'normalized_projects.project_type',
+                'normalized_projects.project_nature',
+                'locations.city_municipality as project_location_city',
                 DB::raw('COALESCE(reports.evaluation, requests.status) as status')
             )
             ->orderBy('requests.created_at', 'desc')
@@ -65,16 +72,63 @@ class RequestController extends Controller
      */
     public function myApplications(): Response
     {
-        // Get all requests for the currently logged-in user with related data
+        // Get all requests for the currently logged-in user with related data from normalized tables
         $applications = RequestModel::where('requests.user_id', auth()->id())
-            ->leftJoin('applications', function($join) {
-                $join->on('requests.applicant_name', '=', 'applications.applicant_name')
-                     ->on('requests.applicant_address', '=', 'applications.applicant_address');
-            })
-            ->leftJoin('reports', 'applications.id', '=', 'reports.app_id')
+            ->leftJoin('reports', 'requests.id', '=', 'reports.request_id')
+            ->leftJoin('applicants', 'requests.applicant_id', '=', 'applicants.id')
+            ->leftJoin('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
+            ->leftJoin('locations', 'requests.id', '=', 'locations.request_id')
+            ->leftJoin('properties', 'requests.id', '=', 'properties.request_id')
+            ->leftJoin('normalized_corporations', 'applicants.id', '=', 'normalized_corporations.applicant_id')
+            ->leftJoin('representatives', 'applicants.id', '=', 'representatives.applicant_id')
             ->select(
-                'requests.*',
-                'applications.id as application_id',
+                'requests.id',
+                'requests.id as application_id',
+                'requests.user_id',
+                'requests.status as request_status',
+                'requests.control_number',
+                'requests.has_written_notice',
+                'requests.notice_officer_name',
+                'requests.notice_dates',
+                'requests.has_similar_application',
+                'requests.similar_application_offices',
+                'requests.similar_application_dates',
+                'requests.preferred_release_mode',
+                'requests.release_address',
+                'requests.created_at',
+                'requests.updated_at',
+                // Applicant fields
+                'applicants.applicant_name',
+                'applicants.applicant_address',
+                'applicants.applicant_contact',
+                // Corporation fields
+                'normalized_corporations.corporation_name',
+                'normalized_corporations.corporation_address',
+                // Representative fields
+                'representatives.representative_name as authorized_representative_name',
+                'representatives.representative_address as authorized_representative_address',
+                // Project fields
+                'normalized_projects.project_type',
+                'normalized_projects.project_nature',
+                'normalized_projects.project_nature_duration',
+                'normalized_projects.project_nature_years',
+                'normalized_projects.project_cost',
+                // Location fields
+                'locations.street_address as project_location_street',
+                'locations.barangay as project_location_barangay',
+                'locations.city_municipality as project_location_city',
+                'locations.province as project_location_province',
+                // Property fields
+                'properties.lot_area_sqm',
+                'properties.bldg_improvement_sqm',
+                'properties.lot_number as project_location_number',
+                'properties.right_over_land',
+                'properties.existing_land_use',
+                // Note: project_area_sqm doesn't exist in normalized structure
+                DB::raw('properties.lot_area_sqm as project_area_sqm'),
+                // Report fields
+                'reports.evaluation',
+                'reports.amount as report_amount',
                 DB::raw('COALESCE(reports.evaluation, requests.status) as status')
             )
             ->orderBy('requests.created_at', 'desc')
@@ -91,8 +145,8 @@ class RequestController extends Controller
     public function store(Request $request)
     {
         // Check for recent duplicate submissions (within last 5 minutes)
+        // Since applicant_name was moved to applicants table, check by user_id and time only
         $recentRequest = RequestModel::where('user_id', auth()->id())
-            ->where('applicant_name', $request->input('applicant_name'))
             ->where('created_at', '>=', now()->subMinutes(5))
             ->first();
             
@@ -141,91 +195,99 @@ class RequestController extends Controller
 
         // Use a database transaction to ensure all records are created together
         $result = DB::transaction(function () use ($validated, $request) {
-            $corpId = null;
-            $projectId = null;
-            $authorizationLetterPath = null;
+            // 1. Create Applicant record
+            $applicant = \App\Models\Applicant::create([
+                'applicant_name' => $validated['applicant_name'],
+                'applicant_address' => $validated['applicant_address'],
+                'applicant_type' => isset($validated['corporation_name']) ? 'corporate' : 'individual',
+            ]);
 
-            // Handle authorization letter upload
-            if ($request->hasFile('authorization_letter')) {
-                $authorizationLetterPath = $request->file('authorization_letter')->store('authorization_letters', 'public');
-            }
+            // 2. Create the Request record
+            $newRequest = RequestModel::create([
+                'user_id' => auth()->id(),
+                'applicant_id' => $applicant->id,
+                'status' => 'pending',
+                'has_written_notice' => $validated['has_written_notice'] ?? 'no',
+                'notice_officer_name' => $validated['notice_officer_name'] ?? null,
+                'notice_dates' => $validated['notice_dates'] ?? null,
+                'has_similar_application' => $validated['has_similar_application'] ?? 'no',
+                'similar_application_offices' => $validated['similar_application_offices'] ?? null,
+                'similar_application_dates' => $validated['similar_application_dates'] ?? null,
+                'preferred_release_mode' => $validated['preferred_release_mode'] ?? 'pickup',
+                'release_address' => $validated['release_address'] ?? null,
+            ]);
 
-            // Create Corporation if corporation_name is provided
-            if (!empty($validated['corporation_name'])) {
-                $corporation = Corporation::create([
+            // 3. Create Corporation record if applicable
+            if (isset($validated['corporation_name']) && !empty($validated['corporation_name'])) {
+                \App\Models\NormalizedCorporation::create([
+                    'applicant_id' => $applicant->id,
                     'corporation_name' => $validated['corporation_name'],
                     'corporation_address' => $validated['corporation_address'] ?? '',
                 ]);
-                $corpId = $corporation->id;
             }
 
-            // Build project location from individual fields
-            $locationParts = array_filter([
-                $validated['project_location_number'] ?? null,
-                $validated['project_location_street'] ?? null,
-                $validated['project_location_barangay'] ?? null,
-                $validated['project_location_city'] ?? null,
-                $validated['project_location_municipality'] ?? null,
-                $validated['project_location_province'] ?? null,
-            ]);
-            $location = implode(', ', $locationParts);
+            // 4. Create Representative record if applicable
+            if (isset($validated['authorized_representative_name']) && !empty($validated['authorized_representative_name'])) {
+                \App\Models\Representative::create([
+                    'applicant_id' => $applicant->id,
+                    'representative_name' => $validated['authorized_representative_name'],
+                    'representative_address' => $validated['authorized_representative_address'] ?? '',
+                    'is_primary' => true,
+                ]);
+            }
 
-            // Create Project
-            $project = Project::create([
-                'location' => $location ?: 'N/A',
-                'lot' => $validated['lot_area_sqm'] ?? null,
-                'bldg_improvement' => $validated['bldg_improvement_sqm'] ?? null,
+            // 5. Create Project record
+            if (isset($validated['project_type']) || isset($validated['project_nature'])) {
+                \App\Models\NormalizedProject::create([
+                    'request_id' => $newRequest->id,
+                    'project_type' => $validated['project_type'] ?? '',
+                    'project_nature' => $validated['project_nature'] ?? '',
+                    'project_nature_duration' => $validated['project_nature_duration'] ?? null,
+                    'project_nature_years' => $validated['project_nature_years'] ?? null,
+                    'project_cost' => $validated['project_cost'] ?? null,
+                ]);
+            }
+
+            // 6. Create Location record
+            if (isset($validated['project_location_barangay']) || isset($validated['project_location_city'])) {
+                \App\Models\Location::create([
+                    'request_id' => $newRequest->id,
+                    'street_address' => $validated['project_location_street'] ?? '',
+                    'barangay' => $validated['project_location_barangay'] ?? '',
+                    'city_municipality' => $validated['project_location_city'] ?? $validated['project_location_municipality'] ?? '',
+                    'province' => $validated['project_location_province'] ?? '',
+                ]);
+            }
+
+            // 7. Create Property record (includes lot area, land use, right over land)
+            \App\Models\Property::create([
+                'request_id' => $newRequest->id,
+                'lot_area_sqm' => $validated['lot_area_sqm'] ?? null,
+                'bldg_improvement_sqm' => $validated['bldg_improvement_sqm'] ?? null,
+                'lot_number' => $validated['project_location_number'] ?? null,
                 'right_over_land' => $validated['right_over_land'] ?? null,
-                'nature' => $validated['project_nature'] ?? null,
                 'existing_land_use' => $validated['existing_land_use'] ?? null,
-                'cost' => $validated['project_cost'] ?? null,
-                'question_1' => $validated['has_written_notice'] ?? null,
-                'if_yes_a' => $validated['notice_officer_name'] ?? null,
-                'if_yes_b' => $validated['notice_dates'] ?? null,
-                'question_b' => $validated['has_similar_application'] ?? null,
-                'if_yes_c' => $validated['similar_application_offices'] ?? null,
-                'if_yes_d' => $validated['similar_application_dates'] ?? null,
-            ]);
-            $projectId = $project->id;
-
-            // Create Application
-            $application = Application::create([
-                'corp_id' => $corpId,
-                'project_id' => $projectId,
-                'applicant_name' => $validated['applicant_name'],
-                'applicant_address' => $validated['applicant_address'],
-                'authorized_representative' => $validated['authorized_representative_name'] ?? null,
-                'representative_address' => $validated['authorized_representative_address'] ?? null,
-                'authorization_letter_path' => $authorizationLetterPath,
-                'preffered_release' => $validated['preferred_release_mode'] ?? null,
             ]);
 
-            // Create Report with default pending status
+            // 8. Create Report with default pending status linked to the request
             $report = Report::create([
-                'app_id' => $application->id,
+                'request_id' => $newRequest->id,
                 'description' => $validated['project_nature'] ?? null,
                 'amount' => $validated['project_cost'] ?? null,
                 'evaluation' => 'pending',
             ]);
 
-            // Also create the request record for the new system
-            $newRequest = RequestModel::create([
-                'user_id' => auth()->id(),
-                'status' => 'pending',
-                ...$validated
-            ]);
-
             return [
-                'application' => $application,
-                'report' => $report,
                 'request' => $newRequest,
+                'applicant' => $applicant,
+                'report' => $report,
             ];
         });
 
         // Send email notification to the user
         try {
             Mail::to(auth()->user()->email)->send(
-                new ApplicationSubmitted($result['application'], auth()->user()->name)
+                new ApplicationSubmitted($result['request'], auth()->user()->name)
             );
             
             // Send SMS notification
@@ -241,6 +303,6 @@ class RequestController extends Controller
             \Log::error('Failed to send application email: ' . $e->getMessage());
         }
 
-        return back()->with('success', 'Request submitted successfully! Your request ID is #' . $result['application']->id);
+        return back()->with('success', 'Request submitted successfully! Your request ID is #' . $result['request']->id);
     }
 }

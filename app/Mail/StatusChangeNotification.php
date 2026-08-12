@@ -46,11 +46,14 @@ class StatusChangeNotification extends Mailable
      */
     public function content(): Content
     {
+        // Load relationships to access normalized data
+        $this->request->load(['applicant']);
+        
         return new Content(
             view: 'emails.status-change-notification',
             with: [
                 'userName' => $this->user->name,
-                'applicantName' => $this->request->applicant_name,
+                'applicantName' => $this->request->applicant->applicant_name ?? 'Applicant',
                 'requestId' => $this->request->id,
                 'statusType' => $this->getStatusTypeLabel(),
                 'oldStatus' => $this->getStatusLabel($this->statusHistory->old_status),

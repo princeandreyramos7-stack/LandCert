@@ -7,6 +7,7 @@ use App\Models\Request as ApplicationRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use App\Services\NotificationService;
 
 class PaymentController extends Controller
 {
@@ -57,18 +58,70 @@ class PaymentController extends Controller
     {
         $validated = $request->validate([
             'request_id' => 'required|exists:requests,id',
-            'amount' => 'required|numeric|min:0',
+            'amount' => 'nullable|numeric|min:0',
             'payment_method' => 'required|in:cash,bank_transfer,gcash,paymaya,check,other',
-            'receipt_number' => 'required|string|max:255',
+            'receipt' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120', // Max 5MB
             'payment_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
 
+        // Handle file upload
+        if ($request->hasFile('receipt')) {
+            $file = $request->file('receipt');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('receipts', $filename, 'public');
+            $validated['receipt_file_path'] = $path;
+        }
+
+        // Generate receipt number
+        $validated['receipt_number'] = 'RCP-' . strtoupper(uniqid());
         $validated['payment_status'] = 'pending';
+        $validated['user_id'] = auth()->id();
 
         $payment = Payment::create($validated);
 
-        return redirect()->back()->with('success', 'Physical payment record created successfully.');
+        // Get the request
+        $requestModel = \App\Models\Request::find($validated['request_id']);
+        if ($requestModel) {
+            // Create notification for payment receipt upload
+            NotificationService::paymentReceiptUploaded($requestModel, $payment);
+            
+            // Send email notification to applicant
+            try {
+                \Mail::to($requestModel->user->email)->send(
+                    new \App\Mail\PaymentReceiptSubmitted($payment, $requestModel)
+                );
+            } catch (\Exception $e) {
+                \Log::error('Failed to send payment receipt email: ' . $e->getMessage());
+            }
+            
+            // Notify admins via email about pending payment verification
+            try {
+                $admins = \App\Models\User::where('user_type', 'admin')->get();
+                foreach ($admins as $admin) {
+                    // Create in-app notification
+                    \App\Models\Notification::createForUser(
+                        $admin->id,
+                        'payment_pending_verification',
+                        'Payment Pending Verification',
+                        "A payment receipt has been uploaded for request #{$requestModel->id}. Please verify.",
+                        "/admin/payments",
+                        [
+                            'request_id' => $requestModel->id,
+                            'payment_id' => $payment->id,
+                        ]
+                    );
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to notify admins: ' . $e->getMessage());
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Receipt uploaded successfully! Payment is pending verification. You will be notified once verified.',
+            'payment' => $payment
+        ], 201);
     }
 
     /**
@@ -114,6 +167,13 @@ class PaymentController extends Controller
             'verified_at' => now(),
         ]);
 
+        // Get the application/request
+        $applicationRequest = ApplicationRequest::find($payment->request_id);
+        if ($applicationRequest) {
+            // Create notification for payment verification
+            NotificationService::paymentVerified($applicationRequest, $payment, auth()->user());
+        }
+
         return redirect()->back()->with('success', 'Payment verified successfully.');
     }
 
@@ -132,6 +192,13 @@ class PaymentController extends Controller
             'verified_by' => Auth::id(),
             'verified_at' => now(),
         ]);
+
+        // Get the application/request
+        $applicationRequest = ApplicationRequest::find($payment->request_id);
+        if ($applicationRequest) {
+            // Create notification for payment rejection
+            NotificationService::paymentRejected($applicationRequest, $payment, $validated['rejection_reason'], auth()->user());
+        }
 
         return redirect()->back()->with('success', 'Payment rejected.');
     }

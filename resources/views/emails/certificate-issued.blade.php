@@ -74,57 +74,58 @@
     </div>
     
     <div class="content">
-        <p>Dear <strong>{{ $applicantName }}</strong>,</p>
+        <p>Dear <strong>{{ $request->applicant->applicant_name ?? 'Applicant' }}</strong>,</p>
         
         <div class="success-badge">
-            ✓ PAYMENT VERIFIED & APPROVED
+            ✓ CERTIFICATE BEING PREPARED
         </div>
         
-        <p>Excellent news! Your payment has been successfully verified and your land certification application has been <strong>approved</strong>. Your official certificate has been generated and is ready for download.</p>
+        <p>Excellent news! Your payment has been successfully verified and your land certification application has been <strong>approved</strong>. Your official certificate is now being prepared for physical collection.</p>
         
         <div class="info-box">
             <p><strong>Certificate Details:</strong></p>
-            <p>Certificate Number: <span class="highlight">{{ $certificateNumber }}</span></p>
+            <p>Certificate Number: <span class="highlight">{{ $certificate->certificate_number }}</span></p>
             <p>Issued Date: <span class="highlight">{{ $certificate->issued_at->format('F d, Y') }}</span></p>
             @if($certificate->valid_until)
             <p>Valid Until: <span class="highlight">{{ \Carbon\Carbon::parse($certificate->valid_until)->format('F d, Y') }}</span></p>
             @endif
+            <p>Status: <span class="highlight">{{ ucwords(str_replace('_', ' ', $certificate->status)) }}</span></p>
         </div>
         
-        <h3>📥 Download Your Certificate</h3>
-        <p>Your official certificate is attached to this email as a PDF file. You can also access it anytime through your account dashboard.</p>
+        <h3>📋 Next Steps</h3>
+        <p>Your certificate is currently being prepared for physical collection. Staff will obtain the necessary official signatures before it's ready for pickup.</p>
         
         <div class="info-box">
-            <p><strong>How to Access Your Certificate:</strong></p>
+            <p><strong>How to Collect Your Certificate:</strong></p>
             <ol>
-                <li><strong>Email Attachment:</strong> Download the PDF file attached to this email</li>
-                <li><strong>Receipt Page:</strong> Login to your account and go to the "Payment Receipt" page</li>
-                <li><strong>Download Button:</strong> Look for the green "Download Certificate" button</li>
-                <li><strong>Certificate Info:</strong> Your certificate details will be displayed in a green verification box</li>
+                <li><strong>Wait for Notification:</strong> You'll receive an email/SMS when your certificate is ready for pickup</li>
+                <li><strong>Visit the Office:</strong> Come to the City Planning and Development Office during business hours</li>
+                <li><strong>Bring Valid ID:</strong> Present a valid government-issued ID for verification</li>
+                <li><strong>Sign for Release:</strong> Staff will record the release and have you sign for the certificate</li>
             </ol>
         </div>
         
         <center>
-            <a href="{{ url('/receipt') }}" class="button">Access Receipt Page</a>
+            <a href="{{ url('/dashboard') }}" class="button">View Dashboard</a>
         </center>
         
         <div class="info-box">
-            <p><strong>🎉 Application Process Complete:</strong></p>
+            <p><strong>🎉 Application Process Status:</strong></p>
             <ul>
                 <li>✅ Application submitted and reviewed</li>
                 <li>✅ Payment received and verified</li>
-                <li>✅ Certificate officially issued</li>
-                <li>✅ Ready for download and use</li>
+                <li>🔄 Certificate being prepared (pending signatures)</li>
+                <li>⏳ Ready for physical collection (will be notified)</li>
             </ul>
         </div>
         
         <div class="info-box">
             <p><strong>⚠️ Important Notes:</strong></p>
             <ul>
-                <li>Keep this certificate in a safe place</li>
-                <li>This is an official document</li>
-                <li>Present this certificate when required</li>
-                <li>Contact us if you need additional copies</li>
+                <li>This is a PHYSICAL certificate that requires official signatures</li>
+                <li>You'll receive notification when it's ready for pickup</li>
+                <li>Bring a valid ID when collecting your certificate</li>
+                <li>Contact us if you have any questions</li>
             </ul>
         </div>
         

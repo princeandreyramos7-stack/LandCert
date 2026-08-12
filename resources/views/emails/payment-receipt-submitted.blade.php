@@ -69,13 +69,13 @@
     </div>
     
     <div class="content">
-        <p>Dear <strong>{{ $applicantName }}</strong>,</p>
+        <p>Dear <strong>{{ $request->applicant->applicant_name ?? 'Applicant' }}</strong>,</p>
         
         <div class="success-badge">
             ✓ RECEIPT SUBMITTED
         </div>
         
-        <p>We have successfully received your payment receipt for Request <span class="highlight">#{{ $requestId }}</span>.</p>
+        <p>We have successfully received your payment receipt for Request <span class="highlight">#{{ $request->id }}</span>.</p>
         
         <div class="info-box">
             <p><strong>Payment Details:</strong></p>
@@ -91,8 +91,8 @@
         <ol>
             <li><strong>Verification Process</strong> - Our admin team will review your payment receipt</li>
             <li><strong>Payment Confirmation</strong> - We'll verify the payment details</li>
-            <li><strong>Certificate Generation</strong> - Once verified, your certificate will be automatically generated</li>
-            <li><strong>Certificate Delivery</strong> - You'll receive your certificate via email and can download it from your dashboard</li>
+            <li><strong>Certificate Preparation</strong> - Once verified, your certificate will be prepared with official signatures</li>
+            <li><strong>Collection Notification</strong> - You'll be notified when your certificate is ready for pickup at our office</li>
         </ol>
         
         <div class="info-box">

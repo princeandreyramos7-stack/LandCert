@@ -194,6 +194,15 @@ class SmsService
     }
     
     /**
+     * Send certificate preparing notification
+     */
+    public function sendCertificatePreparing(string $phoneNumber, string $applicantName, string $certificateNumber): bool
+    {
+        $message = "CPDO: {$applicantName}, your certificate (#{$certificateNumber}) is being prepared. You will be notified when it's ready for pickup at our office.";
+        return $this->send($phoneNumber, $message);
+    }
+    
+    /**
      * Send general status update
      */
     public function sendStatusUpdate(string $phoneNumber, string $applicantName, int $requestId, string $oldStatus, string $newStatus): bool

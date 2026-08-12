@@ -15,6 +15,7 @@ import { EditRequestModal } from "./EditRequestModal";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { ApproveConfirmDialog } from "./ApproveConfirmDialog";
 import { RejectDialog } from "./RejectDialog";
+import ReviewApplicationModal from "@/Components/Admin/ReviewApplicationModal";
 import { generateCSV, downloadCSV } from "./utils";
 
 export function AdminRequestList({ requests, flash = {} }) {
@@ -31,7 +32,7 @@ export function AdminRequestList({ requests, flash = {} }) {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
     const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-    const [rejectionFeedback, setRejectionFeedback] = useState("");
+    const [isMarkReviewedDialogOpen, setIsMarkReviewedDialogOpen] = useState(false);
 
     const { toast } = useToast();
 
@@ -215,11 +216,10 @@ export function AdminRequestList({ requests, flash = {} }) {
             return;
         }
         setSelectedRequest(request);
-        setRejectionFeedback("");
         setIsRejectDialogOpen(true);
     };
 
-    const confirmReject = () => {
+    const confirmReject = (rejectionFeedback) => {
         if (!selectedRequest) return;
 
         if (!rejectionFeedback.trim()) {
@@ -243,7 +243,6 @@ export function AdminRequestList({ requests, flash = {} }) {
                 onSuccess: () => {
                     setIsRejectDialogOpen(false);
                     setSelectedRequest(null);
-                    setRejectionFeedback("");
                     toast({
                         title: "Request Declined!",
                         description: `Request #${selectedRequest.id} has been declined.`,
@@ -265,6 +264,15 @@ export function AdminRequestList({ requests, flash = {} }) {
         setSelectedRequest(request);
         setIsDeleteDialogOpen(true);
     };
+
+    const handleMarkReviewed = (request) => {
+        // Open the new comprehensive review modal
+        setSelectedRequest(request);
+        setIsMarkReviewedDialogOpen(true);
+    };
+
+    // This is no longer needed as the new modal handles submission
+    // Kept for backwards compatibility, can be removed later
 
     const confirmDelete = () => {
         if (!selectedRequest) return;
@@ -441,6 +449,7 @@ export function AdminRequestList({ requests, flash = {} }) {
                         onSelectItem={handleSelectItem}
                         onView={handleView}
                         onEdit={handleEdit}
+                        onMarkReviewed={handleMarkReviewed}
                         onApprove={handleApprove}
                         onReject={handleReject}
                         onDelete={handleDelete}
@@ -489,9 +498,22 @@ export function AdminRequestList({ requests, flash = {} }) {
                 isOpen={isRejectDialogOpen}
                 onClose={() => setIsRejectDialogOpen(false)}
                 request={selectedRequest}
-                feedback={rejectionFeedback}
-                onFeedbackChange={setRejectionFeedback}
                 onConfirm={confirmReject}
+            />
+
+            <ReviewApplicationModal
+                request={selectedRequest}
+                isOpen={isMarkReviewedDialogOpen}
+                onClose={() => {
+                    setIsMarkReviewedDialogOpen(false);
+                    setSelectedRequest(null);
+                }}
+                onSuccess={() => {
+                    toast({
+                        title: "Success!",
+                        description: "Application review submitted successfully!",
+                    });
+                }}
             />
         </div>
     );

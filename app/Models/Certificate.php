@@ -12,6 +12,7 @@ class Certificate extends Model
         'request_id',
         'application_id',
         'payment_id',
+        'user_id',
         'certificate_number',
         'certificate_file_path',
         'issued_by',
@@ -19,12 +20,29 @@ class Certificate extends Model
         'valid_until',
         'status',
         'notes',
+        'ready_at',
+        'released_at',
+        'released_by',
+        'released_to_name',
+        'released_to_id_type',
+        'released_to_id_number',
+        'release_signature_path',
     ];
 
     protected $casts = [
         'issued_at' => 'datetime',
         'valid_until' => 'date',
+        'ready_at' => 'datetime',
+        'released_at' => 'datetime',
     ];
+
+    /**
+     * Get the user who owns this certificate (applicant).
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     /**
      * Get the request that owns the certificate.
@@ -48,6 +66,14 @@ class Certificate extends Model
     public function issuedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'issued_by');
+    }
+
+    /**
+     * Get the user who released the certificate.
+     */
+    public function releasedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'released_by');
     }
 
     /**

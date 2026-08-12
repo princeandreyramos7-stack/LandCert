@@ -27,10 +27,16 @@ import {
     FileText,
 } from "lucide-react";
 import { getStatusColor, getStatusIcon, formatDate, formatLocation } from "@/Components/Admin/Request/utils";
+import { ApproveDialog } from "./ApproveDialog";
+import { RejectDialog } from "./RejectDialog";
 
 export function SuperAdminRequestList({ requests }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
+    const [selectedRequest, setSelectedRequest] = useState(null);
+    const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+    const [rejectionFeedback, setRejectionFeedback] = useState("");
     const { toast } = useToast();
 
     const requestsData = requests?.data || requests || [];
@@ -74,9 +80,15 @@ export function SuperAdminRequestList({ requests }) {
             });
             return;
         }
+        setSelectedRequest(request);
+        setIsApproveDialogOpen(true);
+    };
+
+    const confirmApprove = () => {
+        if (!selectedRequest) return;
 
         router.post(
-            route("super-admin.approve-request", request.report_id),
+            route("super-admin.approve-request", selectedRequest.report_id),
             {
                 description: "Application approved by Super Admin",
                 issued_by: "Super Admin",
@@ -84,12 +96,15 @@ export function SuperAdminRequestList({ requests }) {
             {
                 preserveScroll: true,
                 onSuccess: () => {
+                    setIsApproveDialogOpen(false);
+                    setSelectedRequest(null);
                     toast({
                         title: "Request Approved!",
-                        description: `Request #${request.id} has been approved.`,
+                        description: `Request #${selectedRequest.id} from ${selectedRequest.applicant_name} has been approved successfully.`,
                     });
                 },
                 onError: () => {
+                    setIsApproveDialogOpen(false);
                     toast({
                         variant: "destructive",
                         title: "Approval Failed!",
@@ -109,24 +124,41 @@ export function SuperAdminRequestList({ requests }) {
             });
             return;
         }
+        setSelectedRequest(request);
+        setRejectionFeedback("");
+        setIsRejectDialogOpen(true);
+    };
 
-        const reason = prompt("Enter rejection reason:");
-        if (!reason) return;
+    const confirmReject = () => {
+        if (!selectedRequest) return;
+
+        if (!rejectionFeedback.trim()) {
+            toast({
+                variant: "destructive",
+                title: "Feedback Required",
+                description: "Please provide a detailed rejection reason.",
+            });
+            return;
+        }
 
         router.post(
-            route("super-admin.reject-request", request.report_id),
+            route("super-admin.reject-request", selectedRequest.report_id),
             {
-                description: reason,
+                description: rejectionFeedback.trim(),
             },
             {
                 preserveScroll: true,
                 onSuccess: () => {
+                    setIsRejectDialogOpen(false);
+                    setSelectedRequest(null);
+                    setRejectionFeedback("");
                     toast({
                         title: "Request Rejected!",
-                        description: `Request #${request.id} has been rejected.`,
+                        description: `Request #${selectedRequest.id} has been rejected.`,
                     });
                 },
                 onError: () => {
+                    setIsRejectDialogOpen(false);
                     toast({
                         variant: "destructive",
                         title: "Rejection Failed!",
@@ -387,6 +419,24 @@ export function SuperAdminRequestList({ requests }) {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Approval Dialog */}
+            <ApproveDialog
+                isOpen={isApproveDialogOpen}
+                onClose={() => setIsApproveDialogOpen(false)}
+                request={selectedRequest}
+                onConfirm={confirmApprove}
+            />
+
+            {/* Rejection Dialog */}
+            <RejectDialog
+                isOpen={isRejectDialogOpen}
+                onClose={() => setIsRejectDialogOpen(false)}
+                request={selectedRequest}
+                feedback={rejectionFeedback}
+                onFeedbackChange={setRejectionFeedback}
+                onConfirm={confirmReject}
+            />
         </div>
     );
 }

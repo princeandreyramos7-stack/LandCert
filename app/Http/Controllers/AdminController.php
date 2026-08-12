@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Application;
 use App\Models\Report;
 use App\Models\Request as RequestModel;
 use App\Models\User;
@@ -14,6 +13,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Mail\ApplicationRejected;
 use App\Services\DashboardCacheService;
 use App\Services\AuditLogService;
+use App\Services\NotificationService;
 use App\Jobs\GeneratePdfExport;
 use App\Models\AuditLog;
 
@@ -37,58 +37,61 @@ class AdminController extends Controller
         // Get cached analytics data
         $analytics = $this->cacheService->getAnalytics();
         
-        $perPage = $request->input('per_page', 25); // Increased default pagination
+        $perPage = $request->input('per_page', 25);
         
-        // Get all requests with their related data
-        $requests = RequestModel::with('user')->orderBy('created_at', 'desc')->paginate($perPage);
-        
-        // Get applications and reports data
-        $applicationsData = Application::with('report')->get()->keyBy(function($app) {
-            return $app->applicant_name . '|' . $app->applicant_address;
-        });
-        
-        // Merge the data
-        $applications = $requests->through(function($request) use ($applicationsData) {
-            $key = $request->applicant_name . '|' . $request->applicant_address;
-            $application = $applicationsData->get($key);
-            $report = $application?->report;
-            
-            return (object)[
-                'id' => $request->id,
-                'applicant_name' => $request->applicant_name,
-                'corporation_name' => $request->corporation_name,
-                'applicant_address' => $request->applicant_address,
-                'project_type' => $request->project_type,
-                'project_nature' => $request->project_nature,
-                'project_location_street' => $request->project_location_street,
-                'project_location_barangay' => $request->project_location_barangay,
-                'project_location_city' => $request->project_location_city,
-                'project_location_municipality' => $request->project_location_municipality,
-                'project_location_province' => $request->project_location_province,
-                'lot_area_sqm' => $request->lot_area_sqm,
-                'project_cost' => $request->project_cost,
-                'created_at' => $request->created_at,
-                'updated_at' => $request->updated_at,
-                'application_id' => $application?->id,
-                'report_id' => $report?->getKey(),
-                'evaluation' => $report?->evaluation,
-                'report_description' => $report?->description,
-                'report_amount' => $report?->amount,
-                'date_certified' => $report?->date_certified,
-                'date_reported' => $report?->date_reported,
-                'issued_by' => $report?->issued_by,
-                'user_name' => $request->user?->name,
-                'user_email' => $request->user?->email,
-                'status' => $report?->evaluation ?? $request->status,
-            ];
-        });
+        // Get all requests with normalized table joins
+        $requests = RequestModel::leftJoin('reports', 'requests.id', '=', 'reports.request_id')
+            ->leftJoin('applicants', 'requests.applicant_id', '=', 'applicants.id')
+            ->leftJoin('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
+            ->leftJoin('locations', 'requests.id', '=', 'locations.request_id')
+            ->leftJoin('properties', 'requests.id', '=', 'properties.request_id')
+            ->leftJoin('normalized_corporations', 'applicants.id', '=', 'normalized_corporations.applicant_id')
+            ->leftJoin('users', 'requests.user_id', '=', 'users.id')
+            ->select(
+                'requests.id',
+                'requests.user_id',
+                'requests.status as request_status',
+                'requests.created_at',
+                'requests.updated_at',
+                // Applicant fields
+                'applicants.applicant_name',
+                'applicants.applicant_address',
+                // Corporation fields
+                'normalized_corporations.corporation_name',
+                // Project fields
+                'normalized_projects.project_type',
+                'normalized_projects.project_nature',
+                'normalized_projects.project_cost',
+                // Location fields
+                'locations.street_address as project_location_street',
+                'locations.barangay as project_location_barangay',
+                'locations.city_municipality as project_location_city',
+                'locations.province as project_location_province',
+                // Property fields
+                'properties.lot_area_sqm',
+                // Report fields
+                'reports.report_id',
+                'reports.evaluation',
+                'reports.description as report_description',
+                'reports.amount as report_amount',
+                'reports.date_certified',
+                'reports.date_reported',
+                'reports.issued_by',
+                // User fields
+                'users.name as user_name',
+                'users.email as user_email',
+                // Status
+                DB::raw('COALESCE(reports.evaluation, requests.status) as status')
+            )
+            ->orderBy('requests.created_at', 'desc')
+            ->paginate($perPage);
 
         // Get cached stats and evaluation distribution
         $stats = $this->cacheService->getStats();
         $evaluationDistribution = $this->cacheService->getEvaluationDistribution();
 
         return Inertia::render('Admin/Dashboard', [
-            'applications' => $applications,
+            'applications' => $requests,
             'stats' => $stats,
             'analytics' => $analytics,
             'evaluationDistribution' => $evaluationDistribution,
@@ -153,8 +156,8 @@ class AdminController extends Controller
         // Average processing time (from submission to approval)
         $avgProcessingTime = Report::where('evaluation', 'approved')
             ->whereNotNull('date_reported')
-            ->join('applications', 'reports.app_id', '=', 'applications.id')
-            ->selectRaw('AVG(DATEDIFF(reports.date_reported, applications.created_at)) as avg_days')
+            ->join('requests', 'reports.request_id', '=', 'requests.id')
+            ->selectRaw('AVG(DATEDIFF(reports.date_reported, requests.created_at)) as avg_days')
             ->value('avg_days');
         
         // Recent activity
@@ -176,9 +179,10 @@ class AdminController extends Controller
             });
         
         // Project type distribution
-        $projectTypes = RequestModel::select('project_type', DB::raw('COUNT(*) as count'))
-            ->whereNotNull('project_type')
-            ->groupBy('project_type')
+        $projectTypes = RequestModel::join('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
+            ->select('normalized_projects.project_type', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('normalized_projects.project_type')
+            ->groupBy('normalized_projects.project_type')
             ->get();
         
         // Top users by submissions
@@ -227,51 +231,54 @@ class AdminController extends Controller
      */
     public function applications(Request $request): Response
     {
-        $perPage = $request->input('per_page', 25); // Increased default pagination
+        $perPage = $request->input('per_page', 25);
         
-        // Get all requests with their related data
-        $requests = RequestModel::with('user')->orderBy('created_at', 'desc')->paginate($perPage);
-        
-        // Get applications and reports data
-        $applicationsData = Application::with('report')->get()->keyBy(function($app) {
-            return $app->applicant_name . '|' . $app->applicant_address;
-        });
-        
-        // Merge the data
-        $applications = $requests->map(function($request) use ($applicationsData) {
-            $key = $request->applicant_name . '|' . $request->applicant_address;
-            $application = $applicationsData->get($key);
-            $report = $application?->report;
-            
-            return (object)[
-                'id' => $request->id,
-                'applicant_name' => $request->applicant_name,
-                'corporation_name' => $request->corporation_name,
-                'applicant_address' => $request->applicant_address,
-                'project_type' => $request->project_type,
-                'project_nature' => $request->project_nature,
-                'project_location_street' => $request->project_location_street,
-                'project_location_barangay' => $request->project_location_barangay,
-                'project_location_city' => $request->project_location_city,
-                'project_location_municipality' => $request->project_location_municipality,
-                'project_location_province' => $request->project_location_province,
-                'lot_area_sqm' => $request->lot_area_sqm,
-                'project_cost' => $request->project_cost,
-                'created_at' => $request->created_at,
-                'updated_at' => $request->updated_at,
-                'application_id' => $application?->id,
-                'report_id' => $report?->getKey(),
-                'evaluation' => $report?->evaluation,
-                'report_description' => $report?->description,
-                'report_amount' => $report?->amount,
-                'date_certified' => $report?->date_certified,
-                'date_reported' => $report?->date_reported,
-                'issued_by' => $report?->issued_by,
-                'user_name' => $request->user?->name,
-                'user_email' => $request->user?->email,
-                'status' => $report?->evaluation ?? $request->status,
-            ];
-        });
+        // Get all requests with normalized table joins
+        $applications = RequestModel::leftJoin('reports', 'requests.id', '=', 'reports.request_id')
+            ->leftJoin('applicants', 'requests.applicant_id', '=', 'applicants.id')
+            ->leftJoin('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
+            ->leftJoin('locations', 'requests.id', '=', 'locations.request_id')
+            ->leftJoin('properties', 'requests.id', '=', 'properties.request_id')
+            ->leftJoin('normalized_corporations', 'applicants.id', '=', 'normalized_corporations.applicant_id')
+            ->leftJoin('users', 'requests.user_id', '=', 'users.id')
+            ->select(
+                'requests.id',
+                'requests.user_id',
+                'requests.status as request_status',
+                'requests.created_at',
+                'requests.updated_at',
+                // Applicant fields
+                'applicants.applicant_name',
+                'applicants.applicant_address',
+                // Corporation fields
+                'normalized_corporations.corporation_name',
+                // Project fields
+                'normalized_projects.project_type',
+                'normalized_projects.project_nature',
+                'normalized_projects.project_cost',
+                // Location fields
+                'locations.street_address as project_location_street',
+                'locations.barangay as project_location_barangay',
+                'locations.city_municipality as project_location_city',
+                'locations.province as project_location_province',
+                // Property fields
+                'properties.lot_area_sqm',
+                // Report fields
+                'reports.report_id',
+                'reports.evaluation',
+                'reports.description as report_description',
+                'reports.amount as report_amount',
+                'reports.date_certified',
+                'reports.date_reported',
+                'reports.issued_by',
+                // User fields
+                'users.name as user_name',
+                'users.email as user_email',
+                // Status
+                DB::raw('COALESCE(reports.evaluation, requests.status) as status')
+            )
+            ->orderBy('requests.created_at', 'desc')
+            ->paginate($perPage);
 
         return Inertia::render('Admin/Applications', [
             'applications' => $applications,
@@ -285,27 +292,19 @@ class AdminController extends Controller
     {
         $perPage = $request->input('per_page', 25); // Increased default pagination
         
-        // Get all requests with their related data including property location and DSS evaluation
-        $requestsData = RequestModel::with([
-            'user'
-        ])->orderBy('created_at', 'desc')->paginate($perPage);
-        
-        // Get applications and reports data
-        $applicationsData = Application::with('report')->get()->keyBy(function($app) {
-            return $app->applicant_name . '|' . $app->applicant_address;
-        });
+        // Get all requests with their related data (using normalized structure)
+        $requestsData = RequestModel::with(['user', 'reports'])->orderBy('created_at', 'desc')->paginate($perPage);
         
         // Merge the data
-        $requests = $requestsData->through(function($request) use ($applicationsData) {
-            $key = $request->applicant_name . '|' . $request->applicant_address;
-            $application = $applicationsData->get($key);
-            $report = $application?->report;
+        $requests = $requestsData->through(function($request) {
+            // Get the latest report for this request
+            $report = $request->reports->first();
             
             // Convert to array and add additional fields
             $requestArray = $request->toArray();
-            $requestArray['application_id'] = $application?->id;
-            $requestArray['authorization_letter_path'] = $application?->authorization_letter_path;
-            $requestArray['report_id'] = $report?->getKey();
+            $requestArray['application_id'] = $request->id; // Using request ID as application ID
+            $requestArray['authorization_letter_path'] = $request->authorization_letter_path ?? null;
+            $requestArray['report_id'] = $report?->report_id;
             $requestArray['evaluation'] = $report?->evaluation;
             $requestArray['user_name'] = $request->user?->name;
             $requestArray['user_email'] = $request->user?->email;
@@ -324,23 +323,17 @@ class AdminController extends Controller
      */
     public function viewRequest($id): Response
     {
-        $request = RequestModel::with(['user'])
+        $request = RequestModel::with(['user', 'reports'])
             ->findOrFail($id);
         
-        // Get application data
-        $key = $request->applicant_name . '|' . $request->applicant_address;
-        $application = Application::with('report')
-            ->where('applicant_name', $request->applicant_name)
-            ->where('applicant_address', $request->applicant_address)
-            ->first();
-        
-        $report = $application?->report;
+        // Get the latest report for this request
+        $report = $request->reports->first();
         
         // Convert to array and add additional fields
         $requestData = $request->toArray();
-        $requestData['application_id'] = $application?->id;
-        $requestData['authorization_letter_path'] = $application?->authorization_letter_path;
-        $requestData['report_id'] = $report?->getKey();
+        $requestData['application_id'] = $request->id; // Using request ID as application ID
+        $requestData['authorization_letter_path'] = $request->authorization_letter_path ?? null;
+        $requestData['report_id'] = $report?->report_id;
         $requestData['evaluation'] = $report?->evaluation;
         $requestData['user_name'] = $request->user?->name;
         $requestData['user_email'] = $request->user?->email;
@@ -419,89 +412,85 @@ class AdminController extends Controller
         // Send email and SMS notification if status changed
         if ($validated['evaluation'] !== $oldEvaluation) {
             try {
-                // Get the application and request details
-                $application = Application::find($report->app_id);
-                \Log::info('Application found: ' . ($application ? 'Yes - ID: ' . $application->id : 'No'));
+                // Get the request details (reports now link directly to requests via request_id)
+                $requestModel = RequestModel::find($report->request_id);
+                \Log::info('Request found: ' . ($requestModel ? 'Yes - ID: ' . $requestModel->id . ', User ID: ' . $requestModel->user_id : 'No'));
                 
-                if ($application) {
-                    \Log::info('Looking for request with applicant_name: ' . $application->applicant_name . ' and applicant_address: ' . $application->applicant_address);
+                if ($requestModel && $requestModel->user_id) {
+                    $user = \App\Models\User::find($requestModel->user_id);
+                    \Log::info('User found: ' . ($user ? 'Yes - Email: ' . $user->email : 'No'));
                     
-                    // Find the request associated with this application
-                    $requestModel = RequestModel::where('applicant_name', $application->applicant_name)
-                        ->where('applicant_address', $application->applicant_address)
-                        ->first();
+                    // Load relationships for email
+                    $requestModel->load(['applicant']);
                     
-                    \Log::info('Request found: ' . ($requestModel ? 'Yes - ID: ' . $requestModel->id . ', User ID: ' . $requestModel->user_id : 'No'));
-                    
-                    if ($requestModel && $requestModel->user_id) {
-                        $user = \App\Models\User::find($requestModel->user_id);
-                        \Log::info('User found: ' . ($user ? 'Yes - Email: ' . $user->email : 'No'));
-                        
-                        if ($user) {
-                            if ($validated['evaluation'] === 'approved') {
-                                \Mail::to($user->email)->send(
-                                    new \App\Mail\ApplicationApproved(
-                                        $application,
-                                        $application->applicant_name,
-                                        $requestModel->id
-                                    )
+                    if ($user) {
+                        if ($validated['evaluation'] === 'approved') {
+                            \Mail::to($user->email)->send(
+                                new \App\Mail\ApplicationApproved(
+                                    $requestModel, // Pass request instead of application
+                                    $requestModel->applicant->applicant_name ?? 'Applicant',
+                                    $requestModel->id
+                                )
+                            );
+                            \Log::info('Application approval email sent to: ' . $user->email . ' for request ID: ' . $requestModel->id);
+                            
+                            // Create notification for admin review
+                            NotificationService::applicationReviewed($requestModel, 'approved', auth()->user());
+                            
+                            // Send SMS notification
+                            if ($user->contact_number) {
+                                app(\App\Services\SmsService::class)->sendApplicationApproved(
+                                    $user->contact_number,
+                                    $user->name,
+                                    $requestModel->id
                                 );
-                                \Log::info('Application approval email sent to: ' . $user->email . ' for request ID: ' . $requestModel->id);
-                                
-                                // Send SMS notification
-                                if ($user->contact_number) {
-                                    app(\App\Services\SmsService::class)->sendApplicationApproved(
-                                        $user->contact_number,
-                                        $user->name,
-                                        $requestModel->id
-                                    );
-                                }
-                                
-                                // Schedule automatic payment reminder for 3 days
-                                try {
-                                    app(\App\Services\ReminderService::class)->schedulePaymentReminder(
-                                        $requestModel->id,
-                                        $user->id,
-                                        3
-                                    );
-                                    \Log::info('Payment reminder scheduled for request ID: ' . $requestModel->id . ' (3 days)');
-                                } catch (\Exception $e) {
-                                    \Log::error('Failed to schedule payment reminder: ' . $e->getMessage());
-                                }
-                            } elseif ($validated['evaluation'] === 'rejected') {
-                                $rejectionReason = $validated['description'] ?? 'Your application has been rejected. Please review and resubmit with the necessary corrections.';
-                                
-                                // Send rejection email immediately (not queued)
-                                \Mail::to($user->email)->send(
-                                    new ApplicationRejected(
-                                        $application,
-                                        $application->applicant_name,
-                                        $requestModel->id,
-                                        $rejectionReason
-                                    )
-                                );
-                                
-                                // Send SMS notification
-                                if ($user->contact_number) {
-                                    app(\App\Services\SmsService::class)->sendApplicationRejected(
-                                        $user->contact_number,
-                                        $user->name,
-                                        $requestModel->id,
-                                        $rejectionReason
-                                    );
-                                }
-                                
-                                // Log the email sending for debugging
-                                \Log::info('Application rejection email sent to: ' . $user->email . ' for request ID: ' . $requestModel->id);
                             }
-                        } else {
-                            \Log::warning('User not found for user_id: ' . $requestModel->user_id);
+                            
+                            // Schedule automatic payment reminder for 3 days
+                            try {
+                                app(\App\Services\ReminderService::class)->schedulePaymentReminder(
+                                    $requestModel->id,
+                                    $user->id,
+                                    3
+                                );
+                                \Log::info('Payment reminder scheduled for request ID: ' . $requestModel->id . ' (3 days)');
+                            } catch (\Exception $e) {
+                                \Log::error('Failed to schedule payment reminder: ' . $e->getMessage());
+                            }
+                        } elseif ($validated['evaluation'] === 'rejected') {
+                            $rejectionReason = $validated['description'] ?? 'Your application has been rejected. Please review and resubmit with the necessary corrections.';
+                            
+                            // Send rejection email immediately (not queued)
+                            \Mail::to($user->email)->send(
+                                new ApplicationRejected(
+                                    $requestModel, // Pass request instead of application
+                                    $requestModel->applicant->applicant_name ?? 'Applicant',
+                                    $requestModel->id,
+                                    $rejectionReason
+                                )
+                            );
+                            
+                            // Create notification for rejection
+                            NotificationService::applicationRejected($requestModel, $rejectionReason, auth()->user());
+                            
+                            // Send SMS notification
+                            if ($user->contact_number) {
+                                app(\App\Services\SmsService::class)->sendApplicationRejected(
+                                    $user->contact_number,
+                                    $user->name,
+                                    $requestModel->id,
+                                    $rejectionReason
+                                );
+                            }
+                            
+                            // Log the email sending for debugging
+                            \Log::info('Application rejection email sent to: ' . $user->email . ' for request ID: ' . $requestModel->id);
                         }
                     } else {
-                        \Log::warning('Request not found or missing user_id for application: ' . $application->applicant_name);
+                        \Log::warning('User not found for user_id: ' . $requestModel->user_id);
                     }
                 } else {
-                    \Log::warning('Application not found for report app_id: ' . $report->app_id);
+                    \Log::warning('Request not found for report request_id: ' . $report->request_id);
                 }
             } catch (\Exception $e) {
                 // Log the error but don't fail the request
@@ -510,6 +499,154 @@ class AdminController extends Controller
         }
 
         return back()->with('success', 'Application evaluation updated successfully!');
+    }
+
+    /**
+     * Streamlined review application method (NEW)
+     * Allows admin to review or reject with one action
+     */
+    public function reviewApplication(Request $request)
+    {
+        $validated = $request->validate([
+            'request_id' => 'required|exists:requests,id',
+            'action' => 'required|in:reviewed,rejected',
+            
+            // For "reviewed" action
+            'appointment_date' => 'required_if:action,reviewed|nullable|date|after:today',
+            'appointment_time' => 'required_if:action,reviewed|nullable',
+            'payment_amount' => 'required_if:action,reviewed|nullable|numeric|min:0',
+            'requirements' => 'required_if:action,reviewed|nullable|array',
+            'requirements.*.id' => 'nullable|integer',
+            'requirements.*.name' => 'nullable|string',
+            'requirements.*.checked' => 'nullable|boolean',
+            'requirements.*.required' => 'nullable|boolean',
+            'admin_notes' => 'nullable|string|max:1000',
+            
+            // For "rejected" action
+            'rejection_reason' => 'required_if:action,rejected|nullable|string|max:1000'
+        ]);
+
+        \Log::info('Review Application - Request Data:', $request->all());
+        \Log::info('Review Application - Validated Data:', $validated);
+
+        $requestModel = RequestModel::with(['applicant', 'project', 'user'])->findOrFail($validated['request_id']);
+
+        if ($validated['action'] === 'reviewed') {
+            // Create or update report with review details
+            $report = Report::updateOrCreate(
+                ['request_id' => $requestModel->id],
+                [
+                    'evaluation' => 'reviewed',
+                    'issued_by' => auth()->user()->name,
+                    'date_reported' => now(),
+                    'appointment_date' => $validated['appointment_date'],
+                    'appointment_time' => $validated['appointment_time'],
+                    'payment_amount' => $validated['payment_amount'],
+                    'requirements' => json_encode($validated['requirements']),
+                    'admin_notes' => $validated['admin_notes'] ?? null,
+                    'description' => 'Application reviewed by ' . auth()->user()->name . '. Pending SuperAdmin approval.'
+                ]
+            );
+
+            // Update request status
+            $requestModel->status = 'pending_superadmin_approval';
+            $requestModel->save();
+
+            // Log the action
+            AuditLogService::logCreate(
+                'Report',
+                $report->id,
+                $report->toArray(),
+                "Admin reviewed application #{$requestModel->id} - Pending SuperAdmin approval"
+            );
+
+            // Notify SuperAdmins
+            $superAdmins = User::where('user_type', 'admin')->get();
+            foreach ($superAdmins as $superAdmin) {
+                \App\Models\Notification::createForUser(
+                    $superAdmin->id,
+                    'application_pending_approval',
+                    'Application Pending Your Approval',
+                    "Application #{$requestModel->id} from " . ($requestModel->applicant->applicant_name ?? 'Applicant') . " has been reviewed and requires your approval.",
+                    "/super-admin/applications",
+                    [
+                        'request_id' => $requestModel->id,
+                        'applicant_name' => $requestModel->applicant->applicant_name ?? 'N/A',
+                        'project_type' => $requestModel->project->project_type ?? 'N/A',
+                    ]
+                );
+            }
+
+            return back()->with('success', 'Application reviewed successfully! Waiting for SuperAdmin approval.');
+
+        } else {
+            // Rejection flow
+            $report = Report::updateOrCreate(
+                ['request_id' => $requestModel->id],
+                [
+                    'evaluation' => 'rejected',
+                    'issued_by' => auth()->user()->name,
+                    'date_reported' => now(),
+                    'description' => $validated['rejection_reason']
+                ]
+            );
+
+            $requestModel->status = 'rejected';
+            $requestModel->save();
+
+            // Log the action
+            AuditLogService::logCreate(
+                'Report',
+                $report->id,
+                $report->toArray(),
+                "Admin rejected application #{$requestModel->id}"
+            );
+
+            // Send immediate rejection email and notification
+            try {
+                if ($requestModel->user && $requestModel->user->email) {
+                    \Mail::to($requestModel->user->email)->send(
+                        new ApplicationRejected(
+                            $requestModel,
+                            $requestModel->applicant->applicant_name ?? 'Applicant',
+                            $requestModel->id,
+                            $validated['rejection_reason']
+                        )
+                    );
+                }
+
+                // Create notification
+                NotificationService::applicationRejected($requestModel, $validated['rejection_reason'], auth()->user());
+
+                // Send SMS if contact number exists
+                if ($requestModel->user && $requestModel->user->contact_number) {
+                    app(\App\Services\SmsService::class)->sendApplicationRejected(
+                        $requestModel->user->contact_number,
+                        $requestModel->user->name,
+                        $requestModel->id,
+                        $validated['rejection_reason']
+                    );
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to send rejection notification: ' . $e->getMessage());
+            }
+
+            return back()->with('success', 'Application rejected and applicant has been notified.');
+        }
+    }
+
+    /**
+     * Get requirements for a specific project type
+     */
+    public function getRequirements(Request $request)
+    {
+        $projectType = $request->input('project_type');
+        
+        $requirements = \App\Constants\ApplicationRequirements::getRequirements($projectType);
+        
+        return response()->json([
+            'requirements' => $requirements
+        ]);
     }
 
     /**
@@ -566,14 +703,13 @@ class AdminController extends Controller
         $statusFilter = $request->input('payment_status', '');
         $methodFilter = $request->input('payment_method', '');
         
-        $query = \App\Models\Payment::with(['request.user', 'verifiedByUser']);
+        $query = \App\Models\Payment::with(['request.user', 'request.applicant', 'request.project', 'verifiedByUser']);
         
         // Apply filters
         if ($search) {
-            $query->whereHas('request', function($q) use ($search) {
-                $q->where('applicant_name', 'like', '%' . $search . '%')
-                  ->orWhere('receipt_number', 'like', '%' . $search . '%');
-            });
+            $query->whereHas('request.applicant', function($q) use ($search) {
+                $q->where('applicant_name', 'like', '%' . $search . '%');
+            })->orWhere('receipt_number', 'like', '%' . $search . '%');
         }
         
         if ($statusFilter) {
@@ -603,8 +739,8 @@ class AdminController extends Controller
                     'created_at' => $payment->created_at,
                     'request' => $payment->request ? [
                         'id' => $payment->request->id,
-                        'applicant_name' => $payment->request->applicant_name,
-                        'project_type' => $payment->request->project_type,
+                        'applicant_name' => $payment->request->applicant->applicant_name ?? 'N/A',
+                        'project_type' => $payment->request->project->project_type ?? 'N/A',
                     ] : null,
                     'verified_by_user' => $payment->verifiedByUser ? [
                         'name' => $payment->verifiedByUser->name,
@@ -655,7 +791,88 @@ class AdminController extends Controller
             'Payment verified by admin'
         );
 
-        return back()->with('success', 'Payment verified successfully!');
+        // Generate certificate after payment verification
+        try {
+            $requestModel = $payment->request;
+            
+            // Ensure request and user exist
+            if (!$requestModel) {
+                \Log::warning("Payment {$payment->id} has no associated request");
+                return back()->with('success', 'Payment verified successfully!');
+            }
+            
+            if (!$requestModel->user) {
+                \Log::warning("Request {$requestModel->id} has no associated user");
+                return back()->with('success', 'Payment verified successfully!');
+            }
+            
+            // Check if certificate already exists for this request
+            $existingCertificate = \App\Models\Certificate::where('request_id', $requestModel->id)->first();
+            
+            if (!$existingCertificate) {
+                // Generate unique certificate number
+                $year = date('Y');
+                $sequence = str_pad($requestModel->id, 6, '0', STR_PAD_LEFT);
+                $certificateNumber = "CPDO-{$year}-{$sequence}";
+                
+                // Create certificate record
+                $certificate = \App\Models\Certificate::create([
+                    'request_id' => $requestModel->id,
+                    'payment_id' => $payment->id,
+                    'user_id' => $requestModel->user_id,
+                    'certificate_number' => $certificateNumber,
+                    'issued_by' => auth()->id(),
+                    'issued_at' => now(),
+                    'valid_until' => now()->addYears(1),
+                    'status' => 'preparing', // Certificate needs physical signatures
+                    'notes' => 'Certificate created after payment verification. Pending physical signatures from officials.',
+                ]);
+                
+                // Log certificate creation
+                AuditLogService::logCreate(
+                    'Certificate',
+                    $certificate->id,
+                    $certificate->toArray(),
+                    "Certificate {$certificateNumber} created after payment verification"
+                );
+                
+                // Send notification to applicant
+                NotificationService::certificateGenerated($requestModel, $certificate);
+                
+                // Send email notification
+                try {
+                    \Mail::to($requestModel->user->email)->send(
+                        new \App\Mail\CertificateIssued($requestModel, $certificate)
+                    );
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send certificate issued email: ' . $e->getMessage());
+                }
+                
+                // Send SMS notification
+                if ($requestModel->user->contact_number) {
+                    try {
+                        app(\App\Services\SmsService::class)->sendCertificatePreparing(
+                            $requestModel->user->contact_number,
+                            $requestModel->user->name,
+                            $certificateNumber
+                        );
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to send SMS notification: ' . $e->getMessage());
+                    }
+                }
+                
+                \Log::info("Certificate {$certificateNumber} created for request #{$requestModel->id}");
+                
+                return back()->with('success', 'Payment verified successfully! Certificate has been generated and is being prepared for signatures.');
+            } else {
+                \Log::info("Certificate already exists for request #{$requestModel->id}");
+                return back()->with('success', 'Payment verified successfully! Certificate already exists for this request.');
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to generate certificate: ' . $e->getMessage());
+            // Don't fail the payment verification if certificate generation fails
+            return back()->with('success', 'Payment verified successfully! Note: Certificate generation encountered an issue - check logs.');
+        }
     }
 
     /**
@@ -696,13 +913,13 @@ class AdminController extends Controller
         $search = $request->input('search', '');
         $statusFilter = $request->input('status', '');
         
-        $query = \App\Models\Certificate::with(['request.user', 'release']);
+        $query = \App\Models\Certificate::with(['request.user', 'request.applicant', 'request.project', 'release']);
         
         // Apply filters
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('certificate_number', 'like', '%' . $search . '%')
-                  ->orWhereHas('request', function($rq) use ($search) {
+                  ->orWhereHas('request.applicant', function($rq) use ($search) {
                       $rq->where('applicant_name', 'like', '%' . $search . '%');
                   });
             });
@@ -725,8 +942,8 @@ class AdminController extends Controller
                     'created_at' => $certificate->created_at,
                     'request' => $certificate->request ? [
                         'id' => $certificate->request->id,
-                        'applicant_name' => $certificate->request->applicant_name,
-                        'project_type' => $certificate->request->project_type,
+                        'applicant_name' => $certificate->request->applicant->applicant_name ?? 'N/A',
+                        'project_type' => $certificate->request->project->project_type ?? 'N/A',
                     ] : null,
                     'release' => $certificate->release ? [
                         'collected_by_name' => $certificate->release->collected_by_name,
@@ -832,7 +1049,7 @@ class AdminController extends Controller
         $status = $request->input('status', 'all');
         $format = $request->input('format', 'csv');
         
-        $query = \App\Models\Payment::with(['request.user', 'verifier']);
+        $query = \App\Models\Payment::with(['request.user', 'request.applicant', 'verifier']);
         
         if ($status !== 'all') {
             $query->where('payment_status', $status);
@@ -881,9 +1098,14 @@ class AdminController extends Controller
                 $processingFee = 0; // Assuming no processing fee for now
                 $totalAmount = $subtotal + $processingFee;
                 
+                // Access applicant name through relationship
+                $applicantName = $payment->request && $payment->request->applicant 
+                    ? $payment->request->applicant->applicant_name 
+                    : '';
+                
                 fputcsv($file, [
                     $payment->id,
-                    $payment->request?->applicant_name ?? '',
+                    $applicantName,
                     $payment->request?->user?->email ?? '',
                     '#' . $payment->request_id,
                     ucfirst($payment->payment_method ?? 'cash'),
@@ -936,48 +1158,52 @@ class AdminController extends Controller
         $status = $request->input('status', 'all');
         $format = $request->input('format', 'csv');
         
-        $requests = RequestModel::with('user')->orderBy('created_at', 'desc')->get();
-        $applicationsData = Application::with('report')->get()->keyBy(function($app) {
-            return $app->applicant_name . '|' . $app->applicant_address;
-        });
+        // Get all requests with their related data and reports (using normalized structure)
+        $requests = RequestModel::with([
+            'user', 
+            'reports', 
+            'applicant.corporation', 
+            'project', 
+            'location', 
+            'property'
+        ])->orderBy('created_at', 'desc')->get();
         
-        $applications = $requests->map(function($request) use ($applicationsData) {
-            $key = $request->applicant_name . '|' . $request->applicant_address;
-            $application = $applicationsData->get($key);
-            $report = $application?->report;
+        $applications = $requests->map(function($request) {
+            // Get the latest report for this request
+            $report = $request->reports->first();
             
             // Build project location
             $projectLocation = collect([
-                $request->project_location_street,
-                $request->project_location_barangay,
-                $request->project_location_city ?? $request->project_location_municipality,
-                $request->project_location_province
+                $request->location->street_address ?? null,
+                $request->location->barangay ?? null,
+                $request->location->city_municipality ?? null,
+                $request->location->province ?? null
             ])->filter()->implode(', ');
             
             return (object)[
                 'id' => $request->id,
                 'full_name' => $request->user?->name,
                 'email_address' => $request->user?->email,
-                'applicant_name' => $request->applicant_name,
-                'corporation_name' => $request->corporation_name,
-                'applicant_address' => $request->applicant_address,
+                'applicant_name' => $request->applicant->applicant_name ?? 'N/A',
+                'corporation_name' => $request->applicant->corporation->corporation_name ?? null,
+                'applicant_address' => $request->applicant->applicant_address ?? 'N/A',
                 'current_status' => $report?->evaluation ?? $request->status,
                 'submission_date' => $request->created_at?->format('M j, Y'),
-                'project_type' => $request->project_type,
-                'project_nature' => $request->project_nature,
+                'project_type' => $request->project->project_type ?? 'N/A',
+                'project_nature' => $request->project->project_nature ?? 'N/A',
                 'project_location' => $projectLocation,
-                'project_area' => $request->project_area_sqm,
-                'lot_area' => $request->lot_area_sqm,
-                'building_area' => $request->bldg_improvement_sqm,
-                'project_cost' => $request->project_cost ? '₱' . number_format($request->project_cost, 2) : '',
-                'right_over_land' => $request->right_over_land ?? 'Owner',
-                'project_duration' => $request->project_nature_duration ?? 'Permanent',
-                'existing_land_use' => $request->existing_land_use ?? 'Not Tenanted',
-                'written_notice_to_tenants' => $request->has_written_notice ? 'YES' : 'NO',
-                'similar_application_filed' => $request->has_similar_application ? 'YES' : 'NO',
+                'project_area' => $request->property->lot_area_sqm ?? null,
+                'lot_area' => $request->property->lot_area_sqm ?? null,
+                'building_area' => $request->property->bldg_improvement_sqm ?? null,
+                'project_cost' => $request->project->project_cost ? '₱' . number_format($request->project->project_cost, 2) : '',
+                'right_over_land' => $request->property->right_over_land ?? 'Owner',
+                'project_duration' => $request->project->project_nature_duration ?? 'Permanent',
+                'existing_land_use' => $request->property->existing_land_use ?? 'Not Tenanted',
+                'written_notice_to_tenants' => $request->property->has_written_notice ? 'YES' : 'NO',
+                'similar_application_filed' => $request->property->has_similar_application ? 'YES' : 'NO',
                 'release_preference' => $request->preferred_release_mode ?? 'mail applicant',
-                'authorized_representative' => $application?->authorization_letter_path ? 'Yes' : 'No Authorized Representative',
-                'authorization_note' => $application?->authorization_letter_path ? 'Has authorized representative' : 'This application was submitted directly by the applicant',
+                'authorized_representative' => $request->authorization_letter_path ? 'Yes' : 'No Authorized Representative',
+                'authorization_note' => $request->authorization_letter_path ? 'Has authorized representative' : 'This application was submitted directly by the applicant',
                 'created_at' => $request->created_at,
             ];
         });
@@ -1096,38 +1322,54 @@ class AdminController extends Controller
 
         $results = [];
 
-        // Search Requests
-        $requests = RequestModel::where('applicant_name', 'LIKE', "%{$query}%")
-            ->orWhere('corporation_name', 'LIKE', "%{$query}%")
-            ->orWhere('project_location_barangay', 'LIKE', "%{$query}%")
-            ->orWhere('id', 'LIKE', "%{$query}%")
+        // Search Requests - use normalized tables
+        $requests = RequestModel::leftJoin('applicants', 'requests.applicant_id', '=', 'applicants.id')
+            ->leftJoin('normalized_corporations', 'applicants.id', '=', 'normalized_corporations.applicant_id')
+            ->leftJoin('locations', 'requests.id', '=', 'locations.request_id')
+            ->leftJoin('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
+            ->where(function($q) use ($query) {
+                $q->where('applicants.applicant_name', 'LIKE', "%{$query}%")
+                  ->orWhere('normalized_corporations.corporation_name', 'LIKE', "%{$query}%")
+                  ->orWhere('locations.barangay', 'LIKE', "%{$query}%")
+                  ->orWhere('requests.id', 'LIKE', "%{$query}%");
+            })
+            ->select([
+                'requests.id',
+                'applicants.applicant_name',
+                'normalized_projects.project_type',
+                'locations.barangay'
+            ])
             ->limit(5)
             ->get();
 
         foreach ($requests as $req) {
             $results[] = [
                 'type' => 'request',
-                'title' => $req->applicant_name,
-                'description' => "Request #{$req->id} - {$req->project_type}",
-                'meta' => $req->project_location_barangay,
+                'title' => $req->applicant_name ?? 'Request #' . $req->id,
+                'description' => "Request #{$req->id} - " . ($req->project_type ?? 'N/A'),
+                'meta' => $req->barangay ?? '',
                 'url' => route('admin.requests'),
             ];
         }
 
         // Search Payments
-        $payments = Payment::whereHas('request', function($q) use ($query) {
+        $payments = Payment::with(['request.applicant'])
+            ->whereHas('request.applicant', function($q) use ($query) {
                 $q->where('applicant_name', 'LIKE', "%{$query}%");
             })
             ->orWhere('receipt_number', 'LIKE', "%{$query}%")
             ->orWhere('id', 'LIKE', "%{$query}%")
-            ->with('request')
             ->limit(5)
             ->get();
 
         foreach ($payments as $payment) {
+            $applicantName = $payment->request && $payment->request->applicant 
+                ? $payment->request->applicant->applicant_name 
+                : 'Payment';
+                
             $results[] = [
                 'type' => 'payment',
-                'title' => $payment->request->applicant_name ?? 'Payment',
+                'title' => $applicantName,
                 'description' => "Payment #{$payment->id} - ₱" . number_format($payment->amount, 2),
                 'meta' => ucfirst($payment->payment_status),
                 'url' => route('admin.payments'),
@@ -1161,47 +1403,52 @@ class AdminController extends Controller
         $status = $request->input('status', 'all');
         $format = $request->input('format', 'pdf');
         
-        $requestsData = RequestModel::with('user')->orderBy('created_at', 'desc')->get();
-        $applicationsData = Application::with('report')->get()->keyBy(function($app) {
-            return $app->applicant_name . '|' . $app->applicant_address;
-        });
+        // Get all requests with their related data and reports (using normalized structure)
+        $requestsData = RequestModel::with([
+            'user', 
+            'reports', 
+            'applicant.corporation', 
+            'applicant.representative',
+            'project', 
+            'location', 
+            'property'
+        ])->orderBy('created_at', 'desc')->get();
         
-        $requests = $requestsData->map(function($request) use ($applicationsData) {
-            $key = $request->applicant_name . '|' . $request->applicant_address;
-            $application = $applicationsData->get($key);
-            $report = $application?->report;
+        $requests = $requestsData->map(function($request) {
+            // Get the latest report for this request
+            $report = $request->reports->first();
             
             return (object)[
                 'id' => $request->id,
-                'applicant_name' => $request->applicant_name,
-                'applicant_address' => $request->applicant_address,
-                'corporation_name' => $request->corporation_name,
-                'corporation_address' => $request->corporation_address,
-                'authorized_representative_name' => $request->authorized_representative_name ?? $application?->authorized_representative_name,
-                'authorized_representative_address' => $request->authorized_representative_address ?? $application?->authorized_representative_address,
-                'authorization_letter_path' => $application?->authorization_letter_path,
-                'project_type' => $request->project_type,
-                'project_nature' => $request->project_nature,
-                'project_location_number' => $request->project_location_number,
-                'project_location_street' => $request->project_location_street,
-                'project_location_barangay' => $request->project_location_barangay,
-                'project_location_municipality' => $request->project_location_municipality,
-                'project_location_city' => $request->project_location_city,
-                'project_location_province' => $request->project_location_province,
-                'project_area_sqm' => $request->project_area_sqm,
-                'lot_area_sqm' => $request->lot_area_sqm,
-                'bldg_improvement_sqm' => $request->bldg_improvement_sqm,
-                'right_over_land' => $request->right_over_land,
-                'project_nature_duration' => $request->project_nature_duration,
-                'project_nature_years' => $request->project_nature_years,
-                'project_cost' => $request->project_cost,
-                'existing_land_use' => $request->existing_land_use,
-                'has_written_notice' => $request->has_written_notice,
-                'notice_officer_name' => $request->notice_officer_name,
-                'notice_dates' => $request->notice_dates,
-                'has_similar_application' => $request->has_similar_application,
-                'similar_application_offices' => $request->similar_application_offices,
-                'similar_application_dates' => $request->similar_application_dates,
+                'applicant_name' => $request->applicant->applicant_name ?? 'N/A',
+                'applicant_address' => $request->applicant->applicant_address ?? 'N/A',
+                'corporation_name' => $request->applicant->corporation->corporation_name ?? null,
+                'corporation_address' => $request->applicant->corporation->corporation_address ?? null,
+                'authorized_representative_name' => $request->applicant->representative->representative_name ?? null,
+                'authorized_representative_address' => $request->applicant->representative->representative_address ?? null,
+                'authorization_letter_path' => $request->authorization_letter_path,
+                'project_type' => $request->project->project_type ?? 'N/A',
+                'project_nature' => $request->project->project_nature ?? 'N/A',
+                'project_location_number' => $request->location->lot_number ?? null,
+                'project_location_street' => $request->location->street_address ?? null,
+                'project_location_barangay' => $request->location->barangay ?? null,
+                'project_location_municipality' => $request->location->city_municipality ?? null,
+                'project_location_city' => $request->location->city_municipality ?? null,
+                'project_location_province' => $request->location->province ?? null,
+                'project_area_sqm' => $request->property->lot_area_sqm ?? null,
+                'lot_area_sqm' => $request->property->lot_area_sqm ?? null,
+                'bldg_improvement_sqm' => $request->property->bldg_improvement_sqm ?? null,
+                'right_over_land' => $request->property->right_over_land ?? null,
+                'project_nature_duration' => $request->project->project_nature_duration ?? null,
+                'project_nature_years' => $request->project->project_nature_years ?? null,
+                'project_cost' => $request->project->project_cost ?? null,
+                'existing_land_use' => $request->property->existing_land_use ?? null,
+                'has_written_notice' => $request->property->has_written_notice ?? false,
+                'notice_officer_name' => $request->property->notice_officer_name ?? null,
+                'notice_dates' => $request->property->notice_dates ?? null,
+                'has_similar_application' => $request->property->has_similar_application ?? false,
+                'similar_application_offices' => $request->property->similar_application_offices ?? null,
+                'similar_application_dates' => $request->property->similar_application_dates ?? null,
                 'preferred_release_mode' => $request->preferred_release_mode,
                 'release_address' => $request->release_address,
                 'user_name' => $request->user?->name,
@@ -1387,20 +1634,16 @@ class AdminController extends Controller
      */
     private function getEvaluationDistribution()
     {
-        // Use the same logic as the main stats calculation
-        $allRequests = RequestModel::with('user')->get();
-        $applicationsData = Application::with('report')->get()->keyBy(function($app) {
-            return $app->applicant_name . '|' . $app->applicant_address;
-        });
+        // Use the same logic as the main stats calculation (using normalized structure)
+        $allRequests = RequestModel::with(['user', 'reports'])->get();
 
         $statusCounts = ['pending' => 0, 'approved' => 0, 'rejected' => 0];
         $requestsWithoutReports = 0;
         $requestsWithReports = 0;
         
         foreach ($allRequests as $request) {
-            $key = $request->applicant_name . '|' . $request->applicant_address;
-            $application = $applicationsData->get($key);
-            $report = $application?->report;
+            // Get the latest report for this request
+            $report = $request->reports->first();
             
             // Use report evaluation if available, otherwise use request status
             $status = $report?->evaluation ?? $request->status;
@@ -1452,29 +1695,29 @@ class AdminController extends Controller
 
         foreach ($request->request_ids as $requestId) {
             try {
-                $requestModel = RequestModel::findOrFail($requestId);
+                $requestModel = RequestModel::with('reports')->findOrFail($requestId);
                 
-                // Find the application and report
-                $application = Application::where('applicant_name', $requestModel->applicant_name)
-                    ->where('applicant_address', $requestModel->applicant_address)
-                    ->first();
+                // Find the report for this request
+                $report = $requestModel->reports->first();
 
-                if (!$application || !$application->report) {
+                if (!$report) {
                     $errors[] = "No report found for request #{$requestId}";
                     continue;
                 }
 
-                $report = $application->report;
                 $report->evaluation = 'approved';
                 $report->issued_by = auth()->user()->name ?? 'Admin';
                 $report->date_reported = now();
                 $report->save();
 
+                // Load relationships for email
+                $requestModel->load(['applicant']);
+
                 // Send approval email
                 try {
                     \Mail::to($requestModel->user->email)->send(new \App\Mail\ApplicationApproved(
                         $application,
-                        $requestModel->applicant_name,
+                        $requestModel->applicant->applicant_name ?? 'Applicant',
                         $requestModel->id
                     ));
                     
@@ -1520,19 +1763,16 @@ class AdminController extends Controller
 
         foreach ($request->request_ids as $requestId) {
             try {
-                $requestModel = RequestModel::findOrFail($requestId);
+                $requestModel = RequestModel::with(['applicant', 'reports'])->findOrFail($requestId);
                 
-                // Find the application and report
-                $application = Application::where('applicant_name', $requestModel->applicant_name)
-                    ->where('applicant_address', $requestModel->applicant_address)
-                    ->first();
-
-                if (!$application || !$application->report) {
-                    $errors[] = "No report found for request #{$requestId}";
-                    continue;
+                // Get or create report for this request
+                $report = $requestModel->reports->first();
+                
+                if (!$report) {
+                    $report = new Report();
+                    $report->request_id = $requestModel->id;
                 }
 
-                $report = $application->report;
                 $report->evaluation = 'rejected';
                 $report->description = $request->reason;
                 $report->issued_by = auth()->user()->name ?? 'Admin';
@@ -1542,8 +1782,8 @@ class AdminController extends Controller
                 // Send rejection email
                 try {
                     \Mail::to($requestModel->user->email)->send(new ApplicationRejected(
-                        $application,
-                        $requestModel->applicant_name,
+                        $requestModel,
+                        $requestModel->applicant->applicant_name ?? 'Applicant',
                         $requestModel->id,
                         $request->reason
                     ));
@@ -1581,20 +1821,14 @@ class AdminController extends Controller
 
         foreach ($request->request_ids as $requestId) {
             try {
-                $requestModel = RequestModel::findOrFail($requestId);
+                $requestModel = RequestModel::with(['reports'])->findOrFail($requestId);
                 
-                // Find and delete related application and report
-                $application = Application::where('applicant_name', $requestModel->applicant_name)
-                    ->where('applicant_address', $requestModel->applicant_address)
-                    ->first();
-
-                if ($application) {
-                    if ($application->report) {
-                        $application->report->delete();
-                    }
-                    $application->delete();
+                // Delete related reports
+                if ($requestModel->reports) {
+                    $requestModel->reports()->delete();
                 }
 
+                // Delete the request (cascade will handle normalized tables if set up)
                 $requestModel->delete();
                 $successCount++;
             } catch (\Exception $e) {

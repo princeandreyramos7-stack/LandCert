@@ -106,7 +106,7 @@ export function CategorySelection({ onSelectCategory }) {
     };
 
     return (
-        <div className="max-w-6xl mx-auto p-6">
+        <div className="w-full">
             <div className="text-center mb-8">
                 <div className="flex justify-center mb-4">
                     <div className="p-4 bg-blue-100 rounded-full">
@@ -122,47 +122,63 @@ export function CategorySelection({ onSelectCategory }) {
             </div>
 
             <div className="grid gap-6 md:grid-cols-3">
-                {categories.map((category) => {
+                {categories.map((category, index) => {
                     const Icon = category.icon;
                     const colors = getColorClasses(category.color);
 
                     return (
-                        <Card
+                        <div
                             key={category.id}
-                            className={`${colors.bg} ${colors.border} border-2 transition-all hover:shadow-lg group`}
+                            className="animate-fadeInUp"
+                            style={{ animationDelay: `${index * 100}ms` }}
                         >
-                            <CardHeader>
-                                <div className="flex justify-center mb-4">
-                                    <div className={`p-3 ${colors.icon} rounded-full group-hover:scale-110 transition-transform`}>
-                                        <Icon className="h-8 w-8" />
+                            <Card
+                                className={`${colors.bg} ${colors.border} border-2 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 group flex flex-col h-full relative overflow-hidden`}
+                            >
+                                {/* Decorative gradient overlay */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                
+                                {/* Top corner accent */}
+                                <div className={`absolute top-0 right-0 w-20 h-20 ${colors.icon} opacity-10 rounded-bl-full transform translate-x-8 -translate-y-8`} />
+                                
+                                <CardHeader className="relative z-10">
+                                    <div className="flex justify-center mb-4">
+                                        <div className={`relative p-4 ${colors.icon} rounded-2xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg`}>
+                                            <Icon className="h-10 w-10" />
+                                            {/* Animated ring around icon */}
+                                            <div className={`absolute inset-0 ${colors.icon} rounded-2xl opacity-0 group-hover:opacity-30 group-hover:scale-125 transition-all duration-500`} />
+                                        </div>
                                     </div>
-                                </div>
-                                <CardTitle className="text-xl text-center mb-2">
-                                    {category.title}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <CardDescription className="text-gray-700 text-center min-h-[100px] flex items-center">
-                                    {category.description}
-                                </CardDescription>
-                                <div className="flex gap-2">
-                                    <Button
-                                        onClick={() => onSelectCategory(category.id)}
-                                        className={`flex-1 ${colors.button} text-white`}
-                                    >
-                                        Select 
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => handleViewRequirements(category)}
-                                        className="flex-1"
-                                    >
-                                        <ListChecks className="h-4 w-4 mr-2" />
-                                        Requirements
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                    <CardTitle className="text-xl text-center mb-2 group-hover:text-gray-900 transition-colors">
+                                        {category.title}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="flex-1 flex flex-col relative z-10">
+                                    <CardDescription className="text-gray-700 text-center flex-1 flex items-center justify-center mb-4 text-sm leading-relaxed">
+                                        {category.description}
+                                    </CardDescription>
+                                    <div className="flex gap-2 mt-auto">
+                                        <Button
+                                            onClick={() => onSelectCategory(category.id)}
+                                            className={`flex-1 ${colors.button} text-white shadow-md hover:shadow-xl transform hover:scale-105 transition-all duration-300`}
+                                        >
+                                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                            Select 
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => handleViewRequirements(category)}
+                                            className="flex-1 hover:bg-gray-50 hover:border-gray-300 transform hover:scale-105 transition-all duration-300"
+                                        >
+                                            <ListChecks className="h-4 w-4 mr-2" />
+                                            Requirements
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
                     );
                 })}
             </div>
@@ -193,7 +209,8 @@ export function CategorySelection({ onSelectCategory }) {
                         {selectedRequirements?.requirements.map((requirement, index) => (
                             <div 
                                 key={index} 
-                                className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200 flex items-start gap-4"
+                                className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200 flex items-start gap-4 animate-fadeInUp"
+                                style={{ animationDelay: `${index * 50}ms` }}
                             >
                                 <div className="flex-shrink-0 mt-1">
                                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
@@ -230,6 +247,25 @@ export function CategorySelection({ onSelectCategory }) {
                     </div>
                 </DialogContent>
             </Dialog>
+            
+            {/* Animation styles */}
+            <style>{`
+                @keyframes fadeInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                
+                .animate-fadeInUp {
+                    animation: fadeInUp 0.5s ease-out forwards;
+                    opacity: 0;
+                }
+            `}</style>
         </div>
     );
 }

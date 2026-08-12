@@ -1,12 +1,23 @@
 import React from "react";
 import { Check, FileText, MapPin, Home } from "lucide-react";
 
-export function StepIndicator({ currentStep, completedSteps }) {
+export function StepIndicator({ currentStep, completedSteps, onStepClick }) {
     const steps = [
         { number: 1, title: "Applicant Info", icon: FileText },
         { number: 2, title: "Project Details", icon: MapPin },
         { number: 3, title: "Land Use", icon: Home },
     ];
+
+    const handleStepClick = (stepNumber) => {
+        // Allow clicking on current step, completed steps, or the next step
+        if (stepNumber <= currentStep || completedSteps.includes(stepNumber - 1)) {
+            onStepClick?.(stepNumber);
+        }
+    };
+
+    const isClickable = (stepNumber) => {
+        return stepNumber <= currentStep || completedSteps.includes(stepNumber - 1);
+    };
 
     return (
         <div className="mb-8">
@@ -14,7 +25,7 @@ export function StepIndicator({ currentStep, completedSteps }) {
                 {/* Progress Line */}
                 <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 -z-10">
                     <div
-                        className="h-full bg-blue-600 transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-500 shadow-lg shadow-blue-300/50"
                         style={{
                             width: `${((completedSteps.length) / (steps.length - 1)) * 100}%`,
                         }}
@@ -24,28 +35,46 @@ export function StepIndicator({ currentStep, completedSteps }) {
                 {steps.map((step, index) => {
                     const isCompleted = completedSteps.includes(step.number);
                     const isCurrent = currentStep === step.number;
+                    const clickable = isClickable(step.number);
                     const Icon = step.icon;
 
                     return (
-                        <div key={step.number} className="flex flex-col items-center flex-1">
-                            <div
-                                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                        <div 
+                            key={step.number} 
+                            className="flex flex-col items-center flex-1 group"
+                        >
+                            <button
+                                onClick={() => handleStepClick(step.number)}
+                                disabled={!clickable}
+                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 relative ${
                                     isCompleted
-                                        ? "bg-green-600 text-white"
+                                        ? "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg shadow-green-300/50"
                                         : isCurrent
-                                        ? "bg-blue-600 text-white ring-4 ring-blue-100"
-                                        : "bg-gray-200 text-gray-500"
+                                        ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white ring-4 ring-blue-200 shadow-xl shadow-blue-400/50"
+                                        : clickable
+                                        ? "bg-gray-300 text-gray-600 hover:bg-gray-400 cursor-pointer"
+                                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                } ${
+                                    clickable && !isCurrent ? "hover:scale-110 hover:shadow-xl" : ""
                                 }`}
                             >
                                 {isCompleted ? (
-                                    <Check className="h-5 w-5" />
+                                    <Check className="h-6 w-6 animate-scaleIn" />
                                 ) : (
-                                    <Icon className="h-5 w-5" />
+                                    <Icon className={`h-6 w-6 ${isCurrent ? "animate-pulse" : ""}`} />
                                 )}
-                            </div>
+                                
+                                {/* Hover tooltip */}
+                                {clickable && !isCurrent && (
+                                    <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-3 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                        Click to jump to this step
+                                        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
+                                    </div>
+                                )}
+                            </button>
                             <div className="mt-2 text-center">
                                 <p
-                                    className={`text-sm font-medium ${
+                                    className={`text-sm font-semibold transition-colors ${
                                         isCurrent
                                             ? "text-blue-600"
                                             : isCompleted
@@ -55,12 +84,40 @@ export function StepIndicator({ currentStep, completedSteps }) {
                                 >
                                     {step.title}
                                 </p>
-                                <p className="text-xs text-gray-400">Step {step.number}</p>
+                                <p className="text-xs text-gray-400">
+                                    Step {step.number}
+                                    {isCompleted && <span className="ml-1 text-green-500">✓</span>}
+                                </p>
                             </div>
                         </div>
                     );
                 })}
             </div>
+            
+            {/* Helper text */}
+            <div className="mt-6 text-center">
+                <p className="text-sm text-gray-500 flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Click on a step number to jump between sections
+                </p>
+            </div>
+            
+            <style>{`
+                @keyframes scaleIn {
+                    from {
+                        transform: scale(0);
+                    }
+                    to {
+                        transform: scale(1);
+                    }
+                }
+                
+                .animate-scaleIn {
+                    animation: scaleIn 0.3s ease-out;
+                }
+            `}</style>
         </div>
     );
 }

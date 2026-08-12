@@ -14,18 +14,21 @@ class CertificateIssued extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
+    public $request;
     public $certificate;
-    public $applicantName;
-    public $certificateNumber;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($certificate, $applicantName, $certificateNumber)
+    public function __construct($request, $certificate)
     {
+        // Load relationships to access normalized data
+        if ($request && method_exists($request, 'load')) {
+            $request->load(['applicant']);
+        }
+        
+        $this->request = $request;
         $this->certificate = $certificate;
-        $this->applicantName = $applicantName;
-        $this->certificateNumber = $certificateNumber;
     }
 
     /**
@@ -34,7 +37,7 @@ class CertificateIssued extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Payment Successfully Verified - Certificate Ready for Download!',
+            subject: 'Certificate Being Prepared - Collection Notice',
         );
     }
 
@@ -55,15 +58,8 @@ class CertificateIssued extends Mailable implements ShouldQueue
      */
     public function attachments(): array
     {
-        // Attach the certificate PDF
-        if ($this->certificate->certificate_file_path && file_exists(storage_path('app/public/' . $this->certificate->certificate_file_path))) {
-            return [
-                Attachment::fromPath(storage_path('app/public/' . $this->certificate->certificate_file_path))
-                    ->as('Certificate-' . $this->certificateNumber . '.pdf')
-                    ->withMime('application/pdf'),
-            ];
-        }
-        
+        // Physical certificates don't have PDF attachments
+        // Certificate will be collected at the office after signatures
         return [];
     }
 }

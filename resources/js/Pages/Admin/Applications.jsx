@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AdminSidebar } from "@/Components/admin-sidebar";
 import { Head } from '@inertiajs/react';
+import ReviewApplicationModal from "@/Components/Admin/ReviewApplicationModal";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -33,7 +34,8 @@ import {
   MapPin,
   User,
   FileText,
-  Download
+  Download,
+  ClipboardCheck
 } from "lucide-react";
 
 export default function Applications({ applications = [] }) {
@@ -41,6 +43,8 @@ export default function Applications({ applications = [] }) {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedApp, setSelectedApp] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewingApp, setReviewingApp] = useState(null);
 
   // Calculate statistics
   const stats = {
@@ -271,7 +275,7 @@ export default function Applications({ applications = [] }) {
                       <th className="text-left p-3 font-semibold">Location</th>
                       <th className="text-left p-3 font-semibold">Date</th>
                       <th className="text-left p-3 font-semibold">Status</th>
-                      <th className="text-left p-3 font-semibold">Actions</th>
+                      <th className="text-right p-3 font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -297,17 +301,32 @@ export default function Applications({ applications = [] }) {
                           </Badge>
                         </td>
                         <td className="p-3">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedApp(app);
-                              setIsModalOpen(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedApp(app);
+                                setIsModalOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                            {(app.status === 'pending' || !app.status) && (
+                              <Button
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                onClick={() => {
+                                  setReviewingApp(app);
+                                  setIsReviewModalOpen(true);
+                                }}
+                              >
+                                <ClipboardCheck className="h-4 w-4 mr-1" />
+                                Review
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -318,6 +337,20 @@ export default function Applications({ applications = [] }) {
           </Card>
         </div>
       </SidebarInset>
+
+      {/* Review Application Modal */}
+      <ReviewApplicationModal
+        request={reviewingApp}
+        isOpen={isReviewModalOpen}
+        onClose={() => {
+          setIsReviewModalOpen(false);
+          setReviewingApp(null);
+        }}
+        onSuccess={() => {
+          // Optionally show a success message or refresh data
+          console.log('Review submitted successfully');
+        }}
+      />
 
       {/* View Details Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

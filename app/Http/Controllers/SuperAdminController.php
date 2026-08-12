@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Application;
 use App\Models\Report;
 use App\Models\Request as RequestModel;
 use App\Models\User;
@@ -14,7 +13,10 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Facades\DB;
 use App\Services\DashboardCacheService;
+use App\Services\NotificationService;
+use App\Services\AuditLogService;
 use App\Models\AuditLog;
+use App\Mail\ApplicationApprovedWithDetails;
 
 class SuperAdminController extends Controller
 {
@@ -32,49 +34,52 @@ class SuperAdminController extends Controller
     {
         $perPage = $request->input('per_page', 25);
         
-        // Get all requests with their related data
-        $requests = RequestModel::with('user')->orderBy('created_at', 'desc')->paginate($perPage);
-        
-        // Get applications and reports data
-        $applicationsData = Application::with('report')->get()->keyBy(function($app) {
-            return $app->applicant_name . '|' . $app->applicant_address;
-        });
-        
-        // Merge the data
-        $applications = $requests->through(function($request) use ($applicationsData) {
-            $key = $request->applicant_name . '|' . $request->applicant_address;
-            $application = $applicationsData->get($key);
-            $report = $application?->report;
-            
-            return (object)[
-                'id' => $request->id,
-                'applicant_name' => $request->applicant_name,
-                'corporation_name' => $request->corporation_name,
-                'applicant_address' => $request->applicant_address,
-                'project_type' => $request->project_type,
-                'project_nature' => $request->project_nature,
-                'project_location_street' => $request->project_location_street,
-                'project_location_barangay' => $request->project_location_barangay,
-                'project_location_city' => $request->project_location_city,
-                'project_location_municipality' => $request->project_location_municipality,
-                'project_location_province' => $request->project_location_province,
-                'lot_area_sqm' => $request->lot_area_sqm,
-                'project_cost' => $request->project_cost,
-                'created_at' => $request->created_at,
-                'updated_at' => $request->updated_at,
-                'application_id' => $application?->id,
-                'report_id' => $report?->getKey(),
-                'evaluation' => $report?->evaluation,
-                'report_description' => $report?->description,
-                'report_amount' => $report?->amount,
-                'date_certified' => $report?->date_certified,
-                'date_reported' => $report?->date_reported,
-                'issued_by' => $report?->issued_by,
-                'user_name' => $request->user?->name,
-                'user_email' => $request->user?->email,
-                'status' => $report?->evaluation ?? $request->status,
-            ];
-        });
+        // Get all requests with normalized table joins
+        $requests = RequestModel::leftJoin('reports', 'requests.id', '=', 'reports.request_id')
+            ->leftJoin('applicants', 'requests.applicant_id', '=', 'applicants.id')
+            ->leftJoin('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
+            ->leftJoin('locations', 'requests.id', '=', 'locations.request_id')
+            ->leftJoin('properties', 'requests.id', '=', 'properties.request_id')
+            ->leftJoin('normalized_corporations', 'applicants.id', '=', 'normalized_corporations.applicant_id')
+            ->leftJoin('users', 'requests.user_id', '=', 'users.id')
+            ->select(
+                'requests.id',
+                'requests.user_id',
+                'requests.status as request_status',
+                'requests.created_at',
+                'requests.updated_at',
+                // Applicant fields
+                'applicants.applicant_name',
+                'applicants.applicant_address',
+                // Corporation fields
+                'normalized_corporations.corporation_name',
+                // Project fields
+                'normalized_projects.project_type',
+                'normalized_projects.project_nature',
+                'normalized_projects.project_cost',
+                // Location fields
+                'locations.street_address as project_location_street',
+                'locations.barangay as project_location_barangay',
+                'locations.city_municipality as project_location_city',
+                'locations.province as project_location_province',
+                // Property fields
+                'properties.lot_area_sqm',
+                // Report fields
+                'reports.report_id',
+                'reports.evaluation',
+                'reports.description as report_description',
+                'reports.amount as report_amount',
+                'reports.date_certified',
+                'reports.date_reported',
+                'reports.issued_by',
+                // User fields
+                'users.name as user_name',
+                'users.email as user_email',
+                // Status
+                DB::raw('COALESCE(reports.evaluation, requests.status) as status')
+            )
+            ->orderBy('requests.created_at', 'desc')
+            ->paginate($perPage);
 
         // Get cached analytics and stats
         $analytics = $this->cacheService->getAnalytics();
@@ -93,7 +98,7 @@ class SuperAdminController extends Controller
         ];
 
         return Inertia::render('SuperAdmin/Dashboard', [
-            'applications' => $applications,
+            'applications' => $requests,
             'stats' => $stats,
             'analytics' => $analytics,
             'evaluationDistribution' => $evaluationDistribution,
@@ -108,21 +113,17 @@ class SuperAdminController extends Controller
     {
         $perPage = $request->input('per_page', 25);
         
-        $requestsData = RequestModel::with('user')->orderBy('created_at', 'desc')->paginate($perPage);
+        // Get all requests with their related data and reports (using normalized structure)
+        $requestsData = RequestModel::with(['user', 'reports'])->orderBy('created_at', 'desc')->paginate($perPage);
         
-        $applicationsData = Application::with('report')->get()->keyBy(function($app) {
-            return $app->applicant_name . '|' . $app->applicant_address;
-        });
-        
-        $requests = $requestsData->through(function($request) use ($applicationsData) {
-            $key = $request->applicant_name . '|' . $request->applicant_address;
-            $application = $applicationsData->get($key);
-            $report = $application?->report;
+        $requests = $requestsData->through(function($request) {
+            // Get the latest report for this request
+            $report = $request->reports->first();
             
             $requestArray = $request->toArray();
-            $requestArray['application_id'] = $application?->id;
-            $requestArray['authorization_letter_path'] = $application?->authorization_letter_path;
-            $requestArray['report_id'] = $report?->getKey();
+            $requestArray['application_id'] = $request->id; // Using request ID as application ID
+            $requestArray['authorization_letter_path'] = $request->authorization_letter_path ?? null;
+            $requestArray['report_id'] = $report?->report_id;
             $requestArray['evaluation'] = $report?->evaluation;
             $requestArray['user_name'] = $request->user?->name;
             $requestArray['user_email'] = $request->user?->email;
@@ -137,29 +138,96 @@ class SuperAdminController extends Controller
     }
 
     /**
-     * Approve a request (Super Admin only)
+     * Approve a request (Super Admin only) - UPDATED FOR NEW WORKFLOW
+     * After admin review, SuperAdmin gives final approval and applicant gets notified
      */
     public function approveRequest(Request $request, $reportId)
     {
-        $validated = $request->validate([
-            'description' => 'nullable|string',
-            'amount' => 'nullable|numeric',
-            'date_certified' => 'nullable|date',
-            'issued_by' => 'nullable|string|max:255',
-        ]);
-
-        $report = Report::findOrFail($reportId);
+        $report = Report::with(['requestModel.applicant', 'requestModel.project', 'requestModel.user'])
+            ->findOrFail($reportId);
         
-        $report->update([
-            'evaluation' => 'approved',
-            'description' => $validated['description'] ?? 'Application approved by Super Admin',
-            'amount' => $validated['amount'] ?? $report->amount,
-            'date_certified' => $validated['date_certified'] ?? now(),
-            'date_reported' => now(),
-            'issued_by' => $validated['issued_by'] ?? 'Super Admin',
-        ]);
+        $requestModel = $report->requestModel;
 
-        return back()->with('success', 'Request approved successfully!');
+        // Verify that application was reviewed by admin first
+        if ($report->evaluation !== 'reviewed') {
+            return back()->with('error', 'Application must be reviewed by admin before SuperAdmin approval.');
+        }
+
+        // Update report to approved
+        $report->evaluation = 'approved';
+        $report->approved_by = auth()->user()->name;
+        $report->approved_at = now();
+        $report->description = 'Application approved by SuperAdmin ' . auth()->user()->name;
+        $report->save();
+
+        // Update request status
+        $requestModel->status = 'approved';
+        $requestModel->save();
+
+        // Log the action
+        AuditLogService::logUpdate(
+            'Report',
+            $report->id,
+            ['evaluation' => 'reviewed'],
+            ['evaluation' => 'approved'],
+            "SuperAdmin approved application #{$requestModel->id}"
+        );
+
+        // Send comprehensive approval email to applicant with appointment details
+        try {
+            if ($requestModel->user && $requestModel->user->email) {
+                // Create a custom mail class or send detailed notification
+                $requirements = json_decode($report->requirements, true) ?? [];
+                
+                \Mail::to($requestModel->user->email)->send(
+                    new \App\Mail\ApplicationApprovedWithDetails(
+                        $requestModel,
+                        $requestModel->applicant->applicant_name ?? 'Applicant',
+                        $report->appointment_date,
+                        $report->appointment_time,
+                        $report->payment_amount,
+                        $requirements,
+                        $report->admin_notes
+                    )
+                );
+
+                \Log::info('Approval email with details sent to: ' . $requestModel->user->email);
+            }
+
+            // Create notification
+            \App\Models\Notification::createForUser(
+                $requestModel->user_id,
+                'application_approved_final',
+                'Application Approved! 🎉',
+                "Your application #{$requestModel->id} has been approved! Check your email for appointment details and requirements.",
+                "/my-applications",
+                [
+                    'request_id' => $requestModel->id,
+                    'appointment_date' => $report->appointment_date,
+                    'payment_amount' => $report->payment_amount,
+                ]
+            );
+
+            // Send SMS if available
+            if ($requestModel->user && $requestModel->user->contact_number) {
+                app(\App\Services\SmsService::class)->sendApplicationApproved(
+                    $requestModel->user->contact_number,
+                    $requestModel->user->name,
+                    $requestModel->id
+                );
+            }
+
+            // Schedule payment reminder
+            app(\App\Services\ReminderService::class)->schedulePaymentReminder(
+                $requestModel->id,
+                $requestModel->user_id,
+                3
+            );
+        } catch (\Exception $e) {
+            \Log::error('Failed to send approval notification: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Application approved! Applicant has been notified with appointment details.');
     }
 
     /**
@@ -372,25 +440,32 @@ class SuperAdminController extends Controller
     {
         $perPage = $request->input('per_page', 25);
         
-        $query = Certificate::with([
-            'request.user',
-            'payment',
-            'issuedBy',
-            'release.releasedBy'
-        ])->orderBy('created_at', 'desc');
+        $query = Certificate::leftJoin('requests', 'certificates.request_id', '=', 'requests.id')
+            ->leftJoin('applicants', 'requests.applicant_id', '=', 'applicants.id')
+            ->leftJoin('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
+            ->leftJoin('users', 'requests.user_id', '=', 'users.id')
+            ->leftJoin('payments', 'certificates.payment_id', '=', 'payments.id')
+            ->leftJoin('users as issuer', 'certificates.issued_by', '=', 'issuer.id')
+            ->select(
+                'certificates.*',
+                'applicants.applicant_name',
+                'normalized_projects.project_type',
+                'users.name as user_name',
+                'users.email as user_email',
+                'issuer.name as issued_by_name'
+            )
+            ->orderBy('certificates.created_at', 'desc');
 
         // Apply filters
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where('certificates.status', $request->status);
         }
 
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('certificate_number', 'like', "%{$search}%")
-                  ->orWhereHas('request', function($q) use ($search) {
-                      $q->where('applicant_name', 'like', "%{$search}%");
-                  });
+                $q->where('certificates.certificate_number', 'like', "%{$search}%")
+                  ->orWhere('applicants.applicant_name', 'like', "%{$search}%");
             });
         }
 
@@ -496,27 +571,35 @@ class SuperAdminController extends Controller
     {
         $perPage = $request->input('per_page', 25);
         
-        $query = Payment::with([
-            'request.user',
-            'verifiedBy'
-        ])->orderBy('created_at', 'desc');
+        $query = Payment::leftJoin('requests', 'payments.request_id', '=', 'requests.id')
+            ->leftJoin('applicants', 'requests.applicant_id', '=', 'applicants.id')
+            ->leftJoin('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
+            ->leftJoin('users', 'requests.user_id', '=', 'users.id')
+            ->leftJoin('users as verifier', 'payments.verified_by', '=', 'verifier.id')
+            ->select(
+                'payments.*',
+                'applicants.applicant_name',
+                'normalized_projects.project_type',
+                'users.name as user_name',
+                'users.email as user_email',
+                'verifier.name as verified_by_name'
+            )
+            ->orderBy('payments.created_at', 'desc');
 
         // Apply filters
         if ($request->filled('payment_status')) {
-            $query->where('payment_status', $request->payment_status);
+            $query->where('payments.payment_status', $request->payment_status);
         }
 
         if ($request->filled('payment_method')) {
-            $query->where('payment_method', $request->payment_method);
+            $query->where('payments.payment_method', $request->payment_method);
         }
 
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('receipt_number', 'like', "%{$search}%")
-                  ->orWhereHas('request', function($q) use ($search) {
-                      $q->where('applicant_name', 'like', "%{$search}%");
-                  });
+                $q->where('payments.receipt_number', 'like', "%{$search}%")
+                  ->orWhere('applicants.applicant_name', 'like', "%{$search}%");
             });
         }
 
@@ -552,7 +635,80 @@ class SuperAdminController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        return back()->with('success', 'Payment verified successfully!');
+        // Generate certificate after payment verification
+        try {
+            $requestModel = $payment->request;
+            
+            // Ensure request and user exist
+            if (!$requestModel) {
+                \Log::warning("Payment {$payment->id} has no associated request");
+                return back()->with('success', 'Payment verified successfully!');
+            }
+            
+            if (!$requestModel->user) {
+                \Log::warning("Request {$requestModel->id} has no associated user");
+                return back()->with('success', 'Payment verified successfully!');
+            }
+            
+            // Check if certificate already exists for this request
+            $existingCertificate = Certificate::where('request_id', $requestModel->id)->first();
+            
+            if (!$existingCertificate) {
+                // Generate unique certificate number
+                $year = date('Y');
+                $sequence = str_pad($requestModel->id, 6, '0', STR_PAD_LEFT);
+                $certificateNumber = "CPDO-{$year}-{$sequence}";
+                
+                // Create certificate record
+                $certificate = Certificate::create([
+                    'request_id' => $requestModel->id,
+                    'payment_id' => $payment->id,
+                    'user_id' => $requestModel->user_id,
+                    'certificate_number' => $certificateNumber,
+                    'issued_by' => auth()->id(),
+                    'issued_at' => now(),
+                    'valid_until' => now()->addYears(1),
+                    'status' => 'preparing', // Certificate needs physical signatures
+                    'notes' => 'Certificate created after payment verification. Pending physical signatures from officials.',
+                ]);
+                
+                // Send notification to applicant
+                NotificationService::certificateGenerated($requestModel, $certificate);
+                
+                // Send email notification
+                try {
+                    \Mail::to($requestModel->user->email)->send(
+                        new \App\Mail\CertificateIssued($requestModel, $certificate)
+                    );
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send certificate issued email: ' . $e->getMessage());
+                }
+                
+                // Send SMS notification
+                if ($requestModel->user->contact_number) {
+                    try {
+                        app(\App\Services\SmsService::class)->sendCertificatePreparing(
+                            $requestModel->user->contact_number,
+                            $requestModel->user->name,
+                            $certificateNumber
+                        );
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to send SMS notification: ' . $e->getMessage());
+                    }
+                }
+                
+                \Log::info("Certificate {$certificateNumber} created for request #{$requestModel->id}");
+                
+                return back()->with('success', 'Payment verified successfully! Certificate has been generated and is being prepared for signatures.');
+            } else {
+                \Log::info("Certificate already exists for request #{$requestModel->id}");
+                return back()->with('success', 'Payment verified successfully! Certificate already exists for this request.');
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to generate certificate: ' . $e->getMessage());
+            // Don't fail the payment verification if certificate generation fails
+            return back()->with('success', 'Payment verified successfully! Note: Certificate generation encountered an issue - check logs.');
+        }
     }
 
     /**

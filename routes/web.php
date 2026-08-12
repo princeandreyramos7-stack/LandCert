@@ -29,6 +29,10 @@ Route::middleware(['auth', 'throttle:60,1'])->group(function () {
     Route::get('/request', [RequestController::class, 'index'])->name('request.index');
     Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:10,1')->name('request.store');
     Route::get('/my-applications', [RequestController::class, 'myApplications'])->name('my-applications');
+    
+    // Payment routes for applicants
+    Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+    Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
 });
 
 // Super Admin routes (highest privilege)
@@ -80,6 +84,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::delete('/users/{userId}', [AdminController::class, 'deleteUser'])->name('users.delete');
     Route::post('/update-evaluation/{reportId}', [AdminController::class, 'updateEvaluation'])->name('update-evaluation');
     Route::delete('/delete-request/{requestId}', [AdminController::class, 'deleteRequest'])->name('delete-request');
+    
+    // NEW: Streamlined Review Workflow
+    Route::post('/review-application', [AdminController::class, 'reviewApplication'])->name('review-application');
+    Route::get('/get-requirements', [AdminController::class, 'getRequirements'])->name('get-requirements');
     
     // Payment Management Routes (Admin can verify/reject)
     Route::get('/payments', [AdminController::class, 'payments'])->name('payments');

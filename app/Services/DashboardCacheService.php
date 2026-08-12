@@ -4,7 +4,6 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
 use App\Models\Request as RequestModel;
-use App\Models\Application;
 use App\Models\Report;
 use Illuminate\Support\Facades\DB;
 
@@ -72,17 +71,18 @@ class DashboardCacheService
             ->groupBy('evaluation')
             ->get();
         
-        // Average processing time
+        // Average processing time (reports now link directly to requests)
         $avgProcessingTime = Report::where('evaluation', 'approved')
             ->whereNotNull('date_reported')
-            ->join('applications', 'reports.app_id', '=', 'applications.id')
-            ->selectRaw('AVG(DATEDIFF(reports.date_reported, applications.created_at)) as avg_days')
+            ->join('requests', 'reports.request_id', '=', 'requests.id')
+            ->selectRaw('AVG(DATEDIFF(reports.date_reported, requests.created_at)) as avg_days')
             ->value('avg_days');
         
         // Project type distribution
-        $projectTypes = RequestModel::select('project_type', DB::raw('COUNT(*) as count'))
-            ->whereNotNull('project_type')
-            ->groupBy('project_type')
+        $projectTypes = RequestModel::join('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
+            ->select('normalized_projects.project_type', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('normalized_projects.project_type')
+            ->groupBy('normalized_projects.project_type')
             ->get();
         
         // Top users by submissions (limited to 5)
@@ -122,21 +122,17 @@ class DashboardCacheService
     }
 
     /**
-     * Calculate statistics
+     * Calculate statistics (using normalized structure)
      */
     private function calculateStats()
     {
-        $allRequests = RequestModel::with('user')->get();
-        $applicationsData = Application::with('report')->get()->keyBy(function($app) {
-            return $app->applicant_name . '|' . $app->applicant_address;
-        });
+        $allRequests = RequestModel::with(['user', 'reports'])->get();
 
         $statusCounts = ['pending' => 0, 'approved' => 0, 'rejected' => 0];
         
         foreach ($allRequests as $request) {
-            $key = $request->applicant_name . '|' . $request->applicant_address;
-            $application = $applicationsData->get($key);
-            $report = $application?->report;
+            // Get the latest report for this request
+            $report = $request->reports->first();
             $status = $report?->evaluation ?? $request->status;
             
             if (isset($statusCounts[$status])) {

@@ -31,11 +31,11 @@
             </tr>
             <tr>
                 <td style="padding: 8px 0; color: #666; font-size: 14px;">Project Type:</td>
-                <td style="padding: 8px 0; color: #333; font-weight: 600; font-size: 14px;">{{ $request->project_type ?? 'N/A' }}</td>
+                <td style="padding: 8px 0; color: #333; font-weight: 600; font-size: 14px;">{{ $request->project->project_type ?? 'N/A' }}</td>
             </tr>
             <tr>
                 <td style="padding: 8px 0; color: #666; font-size: 14px;">Project Location:</td>
-                <td style="padding: 8px 0; color: #333; font-weight: 600; font-size: 14px;">{{ $request->project_location_city ?? $request->project_location_municipality ?? 'N/A' }}</td>
+                <td style="padding: 8px 0; color: #333; font-weight: 600; font-size: 14px;">{{ $request->location->city_municipality ?? 'N/A' }}</td>
             </tr>
             <tr>
                 <td style="padding: 8px 0; color: #666; font-size: 14px;">Payment Due Date:</td>

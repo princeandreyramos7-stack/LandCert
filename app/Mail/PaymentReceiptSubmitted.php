@@ -14,17 +14,20 @@ class PaymentReceiptSubmitted extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public $payment;
-    public $applicantName;
-    public $requestId;
+    public $request;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($payment, $applicantName, $requestId)
+    public function __construct($payment, $request)
     {
+        // Load relationships to access normalized data
+        if ($request && method_exists($request, 'load')) {
+            $request->load(['applicant']);
+        }
+        
         $this->payment = $payment;
-        $this->applicantName = $applicantName;
-        $this->requestId = $requestId;
+        $this->request = $request;
     }
 
     /**

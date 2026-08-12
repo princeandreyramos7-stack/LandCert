@@ -60,7 +60,7 @@ class CertificateController extends Controller
         ]);
 
         $validated['issued_by'] = Auth::id();
-        $validated['status'] = 'generated';
+        $validated['status'] = 'preparing'; // Physical certificate needs signatures
 
         $certificate = Certificate::create($validated);
 
@@ -76,7 +76,7 @@ class CertificateController extends Controller
             'certificate_number' => 'required|unique:certificates,certificate_number,' . $certificate->id,
             'issued_at' => 'nullable|date',
             'valid_until' => 'nullable|date',
-            'status' => 'required|in:generated,sent,collected',
+            'status' => 'required|in:preparing,ready_for_pickup,released,cancelled',
             'notes' => 'nullable|string',
         ]);
 
@@ -91,11 +91,40 @@ class CertificateController extends Controller
     public function markReady(Certificate $certificate)
     {
         $certificate->update([
-            'status' => 'sent',
-            'issued_at' => now(),
+            'status' => 'ready_for_pickup',
+            'ready_at' => now(),
         ]);
 
-        return redirect()->back()->with('success', 'Certificate marked as ready for collection.');
+        // Send notification to applicant
+        try {
+            $requestModel = $certificate->request;
+            if ($requestModel && $requestModel->user) {
+                // Send email notification
+                // TODO: Create CertificateReadyForPickup mailable
+                
+                // Send SMS notification
+                if ($requestModel->user->contact_number) {
+                    app(\App\Services\SmsService::class)->sendMessage(
+                        $requestModel->user->contact_number,
+                        "CPDO: Your certificate ({$certificate->certificate_number}) is ready for pickup at our office. Please bring a valid ID."
+                    );
+                }
+                
+                // Create in-app notification
+                \App\Models\Notification::createForUser(
+                    $requestModel->user_id,
+                    'certificate_ready',
+                    'Certificate Ready for Pickup',
+                    "Your certificate {$certificate->certificate_number} is ready for collection at the CPDO office. Please bring a valid government-issued ID.",
+                    "/dashboard",
+                    ['certificate_id' => $certificate->id]
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send certificate ready notification: ' . $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', 'Certificate marked as ready for collection. Applicant has been notified.');
     }
 
     /**
@@ -118,8 +147,15 @@ class CertificateController extends Controller
 
         CertificateRelease::create($validated);
 
-        // Update certificate status to collected
-        $certificate->update(['status' => 'collected']);
+        // Update certificate status to released and add release tracking
+        $certificate->update([
+            'status' => 'released',
+            'released_at' => now(),
+            'released_by' => Auth::id(),
+            'released_to_name' => $validated['collected_by_name'],
+            'released_to_id_type' => $validated['valid_id_type'] ?? null,
+            'released_to_id_number' => $validated['valid_id_number'] ?? null,
+        ]);
 
         return redirect()->back()->with('success', 'Certificate release recorded successfully.');
     }

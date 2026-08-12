@@ -27,8 +27,10 @@ class PaymentDueReminder extends Mailable
     public function __construct(Reminder $reminder)
     {
         $this->reminder = $reminder;
-        $this->request = RequestModel::find($reminder->related_id);
-        $this->applicantName = $this->request->applicant_name ?? 'Applicant';
+        $this->request = RequestModel::with(['applicant', 'project', 'location'])->find($reminder->related_id);
+        $this->applicantName = $this->request && $this->request->applicant 
+            ? $this->request->applicant->applicant_name 
+            : 'Applicant';
         $this->daysRemaining = $reminder->metadata['days'] ?? 3;
         $this->dueDate = now()->addDays($this->daysRemaining)->format('F j, Y');
     }

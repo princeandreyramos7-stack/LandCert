@@ -134,11 +134,11 @@ export function RequestTable({
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
                                                 onClick={() => onMarkReviewed(request)}
-                                                disabled={request.status === "reviewed"}
+                                                disabled={request.status === "reviewed" || request.status === "approved"}
                                                 className="text-blue-600"
                                             >
                                                 <CheckCircle className="h-4 w-4 mr-2" />
-                                                Mark as Reviewed
+                                                Review Application
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
