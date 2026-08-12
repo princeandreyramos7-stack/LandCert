@@ -21,10 +21,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
     MoreVertical,
-    Eye,
     CheckCircle,
     XCircle,
     FileText,
+    FileCheck,
 } from "lucide-react";
 import { getStatusColor, getStatusIcon, formatDate, formatLocation } from "@/Components/Admin/Request/utils";
 import { ApproveDialog } from "./ApproveDialog";
@@ -180,16 +180,16 @@ export function SuperAdminRequestList({ requests }) {
                 `,
             }}
         >
-            {/* Enhanced Header with Pure Blue Background */}
-            <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-2xl">
+            {/* Enhanced Header with White Background */}
+            <div className="bg-white rounded-2xl p-6 shadow-2xl border-2 border-gray-100">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                            <FileText className="h-8 w-8" />
+                        <div className="p-3 bg-blue-100 rounded-xl">
+                            <FileText className="h-8 w-8 text-blue-600" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold">Request Management</h1>
-                            <p className="text-blue-100">Approve or reject applications with full authority</p>
+                            <h1 className="text-3xl font-bold text-gray-900">Request Management</h1>
+                            <p className="text-gray-600">Approve or reject applications with full authority</p>
                         </div>
                     </div>
                 </div>
@@ -236,7 +236,7 @@ export function SuperAdminRequestList({ requests }) {
                                 <p className="text-sm font-medium text-muted-foreground">Reviewed</p>
                                 <p className="text-3xl font-bold text-blue-700">{stats.reviewed}</p>
                             </div>
-                            <Eye className="h-8 w-8 text-blue-500" />
+                            <FileCheck className="h-8 w-8 text-blue-500" />
                         </div>
                         <div className="mt-2 h-1 bg-blue-100 rounded-full overflow-hidden">
                             <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" style={{ width: `${stats.total > 0 ? (stats.reviewed / stats.total) * 100 : 0}%` }}></div>
@@ -393,12 +393,19 @@ export function SuperAdminRequestList({ requests }) {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem
+                                                            onClick={() => router.visit(route('super-admin.requests.review', request.id))}
+                                                            className="text-blue-600 font-medium"
+                                                        >
+                                                            <FileCheck className="h-4 w-4 mr-2" />
+                                                            Review Application
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
                                                             onClick={() => handleApprove(request)}
                                                             disabled={request.status === "approved"}
                                                             className="text-green-600"
                                                         >
                                                             <CheckCircle className="h-4 w-4 mr-2" />
-                                                            Approve
+                                                            Quick Approve
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             onClick={() => handleReject(request)}
@@ -406,7 +413,7 @@ export function SuperAdminRequestList({ requests }) {
                                                             className="text-red-600"
                                                         >
                                                             <XCircle className="h-4 w-4 mr-2" />
-                                                            Reject
+                                                            Quick Reject
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>

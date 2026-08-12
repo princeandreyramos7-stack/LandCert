@@ -217,6 +217,11 @@ class RequestController extends Controller
                 'release_address' => $validated['release_address'] ?? null,
             ]);
 
+            // Assign unique CPD control number immediately after creation
+            $newRequest->update([
+                'control_number' => RequestModel::generateControlNumber(),
+            ]);
+
             // 3. Create Corporation record if applicable
             if (isset($validated['corporation_name']) && !empty($validated['corporation_name'])) {
                 \App\Models\NormalizedCorporation::create([

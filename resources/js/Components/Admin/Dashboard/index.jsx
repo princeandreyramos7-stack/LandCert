@@ -4,8 +4,10 @@ import { Button } from "@/Components/ui/button";
 import { BarChart3, Sparkles } from "lucide-react";
 
 import { AnalyticsDashboard } from "@/Components/Admin/Analytics";
+import { PaymentsPendingWidget } from "./PaymentsPendingWidget";
+import { RecentPaymentsWidget } from "./RecentPaymentsWidget";
 
-export function AdminDashboard({ analytics = null }) {
+export function AdminDashboard({ analytics = null, pendingPaymentsCount = 0, recentPayments = [] }) {
     const [showAnalytics, setShowAnalytics] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -54,6 +56,12 @@ export function AdminDashboard({ analytics = null }) {
                     </span>
                 </Button>
             </div>
+
+            {/* Payments Pending Widget */}
+            <PaymentsPendingWidget pendingPaymentsCount={pendingPaymentsCount} />
+
+            {/* Recent Payment Activity Widget - FR9.3 */}
+            <RecentPaymentsWidget recentPayments={recentPayments} />
 
             {/* Analytics Section */}
             {showAnalytics && analytics && (

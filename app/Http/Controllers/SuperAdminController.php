@@ -138,6 +138,92 @@ class SuperAdminController extends Controller
     }
 
     /**
+     * Show review page for a request (Super Admin)
+     */
+    public function reviewRequest($id): Response
+    {
+        $request = RequestModel::with([
+            'user', 
+            'reports',
+            'applicant.corporation',
+            'applicant.primaryRepresentative',
+            'project',
+            'location',
+            'property'
+        ])->findOrFail($id);
+        
+        // Get the latest report for this request
+        $report = $request->reports->first();
+        
+        // Build the request data with normalized relationships
+        $requestData = [
+            'id' => $request->id,
+            'control_number' => $request->control_number,
+            'status' => $report?->evaluation ?? $request->status,
+            'created_at' => $request->created_at,
+            'updated_at' => $request->updated_at,
+            
+            // User info
+            'user_id' => $request->user_id,
+            'user_name' => $request->user?->name,
+            'user_email' => $request->user?->email,
+            
+            // Applicant info
+            'applicant_name' => $request->applicant?->applicant_name,
+            'applicant_address' => $request->applicant?->applicant_address,
+            'applicant_contact' => $request->applicant?->applicant_contact,
+            
+            // Corporation info
+            'corporation_name' => $request->applicant?->corporation?->corporation_name,
+            'corporation_address' => $request->applicant?->corporation?->corporation_address,
+            
+            // Representative info
+            'authorized_representative_name' => $request->applicant?->primaryRepresentative?->representative_name,
+            'authorized_representative_address' => $request->applicant?->primaryRepresentative?->representative_address,
+            'authorization_letter_path' => $request->applicant?->primaryRepresentative?->authorization_letter_path,
+            
+            // Project info
+            'application_category' => $request->project?->project_type,
+            'project_type' => $request->project?->project_type,
+            'project_nature' => $request->project?->project_nature,
+            'project_nature_duration' => $request->project?->project_nature_duration,
+            'project_nature_years' => $request->project?->project_nature_years,
+            'project_cost' => $request->project?->project_cost,
+            
+            // Location info
+            'project_location_number' => null,
+            'project_location_street' => $request->location?->street_address,
+            'project_location_barangay' => $request->location?->barangay,
+            'project_location_municipality' => $request->location?->city_municipality,
+            'project_location_province' => $request->location?->province,
+            
+            // Property info
+            'project_area_sqm' => ($request->property?->lot_area_sqm + $request->property?->bldg_improvement_sqm),
+            'lot_area_sqm' => $request->property?->lot_area_sqm,
+            'bldg_improvement_sqm' => $request->property?->bldg_improvement_sqm,
+            'right_over_land' => $request->property?->right_over_land,
+            
+            // Land use info
+            'existing_land_use' => $request->property?->existing_land_use,
+            'has_written_notice' => $request->has_written_notice,
+            'notice_officer_name' => $request->notice_officer_name,
+            'notice_dates' => $request->notice_dates,
+            'has_similar_application' => $request->has_similar_application,
+            'similar_application_offices' => $request->similar_application_offices,
+            'similar_application_dates' => $request->similar_application_dates,
+            
+            // Report info
+            'report_id' => $report?->report_id,
+            'evaluation' => $report?->evaluation,
+            'application_id' => $request->id,
+        ];
+        
+        return Inertia::render('SuperAdmin/ReviewRequest', [
+            'request' => $requestData,
+        ]);
+    }
+
+    /**
      * Approve a request (Super Admin only) - UPDATED FOR NEW WORKFLOW
      * After admin review, SuperAdmin gives final approval and applicant gets notified
      */
@@ -605,9 +691,32 @@ class SuperAdminController extends Controller
 
         $payments = $query->paginate($perPage);
 
+        // Summary stats for analytics cards
+        $statsQuery = Payment::leftJoin('requests', 'payments.request_id', '=', 'requests.id')
+            ->leftJoin('applicants', 'requests.applicant_id', '=', 'applicants.id')
+            ->leftJoin('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id');
+
+        $stats = [
+            'total'          => (clone $statsQuery)->count(),
+            'pending'        => (clone $statsQuery)->where('payments.payment_status', 'pending')->count(),
+            'verified'       => (clone $statsQuery)->where('payments.payment_status', 'verified')->count(),
+            'rejected'       => (clone $statsQuery)->where('payments.payment_status', 'rejected')->count(),
+            'total_revenue'  => (clone $statsQuery)->where('payments.payment_status', 'verified')->sum('payments.amount'),
+            'pending_amount' => (clone $statsQuery)->where('payments.payment_status', 'pending')->sum('payments.amount'),
+            'this_month'     => (clone $statsQuery)->where('payments.payment_status', 'verified')
+                                    ->whereMonth('payments.verified_at', now()->month)
+                                    ->whereYear('payments.verified_at', now()->year)
+                                    ->sum('payments.amount'),
+            'last_month'     => (clone $statsQuery)->where('payments.payment_status', 'verified')
+                                    ->whereMonth('payments.verified_at', now()->subMonth()->month)
+                                    ->whereYear('payments.verified_at', now()->subMonth()->year)
+                                    ->sum('payments.amount'),
+        ];
+
         return Inertia::render('SuperAdmin/Payments', [
             'payments' => $payments,
             'filters' => $request->only(['payment_status', 'payment_method', 'search']),
+            'stats'   => $stats,
         ]);
     }
 

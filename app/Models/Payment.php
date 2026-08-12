@@ -60,4 +60,12 @@ class Payment extends Model
     {
         return $this->hasMany(Certificate::class);
     }
+
+    /**
+     * Get the certificate for this payment (singular - one-to-one).
+     */
+    public function certificate()
+    {
+        return $this->hasOne(Certificate::class);
+    }
 }

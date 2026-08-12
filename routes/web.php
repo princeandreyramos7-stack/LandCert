@@ -39,6 +39,7 @@ Route::middleware(['auth', 'throttle:60,1'])->group(function () {
 Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('super-admin.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\SuperAdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/requests', [\App\Http\Controllers\SuperAdminController::class, 'requests'])->name('requests');
+    Route::get('/requests/{id}/review', [\App\Http\Controllers\SuperAdminController::class, 'reviewRequest'])->name('requests.review');
     
     // Management
     Route::get('/users', [\App\Http\Controllers\SuperAdminController::class, 'users'])->name('users');
@@ -56,14 +57,32 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
     Route::put('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'deleteUser'])->name('users.delete');
     
-    // Certificate Management Routes (Physical Certificates)
-    Route::get('/certificates', [\App\Http\Controllers\SuperAdminController::class, 'certificates'])->name('certificates');
-    Route::put('/certificates/{certificate}', [\App\Http\Controllers\SuperAdminController::class, 'updateCertificate'])->name('certificates.update');
-    Route::post('/certificates/{certificate}/mark-ready', [\App\Http\Controllers\SuperAdminController::class, 'markCertificateReady'])->name('certificates.mark-ready');
-    Route::post('/certificates/{certificate}/release', [\App\Http\Controllers\SuperAdminController::class, 'releaseCertificate'])->name('certificates.release');
+    // Certificate Management Routes (NEW: Using CertificateController with PDF generation)
+    Route::prefix('certificates')->name('certificates.')->group(function () {
+        Route::get('/', [CertificateController::class, 'index'])->name('index');
+        Route::get('/{certificate}', [CertificateController::class, 'show'])->name('show');
+        Route::get('/{certificate}/download', [CertificateController::class, 'download'])->name('download');
+        Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
+        Route::post('/{certificate}/mark-ready', [CertificateController::class, 'markReady'])->name('mark-ready');
+        Route::post('/{certificate}/record-release', [CertificateController::class, 'recordRelease'])->name('record-release');
+        Route::post('/', [CertificateController::class, 'store'])->name('store');
+        Route::put('/{certificate}', [CertificateController::class, 'update'])->name('update');
+        Route::delete('/{certificate}', [CertificateController::class, 'destroy'])->name('destroy');
+    });
+    
+    // Legacy certificate routes (keep for backward compatibility)
+    Route::get('/certificates-old', [\App\Http\Controllers\SuperAdminController::class, 'certificates'])->name('certificates-old');
+    Route::put('/certificates-old/{certificate}', [\App\Http\Controllers\SuperAdminController::class, 'updateCertificate'])->name('certificates-old.update');
+    Route::post('/certificates-old/{certificate}/mark-ready', [\App\Http\Controllers\SuperAdminController::class, 'markCertificateReady'])->name('certificates-old.mark-ready');
+    Route::post('/certificates-old/{certificate}/release', [\App\Http\Controllers\SuperAdminController::class, 'releaseCertificate'])->name('certificates-old.release');
     
     // Payment Management Routes (Physical Payments)
     Route::get('/payments', [\App\Http\Controllers\SuperAdminController::class, 'payments'])->name('payments');
+    Route::get('/payments/pending', [PaymentController::class, 'pending'])->name('payments.pending');
+    Route::post('/payments/record', [PaymentController::class, 'recordPayment'])->name('payments.record');
+    Route::post('/payments/check-duplicate', [PaymentController::class, 'checkDuplicate'])->name('payments.check-duplicate');
+    Route::get('/payments/history', [PaymentController::class, 'history'])->name('payments.history');
+    Route::get('/payments/{id}/show', [PaymentController::class, 'show'])->name('payments.show');
     Route::put('/payments/{payment}', [\App\Http\Controllers\SuperAdminController::class, 'updatePayment'])->name('payments.update');
     Route::post('/payments/{payment}/verify', [\App\Http\Controllers\SuperAdminController::class, 'verifyPayment'])->name('payments.verify');
     Route::post('/payments/{payment}/reject', [\App\Http\Controllers\SuperAdminController::class, 'rejectPayment'])->name('payments.reject');
@@ -75,6 +94,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/search', [AdminController::class, 'search'])->name('search');
     Route::get('/requests', [AdminController::class, 'requests'])->name('requests');
     Route::get('/requests/{id}', [AdminController::class, 'viewRequest'])->name('requests.view');
+    Route::get('/requests/{id}/review', [AdminController::class, 'reviewRequest'])->name('requests.review');
     Route::get('/applications', [AdminController::class, 'applications'])->name('applications');
     Route::get('/reports', function () {
         return Inertia::render('Admin/Reports');
@@ -91,13 +111,31 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     
     // Payment Management Routes (Admin can verify/reject)
     Route::get('/payments', [AdminController::class, 'payments'])->name('payments');
+    Route::get('/payments/pending', [PaymentController::class, 'pending'])->name('payments.pending');
+    Route::post('/payments/record', [PaymentController::class, 'recordPayment'])->name('payments.record');
+    Route::post('/payments/check-duplicate', [PaymentController::class, 'checkDuplicate'])->name('payments.check-duplicate');
+    Route::get('/payments/history', [PaymentController::class, 'history'])->name('payments.history');
+    Route::get('/payments/{id}/show', [PaymentController::class, 'show'])->name('payments.show');
     Route::post('/payments/{payment}/verify', [AdminController::class, 'verifyPayment'])->name('payments.verify');
     Route::post('/payments/{payment}/reject', [AdminController::class, 'rejectPayment'])->name('payments.reject');
     
-    // Certificate Management Routes (Admin can mark ready and record collection)
-    Route::get('/certificates', [AdminController::class, 'certificates'])->name('certificates');
-    Route::post('/certificates/{certificate}/mark-ready', [AdminController::class, 'markCertificateReady'])->name('certificates.mark-ready');
-    Route::post('/certificates/{certificate}/release', [AdminController::class, 'releaseCertificate'])->name('certificates.release');
+    // Certificate Management Routes (NEW: Using CertificateController with PDF generation)
+    Route::prefix('certificates')->name('certificates.')->group(function () {
+        Route::get('/', [CertificateController::class, 'index'])->name('index');
+        Route::get('/{certificate}', [CertificateController::class, 'show'])->name('show');
+        Route::get('/{certificate}/download', [CertificateController::class, 'download'])->name('download');
+        Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
+        Route::post('/{certificate}/mark-ready', [CertificateController::class, 'markReady'])->name('mark-ready');
+        Route::post('/{certificate}/record-release', [CertificateController::class, 'recordRelease'])->name('record-release');
+        Route::post('/', [CertificateController::class, 'store'])->name('store');
+        Route::put('/{certificate}', [CertificateController::class, 'update'])->name('update');
+        Route::delete('/{certificate}', [CertificateController::class, 'destroy'])->name('destroy');
+    });
+    
+    // Legacy certificate routes (keep for backward compatibility)
+    Route::get('/certificates-old', [AdminController::class, 'certificates'])->name('certificates-old');
+    Route::post('/certificates-old/{certificate}/mark-ready', [AdminController::class, 'markCertificateReady'])->name('certificates-old.mark-ready');
+    Route::post('/certificates-old/{certificate}/release', [AdminController::class, 'releaseCertificate'])->name('certificates-old.release');
     
     // Export routes
     Route::get('/export/applications', [AdminController::class, 'exportApplications'])->name('export.applications');

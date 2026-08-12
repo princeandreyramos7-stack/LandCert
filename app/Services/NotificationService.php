@@ -14,7 +14,7 @@ class NotificationService
     private static function ensureRelationshipsLoaded(RequestModel $request)
     {
         if (!$request->relationLoaded('applicant')) {
-            $request->load(['applicant.corporation', 'applicant.representative', 'project', 'location', 'property']);
+            $request->load(['applicant.corporation', 'applicant.primaryRepresentative', 'project', 'location', 'property']);
         }
         return $request;
     }
@@ -251,16 +251,24 @@ class NotificationService
     {
         $verifierName = $verifiedBy ? $verifiedBy->name : 'Admin';
         
+        // Format payment details for the message (FR8.2: OR Number, Amount, Date, Next steps)
+        $receiptNumber = $payment->receipt_number ?? 'N/A';
+        $amount = number_format($payment->amount, 2);
+        $paymentDate = $payment->payment_date ?? date('Y-m-d');
+        
         // Notify the applicant
         Notification::createForUser(
             $request->user_id,
             'payment_verified',
-            'Payment Verified ✓',
-            "Your payment for application #{$request->id} has been verified by {$verifierName}. Your certificate will be issued soon.",
+            'Payment Confirmed ✓',
+            "Your payment for application #{$request->id} has been confirmed by {$verifierName}. OR: {$receiptNumber}, Amount: ₱{$amount}, Date: {$paymentDate}. Your certificate will be processed next.",
             "/my-applications",
             [
                 'application_id' => $request->id,
                 'payment_id' => $payment->id,
+                'receipt_number' => $receiptNumber,
+                'amount' => $payment->amount,
+                'payment_date' => $paymentDate,
                 'verified_by' => $verifierName,
             ]
         );
@@ -396,5 +404,83 @@ class NotificationService
                 'certificate_number' => $certificate->certificate_number,
             ]
         );
+    }
+
+    /**
+     * Notify when certificate is ready for pickup
+     */
+    public static function certificateReady(RequestModel $request, $certificate)
+    {
+        self::ensureRelationshipsLoaded($request);
+        $applicantName = self::getApplicantName($request);
+        
+        // Notify the applicant
+        Notification::createForUser(
+            $request->user_id,
+            'certificate_ready',
+            'Certificate Ready for Pickup',
+            "Your certificate {$certificate->certificate_number} is now ready for pickup at the CPDO office. Please bring a valid ID.",
+            "/my-applications/{$request->id}",
+            [
+                'request_id' => $request->id,
+                'certificate_id' => $certificate->id,
+                'certificate_number' => $certificate->certificate_number,
+            ]
+        );
+
+        // Send email notification
+        try {
+            $user = $request->user;
+            if ($user && $user->email) {
+                \Mail::to($user->email)->send(
+                    new \App\Mail\CertificateReady($certificate, $request)
+                );
+                \Log::info("Certificate ready email sent", [
+                    'certificate_id' => $certificate->id,
+                    'recipient' => $user->email
+                ]);
+            }
+        } catch (\Exception $e) {
+            \Log::error("Failed to send certificate ready email", [
+                'certificate_id' => $certificate->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // Send SMS notification if enabled
+        try {
+            $smsService = app(SmsService::class);
+            $user = $request->user;
+            if ($smsService->isEnabled() && $user && $user->phone) {
+                $message = "Your certificate {$certificate->certificate_number} is ready for pickup at CPDO office. Bring valid ID. Contact: 078-123-4567";
+                $smsService->send($user->phone, $message);
+                \Log::info("Certificate ready SMS sent", [
+                    'certificate_id' => $certificate->id,
+                    'recipient' => $user->phone
+                ]);
+            }
+        } catch (\Exception $e) {
+            \Log::error("Failed to send certificate ready SMS", [
+                'certificate_id' => $certificate->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // Notify admins about the certificate being ready
+        $admins = User::where('user_type', 'admin')->get();
+        foreach ($admins as $admin) {
+            Notification::createForUser(
+                $admin->id,
+                'certificate_marked_ready',
+                'Certificate Marked Ready',
+                "Certificate {$certificate->certificate_number} for {$applicantName} has been marked ready for pickup.",
+                "/admin/certificates",
+                [
+                    'request_id' => $request->id,
+                    'certificate_id' => $certificate->id,
+                    'certificate_number' => $certificate->certificate_number,
+                ]
+            );
+        }
     }
 }

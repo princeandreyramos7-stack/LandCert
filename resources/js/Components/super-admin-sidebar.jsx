@@ -5,11 +5,11 @@ import {
     Users,
     Shield,
     ScrollText,
-    Map,
     FolderKanban,
-    Plus,
     CreditCard,
     Award,
+    Clock,
+    History,
 } from "lucide-react";
 
 import { NavMain } from "@/Components/nav-main";
@@ -52,25 +52,43 @@ export function SuperAdminSidebar({ ...props }) {
                 ],
             },
             {
+                title: "Payments",
+                url: "#",
+                icon: CreditCard,
+                isActive: false,
+                items: [
+                    {
+                        title: "Pending Payments",
+                        url: route("super-admin.payments.pending"),
+                        icon: Clock,
+                    },
+                    {
+                        title: "Payment History",
+                        url: route("super-admin.payments.history"),
+                        icon: History,
+                    },
+                    {
+                        title: "All Payments",
+                        url: route("super-admin.payments"),
+                        icon: CreditCard,
+                    },
+                ],
+            },
+            {
                 title: "Management",
                 url: "#",
                 icon: FolderKanban,
                 isActive: false,
                 items: [
                     {
-                        title: "Users Management",
+                        title: "Certificates",
+                        url: route("super-admin.certificates.index"),
+                        icon: Award,
+                    },
+                    {
+                        title: "Users",
                         url: route("super-admin.users"),
                         icon: Users,
-                    },
-                    {
-                        title: "Payments",
-                        url: route("super-admin.payments"),
-                        icon: CreditCard,
-                    },
-                    {
-                        title: "Certificates",
-                        url: route("super-admin.certificates"),
-                        icon: Award,
                     },
                     {
                         title: "Audit Logs",
@@ -86,10 +104,10 @@ export function SuperAdminSidebar({ ...props }) {
         <Sidebar collapsible="icon" {...props}>
             <SidebarHeader>
                 <div className="flex items-center gap-2 px-2 py-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden">
-                        <img 
-                            src="/images/Ilagan.png" 
-                            alt="CPDO Logo" 
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden flex-shrink-0">
+                        <img
+                            src="/images/Ilagan.png"
+                            alt="CPDO Logo"
                             className="h-full w-full object-contain"
                         />
                     </div>

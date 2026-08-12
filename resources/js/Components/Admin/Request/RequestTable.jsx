@@ -1,6 +1,7 @@
 import React from "react";
 import { Badge } from "@/Components/ui/badge";
 import { Button } from "@/Components/ui/button";
+import { router } from "@inertiajs/react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -10,20 +11,20 @@ import {
 } from "@/Components/ui/dropdown-menu";
 import {
     MoreVertical,
-    Eye,
-    Edit,
     CheckCircle,
     Trash2,
 } from "lucide-react";
-import { getStatusColor, getStatusIcon, formatDate, formatLocation } from "./utils";
+import { getStatusColor, getStatusIcon, formatDate, formatLocation, formatProjectType } from "./utils";
 
 export function RequestTable({
     requests,
-    onView,
     onEdit,
-    onMarkReviewed,
     onDelete,
 }) {
+    const handleReviewClick = (request) => {
+        router.visit(route('admin.requests.review', request.id));
+    };
+
     return (
         <div className="overflow-x-auto">
             <table className="w-full">
@@ -86,7 +87,9 @@ export function RequestTable({
                                     </div>
                                 </td>
                                 <td className="p-3 text-sm">
-                                    {request.project_type || "N/A"}
+                                    {formatProjectType(request.project_type) ?? (
+                                        <span className="text-slate-400 italic text-xs">Not specified</span>
+                                    )}
                                 </td>
                                 <td className="p-3 text-sm max-w-xs truncate">
                                     {formatLocation(request)}
@@ -120,22 +123,8 @@ export function RequestTable({
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem
-                                                onClick={() => onView(request)}
-                                            >
-                                                <Eye className="h-4 w-4 mr-2" />
-                                                View
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() => onEdit(request)}
-                                            >
-                                                <Edit className="h-4 w-4 mr-2" />
-                                                Edit
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem
-                                                onClick={() => onMarkReviewed(request)}
-                                                disabled={request.status === "reviewed" || request.status === "approved"}
-                                                className="text-blue-600"
+                                                onClick={() => handleReviewClick(request)}
+                                                className="text-blue-600 font-medium"
                                             >
                                                 <CheckCircle className="h-4 w-4 mr-2" />
                                                 Review Application

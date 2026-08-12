@@ -10,12 +10,10 @@ import { RequestStats } from "./RequestStats";
 import { RequestTable } from "./RequestTable";
 import { RequestTableHeader } from "./RequestTableHeader";
 import { RequestPagination } from "./RequestPagination";
-import { ViewRequestModal } from "./ViewRequestModal";
 import { EditRequestModal } from "./EditRequestModal";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { ApproveConfirmDialog } from "./ApproveConfirmDialog";
 import { RejectDialog } from "./RejectDialog";
-import ReviewApplicationModal from "@/Components/Admin/ReviewApplicationModal";
 import { generateCSV, downloadCSV } from "./utils";
 
 export function AdminRequestList({ requests, flash = {} }) {
@@ -27,12 +25,10 @@ export function AdminRequestList({ requests, flash = {} }) {
     const [bulkLoading, setBulkLoading] = useState(false);
 
     // Modal States
-    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
     const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-    const [isMarkReviewedDialogOpen, setIsMarkReviewedDialogOpen] = useState(false);
 
     const { toast } = useToast();
 
@@ -109,11 +105,6 @@ export function AdminRequestList({ requests, flash = {} }) {
     }, [requestsData]);
 
     // Event Handlers
-    const handleView = (request) => {
-        setSelectedRequest(request);
-        setIsViewModalOpen(true);
-    };
-
     const handleEdit = (request) => {
         setSelectedRequest(request);
         setEditData({
@@ -264,15 +255,6 @@ export function AdminRequestList({ requests, flash = {} }) {
         setSelectedRequest(request);
         setIsDeleteDialogOpen(true);
     };
-
-    const handleMarkReviewed = (request) => {
-        // Open the new comprehensive review modal
-        setSelectedRequest(request);
-        setIsMarkReviewedDialogOpen(true);
-    };
-
-    // This is no longer needed as the new modal handles submission
-    // Kept for backwards compatibility, can be removed later
 
     const confirmDelete = () => {
         if (!selectedRequest) return;
@@ -447,11 +429,7 @@ export function AdminRequestList({ requests, flash = {} }) {
                         selectedItems={selectedItems}
                         onSelectAll={handleSelectAll}
                         onSelectItem={handleSelectItem}
-                        onView={handleView}
                         onEdit={handleEdit}
-                        onMarkReviewed={handleMarkReviewed}
-                        onApprove={handleApprove}
-                        onReject={handleReject}
                         onDelete={handleDelete}
                     />
 
@@ -464,12 +442,6 @@ export function AdminRequestList({ requests, flash = {} }) {
             </Card>
 
             {/* Modals and Dialogs */}
-            <ViewRequestModal
-                isOpen={isViewModalOpen}
-                onClose={() => setIsViewModalOpen(false)}
-                request={selectedRequest}
-            />
-
             <EditRequestModal
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
@@ -499,21 +471,6 @@ export function AdminRequestList({ requests, flash = {} }) {
                 onClose={() => setIsRejectDialogOpen(false)}
                 request={selectedRequest}
                 onConfirm={confirmReject}
-            />
-
-            <ReviewApplicationModal
-                request={selectedRequest}
-                isOpen={isMarkReviewedDialogOpen}
-                onClose={() => {
-                    setIsMarkReviewedDialogOpen(false);
-                    setSelectedRequest(null);
-                }}
-                onSuccess={() => {
-                    toast({
-                        title: "Success!",
-                        description: "Application review submitted successfully!",
-                    });
-                }}
             />
         </div>
     );

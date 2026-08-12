@@ -100,36 +100,62 @@ export function MyApplicationsList({ applications = [] }) {
     const getStatusBadge = (status) => {
         const statusConfig = {
             pending: { 
-                variant: "secondary", 
                 icon: Clock, 
                 label: "Pending Review",
                 className: "bg-amber-50 text-amber-700 border-amber-300",
-                pulse: false
             },
-            approved: { 
-                variant: "default", 
-                icon: CheckCircle, 
-                label: "Approved",
-                className: "bg-emerald-50 text-emerald-700 border-emerald-300",
-                pulse: false
-            },
-            rejected: { 
-                variant: "destructive", 
-                icon: XCircle, 
-                label: "Rejected",
-                className: "bg-red-50 text-red-700 border-red-300",
-                pulse: false
+            reviewed: {
+                icon: AlertCircle,
+                label: "Under Review",
+                className: "bg-sky-50 text-sky-700 border-sky-300",
             },
             "under review": { 
-                variant: "outline", 
                 icon: AlertCircle, 
                 label: "Under Review",
                 className: "bg-sky-50 text-sky-700 border-sky-300",
-                pulse: false
+            },
+            approved: { 
+                icon: CheckCircle, 
+                label: "Approved",
+                className: "bg-emerald-50 text-emerald-700 border-emerald-300",
+            },
+            rejected: { 
+                icon: XCircle, 
+                label: "Rejected",
+                className: "bg-red-50 text-red-700 border-red-300",
+            },
+            payment_confirmed: {
+                icon: DollarSign,
+                label: "Payment Confirmed",
+                className: "bg-blue-50 text-blue-700 border-blue-300",
+            },
+            certificate_preparing: {
+                icon: FileText,
+                label: "Certificate Preparing",
+                className: "bg-purple-50 text-purple-700 border-purple-300",
+            },
+            certificate_ready: {
+                icon: Award,
+                label: "Ready for Pickup",
+                className: "bg-emerald-50 text-emerald-800 border-emerald-400",
+            },
+            completed: {
+                icon: CheckCircle,
+                label: "Completed",
+                className: "bg-green-50 text-green-700 border-green-300",
+            },
+            released: {
+                icon: Award,
+                label: "Released",
+                className: "bg-green-100 text-green-800 border-green-400",
             },
         };
 
-        const config = statusConfig[status?.toLowerCase()] || statusConfig.pending;
+        const config = statusConfig[status?.toLowerCase()] || {
+            icon: Clock,
+            label: status ? status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : "Pending Review",
+            className: "bg-slate-50 text-slate-700 border-slate-300",
+        };
         const Icon = config.icon;
 
         return (
@@ -191,7 +217,7 @@ export function MyApplicationsList({ applications = [] }) {
         formData.append('receipt', receiptFile);
         formData.append('request_id', selectedApplication.id);
         formData.append('amount', selectedApplication.report_amount || '');
-        formData.append('payment_method', 'bank_transfer');
+        formData.append('payment_method', 'cash');
         formData.append('payment_date', new Date().toISOString().split('T')[0]);
 
         try {
@@ -383,7 +409,7 @@ export function MyApplicationsList({ applications = [] }) {
                                 <SelectItem value="all">All Statuses</SelectItem>
                                 {uniqueStatuses.map((status) => (
                                     <SelectItem key={status} value={status}>
-                                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                                        {status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

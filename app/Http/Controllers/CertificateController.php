@@ -5,44 +5,89 @@ namespace App\Http\Controllers;
 use App\Models\Certificate;
 use App\Models\CertificateRelease;
 use App\Models\Request as ApplicationRequest;
+use App\Services\CertificateService;
+use App\Services\CertificatePDFService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class CertificateController extends Controller
 {
+    protected $certificateService;
+    protected $certificatePDFService;
+
+    public function __construct(CertificateService $certificateService, CertificatePDFService $certificatePDFService)
+    {
+        $this->certificateService = $certificateService;
+        $this->certificatePDFService = $certificatePDFService;
+    }
+
     /**
      * Display a listing of certificates.
      */
     public function index(Request $request)
     {
-        $query = Certificate::with(['request', 'payment', 'issuedBy', 'release.releasedBy']);
+        // Use the service method with filters
+        $filters = [
+            'status' => $request->status ?? 'all',
+            'search' => $request->search ?? null,
+            'from_date' => $request->from_date ?? null,
+            'to_date' => $request->to_date ?? null,
+        ];
 
-        // Filter by status
-        if ($request->has('status') && $request->status !== '') {
-            $query->where('status', $request->status);
-        }
+        $certificates = $this->certificateService->getAllCertificates($filters);
 
-        // Search functionality
-        if ($request->has('search') && $request->search !== '') {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('certificate_number', 'like', "%{$search}%")
-                  ->orWhereHas('request', function ($req) use ($search) {
-                      $req->where('applicant_name', 'like', "%{$search}%");
-                  });
-            });
-        }
-
-        $certificates = $query->orderBy('created_at', 'desc')->paginate(15);
-
-        return Inertia::render('SuperAdmin/Certificates', [
+        return Inertia::render('Admin/Certificates/Index', [
             'certificates' => $certificates,
-            'filters' => [
-                'status' => $request->status,
-                'search' => $request->search,
-            ],
+            'filters' => $filters,
+            'userType' => Auth::user()->user_type,
         ]);
+    }
+
+    /**
+     * Display the specified certificate.
+     */
+    public function show(Certificate $certificate)
+    {
+        $certificate->load(['request.applicant', 'request.project', 'payment', 'issuedBy', 'releasedBy']);
+
+        return Inertia::render('Admin/Certificates/Show', [
+            'certificate' => $certificate,
+        ]);
+    }
+
+    /**
+     * Download certificate PDF.
+     */
+    public function download(Certificate $certificate)
+    {
+        try {
+            return $this->certificatePDFService->download($certificate);
+        } catch (\Exception $e) {
+            \Log::error('Failed to download certificate', [
+                'certificate_id' => $certificate->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return redirect()->back()->with('error', 'Failed to download certificate. Please try again.');
+        }
+    }
+
+    /**
+     * Stream/preview certificate PDF.
+     */
+    public function preview(Certificate $certificate)
+    {
+        try {
+            return $this->certificatePDFService->stream($certificate);
+        } catch (\Exception $e) {
+            \Log::error('Failed to preview certificate', [
+                'certificate_id' => $certificate->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return redirect()->back()->with('error', 'Failed to preview certificate. Please try again.');
+        }
     }
 
     /**
@@ -88,43 +133,24 @@ class CertificateController extends Controller
     /**
      * Mark certificate as ready for collection.
      */
-    public function markReady(Certificate $certificate)
+    public function markReady(Request $request, Certificate $certificate)
     {
-        $certificate->update([
-            'status' => 'ready_for_pickup',
-            'ready_at' => now(),
-        ]);
-
-        // Send notification to applicant
         try {
-            $requestModel = $certificate->request;
-            if ($requestModel && $requestModel->user) {
-                // Send email notification
-                // TODO: Create CertificateReadyForPickup mailable
-                
-                // Send SMS notification
-                if ($requestModel->user->contact_number) {
-                    app(\App\Services\SmsService::class)->sendMessage(
-                        $requestModel->user->contact_number,
-                        "CPDO: Your certificate ({$certificate->certificate_number}) is ready for pickup at our office. Please bring a valid ID."
-                    );
-                }
-                
-                // Create in-app notification
-                \App\Models\Notification::createForUser(
-                    $requestModel->user_id,
-                    'certificate_ready',
-                    'Certificate Ready for Pickup',
-                    "Your certificate {$certificate->certificate_number} is ready for collection at the CPDO office. Please bring a valid government-issued ID.",
-                    "/dashboard",
-                    ['certificate_id' => $certificate->id]
-                );
-            }
-        } catch (\Exception $e) {
-            \Log::error('Failed to send certificate ready notification: ' . $e->getMessage());
-        }
+            $validated = $request->validate([
+                'notes' => 'nullable|string|max:500',
+            ]);
 
-        return redirect()->back()->with('success', 'Certificate marked as ready for collection. Applicant has been notified.');
+            $this->certificateService->markReady($certificate, $validated['notes'] ?? null);
+
+            return redirect()->back()->with('success', 'Certificate marked as ready. Applicant has been notified via email, SMS, and in-app notification.');
+        } catch (\Exception $e) {
+            \Log::error('Failed to mark certificate ready', [
+                'certificate_id' => $certificate->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return redirect()->back()->with('error', 'Failed to mark certificate as ready. Please try again.');
+        }
     }
 
     /**
@@ -132,32 +158,24 @@ class CertificateController extends Controller
      */
     public function recordRelease(Request $request, Certificate $certificate)
     {
-        $validated = $request->validate([
-            'collected_by_name' => 'required|string|max:255',
-            'release_date' => 'required|date',
-            'release_time' => 'required',
-            'valid_id_type' => 'nullable|string|max:255',
-            'valid_id_number' => 'nullable|string|max:255',
-            'relationship_to_applicant' => 'required|in:applicant,authorized_representative,other',
-            'remarks' => 'nullable|string',
-        ]);
+        try {
+            $validated = $request->validate([
+                'released_to_name' => 'required|string|max:255',
+                'released_to_id_type' => 'nullable|string|max:100',
+                'released_to_id_number' => 'nullable|string|max:100',
+            ]);
 
-        $validated['certificate_id'] = $certificate->id;
-        $validated['released_by'] = Auth::id();
+            $this->certificateService->recordRelease($certificate, $validated);
 
-        CertificateRelease::create($validated);
-
-        // Update certificate status to released and add release tracking
-        $certificate->update([
-            'status' => 'released',
-            'released_at' => now(),
-            'released_by' => Auth::id(),
-            'released_to_name' => $validated['collected_by_name'],
-            'released_to_id_type' => $validated['valid_id_type'] ?? null,
-            'released_to_id_number' => $validated['valid_id_number'] ?? null,
-        ]);
-
-        return redirect()->back()->with('success', 'Certificate release recorded successfully.');
+            return redirect()->back()->with('success', 'Certificate release recorded successfully.');
+        } catch (\Exception $e) {
+            \Log::error('Failed to record certificate release', [
+                'certificate_id' => $certificate->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return redirect()->back()->with('error', 'Failed to record certificate release. Please try again.');
+        }
     }
 
     /**

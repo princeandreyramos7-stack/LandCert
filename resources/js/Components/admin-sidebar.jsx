@@ -56,8 +56,12 @@ const adminNavMain = [
         isActive: false,
         items: [
             {
-                title: "Payments",
-                url: "/admin/payments",
+                title: "Payments Pending",
+                url: "/admin/payments/pending",
+            },
+            {
+                title: "Payment History",
+                url: "/admin/payments/history",
             },
             {
                 title: "Certificates",

@@ -26,7 +26,7 @@ class RequestObserver
         $this->cacheService->clearCache();
         
         // Load relationships to access normalized data
-        $request->load(['applicant.corporation', 'applicant.representative', 'project', 'location', 'property', 'user']);
+        $request->load(['applicant.corporation', 'applicant.primaryRepresentative', 'project', 'location', 'property', 'user']);
         
         $applicantName = $request->applicant->applicant_name ?? 'Applicant';
         

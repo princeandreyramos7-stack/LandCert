@@ -83,8 +83,17 @@ export const generateCSV = (requests) => {
 };
 
 /**
- * Download CSV file
+ * Format project type to a human-readable label
  */
+export const formatProjectType = (type) => {
+    if (!type) return null;
+    const labels = {
+        "TUP": "TUP (Temporary Use Permit)",
+        "Zoning Clearance": "Zoning Clearance",
+        "SUP": "SUP (Special Use Permit)",
+    };
+    return labels[type] || type;
+};
 export const downloadCSV = (content, filename) => {
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");

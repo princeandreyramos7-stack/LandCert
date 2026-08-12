@@ -90,11 +90,40 @@ class AdminController extends Controller
         $stats = $this->cacheService->getStats();
         $evaluationDistribution = $this->cacheService->getEvaluationDistribution();
 
+        // Get recent payment activity (last 5 verified payments) - FR9.3
+        $recentPayments = \App\Models\Payment::with(['request.applicant', 'verifiedByUser'])
+            ->where('payment_status', 'verified')
+            ->whereNotNull('verified_at')
+            ->orderBy('verified_at', 'desc')
+            ->take(5)
+            ->get()
+            ->map(function($payment) {
+                return [
+                    'id' => $payment->id,
+                    'receipt_number' => $payment->receipt_number,
+                    'applicant_name' => $payment->request->applicant->applicant_name ?? 'Unknown',
+                    'amount' => $payment->amount,
+                    'payment_method' => $payment->payment_method,
+                    'verified_by_name' => $payment->verifiedByUser->name ?? 'Unknown',
+                    'verified_at' => $payment->verified_at,
+                ];
+            });
+
+        // Get pending payments count - FR9.1 & FR9.2
+        $pendingPaymentsCount = RequestModel::join('reports', 'requests.id', '=', 'reports.request_id')
+            ->where('reports.evaluation', 'approved')
+            ->whereDoesntHave('payments', function($query) {
+                $query->where('payment_status', 'verified');
+            })
+            ->count();
+
         return Inertia::render('Admin/Dashboard', [
             'applications' => $requests,
             'stats' => $stats,
             'analytics' => $analytics,
             'evaluationDistribution' => $evaluationDistribution,
+            'recentPayments' => $recentPayments,
+            'pendingPaymentsCount' => $pendingPaymentsCount,
         ]);
     }
     
@@ -340,6 +369,92 @@ class AdminController extends Controller
         $requestData['status'] = $report?->evaluation ?? $request->status;
         
         return Inertia::render('Admin/RequestDetails', [
+            'request' => $requestData,
+        ]);
+    }
+
+    /**
+     * Show review page for a request
+     */
+    public function reviewRequest($id): Response
+    {
+        $request = RequestModel::with([
+            'user', 
+            'reports',
+            'applicant.corporation',
+            'applicant.primaryRepresentative',
+            'project',
+            'location',
+            'property'
+        ])->findOrFail($id);
+        
+        // Get the latest report for this request
+        $report = $request->reports->first();
+        
+        // Build the request data with normalized relationships
+        $requestData = [
+            'id' => $request->id,
+            'control_number' => $request->control_number,
+            'status' => $report?->evaluation ?? $request->status,
+            'created_at' => $request->created_at,
+            'updated_at' => $request->updated_at,
+            
+            // User info
+            'user_id' => $request->user_id,
+            'user_name' => $request->user?->name,
+            'user_email' => $request->user?->email,
+            
+            // Applicant info
+            'applicant_name' => $request->applicant?->applicant_name,
+            'applicant_address' => $request->applicant?->applicant_address,
+            'applicant_contact' => $request->applicant?->applicant_contact,
+            
+            // Corporation info
+            'corporation_name' => $request->applicant?->corporation?->corporation_name,
+            'corporation_address' => $request->applicant?->corporation?->corporation_address,
+            
+            // Representative info
+            'authorized_representative_name' => $request->applicant?->primaryRepresentative?->representative_name,
+            'authorized_representative_address' => $request->applicant?->primaryRepresentative?->representative_address,
+            'authorization_letter_path' => $request->applicant?->primaryRepresentative?->authorization_letter_path,
+            
+            // Project info
+            'application_category' => $request->project?->project_type, // project_type serves as category
+            'project_type' => $request->project?->project_type,
+            'project_nature' => $request->project?->project_nature,
+            'project_nature_duration' => $request->project?->project_nature_duration,
+            'project_nature_years' => $request->project?->project_nature_years,
+            'project_cost' => $request->project?->project_cost,
+            
+            // Location info
+            'project_location_number' => null, // Not in normalized structure
+            'project_location_street' => $request->location?->street_address,
+            'project_location_barangay' => $request->location?->barangay,
+            'project_location_municipality' => $request->location?->city_municipality,
+            'project_location_province' => $request->location?->province,
+            
+            // Property info
+            'project_area_sqm' => ($request->property?->lot_area_sqm + $request->property?->bldg_improvement_sqm), // Calculate total
+            'lot_area_sqm' => $request->property?->lot_area_sqm,
+            'bldg_improvement_sqm' => $request->property?->bldg_improvement_sqm,
+            'right_over_land' => $request->property?->right_over_land,
+            
+            // Land use info
+            'existing_land_use' => $request->property?->existing_land_use,
+            'has_written_notice' => $request->has_written_notice,
+            'notice_officer_name' => $request->notice_officer_name,
+            'notice_dates' => $request->notice_dates,
+            'has_similar_application' => $request->has_similar_application,
+            'similar_application_offices' => $request->similar_application_offices,
+            'similar_application_dates' => $request->similar_application_dates,
+            
+            // Report info
+            'report_id' => $report?->report_id,
+            'evaluation' => $report?->evaluation,
+            'application_id' => $request->id,
+        ];
+        
+        return Inertia::render('Admin/ReviewRequest', [
             'request' => $requestData,
         ]);
     }

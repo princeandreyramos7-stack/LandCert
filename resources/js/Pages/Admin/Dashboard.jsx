@@ -18,6 +18,8 @@ export default function Page({
     applications = [],
     stats = {},
     analytics = null,
+    pendingPaymentsCount = 0,
+    recentPayments = [],
 }) {
     return (
         <SidebarProvider>
@@ -45,6 +47,8 @@ export default function Page({
                         applications={applications}
                         stats={stats}
                         analytics={analytics}
+                        pendingPaymentsCount={pendingPaymentsCount}
+                        recentPayments={recentPayments}
                     />
                 </div>
             </SidebarInset>

@@ -69,7 +69,7 @@ export default function Certificates({ auth, certificates, filters }) {
     });
 
     const handleSearch = () => {
-        router.get(route('super-admin.certificates'), {
+        router.get(route('super-admin.certificates.index'), {
             search,
             status: statusFilter === 'all' ? '' : statusFilter,
         }, {
@@ -119,7 +119,7 @@ export default function Certificates({ auth, certificates, filters }) {
 
     const submitRelease = () => {
         setProcessing(true);
-        router.post(route('super-admin.certificates.release', selectedCertificate.id), releaseForm, {
+        router.post(route('super-admin.certificates.record-release', selectedCertificate.id), releaseForm, {
             onFinish: () => {
                 setProcessing(false);
                 setShowReleaseModal(false);
@@ -186,7 +186,7 @@ export default function Certificates({ auth, certificates, filters }) {
                                     </div>
                                     <Select value={statusFilter} onValueChange={(value) => {
                                         setStatusFilter(value);
-                                        router.get(route('super-admin.certificates'), {
+                                        router.get(route('super-admin.certificates.index'), {
                                             search,
                                             status: value === 'all' ? '' : value,
                                         }, {

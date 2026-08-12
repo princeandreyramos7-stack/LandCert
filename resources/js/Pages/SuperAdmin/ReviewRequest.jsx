@@ -1,0 +1,776 @@
+import { SuperAdminSidebar } from "@/Components/super-admin-sidebar";
+import { Head, Link, router } from "@inertiajs/react";
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbList,
+    BreadcrumbPage,
+} from "@/Components/ui/breadcrumb";
+import { Separator } from "@/Components/ui/separator";
+import {
+    SidebarInset,
+    SidebarProvider,
+    SidebarTrigger,
+} from "@/Components/ui/sidebar";
+import { Button } from "@/Components/ui/button";
+import { Badge } from "@/Components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
+import {
+    User,
+    Building2,
+    MapPin,
+    DollarSign,
+    Home,
+    FileText,
+    CalendarDays,
+    ArrowLeft,
+    Clock,
+    CheckCircle2,
+    XCircle,
+    AlertCircle,
+    Check,
+    Shield,
+    UserCog,
+    MessageSquare,
+    Loader2,
+    History,
+} from "lucide-react";
+import { formatDate } from "@/Components/Admin/Request/utils";
+import { useState } from "react";
+import { useToast } from "@/Components/ui/use-toast";
+import { Toaster } from "@/Components/ui/toaster";
+import axios from "axios";
+
+export default function SuperAdminReviewRequest({ request }) {
+    const [currentStep, setCurrentStep] = useState(1);
+    const [action, setAction] = useState('');
+    const [formData, setFormData] = useState({
+        approval_notes: '',
+        rejection_reason: '',
+        assign_to_admin: false,
+        priority_level: 'normal',
+        special_instructions: ''
+    });
+    const [loading, setLoading] = useState(false);
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const { toast} = useToast();
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setShowConfirmDialog(true);
+    };
+
+    const confirmSubmit = async () => {
+        setShowConfirmDialog(false);
+        setLoading(true);
+
+        try {
+            const endpoint = action === 'approved' 
+                ? route('super-admin.approve-request', request.report_id)
+                : route('super-admin.reject-request', request.report_id);
+
+            await axios.post(endpoint, {
+                description: action === 'approved' ? formData.approval_notes : formData.rejection_reason,
+                issued_by: 'Super Admin',
+                priority_level: formData.priority_level,
+                special_instructions: formData.special_instructions,
+                assign_to_admin: formData.assign_to_admin
+            });
+
+            toast({
+                title: "Success!",
+                description: `Application ${action === 'approved' ? 'approved' : 'rejected'} successfully!`,
+            });
+            
+            setTimeout(() => {
+                router.visit(route('super-admin.requests'));
+            }, 1500);
+        } catch (error) {
+            console.error('Review failed:', error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: error.response?.data?.message || "Failed to submit review.",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getStatusConfig = (status) => {
+        const configs = {
+            pending: {
+                icon: Clock,
+                color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+                label: "Pending Review",
+            },
+            approved: {
+                icon: CheckCircle2,
+                color: "bg-green-100 text-green-800 border-green-200",
+                label: "Approved",
+            },
+            rejected: {
+                icon: XCircle,
+                color: "bg-red-100 text-red-800 border-red-200",
+                label: "Rejected",
+            },
+            reviewed: {
+                icon: AlertCircle,
+                color: "bg-blue-100 text-blue-800 border-blue-200",
+                label: "Under Review",
+            },
+        };
+        return configs[status] || configs.pending;
+    };
+
+    const statusConfig = getStatusConfig(request.status || "pending");
+    const StatusIcon = statusConfig.icon;
+
+    const steps = [
+        { number: 1, title: "Applicant Info", icon: User },
+        { number: 2, title: "Project Details", icon: Building2 },
+        { number: 3, title: "Land Use", icon: Home },
+    ];
+
+    return (
+        <SidebarProvider>
+            <Head title={`Review Request #${request.id} - Super Admin`} />
+            <SuperAdminSidebar />
+            <SidebarInset>
+                <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b bg-white">
+                    <div className="flex items-center gap-2 px-4 w-full">
+                        <SidebarTrigger className="-ml-1" />
+                        <Separator orientation="vertical" className="mr-2 h-4" />
+                        <Breadcrumb>
+                            <BreadcrumbList>
+                                <BreadcrumbItem>
+                                    <Link
+                                        href={route("super-admin.dashboard")}
+                                        className="text-gray-600 hover:text-gray-900 transition-colors"
+                                    >
+                                        Dashboard
+                                    </Link>
+                                </BreadcrumbItem>
+                                <BreadcrumbItem>
+                                    <span className="mx-2 text-gray-400">›</span>
+                                </BreadcrumbItem>
+                                <BreadcrumbItem>
+                                    <Link
+                                        href={route("super-admin.requests")}
+                                        className="text-gray-600 hover:text-gray-900 transition-colors"
+                                    >
+                                        Requests
+                                    </Link>
+                                </BreadcrumbItem>
+                                <BreadcrumbItem>
+                                    <span className="mx-2 text-gray-400">›</span>
+                                </BreadcrumbItem>
+                                <BreadcrumbItem>
+                                    <BreadcrumbPage>Review #{request.id}</BreadcrumbPage>
+                                </BreadcrumbItem>
+                            </BreadcrumbList>
+                        </Breadcrumb>
+                    </div>
+                </header>
+
+                <div className="flex flex-1 flex-col gap-6 p-6 bg-gray-50 min-h-screen">
+                    <div className="max-w-7xl mx-auto w-full">
+                        {/* Back Button */}
+                        <div className="mb-4">
+                            <Link href={route("super-admin.requests")}>
+                                <Button variant="outline" size="sm" className="hover:bg-gray-100">
+                                    <ArrowLeft className="h-4 w-4 mr-2" />
+                                    Back to Requests
+                                </Button>
+                            </Link>
+                        </div>
+
+                        {/* Super Admin Badge */}
+                        <div className="mb-4 flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-gray-600" />
+                            <span className="text-sm font-semibold text-gray-600">Super Admin Review Mode</span>
+                        </div>
+
+                        {/* Application Details Card */}
+                        <Card className="mb-6 border">
+                            <CardHeader className="bg-white border-b">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-gray-100 rounded-lg">
+                                            <FileText className="h-6 w-6 text-gray-600" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-2xl text-gray-900">
+                                                Request #{request.id}
+                                            </CardTitle>
+                                            <p className="text-sm text-gray-600 mt-1">
+                                                Application Type: <span className="font-semibold text-gray-900">{request.application_category || "N/A"}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Badge className={`${statusConfig.color} border px-4 py-2 text-sm font-semibold flex items-center gap-2`}>
+                                        <StatusIcon className="h-4 w-4" />
+                                        {statusConfig.label}
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-6 pt-6">
+                                <StepIndicator
+                                    steps={steps}
+                                    currentStep={currentStep}
+                                    onStepClick={setCurrentStep}
+                                />
+
+                                <div className="mt-8">
+                                    {currentStep === 1 && <Step1Content request={request} />}
+                                    {currentStep === 2 && <Step2Content request={request} />}
+                                    {currentStep === 3 && <Step3Content request={request} />}
+                                </div>
+
+                                <div className="flex justify-between pt-6 border-t">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+                                        disabled={currentStep === 1}
+                                    >
+                                        Previous
+                                    </Button>
+                                    <div className="text-sm text-gray-500">
+                                        Step {currentStep} of {steps.length}
+                                    </div>
+                                    <Button
+                                        onClick={() => setCurrentStep(Math.min(steps.length, currentStep + 1))}
+                                        disabled={currentStep === steps.length}
+                                    >
+                                        Next
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Super Admin Review Form */}
+                        <Card className="border">
+                            <CardHeader className="bg-white border-b">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 bg-gray-100 rounded-lg">
+                                        <Shield className="h-6 w-6 text-gray-600" />
+                                    </div>
+                                    <CardTitle className="text-2xl text-gray-900">
+                                        Super Admin Decision
+                                    </CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-6">
+                                <form onSubmit={handleSubmit} className="space-y-6">
+                                    {/* Action Selection */}
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-800 mb-3">
+                                            Final Decision <span className="text-red-500">*</span>
+                                        </label>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <label className={`relative flex items-center p-5 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                                                action === 'approved' 
+                                                    ? 'border-green-500 bg-green-50 shadow-md' 
+                                                    : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
+                                            }`}>
+                                                <input
+                                                    type="radio"
+                                                    name="action"
+                                                    value="approved"
+                                                    checked={action === 'approved'}
+                                                    onChange={(e) => setAction(e.target.value)}
+                                                    className="w-5 h-5 text-green-600"
+                                                    required
+                                                />
+                                                <div className="ml-3">
+                                                    <div className="flex items-center gap-2 font-semibold text-green-700 text-base mb-1">
+                                                        <CheckCircle2 className="h-5 w-5" />
+                                                        APPROVE
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">Final approval - Application will proceed</div>
+                                                </div>
+                                            </label>
+
+                                            <label className={`relative flex items-center p-5 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                                                action === 'rejected' 
+                                                    ? 'border-red-500 bg-red-50 shadow-md' 
+                                                    : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
+                                            }`}>
+                                                <input
+                                                    type="radio"
+                                                    name="action"
+                                                    value="rejected"
+                                                    checked={action === 'rejected'}
+                                                    onChange={(e) => setAction(e.target.value)}
+                                                    className="w-5 h-5 text-red-600"
+                                                    required
+                                                />
+                                                <div className="ml-3">
+                                                    <div className="flex items-center gap-2 font-semibold text-red-700 text-base mb-1">
+                                                        <XCircle className="h-5 w-5" />
+                                                        REJECT
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">Decline application with reason</div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* Approved Form */}
+                                    {action === 'approved' && (
+                                        <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
+                                            {/* Priority Level */}
+                                            <div className="bg-white rounded-lg p-5 border-2 border-gray-200">
+                                                <label className="block text-sm font-semibold text-gray-800 mb-3">
+                                                    Priority Level
+                                                </label>
+                                                
+                                                <select
+                                                    value={formData.priority_level}
+                                                    onChange={(e) => setFormData({ ...formData, priority_level: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
+                                                >
+                                                    <option value="low">Low Priority - Standard Processing</option>
+                                                    <option value="normal">Normal Priority - Regular Timeline</option>
+                                                    <option value="high">High Priority - Expedited Processing</option>
+                                                    <option value="urgent">Urgent - Immediate Attention Required</option>
+                                                </select>
+                                            </div>
+
+                                            {/* Approval Notes */}
+                                            <div className="bg-white rounded-lg p-5 border-2 border-gray-200">
+                                                <label className="block text-sm font-semibold text-gray-800 mb-3">
+                                                    Approval Notes (Optional)
+                                                </label>
+                                                
+                                                <textarea
+                                                    value={formData.approval_notes}
+                                                    onChange={(e) => setFormData({ ...formData, approval_notes: e.target.value })}
+                                                    rows="4"
+                                                    maxLength="1000"
+                                                    placeholder="Add any notes, conditions, or special remarks for this approval..."
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all resize-none"
+                                                />
+                                                <p className="text-xs text-gray-500 mt-2">
+                                                    {formData.approval_notes.length}/1000 characters
+                                                </p>
+                                            </div>
+
+                                            {/* Special Instructions */}
+                                            <div className="bg-white rounded-lg p-5 border-2 border-gray-200">
+                                                <label className="block text-sm font-semibold text-gray-800 mb-3">
+                                                    Special Instructions for Admin (Optional)
+                                                </label>
+                                                
+                                                <textarea
+                                                    value={formData.special_instructions}
+                                                    onChange={(e) => setFormData({ ...formData, special_instructions: e.target.value })}
+                                                    rows="3"
+                                                    maxLength="500"
+                                                    placeholder="Instructions for the admin handling this application..."
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all resize-none"
+                                                />
+                                                <p className="text-xs text-gray-500 mt-2">
+                                                    {formData.special_instructions.length}/500 characters
+                                                </p>
+                                            </div>
+
+                                            {/* Assign to Admin */}
+                                            <div className="flex items-center gap-3 p-4 bg-gray-50 border-2 border-gray-200 rounded-lg">
+                                                <input
+                                                    type="checkbox"
+                                                    id="assign_to_admin"
+                                                    checked={formData.assign_to_admin}
+                                                    onChange={(e) => setFormData({ ...formData, assign_to_admin: e.target.checked })}
+                                                    className="w-5 h-5 text-gray-600 rounded focus:ring-gray-500"
+                                                />
+                                                <label htmlFor="assign_to_admin" className="flex items-center gap-2 cursor-pointer">
+                                                    <UserCog className="h-5 w-5 text-gray-600" />
+                                                    <span className="text-sm font-semibold text-gray-800">
+                                                        Immediately assign to Admin for further processing
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Reject Form */}
+                                    {action === 'rejected' && (
+                                        <div className="animate-in slide-in-from-top-2 duration-300">
+                                            <div className="bg-white rounded-lg p-5 border-2 border-gray-200">
+                                                <label className="block text-sm font-semibold text-gray-800 mb-3">
+                                                    Rejection Reason <span className="text-red-500">*</span>
+                                                </label>
+                                                
+                                                <textarea
+                                                    value={formData.rejection_reason}
+                                                    onChange={(e) => setFormData({ ...formData, rejection_reason: e.target.value })}
+                                                    rows="5"
+                                                    required
+                                                    maxLength="1000"
+                                                    placeholder="Provide a comprehensive reason for rejection..."
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all resize-none"
+                                                />
+                                                <p className="text-xs text-gray-500 mt-2">
+                                                    {formData.rejection_reason.length}/1000 characters
+                                                </p>
+
+                                                {/* Quick Reasons */}
+                                                <div className="mt-4">
+                                                    <p className="text-sm font-medium text-gray-700 mb-2">Quick Select:</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {[
+                                                            'Non-compliant with regulations',
+                                                            'Incomplete documentation',
+                                                            'Location not zoned for this use',
+                                                            'Policy violation',
+                                                            'Environmental concerns'
+                                                        ].map((reason) => (
+                                                            <button
+                                                                key={reason}
+                                                                type="button"
+                                                                onClick={() => setFormData({ ...formData, rejection_reason: reason })}
+                                                                className="px-3 py-1.5 text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-all duration-200"
+                                                            >
+                                                                {reason}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Submit Button */}
+                                    <div className="flex justify-end gap-3 pt-4 border-t">
+                                        <Link href={route('super-admin.requests')}>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                disabled={loading}
+                                            >
+                                                Cancel
+                                            </Button>
+                                        </Link>
+                                        <Button
+                                            type="submit"
+                                            disabled={loading || !action}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                                        >
+                                            {loading ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                    Processing...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Submit Decision
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </SidebarInset>
+            
+            {/* Confirmation Dialog */}
+            {showConfirmDialog && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
+                        <div className="px-6 py-5 border-b">
+                            <h3 className="text-xl font-bold text-gray-900">
+                                Confirm Your Decision
+                            </h3>
+                        </div>
+                        
+                        <div className="px-6 py-5">
+                            <div className="mb-6">
+                                <p className="text-gray-700 mb-4">
+                                    {action === 'approved' ? (
+                                        <>
+                                            You are about to <span className="font-bold text-green-600">APPROVE</span> this application:
+                                            <ul className="mt-3 space-y-2 text-sm text-gray-600">
+                                                <li>• Priority: <span className="font-semibold">{formData.priority_level.toUpperCase()}</span></li>
+                                                {formData.assign_to_admin && (
+                                                    <li>• <span className="font-semibold">Will be assigned to Admin immediately</span></li>
+                                                )}
+                                                {formData.approval_notes && (
+                                                    <li>• Includes approval notes</li>
+                                                )}
+                                            </ul>
+                                        </>
+                                    ) : (
+                                        <>
+                                            You are about to <span className="font-bold text-red-600">REJECT</span> this application:
+                                            <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                                <p className="text-sm text-gray-700 italic">
+                                                    "{formData.rejection_reason || 'No reason provided'}"
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
+                                </p>
+                                
+                                <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                    <p className="text-sm text-gray-600">
+                                        <span className="font-semibold">Note:</span> The applicant will be notified immediately via email.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <p className="text-center font-medium text-gray-900 mb-4">
+                                Do you want to proceed?
+                            </p>
+                            
+                            <div className="flex gap-3">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setShowConfirmDialog(false)}
+                                    className="flex-1 border-2 hover:bg-gray-100"
+                                    disabled={loading}
+                                >
+                                    No, Go Back
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={confirmSubmit}
+                                    disabled={loading}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        <>Yes, Confirm</>
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            <Toaster />
+        </SidebarProvider>
+    );
+}
+
+// Step Indicator Component (same as Admin version)
+function StepIndicator({ steps, currentStep, onStepClick }) {
+    return (
+        <div className="mb-8">
+            <div className="flex items-center justify-between relative">
+                <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 -z-10">
+                    <div
+                        className="h-full bg-gray-600 transition-all duration-500"
+                        style={{
+                            width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`,
+                        }}
+                    />
+                </div>
+
+                {steps.map((step) => {
+                    const isCompleted = currentStep > step.number;
+                    const isCurrent = currentStep === step.number;
+                    const Icon = step.icon;
+
+                    return (
+                        <div 
+                            key={step.number} 
+                            className="flex flex-col items-center flex-1 cursor-pointer"
+                            onClick={() => onStepClick(step.number)}
+                        >
+                            <div
+                                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                    isCompleted
+                                        ? "bg-green-600 text-white"
+                                        : isCurrent
+                                        ? "bg-blue-600 text-white ring-4 ring-blue-100"
+                                        : "bg-gray-200 text-gray-500"
+                                }`}
+                            >
+                                {isCompleted ? (
+                                    <Check className="h-5 w-5" />
+                                ) : (
+                                    <Icon className="h-5 w-5" />
+                                )}
+                            </div>
+                            <div className="mt-2 text-center">
+                                <p
+                                    className={`text-sm font-medium ${
+                                        isCurrent
+                                            ? "text-blue-600"
+                                            : isCompleted
+                                            ? "text-green-600"
+                                            : "text-gray-500"
+                                    }`}
+                                >
+                                    {step.title}
+                                </p>
+                                <p className="text-xs text-gray-400">Step {step.number}</p>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+// Step Content Components (reuse from Admin version)
+function Step1Content({ request }) {
+    return (
+        <div className="space-y-6">
+            <SectionTitle icon={User} title="Applicant Information" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InfoField label="Name of Applicant" value={request.applicant_name} />
+                <InfoField label="Address of Applicant" value={request.applicant_address} />
+            </div>
+
+            {request.corporation_name && (
+                <div className="pt-4 border-t">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-4">Corporation Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InfoField label="Name of Corporation" value={request.corporation_name} />
+                        <InfoField label="Address of Corporation" value={request.corporation_address} />
+                    </div>
+                </div>
+            )}
+
+            {request.authorized_representative_name && (
+                <div className="pt-4 border-t">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-4">Authorized Representative</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InfoField label="Name" value={request.authorized_representative_name} />
+                        <InfoField label="Address" value={request.authorized_representative_address} />
+                    </div>
+                    {request.authorization_letter_path && (
+                        <div className="mt-4">
+                            <a
+                                href={`/storage/${request.authorization_letter_path}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                            >
+                                <FileText className="h-4 w-4" />
+                                View Authorization Letter
+                            </a>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function Step2Content({ request }) {
+    return (
+        <div className="space-y-6">
+            <SectionTitle icon={Building2} title="Project Details" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InfoField label="Project Type" value={request.project_type} />
+                <InfoField label="Project Nature" value={request.project_nature} />
+            </div>
+
+            <div className="pt-4 border-t">
+                <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Project Location
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InfoField label="Street" value={request.project_location_street} />
+                    <InfoField label="Barangay" value={request.project_location_barangay} />
+                    <InfoField label="Municipality" value={request.project_location_municipality} />
+                    <InfoField label="Province" value={request.project_location_province} />
+                </div>
+            </div>
+
+            <div className="pt-4 border-t">
+                <h4 className="text-sm font-semibold text-gray-700 mb-4">Project Area</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InfoField
+                        label="Lot (sqm)"
+                        value={request.lot_area_sqm ? `${parseFloat(request.lot_area_sqm).toLocaleString()} sqm` : "N/A"}
+                    />
+                    <InfoField
+                        label="Building (sqm)"
+                        value={request.bldg_improvement_sqm ? `${parseFloat(request.bldg_improvement_sqm).toLocaleString()} sqm` : "N/A"}
+                    />
+                    <InfoField label="Right Over Land" value={request.right_over_land} />
+                    <InfoField
+                        label="Project Cost"
+                        value={request.project_cost ? `₱${parseFloat(request.project_cost).toLocaleString()}` : "N/A"}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function Step3Content({ request }) {
+    return (
+        <div className="space-y-6">
+            <SectionTitle icon={Home} title="Land Use Information" />
+            
+            <InfoField label="Existing Land Use" value={request.existing_land_use} />
+
+            <div className="pt-4 border-t">
+                <h4 className="text-sm font-semibold text-gray-700 mb-4">Written Notice</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InfoField label="Has Written Notice" value={request.has_written_notice?.toUpperCase()} />
+                    {request.has_written_notice === "yes" && (
+                        <>
+                            <InfoField label="Officer Name" value={request.notice_officer_name} />
+                            <InfoField label="Notice Dates" value={request.notice_dates} />
+                        </>
+                    )}
+                </div>
+            </div>
+
+            <div className="pt-4 border-t">
+                <h4 className="text-sm font-semibold text-gray-700 mb-4">Similar Applications</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InfoField label="Has Similar Application" value={request.has_similar_application?.toUpperCase()} />
+                    {request.has_similar_application === "yes" && (
+                        <>
+                            <InfoField label="Other Offices" value={request.similar_application_offices} />
+                            <InfoField label="Dates Filed" value={request.similar_application_dates} />
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function SectionTitle({ icon: Icon, title }) {
+    return (
+        <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 bg-gray-100 rounded-lg">
+                <Icon className="h-5 w-5 text-gray-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        </div>
+    );
+}
+
+function InfoField({ label, value }) {
+    return (
+        <div className="group">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                {label}
+            </p>
+            <p className="text-sm text-gray-900 font-medium">
+                {value || <span className="text-gray-400 italic">Not provided</span>}
+            </p>
+        </div>
+    );
+}

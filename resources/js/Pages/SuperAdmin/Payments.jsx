@@ -1,668 +1,392 @@
 import { SuperAdminSidebar } from "@/Components/super-admin-sidebar";
-import { Head, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Head, router, usePage } from "@inertiajs/react";
+import { useState } from "react";
+import { Button } from "@/Components/ui/button";
+import { Input } from "@/Components/ui/input";
+import { Badge } from "@/Components/ui/badge";
+import { Label } from "@/Components/ui/label";
+import { Textarea } from "@/Components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbList,
-    BreadcrumbPage,
+    Breadcrumb, BreadcrumbItem, BreadcrumbLink,
+    BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from "@/Components/ui/breadcrumb";
 import { Separator } from "@/Components/ui/separator";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/Components/ui/sidebar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
+import { PaymentDetailsCard } from "@/Components/Admin/Payments/PaymentDetailsCard";
 import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from "@/components/ui/sidebar";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Search, Eye, CheckCircle, XCircle, Edit } from 'lucide-react';
+    CreditCard, Clock, CheckCircle2, XCircle, Search, Eye,
+    DollarSign, AlertCircle, TrendingUp, RefreshCw,
+} from "lucide-react";
 
-export default function Payments({ auth, payments, filters }) {
+const statusStyle = {
+    verified: "bg-green-100 text-green-800 border-green-200",
+    pending:  "bg-yellow-100 text-yellow-800 border-yellow-200",
+    rejected: "bg-red-100 text-red-800 border-red-200",
+};
+const statusIcon = {
+    verified: <CheckCircle2 className="h-3 w-3 mr-1 inline" />,
+    pending:  <Clock className="h-3 w-3 mr-1 inline" />,
+    rejected: <XCircle className="h-3 w-3 mr-1 inline" />,
+};
+const fmt = (n) => Number(n || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 });
+
+export default function Payments({ payments = {}, filters = {}, stats = {} }) {
     const { flash } = usePage().props;
-    const [search, setSearch] = useState(filters?.search || '');
-    const [statusFilter, setStatusFilter] = useState(filters?.payment_status || 'all');
-    const [methodFilter, setMethodFilter] = useState(filters?.payment_method || 'all');
-    const [selectedPayment, setSelectedPayment] = useState(null);
-    const [showDetailsModal, setShowDetailsModal] = useState(false);
-    const [showVerifyModal, setShowVerifyModal] = useState(false);
-    const [showRejectModal, setShowRejectModal] = useState(false);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [processing, setProcessing] = useState(false);
+    const [search, setSearch]             = useState(filters.search || "");
+    const [statusFilter, setStatusFilter] = useState(filters.payment_status || "all");
+    const [methodFilter, setMethodFilter] = useState(filters.payment_method || "all");
+    const [selected, setSelected]         = useState(null);
+    const [showDetails, setShowDetails]   = useState(false);
+    const [showVerify, setShowVerify]     = useState(false);
+    const [showReject, setShowReject]     = useState(false);
+    const [processing, setProcessing]     = useState(false);
+    const [verifyForm, setVerifyForm]     = useState({ amount: "", receipt_number: "", payment_date: "", notes: "" });
+    const [rejectForm, setRejectForm]     = useState({ rejection_reason: "" });
 
-    const [verifyForm, setVerifyForm] = useState({
-        amount: '',
-        receipt_number: '',
-        payment_date: '',
-        notes: '',
-    });
+    const paymentsData = payments.data || [];
 
-    const [rejectForm, setRejectForm] = useState({
-        rejection_reason: '',
-    });
-
-    const [editForm, setEditForm] = useState({
-        amount: '',
-        payment_method: '',
-        receipt_number: '',
-        payment_date: '',
-        payment_status: '',
-        notes: '',
-    });
-
-    const handleSearch = () => {
-        router.get(route('super-admin.payments'), {
+    const applyFilters = (overrides = {}) => {
+        router.get(route("super-admin.payments"), {
             search,
-            payment_status: statusFilter === 'all' ? '' : statusFilter,
-            payment_method: methodFilter === 'all' ? '' : methodFilter,
-        }, {
-            preserveState: true,
-            preserveScroll: true,
-        });
+            payment_status: statusFilter === "all" ? "" : statusFilter,
+            payment_method: methodFilter === "all" ? "" : methodFilter,
+            ...overrides,
+        }, { preserveState: true, preserveScroll: true });
     };
 
-    const handleViewDetails = (payment) => {
-        setSelectedPayment(payment);
-        setShowDetailsModal(true);
-    };
-
-    const handleVerify = (payment) => {
-        setSelectedPayment(payment);
+    const openVerify = (p) => {
+        setSelected(p);
         setVerifyForm({
-            amount: payment.amount || '',
-            receipt_number: payment.receipt_number || '',
-            payment_date: payment.payment_date ? new Date(payment.payment_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            notes: '',
+            amount: p.amount || "",
+            receipt_number: p.receipt_number || "",
+            payment_date: p.payment_date ? new Date(p.payment_date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+            notes: "",
         });
-        setShowVerifyModal(true);
+        setShowVerify(true);
     };
 
-    const handleReject = (payment) => {
-        setSelectedPayment(payment);
-        setRejectForm({
-            rejection_reason: '',
-        });
-        setShowRejectModal(true);
-    };
-
-    const handleEdit = (payment) => {
-        setSelectedPayment(payment);
-        setEditForm({
-            amount: payment.amount || '',
-            payment_method: payment.payment_method || '',
-            receipt_number: payment.receipt_number || '',
-            payment_date: payment.payment_date ? new Date(payment.payment_date).toISOString().split('T')[0] : '',
-            payment_status: payment.payment_status || '',
-            notes: payment.notes || '',
-        });
-        setShowEditModal(true);
-    };
+    const openReject = (p) => { setSelected(p); setRejectForm({ rejection_reason: "" }); setShowReject(true); };
 
     const submitVerify = () => {
         setProcessing(true);
-        router.post(route('super-admin.payments.verify', selectedPayment.id), verifyForm, {
-            onFinish: () => {
-                setProcessing(false);
-                setShowVerifyModal(false);
-                setSelectedPayment(null);
-            },
+        router.post(route("super-admin.payments.verify", selected.id), verifyForm, {
+            onFinish: () => { setProcessing(false); setShowVerify(false); setSelected(null); },
         });
     };
 
     const submitReject = () => {
         setProcessing(true);
-        router.post(route('super-admin.payments.reject', selectedPayment.id), rejectForm, {
-            onFinish: () => {
-                setProcessing(false);
-                setShowRejectModal(false);
-                setSelectedPayment(null);
-            },
+        router.post(route("super-admin.payments.reject", selected.id), rejectForm, {
+            onFinish: () => { setProcessing(false); setShowReject(false); setSelected(null); },
         });
-    };
-
-    const submitEdit = () => {
-        setProcessing(true);
-        router.put(route('super-admin.payments.update', selectedPayment.id), editForm, {
-            onFinish: () => {
-                setProcessing(false);
-                setShowEditModal(false);
-                setSelectedPayment(null);
-            },
-        });
-    };
-
-    const getStatusBadge = (status) => {
-        const statusMap = {
-            pending: { variant: 'secondary', label: 'Pending Verification' },
-            verified: { variant: 'success', label: 'Verified' },
-            rejected: { variant: 'destructive', label: 'Rejected' },
-        };
-        const config = statusMap[status] || { variant: 'secondary', label: status };
-        return <Badge variant={config.variant}>{config.label}</Badge>;
-    };
-
-    const getMethodBadge = (method) => {
-        const methodMap = {
-            cash: { variant: 'default', label: 'Cash' },
-            check: { variant: 'outline', label: 'Check' },
-            bank_transfer: { variant: 'secondary', label: 'Bank Transfer' },
-        };
-        const config = methodMap[method] || { variant: 'outline', label: method };
-        return <Badge variant={config.variant}>{config.label}</Badge>;
     };
 
     return (
         <SidebarProvider>
-            <Head title="Payment Management - Super Admin" />
+            <Head title="All Payments — Super Admin" />
             <SuperAdminSidebar />
             <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+                <header className="flex h-16 shrink-0 items-center gap-2">
                     <div className="flex items-center gap-2 px-4">
                         <SidebarTrigger className="-ml-1" />
                         <Separator orientation="vertical" className="mr-2 h-4" />
                         <Breadcrumb>
                             <BreadcrumbList>
                                 <BreadcrumbItem>
-                                    <BreadcrumbPage className="text-gray-900 font-semibold">
-                                        Payment Management
-                                    </BreadcrumbPage>
+                                    <BreadcrumbLink href={route("super-admin.dashboard")} className="text-slate-500 hover:text-slate-800">Dashboard</BreadcrumbLink>
+                                </BreadcrumbItem>
+                                <BreadcrumbSeparator />
+                                <BreadcrumbItem>
+                                    <BreadcrumbPage className="font-semibold text-slate-900">All Payments</BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
                         </Breadcrumb>
                     </div>
                 </header>
-                <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-                    {/* Content */}
-                    <div className="bg-white rounded-lg shadow-sm border">
-                        <div className="p-6">
-                            {flash?.success && (
-                                <div className="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                                    {flash.success}
-                                </div>
-                            )}
 
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-lg font-semibold">Physical Payment Records</h3>
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-2">
+                <div className="flex flex-1 flex-col gap-6 p-6 pt-0 bg-white min-h-screen">
+                    {/* Page title */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-slate-900">All Payments</h1>
+                            <p className="text-sm text-slate-500 mt-1">Full payment records across the system</p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => router.reload()} className="gap-2">
+                            <RefreshCw className="h-4 w-4" /> Refresh
+                        </Button>
+                    </div>
+
+                    {flash?.success && (
+                        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="h-4 w-4 flex-shrink-0" />{flash.success}
+                        </div>
+                    )}
+
+                    {/* Summary cards */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[
+                            { label: "Total Revenue", value: `₱${fmt(stats.total_revenue)}`, sub: `${stats.verified || 0} verified`, icon: DollarSign },
+                            { label: "This Month",    value: `₱${fmt(stats.this_month)}`,    sub: `₱${fmt(stats.last_month)} last month`, icon: TrendingUp },
+                            { label: "Pending",       value: stats.pending || 0,             sub: `₱${fmt(stats.pending_amount)} held`, icon: Clock },
+                            { label: "Rejected",      value: stats.rejected || 0,            sub: `${stats.total > 0 ? ((stats.rejected / stats.total) * 100).toFixed(1) : 0}% rate`, icon: AlertCircle },
+                        ].map(({ label, value, sub, icon: Icon }) => (
+                            <Card key={label} className="border border-slate-200 shadow-sm">
+                                <CardContent className="p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs text-slate-500 font-medium mb-1">{label}</p>
+                                            <p className="text-xl font-bold text-slate-900">{value}</p>
+                                            <p className="text-xs text-slate-400 mt-0.5">{sub}</p>
+                                        </div>
+                                        <div className="p-2 bg-slate-100 rounded-lg">
+                                            <Icon className="h-5 w-5 text-slate-600" />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+
+                    {/* Status tabs */}
+                    <div className="flex gap-2 flex-wrap">
+                        {[
+                            { key: "all",      label: `All (${stats.total || 0})` },
+                            { key: "pending",  label: `Pending (${stats.pending || 0})` },
+                            { key: "verified", label: `Verified (${stats.verified || 0})` },
+                            { key: "rejected", label: `Rejected (${stats.rejected || 0})` },
+                        ].map(({ key, label }) => (
+                            <button key={key}
+                                onClick={() => { setStatusFilter(key); applyFilters({ payment_status: key === "all" ? "" : key }); }}
+                                className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                                    statusFilter === key
+                                        ? "bg-slate-900 text-white border-slate-900"
+                                        : "bg-white text-slate-600 border-slate-300 hover:border-slate-500"
+                                }`}
+                            >{label}</button>
+                        ))}
+                    </div>
+
+                    {/* Main table */}
+                    <Card className="border border-slate-200 shadow-sm">
+                        <CardHeader className="border-b border-slate-200 p-4">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                                    <CreditCard className="h-4 w-4 text-slate-500" />
+                                    Payment Records
+                                    <span className="text-slate-400 font-normal text-sm">({payments.total || 0})</span>
+                                </CardTitle>
+                                <div className="flex gap-2 flex-wrap">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
                                         <Input
-                                            type="text"
-                                            placeholder="Search payments..."
+                                            placeholder="Search OR# or applicant..."
                                             value={search}
                                             onChange={(e) => setSearch(e.target.value)}
-                                            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                                            className="w-64"
+                                            onKeyDown={(e) => e.key === "Enter" && applyFilters()}
+                                            className="pl-9 w-52 h-9"
                                         />
-                                        <Button onClick={handleSearch} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
-                                            <Search className="h-4 w-4" />
-                                        </Button>
                                     </div>
-                                    <Select value={statusFilter} onValueChange={(value) => {
-                                        setStatusFilter(value);
-                                        router.get(route('super-admin.payments'), {
-                                            search,
-                                            payment_status: value === 'all' ? '' : value,
-                                            payment_method: methodFilter === 'all' ? '' : methodFilter,
-                                        }, {
-                                            preserveState: true,
-                                            preserveScroll: true,
-                                        });
-                                    }}>
-                                        <SelectTrigger className="w-48">
-                                            <SelectValue placeholder="Filter by status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Statuses</SelectItem>
-                                            <SelectItem value="pending">Pending</SelectItem>
-                                            <SelectItem value="verified">Verified</SelectItem>
-                                            <SelectItem value="rejected">Rejected</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <Select value={methodFilter} onValueChange={(value) => {
-                                        setMethodFilter(value);
-                                        router.get(route('super-admin.payments'), {
-                                            search,
-                                            payment_status: statusFilter === 'all' ? '' : statusFilter,
-                                            payment_method: value === 'all' ? '' : value,
-                                        }, {
-                                            preserveState: true,
-                                            preserveScroll: true,
-                                        });
-                                    }}>
-                                        <SelectTrigger className="w-48">
-                                            <SelectValue placeholder="Filter by method" />
-                                        </SelectTrigger>
+                                    <Select value={methodFilter} onValueChange={(v) => { setMethodFilter(v); applyFilters({ payment_method: v === "all" ? "" : v }); }}>
+                                        <SelectTrigger className="w-32 h-9"><SelectValue placeholder="Method" /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">All Methods</SelectItem>
                                             <SelectItem value="cash">Cash</SelectItem>
-                                            <SelectItem value="check">Check</SelectItem>
-                                            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
                                         </SelectContent>
                                     </Select>
+                                    <Button size="sm" onClick={() => applyFilters()} className="h-9 bg-slate-900 hover:bg-slate-800 text-white">
+                                        <Search className="h-4 w-4" />
+                                    </Button>
                                 </div>
                             </div>
+                        </CardHeader>
 
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Receipt #</TableHead>
-                                        <TableHead>Applicant</TableHead>
-                                        <TableHead>Amount</TableHead>
-                                        <TableHead>Payment Method</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Payment Date</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {payments.data.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={7} className="text-center text-gray-500">
-                                                No payments found
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        payments.data.map((payment) => (
-                                            <TableRow key={payment.id}>
-                                                <TableCell className="font-medium">
-                                                    {payment.receipt_number || 'N/A'}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {payment.request?.applicant_name || 'N/A'}
-                                                </TableCell>
-                                                <TableCell>
-                                                    ₱{payment.amount ? parseFloat(payment.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00'}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {getMethodBadge(payment.payment_method)}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {getStatusBadge(payment.payment_status)}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : 'N/A'}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleViewDetails(payment)}
-                                                        >
+                        <CardContent className="p-0">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-slate-50 border-b border-slate-200">
+                                        <tr>
+                                            {["OR #", "Applicant", "Project Type", "Amount", "Date", "Verified By", "Status", "Actions"].map(h => (
+                                                <th key={h} className={`px-4 py-3 font-semibold text-slate-600 ${h === "Amount" ? "text-right" : h === "Actions" ? "text-center" : "text-left"}`}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {paymentsData.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={8} className="py-16 text-center text-slate-400">
+                                                    <Search className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                                                    <p className="font-medium">No payments found</p>
+                                                </td>
+                                            </tr>
+                                        ) : paymentsData.map((payment, i) => (
+                                            <tr key={payment.id}
+                                                className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${i % 2 === 1 ? "bg-slate-50/40" : "bg-white"}`}
+                                            >
+                                                <td className="px-4 py-3 font-mono font-semibold text-blue-600 text-sm">
+                                                    {payment.receipt_number || "—"}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="font-medium text-slate-800">{payment.applicant_name || "—"}</div>
+                                                    <div className="text-xs text-slate-400">Req #{payment.request_id}</div>
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-600 text-sm">
+                                                    {payment.project_type || <span className="text-slate-300 italic">—</span>}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-semibold text-slate-800">₱{fmt(payment.amount)}</td>
+                                                <td className="px-4 py-3 text-slate-600 text-sm">
+                                                    {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-600 text-sm">
+                                                    {payment.verified_by_name || payment.verified_by_user?.name || <span className="text-slate-300">—</span>}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <Badge className={`text-xs border ${statusStyle[payment.payment_status] || "bg-slate-100 text-slate-600"}`}>
+                                                        {statusIcon[payment.payment_status]}
+                                                        {payment.payment_status ? payment.payment_status.charAt(0).toUpperCase() + payment.payment_status.slice(1) : "—"}
+                                                    </Badge>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <Button variant="ghost" size="sm" onClick={() => { setSelected(payment); setShowDetails(true); }}
+                                                            className="h-8 w-8 p-0 text-slate-500 hover:text-slate-800" title="View details">
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleEdit(payment)}
-                                                        >
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                        {payment.payment_status === 'pending' && (
+                                                        {payment.payment_status === "pending" && (
                                                             <>
-                                                                <Button
-                                                                    size="sm"
-                                                                    onClick={() => handleVerify(payment)}
-                                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                                                                >
-                                                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                                                    Verify
+                                                                <Button size="sm" onClick={() => openVerify(payment)}
+                                                                    className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white text-xs">
+                                                                    <CheckCircle2 className="h-3 w-3 mr-1" />Verify
                                                                 </Button>
-                                                                <Button
-                                                                    variant="destructive"
-                                                                    size="sm"
-                                                                    onClick={() => handleReject(payment)}
-                                                                >
-                                                                    <XCircle className="h-4 w-4 mr-1" />
-                                                                    Reject
+                                                                <Button variant="destructive" size="sm" onClick={() => openReject(payment)}
+                                                                    className="h-7 px-2 text-xs">
+                                                                    <XCircle className="h-3 w-3 mr-1" />Reject
                                                                 </Button>
                                                             </>
                                                         )}
                                                     </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
 
                             {/* Pagination */}
-                            {payments.links && (
-                                <div className="flex items-center justify-between mt-4">
-                                    <div className="text-sm text-gray-500">
-                                        Showing {payments.from} to {payments.to} of {payments.total} payments
-                                    </div>
-                                    <div className="flex gap-2">
-                                        {payments.links.map((link, index) => (
-                                            <Button
-                                                key={index}
-                                                variant={link.active ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={() => link.url && router.get(link.url)}
-                                                disabled={!link.url}
-                                                className={link.active ? 'bg-blue-600 hover:bg-blue-700' : ''}
-                                            >
+                            {payments.links && payments.total > 0 && (
+                                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+                                    <p className="text-sm text-slate-500">
+                                        Showing <b>{payments.from}</b>–<b>{payments.to}</b> of <b>{payments.total}</b>
+                                    </p>
+                                    <div className="flex gap-1">
+                                        {payments.links.map((link, idx) => (
+                                            <Button key={idx} variant={link.active ? "default" : "outline"} size="sm"
+                                                onClick={() => link.url && router.get(link.url)} disabled={!link.url}
+                                                className={`h-8 min-w-[32px] text-xs ${link.active ? "bg-slate-900 hover:bg-slate-800" : ""}`}>
                                                 <span dangerouslySetInnerHTML={{ __html: link.label }} />
                                             </Button>
                                         ))}
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </SidebarInset>
 
             {/* Details Modal */}
-            <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-                <DialogContent className="max-w-2xl">
+            <Dialog open={showDetails} onOpenChange={setShowDetails}>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Payment Details</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2">
+                            <CreditCard className="h-5 w-5 text-slate-600" />Payment Details
+                        </DialogTitle>
                     </DialogHeader>
-                    {selectedPayment && (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <Label className="font-semibold">Receipt Number</Label>
-                                    <p>{selectedPayment.receipt_number || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <Label className="font-semibold">Status</Label>
-                                    <div className="mt-1">{getStatusBadge(selectedPayment.payment_status)}</div>
-                                </div>
-                                <div>
-                                    <Label className="font-semibold">Applicant Name</Label>
-                                    <p>{selectedPayment.request?.applicant_name || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <Label className="font-semibold">Project Type</Label>
-                                    <p>{selectedPayment.request?.project_type || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <Label className="font-semibold">Amount</Label>
-                                    <p className="text-lg font-semibold">
-                                        ₱{selectedPayment.amount ? parseFloat(selectedPayment.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <Label className="font-semibold">Payment Method</Label>
-                                    <div className="mt-1">{getMethodBadge(selectedPayment.payment_method)}</div>
-                                </div>
-                                <div>
-                                    <Label className="font-semibold">Payment Date</Label>
-                                    <p>{selectedPayment.payment_date ? new Date(selectedPayment.payment_date).toLocaleDateString() : 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <Label className="font-semibold">Submitted Date</Label>
-                                    <p>{selectedPayment.created_at ? new Date(selectedPayment.created_at).toLocaleDateString() : 'N/A'}</p>
-                                </div>
-                            </div>
-                            {selectedPayment.verified_by && (
-                                <div className="border-t pt-4">
-                                    <h4 className="font-semibold mb-3">Verification Details</h4>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <Label className="font-semibold">Verified By</Label>
-                                            <p>{selectedPayment.verified_by_user?.name || 'N/A'}</p>
-                                        </div>
-                                        <div>
-                                            <Label className="font-semibold">Verified At</Label>
-                                            <p>{selectedPayment.verified_at ? new Date(selectedPayment.verified_at).toLocaleDateString() : 'N/A'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                            {selectedPayment.rejection_reason && (
-                                <div className="border-t pt-4">
-                                    <Label className="font-semibold">Rejection Reason</Label>
-                                    <p className="text-red-600 mt-1">{selectedPayment.rejection_reason}</p>
-                                </div>
-                            )}
-                            {selectedPayment.notes && (
-                                <div className="border-t pt-4">
-                                    <Label className="font-semibold">Notes</Label>
-                                    <p className="mt-1">{selectedPayment.notes}</p>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    {selected && <PaymentDetailsCard payment={selected} />}
                 </DialogContent>
             </Dialog>
 
             {/* Verify Modal */}
-            <Dialog open={showVerifyModal} onOpenChange={setShowVerifyModal}>
-                <DialogContent>
+            <Dialog open={showVerify} onOpenChange={setShowVerify}>
+                <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Verify Payment</DialogTitle>
-                        <DialogDescription>
-                            Confirm that the physical payment has been received and verified.
-                        </DialogDescription>
+                        <DialogTitle className="flex items-center gap-2 text-green-700">
+                            <CheckCircle2 className="h-5 w-5" />Verify Payment
+                        </DialogTitle>
+                        <DialogDescription>Confirm payment details before marking as verified.</DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4">
-                        <div>
-                            <Label htmlFor="amount">Amount (₱) *</Label>
-                            <Input
-                                id="amount"
-                                type="number"
-                                step="0.01"
-                                value={verifyForm.amount}
-                                onChange={(e) => setVerifyForm({ ...verifyForm, amount: e.target.value })}
-                                placeholder="0.00"
-                            />
+                    {selected && (
+                        <div className="bg-slate-50 rounded-lg p-3 mb-4 text-sm border border-slate-200 space-y-1">
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Applicant</span>
+                                <span className="font-medium">{selected.applicant_name || "—"}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Request</span>
+                                <span className="font-medium">#{selected.request_id}</span>
+                            </div>
+                        </div>
+                    )}
+                    <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label htmlFor="v-amount">Amount (₱) <span className="text-red-500">*</span></Label>
+                                <Input id="v-amount" type="number" step="0.01" value={verifyForm.amount}
+                                    onChange={(e) => setVerifyForm({ ...verifyForm, amount: e.target.value })} className="mt-1" />
+                            </div>
+                            <div>
+                                <Label htmlFor="v-date">Payment Date <span className="text-red-500">*</span></Label>
+                                <Input id="v-date" type="date" value={verifyForm.payment_date}
+                                    onChange={(e) => setVerifyForm({ ...verifyForm, payment_date: e.target.value })} className="mt-1" />
+                            </div>
                         </div>
                         <div>
-                            <Label htmlFor="receipt_number">Receipt Number *</Label>
-                            <Input
-                                id="receipt_number"
-                                value={verifyForm.receipt_number}
+                            <Label htmlFor="v-or">OR Number <span className="text-red-500">*</span></Label>
+                            <Input id="v-or" value={verifyForm.receipt_number}
                                 onChange={(e) => setVerifyForm({ ...verifyForm, receipt_number: e.target.value })}
-                                placeholder="Enter receipt number"
-                            />
+                                placeholder="Official Receipt number" className="mt-1" />
                         </div>
                         <div>
-                            <Label htmlFor="payment_date">Payment Date *</Label>
-                            <Input
-                                id="payment_date"
-                                type="date"
-                                value={verifyForm.payment_date}
-                                onChange={(e) => setVerifyForm({ ...verifyForm, payment_date: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="notes">Notes</Label>
-                            <Textarea
-                                id="notes"
-                                value={verifyForm.notes}
+                            <Label htmlFor="v-notes">Notes</Label>
+                            <Textarea id="v-notes" value={verifyForm.notes}
                                 onChange={(e) => setVerifyForm({ ...verifyForm, notes: e.target.value })}
-                                placeholder="Any additional notes..."
-                                rows={3}
-                            />
+                                rows={2} className="mt-1 resize-none" />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowVerifyModal(false)}>
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={submitVerify}
-                            disabled={
-                                processing ||
-                                !verifyForm.amount ||
-                                !verifyForm.receipt_number ||
-                                !verifyForm.payment_date
-                            }
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            {processing ? 'Processing...' : 'Verify Payment'}
+                    <DialogFooter className="mt-4">
+                        <Button variant="outline" onClick={() => setShowVerify(false)} disabled={processing}>Cancel</Button>
+                        <Button onClick={submitVerify}
+                            disabled={processing || !verifyForm.amount || !verifyForm.receipt_number || !verifyForm.payment_date}
+                            className="bg-green-600 hover:bg-green-700 text-white">
+                            {processing ? "Processing..." : "Verify Payment"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* Reject Modal */}
-            <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
-                <DialogContent>
+            <Dialog open={showReject} onOpenChange={setShowReject}>
+                <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Reject Payment</DialogTitle>
-                        <DialogDescription>
-                            Provide a reason for rejecting this payment.
-                        </DialogDescription>
+                        <DialogTitle className="flex items-center gap-2 text-red-700">
+                            <XCircle className="h-5 w-5" />Reject Payment
+                        </DialogTitle>
+                        <DialogDescription>Provide a reason for rejecting this payment.</DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4">
-                        <div>
-                            <Label htmlFor="rejection_reason">Rejection Reason *</Label>
-                            <Textarea
-                                id="rejection_reason"
-                                value={rejectForm.rejection_reason}
-                                onChange={(e) => setRejectForm({ ...rejectForm, rejection_reason: e.target.value })}
-                                placeholder="Explain why this payment is being rejected..."
-                                rows={4}
-                            />
-                        </div>
+                    <div>
+                        <Label htmlFor="r-reason">Rejection Reason <span className="text-red-500">*</span></Label>
+                        <Textarea id="r-reason" value={rejectForm.rejection_reason}
+                            onChange={(e) => setRejectForm({ rejection_reason: e.target.value })}
+                            placeholder="Explain why this payment is being rejected..."
+                            rows={4} className="mt-1 resize-none" />
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowRejectModal(false)}>
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={submitReject}
-                            disabled={processing || !rejectForm.rejection_reason}
-                        >
-                            {processing ? 'Processing...' : 'Reject Payment'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Edit Modal */}
-            <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-                <DialogContent className="max-w-xl">
-                    <DialogHeader>
-                        <DialogTitle>Edit Payment Details</DialogTitle>
-                        <DialogDescription>
-                            Update payment information.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label htmlFor="edit_amount">Amount (₱) *</Label>
-                                <Input
-                                    id="edit_amount"
-                                    type="number"
-                                    step="0.01"
-                                    value={editForm.amount}
-                                    onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="edit_payment_method">Payment Method *</Label>
-                                <Select
-                                    value={editForm.payment_method}
-                                    onValueChange={(value) => setEditForm({ ...editForm, payment_method: value })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select method" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="cash">Cash</SelectItem>
-                                        <SelectItem value="check">Check</SelectItem>
-                                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div>
-                            <Label htmlFor="edit_receipt_number">Receipt Number *</Label>
-                            <Input
-                                id="edit_receipt_number"
-                                value={editForm.receipt_number}
-                                onChange={(e) => setEditForm({ ...editForm, receipt_number: e.target.value })}
-                                placeholder="Enter receipt number"
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label htmlFor="edit_payment_date">Payment Date *</Label>
-                                <Input
-                                    id="edit_payment_date"
-                                    type="date"
-                                    value={editForm.payment_date}
-                                    onChange={(e) => setEditForm({ ...editForm, payment_date: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="edit_payment_status">Status *</Label>
-                                <Select
-                                    value={editForm.payment_status}
-                                    onValueChange={(value) => setEditForm({ ...editForm, payment_status: value })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="pending">Pending</SelectItem>
-                                        <SelectItem value="verified">Verified</SelectItem>
-                                        <SelectItem value="rejected">Rejected</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div>
-                            <Label htmlFor="edit_notes">Notes</Label>
-                            <Textarea
-                                id="edit_notes"
-                                value={editForm.notes}
-                                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                                placeholder="Any additional notes..."
-                                rows={3}
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowEditModal(false)}>
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={submitEdit}
-                            disabled={
-                                processing ||
-                                !editForm.amount ||
-                                !editForm.payment_method ||
-                                !editForm.receipt_number ||
-                                !editForm.payment_date ||
-                                !editForm.payment_status
-                            }
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            {processing ? 'Saving...' : 'Save Changes'}
+                    <DialogFooter className="mt-4">
+                        <Button variant="outline" onClick={() => setShowReject(false)} disabled={processing}>Cancel</Button>
+                        <Button variant="destructive" onClick={submitReject}
+                            disabled={processing || !rejectForm.rejection_reason.trim()}>
+                            {processing ? "Processing..." : "Reject Payment"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
