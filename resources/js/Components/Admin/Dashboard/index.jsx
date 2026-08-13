@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
-import { BarChart3, Sparkles } from "lucide-react";
+import { BarChart3, LayoutDashboard } from "lucide-react";
 
 import { AnalyticsDashboard } from "@/Components/Admin/Analytics";
 import { PaymentsPendingWidget } from "./PaymentsPendingWidget";
@@ -20,95 +20,67 @@ export function AdminDashboard({ analytics = null, pendingPaymentsCount = 0, rec
     };
 
     return (
-        <div
-            className="space-y-6 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100"
-            style={{
-                backgroundImage: `
-             radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
-             radial-gradient(circle at 80% 20%, rgba(255, 107, 107, 0.1) 0%, transparent 50%),
-             radial-gradient(circle at 40% 40%, rgba(59, 130, 246, 0.05) 0%, transparent 50%)
-           `,
-            }}
-        >
-            {/* Toggle Analytics View */}
-            <div className="flex justify-between items-center p-6 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 animate-in slide-in-from-top duration-700">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg">
-                        <Sparkles className="h-6 w-6 text-white" />
+        <div className="space-y-6">
+            {/* Dashboard header bar */}
+            <div className="relative overflow-hidden rounded-2xl text-white"
+                style={{ background: "linear-gradient(135deg,#0d1f5c 0%,#1a3a8f 60%,#112068 100%)" }}>
+                <svg className="absolute inset-0 w-full h-full opacity-[0.07] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+                    <defs><pattern id="adg" width="48" height="48" patternUnits="userSpaceOnUse">
+                        <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#93c5fd" strokeWidth="0.7"/>
+                    </pattern></defs>
+                    <rect width="100%" height="100%" fill="url(#adg)"/>
+                </svg>
+                <div className="relative z-10 flex items-center justify-between p-6">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-[#d4a017]/20 border border-[#d4a017]/30 rounded-xl">
+                            <LayoutDashboard className="h-7 w-7 text-[#d4a017]"/>
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <div className="w-1 h-4 rounded-full bg-[#d4a017]"/>
+                                <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">CPDO Admin</p>
+                            </div>
+                            <h2 className="text-2xl font-black text-white">Dashboard Overview</h2>
+                        </div>
                     </div>
-                    <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent">
-                        Dashboard Overview
-                    </h2>
-                </div>
-                <Button
-                    variant="outline"
-                    onClick={handleToggle}
-                    disabled={isTransitioning}
-                    className="gap-2 px-6 py-3 bg-white/80 backdrop-blur-sm border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 hover:shadow-lg rounded-xl"
-                >
-                    <BarChart3
-                        className={`h-4 w-4 transition-transform duration-300 ${
-                            isTransitioning ? "rotate-180" : ""
-                        }`}
-                    />
-                    <span className="font-medium">
+                    <Button
+                        variant="outline"
+                        onClick={handleToggle}
+                        disabled={isTransitioning}
+                        className="gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white transition-all rounded-xl"
+                    >
+                        <BarChart3 className={`h-4 w-4 transition-transform duration-300 ${isTransitioning ? "rotate-180" : ""}`}/>
                         {showAnalytics ? "Hide" : "Show"} Analytics
-                    </span>
-                </Button>
+                    </Button>
+                </div>
             </div>
 
             {/* Payments Pending Widget */}
-            <PaymentsPendingWidget pendingPaymentsCount={pendingPaymentsCount} />
+            <PaymentsPendingWidget pendingPaymentsCount={pendingPaymentsCount}/>
 
-            {/* Recent Payment Activity Widget - FR9.3 */}
-            <RecentPaymentsWidget recentPayments={recentPayments} />
+            {/* Recent Payment Activity Widget */}
+            <RecentPaymentsWidget recentPayments={recentPayments}/>
 
             {/* Analytics Section */}
             {showAnalytics && analytics && (
                 <div className="animate-in fade-in slide-in-from-bottom duration-500">
-                    <AnalyticsDashboard analytics={analytics} />
+                    <AnalyticsDashboard analytics={analytics}/>
                 </div>
             )}
 
-            {/* CDRRMO Logo Display - Always show when analytics is disabled */}
+            {/* Logo splash when analytics hidden */}
             {!showAnalytics && (
-                <div
-                    className={`transition-all duration-500 ${
-                        isTransitioning
-                            ? "opacity-0 scale-95"
-                            : "opacity-100 scale-100"
-                    }`}
-                >
-                    <Card className="bg-gradient-to-br from-white via-blue-50 to-indigo-100 backdrop-blur-sm border-0 shadow-2xl rounded-3xl overflow-hidden animate-in fade-in zoom-in duration-700">
+                <div className={`transition-all duration-500 ${isTransitioning ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}>
+                    <Card className="border border-gray-100 shadow-sm overflow-hidden">
                         <CardContent className="p-12">
-                            <div className="flex flex-col items-center justify-center min-h-[450px] space-y-8">
-                                <div className="relative group">
-                                    {/* Animated background rings */}
-                                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 via-purple-500 to-indigo-600 opacity-20 animate-pulse"></div>
-                                    <div className="absolute inset-2 rounded-full bg-gradient-to-r from-indigo-400 via-blue-500 to-purple-600 opacity-30 animate-pulse delay-75"></div>
-                                    <div className="absolute inset-4 rounded-full bg-gradient-to-r from-purple-400 via-indigo-500 to-blue-600 opacity-40 animate-pulse delay-150"></div>
-
-                                    {/* Logo container */}
-                                    <div className="relative w-80 h-80 mx-auto group-hover:scale-110 transition-transform duration-700 ease-out">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-white/80 to-white/60 rounded-full shadow-2xl backdrop-blur-sm"></div>
-                                        <div className="absolute inset-4 rounded-full overflow-hidden shadow-xl">
-                                            <img
-                                                src="/images/ilagan.png"
-                                                alt="CDRRMO Logo"
-                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                            />
-                                        </div>
-
-                                        {/* Floating particles */}
-                                        <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-400 rounded-full animate-bounce delay-100"></div>
-                                        <div className="absolute -bottom-4 -left-4 w-3 h-3 bg-purple-400 rounded-full animate-bounce delay-300"></div>
-                                        <div className="absolute top-1/4 -right-6 w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-500"></div>
-                                        <div className="absolute bottom-1/3 -left-6 w-2 h-2 bg-pink-400 rounded-full animate-bounce delay-700"></div>
-                                    </div>
+                            <div className="flex flex-col items-center justify-center min-h-[300px] space-y-6">
+                                <div className="w-40 h-40 rounded-full border-4 border-[#d4a017]/30 bg-[#0d1f5c]/5 flex items-center justify-center">
+                                    <img src="/images/ilagan.png" alt="CPDO Logo" className="w-28 h-28 object-contain"/>
                                 </div>
-
-                                {/* Animated gradient line */}
-                                <div className="w-32 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 rounded-full animate-pulse"></div>
+                                <div className="flex items-center gap-2 px-5 py-2 rounded-full border border-[#d4a017]/30 bg-[#0d1f5c]/5">
+                                    <div className="w-2 h-2 rounded-full bg-[#d4a017] animate-pulse"/>
+                                    <span className="text-[#0d1f5c] font-bold text-sm">CPDO — City Planning & Development Office</span>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

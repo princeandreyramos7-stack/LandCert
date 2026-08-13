@@ -744,6 +744,9 @@ class SuperAdminController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
+        // Clear dashboard cache so analytics reflect this payment immediately
+        $this->cacheService->clearCache();
+
         // Generate certificate after payment verification
         try {
             $requestModel = $payment->request;
@@ -837,6 +840,9 @@ class SuperAdminController extends Controller
             'verified_by' => auth()->id(),
             'verified_at' => now(),
         ]);
+
+        // Clear dashboard cache so analytics reflect this payment immediately
+        $this->cacheService->clearCache();
 
         return back()->with('success', 'Payment rejected successfully!');
     }

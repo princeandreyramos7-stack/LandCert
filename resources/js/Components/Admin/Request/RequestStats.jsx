@@ -2,104 +2,34 @@ import React from "react";
 import { Card, CardContent } from "@/Components/ui/card";
 import { FileText, Clock, CheckCircle2, XCircle } from "lucide-react";
 
+const CARDS = [
+    { key: "all",      label: "Total Requests",  sub: "All submissions",      bg: "bg-[#0d1f5c]/5", text: "text-[#0d1f5c]", icon: FileText,     iconBg: "bg-[#0d1f5c]" },
+    { key: "pending",  label: "Pending",          sub: "Awaiting review",      bg: "bg-yellow-50",   text: "text-yellow-900", icon: Clock,        iconBg: "bg-yellow-500" },
+    { key: "approved", label: "Approved",          sub: "Successfully processed",bg: "bg-green-50",  text: "text-green-900",  icon: CheckCircle2, iconBg: "bg-green-500"  },
+    { key: "rejected", label: "Rejected",          sub: "Needs attention",      bg: "bg-red-50",     text: "text-red-900",    icon: XCircle,      iconBg: "bg-red-500"    },
+];
+
 export function RequestStats({ stats, onFilterChange }) {
+    const values = { all: stats.total, pending: stats.pending, approved: stats.approved, rejected: stats.rejected };
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card
-                className="cursor-pointer bg-purple-50 border-0"
-                onClick={() => onFilterChange("all")}
-            >
-                <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs text-purple-700 font-medium mb-1">
-                                Total Requests
-                            </p>
-                            <p className="text-2xl font-bold text-purple-900">
-                                {stats.total}
-                            </p>
-                            <p className="text-xs text-purple-600 mt-0.5">
-                                All submissions
-                            </p>
+            {CARDS.map(c => (
+                <Card key={c.key} className={`cursor-pointer ${c.bg} border-0 hover:shadow-md transition-shadow`}
+                    onClick={() => onFilterChange(c.key)}>
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className={`text-xs font-bold mb-1 ${c.text} opacity-70 uppercase tracking-wide`}>{c.label}</p>
+                                <p className={`text-2xl font-black ${c.text}`}>{values[c.key]}</p>
+                                <p className={`text-xs mt-0.5 ${c.text} opacity-60`}>{c.sub}</p>
+                            </div>
+                            <div className={`p-2 ${c.iconBg} rounded-lg`}>
+                                <c.icon className="h-5 w-5 text-white"/>
+                            </div>
                         </div>
-                        <div className="p-2 bg-purple-500 rounded-lg">
-                            <FileText className="h-5 w-5 text-white" />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card
-                className="cursor-pointer bg-yellow-50 border-0"
-                onClick={() => onFilterChange("pending")}
-            >
-                <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs text-yellow-700 font-medium mb-1">
-                                Pending
-                            </p>
-                            <p className="text-2xl font-bold text-yellow-900">
-                                {stats.pending}
-                            </p>
-                            <p className="text-xs text-yellow-600 mt-0.5">
-                                Awaiting review
-                            </p>
-                        </div>
-                        <div className="p-2 bg-yellow-500 rounded-lg">
-                            <Clock className="h-5 w-5 text-white" />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card
-                className="cursor-pointer bg-green-50 border-0"
-                onClick={() => onFilterChange("approved")}
-            >
-                <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs text-green-700 font-medium mb-1">
-                                Approved
-                            </p>
-                            <p className="text-2xl font-bold text-green-900">
-                                {stats.approved}
-                            </p>
-                            <p className="text-xs text-green-600 mt-0.5">
-                                Successfully processed
-                            </p>
-                        </div>
-                        <div className="p-2 bg-green-500 rounded-lg">
-                            <CheckCircle2 className="h-5 w-5 text-white" />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card
-                className="cursor-pointer bg-red-50 border-0"
-                onClick={() => onFilterChange("rejected")}
-            >
-                <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs text-red-700 font-medium mb-1">
-                                Rejected
-                            </p>
-                            <p className="text-2xl font-bold text-red-900">
-                                {stats.rejected}
-                            </p>
-                            <p className="text-xs text-red-600 mt-0.5">
-                                Needs attention
-                            </p>
-                        </div>
-                        <div className="p-2 bg-red-500 rounded-lg">
-                            <XCircle className="h-5 w-5 text-white" />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            ))}
         </div>
     );
 }

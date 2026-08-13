@@ -897,6 +897,9 @@ class AdminController extends Controller
             'verified_at' => now(),
         ]);
 
+        // Clear dashboard cache so analytics refresh immediately
+        $this->cacheService->clearCache();
+
         // Log audit
         AuditLogService::logUpdate(
             'Payment',
@@ -1007,6 +1010,9 @@ class AdminController extends Controller
             'verified_by' => auth()->id(),
             'verified_at' => now(),
         ]);
+
+        // Clear dashboard cache so analytics refresh immediately
+        $this->cacheService->clearCache();
 
         // Log audit
         AuditLogService::logUpdate(
@@ -1164,7 +1170,7 @@ class AdminController extends Controller
         $status = $request->input('status', 'all');
         $format = $request->input('format', 'csv');
         
-        $query = \App\Models\Payment::with(['request.user', 'request.applicant', 'verifier']);
+        $query = \App\Models\Payment::with(['request.user', 'request.applicant', 'verifiedBy']);
         
         if ($status !== 'all') {
             $query->where('payment_status', $status);
@@ -1231,7 +1237,7 @@ class AdminController extends Controller
                     $totalAmount ? 'PHP ' . number_format($totalAmount, 2) : '',
                     'PHP ' . number_format($processingFee, 2),
                     $payment->created_at ? $payment->created_at->format('M j, Y') : '',
-                    $payment->verifier?->name ?? '',
+                    $payment->verifiedBy?->name ?? '',
                     $payment->verified_at ? \Carbon\Carbon::parse($payment->verified_at)->format('M j, Y') : '',
                     $payment->receipt_file_path ? 'View Receipt Document' : 'No Receipt',
                     $payment->rejection_reason ?? '',

@@ -26,20 +26,20 @@ export function FilterCard({
     return (
         <Card className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-4">
             <CardHeader
-                className="bg-blue-600 border-b border-blue-700 p-3 cursor-pointer hover:bg-blue-700 transition-colors"
+                className="bg-white border-b border-gray-100 p-3 cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => setShowFilters(!showFilters)}
             >
-                <CardTitle className="text-lg font-bold flex items-center justify-between text-white">
+                <CardTitle className="text-base font-bold flex items-center justify-between text-[#0d1f5c]">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
-                            <Filter className="h-4 w-4 text-white" />
+                        <div className="p-1.5 rounded-lg" style={{background:"rgba(13,31,92,0.06)"}}>
+                            <Filter className="h-4 w-4 text-[#0d1f5c]" />
                         </div>
                         Filters
                     </div>
                     {showFilters ? (
-                        <ChevronUp className="h-5 w-5 text-white" />
+                        <ChevronUp className="h-5 w-5 text-gray-400" />
                     ) : (
-                        <ChevronDown className="h-5 w-5 text-white" />
+                        <ChevronDown className="h-5 w-5 text-gray-400" />
                     )}
                 </CardTitle>
             </CardHeader>

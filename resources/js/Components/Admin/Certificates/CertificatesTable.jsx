@@ -196,24 +196,24 @@ export function CertificatesTable({
             <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-slate-50 border-b border-slate-200">
-                            <tr>
-                                <th className="text-left p-3 font-semibold text-slate-700 text-sm">
+                        <thead className="border-b border-gray-100">
+                            <tr className="bg-gray-50">
+                                <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
                                     Certificate No.
                                 </th>
-                                <th className="text-left p-3 font-semibold text-slate-700 text-sm">
+                                <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
                                     Applicant
                                 </th>
-                                <th className="text-left p-3 font-semibold text-slate-700 text-sm">
+                                <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
                                     Project Type
                                 </th>
-                                <th className="text-left p-3 font-semibold text-slate-700 text-sm">
+                                <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
                                     Issued Date
                                 </th>
-                                <th className="text-left p-3 font-semibold text-slate-700 text-sm">
+                                <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
                                     Status
                                 </th>
-                                <th className="text-left p-3 font-semibold text-slate-700 text-sm">
+                                <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
                                     Actions
                                 </th>
                             </tr>
@@ -223,7 +223,7 @@ export function CertificatesTable({
                                 <tr>
                                     <td
                                         colSpan="6"
-                                        className="p-12 text-center text-slate-500"
+                                        className="px-4 py-12 text-center text-slate-500"
                                     >
                                         <div className="flex flex-col items-center justify-center">
                                             <FileText className="h-12 w-12 text-slate-300 mb-3" />

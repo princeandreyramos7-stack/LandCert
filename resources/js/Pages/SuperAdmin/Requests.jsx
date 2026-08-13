@@ -1,42 +1,27 @@
-import { SuperAdminSidebar } from "@/Components/super-admin-sidebar";
 import { Head } from "@inertiajs/react";
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbList,
-    BreadcrumbPage,
-} from "@/Components/ui/breadcrumb";
-import { Separator } from "@/Components/ui/separator";
-import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from "@/components/ui/sidebar";
+import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import { SuperAdminRequestList } from "@/Components/SuperAdmin/Request";
+import { FileText } from "lucide-react";
 
 export default function SuperAdminRequests({ requests }) {
     return (
-        <SidebarProvider>
-            <Head title="Manage Requests - Super Admin" />
-            <SuperAdminSidebar />
-            <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-                    <div className="flex items-center gap-2 px-4">
-                        <SidebarTrigger className="-ml-1" />
-                        <Separator orientation="vertical" className="mr-2 h-4" />
-                        <Breadcrumb>
-                            <BreadcrumbList>
-                                <BreadcrumbItem>
-                                    <BreadcrumbPage className="text-gray-900 font-semibold">Requests Management</BreadcrumbPage>
-                                </BreadcrumbItem>
-                            </BreadcrumbList>
-                        </Breadcrumb>
+        <>
+            <Head title="Requests — Super Admin"/>
+            <SuperAdminLayout title="All Requests" breadcrumbs={[{ label: "Dashboard", href: "/super-admin/dashboard" }]}>
+                {/* Page header card */}
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-5">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl" style={{background:"rgba(13,31,92,0.06)"}}>
+                            <FileText className="h-6 w-6 text-[#0d1f5c]"/>
+                        </div>
+                        <div>
+                            <h1 className="text-lg font-black text-[#0d1f5c]">All Requests</h1>
+                            <p className="text-xs text-gray-400 mt-0.5">Review, approve, and manage land use permit applications</p>
+                        </div>
                     </div>
-                </header>
-                <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-                    <SuperAdminRequestList requests={requests} />
                 </div>
-            </SidebarInset>
-        </SidebarProvider>
+                <SuperAdminRequestList requests={requests}/>
+            </SuperAdminLayout>
+        </>
     );
 }

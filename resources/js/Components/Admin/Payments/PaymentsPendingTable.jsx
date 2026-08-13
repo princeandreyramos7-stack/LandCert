@@ -146,21 +146,21 @@ export function PaymentsPendingTable({ pendingPayments = [], onRecordPayment }) 
 
     return (
         <Card className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <CardHeader className="bg-blue-600 border-b border-blue-700 p-3 sm:p-4">
+            <CardHeader className="bg-white border-b border-gray-100 p-3 sm:p-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-xl font-bold text-white">
-                        <div className="p-1.5 sm:p-2 bg-white/20 rounded-xl backdrop-blur-sm flex-shrink-0">
-                            <FileText className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
+                    <CardTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-xl font-bold text-[#0d1f5c]">
+                        <div className="p-1.5 sm:p-2 rounded-xl flex-shrink-0" style={{background:"rgba(13,31,92,0.06)"}}>
+                            <FileText className="h-4 w-4 sm:h-6 sm:w-6 text-[#0d1f5c]" />
                         </div>
                         <span className="truncate">Payments Pending ({sortedPayments.length})</span>
                     </CardTitle>
                     <div className="relative w-full sm:w-64">
-                        <Search className="absolute left-3 top-3 h-4 w-4 text-white/70 pointer-events-none" />
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
                             placeholder="Search by Request ID or Name..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 bg-white/20 backdrop-blur-sm border-white/30 text-white placeholder:text-white/70 focus:bg-white/30"
+                            className="pl-10 border-gray-200 focus:border-[#d4a017]"
                         />
                     </div>
                 </div>

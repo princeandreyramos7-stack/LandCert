@@ -76,6 +76,14 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
     Route::post('/certificates-old/{certificate}/mark-ready', [\App\Http\Controllers\SuperAdminController::class, 'markCertificateReady'])->name('certificates-old.mark-ready');
     Route::post('/certificates-old/{certificate}/release', [\App\Http\Controllers\SuperAdminController::class, 'releaseCertificate'])->name('certificates-old.release');
     
+    // Export routes
+    Route::get('/export/requests', [\App\Http\Controllers\AdminController::class, 'exportRequests'])->name('export.requests');
+    Route::get('/export/users', [\App\Http\Controllers\AdminController::class, 'exportUsers'])->name('export.users');
+    Route::get('/export/payments', [\App\Http\Controllers\AdminController::class, 'exportPayments'])->name('export.payments');
+    
+    // Audit log export
+    Route::get('/audit-logs/export', [\App\Http\Controllers\AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
+    
     // Payment Management Routes (Physical Payments)
     Route::get('/payments', [\App\Http\Controllers\SuperAdminController::class, 'payments'])->name('payments');
     Route::get('/payments/pending', [PaymentController::class, 'pending'])->name('payments.pending');
@@ -141,6 +149,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/export/applications', [AdminController::class, 'exportApplications'])->name('export.applications');
     Route::get('/export/requests', [AdminController::class, 'exportRequests'])->name('export.requests');
     Route::get('/export/users', [AdminController::class, 'exportUsers'])->name('export.users');
+    Route::get('/export/payments', [AdminController::class, 'exportPayments'])->name('export.payments');
     
     // Bulk action routes
     Route::post('/bulk/approve', [AdminController::class, 'bulkApprove'])->name('bulk.approve');

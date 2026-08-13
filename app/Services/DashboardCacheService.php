@@ -9,33 +9,42 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardCacheService
 {
-    const CACHE_TTL = 300; // 5 minutes cache
+    const CACHE_TTL = 0; // No cache — always fresh data
 
     /**
-     * Get cached dashboard analytics
+     * Get dashboard analytics (always fresh)
      */
     public function getAnalytics()
     {
+        if (self::CACHE_TTL === 0) {
+            return $this->calculateAnalytics();
+        }
         return Cache::remember('dashboard.analytics', self::CACHE_TTL, function () {
             return $this->calculateAnalytics();
         });
     }
 
     /**
-     * Get cached statistics
+     * Get statistics (always fresh)
      */
     public function getStats()
     {
+        if (self::CACHE_TTL === 0) {
+            return $this->calculateStats();
+        }
         return Cache::remember('dashboard.stats', self::CACHE_TTL, function () {
             return $this->calculateStats();
         });
     }
 
     /**
-     * Get cached evaluation distribution
+     * Get evaluation distribution (always fresh)
      */
     public function getEvaluationDistribution()
     {
+        if (self::CACHE_TTL === 0) {
+            return $this->calculateEvaluationDistribution();
+        }
         return Cache::remember('dashboard.evaluation_distribution', self::CACHE_TTL, function () {
             return $this->calculateEvaluationDistribution();
         });
@@ -110,14 +119,58 @@ class DashboardCacheService
         ->groupBy('week')
         ->orderBy('week')
         ->get();
+
+        // Monthly revenue (last 6 months)
+        $monthlyRevenue = \App\Models\Payment::select(
+            DB::raw('DATE_FORMAT(verified_at, "%Y-%m") as month'),
+            DB::raw('SUM(amount) as total')
+        )
+        ->where('payment_status', 'verified')
+        ->whereNotNull('verified_at')
+        ->where('verified_at', '>=', now()->subMonths(6))
+        ->groupBy('month')
+        ->orderBy('month')
+        ->get();
+
+        // Payment stats (real-time)
+        $paymentStats = [
+            'total_revenue'    => \App\Models\Payment::where('payment_status', 'verified')->sum('amount'),
+            'pending_payments' => \App\Models\Payment::where('payment_status', 'pending')->count(),
+            'verified_payments'=> \App\Models\Payment::where('payment_status', 'verified')->count(),
+            'rejected_payments'=> \App\Models\Payment::where('payment_status', 'rejected')->count(),
+            'this_month_revenue'=> \App\Models\Payment::where('payment_status', 'verified')
+                ->whereMonth('verified_at', now()->month)
+                ->whereYear('verified_at', now()->year)
+                ->sum('amount'),
+        ];
+
+        // Payment method breakdown
+        $paymentMethods = \App\Models\Payment::where('payment_status', 'verified')
+            ->select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(amount) as total'))
+            ->groupBy('payment_method')
+            ->get();
+
+        // Certificate stats (real-time)
+        $certificateStats = [
+            'total_issued'       => \App\Models\Certificate::count(),
+            'issued_this_month'  => \App\Models\Certificate::whereMonth('issued_at', now()->month)
+                ->whereYear('issued_at', now()->year)->count(),
+            'preparing'          => \App\Models\Certificate::where('status', 'preparing')->count(),
+            'ready_for_pickup'   => \App\Models\Certificate::where('status', 'ready_for_pickup')->count(),
+            'collected'          => \App\Models\Certificate::where('status', 'released')->count(),
+        ];
         
         return [
             'monthly_submissions' => $monthlyData,
-            'status_breakdown' => $statusBreakdown,
+            'monthly_revenue'     => $monthlyRevenue,
+            'status_breakdown'    => $statusBreakdown,
             'avg_processing_time' => round($avgProcessingTime ?? 0, 1),
-            'project_types' => $projectTypes,
-            'top_users' => $topUsers,
-            'weekly_activity' => $weeklyActivity,
+            'project_types'       => $projectTypes,
+            'top_users'           => $topUsers,
+            'weekly_activity'     => $weeklyActivity,
+            'payment_stats'       => $paymentStats,
+            'payment_methods'     => $paymentMethods,
+            'certificate_stats'   => $certificateStats,
         ];
     }
 

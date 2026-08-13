@@ -1,4 +1,4 @@
-import { SuperAdminSidebar } from "@/Components/super-admin-sidebar";
+import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import { Head, router, usePage } from "@inertiajs/react";
 import { useState } from "react";
 import { Button } from "@/Components/ui/button";
@@ -7,12 +7,6 @@ import { Badge } from "@/Components/ui/badge";
 import { Label } from "@/Components/ui/label";
 import { Textarea } from "@/Components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
-import {
-    Breadcrumb, BreadcrumbItem, BreadcrumbLink,
-    BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
-} from "@/Components/ui/breadcrumb";
-import { Separator } from "@/Components/ui/separator";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/Components/ui/sidebar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
 import { PaymentDetailsCard } from "@/Components/Admin/Payments/PaymentDetailsCard";
@@ -85,41 +79,29 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
     };
 
     return (
-        <SidebarProvider>
+        <>
             <Head title="All Payments — Super Admin" />
-            <SuperAdminSidebar />
-            <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center gap-2">
-                    <div className="flex items-center gap-2 px-4">
-                        <SidebarTrigger className="-ml-1" />
-                        <Separator orientation="vertical" className="mr-2 h-4" />
-                        <Breadcrumb>
-                            <BreadcrumbList>
-                                <BreadcrumbItem>
-                                    <BreadcrumbLink href={route("super-admin.dashboard")} className="text-slate-500 hover:text-slate-800">Dashboard</BreadcrumbLink>
-                                </BreadcrumbItem>
-                                <BreadcrumbSeparator />
-                                <BreadcrumbItem>
-                                    <BreadcrumbPage className="font-semibold text-slate-900">All Payments</BreadcrumbPage>
-                                </BreadcrumbItem>
-                            </BreadcrumbList>
-                        </Breadcrumb>
-                    </div>
-                </header>
+            <SuperAdminLayout title="All Payments" breadcrumbs={[{ label: "Dashboard", href: "/super-admin/dashboard" }]}>
 
-                <div className="flex flex-1 flex-col gap-6 p-6 pt-0 bg-white min-h-screen">
-                    {/* Page title */}
+                {/* Page header card */}
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-5">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-slate-900">All Payments</h1>
-                            <p className="text-sm text-slate-500 mt-1">Full payment records across the system</p>
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-xl" style={{background:"rgba(13,31,92,0.06)"}}>
+                                <CreditCard className="h-6 w-6 text-[#0d1f5c]"/>
+                            </div>
+                            <div>
+                                <h1 className="text-lg font-black text-[#0d1f5c]">All Payments</h1>
+                                <p className="text-xs text-gray-400 mt-0.5">Full payment records across the system</p>
+                            </div>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => router.reload()} className="gap-2">
-                            <RefreshCw className="h-4 w-4" /> Refresh
+                        <Button variant="outline" size="sm" onClick={() => router.reload()} className="gap-2 border-gray-200 text-[#0d1f5c] hover:border-[#d4a017] hover:text-[#d4a017]">
+                            <RefreshCw className="h-4 w-4"/> Refresh
                         </Button>
                     </div>
+                </div>
 
-                    {flash?.success && (
+                {flash?.success && (
                         <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-2 text-sm">
                             <CheckCircle2 className="h-4 w-4 flex-shrink-0" />{flash.success}
                         </div>
@@ -151,7 +133,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                     </div>
 
                     {/* Status tabs */}
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap my-4">
                         {[
                             { key: "all",      label: `All (${stats.total || 0})` },
                             { key: "pending",  label: `Pending (${stats.pending || 0})` },
@@ -162,8 +144,8 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                                 onClick={() => { setStatusFilter(key); applyFilters({ payment_status: key === "all" ? "" : key }); }}
                                 className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all ${
                                     statusFilter === key
-                                        ? "bg-slate-900 text-white border-slate-900"
-                                        : "bg-white text-slate-600 border-slate-300 hover:border-slate-500"
+                                        ? "bg-white text-[#0d1f5c] border-[#0d1f5c] ring-1 ring-[#0d1f5c] font-bold"
+                                        : "bg-white text-slate-500 border-slate-300 hover:border-[#0d1f5c] hover:text-[#0d1f5c]"
                                 }`}
                             >{label}</button>
                         ))}
@@ -196,7 +178,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                                             <SelectItem value="cash">Cash</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <Button size="sm" onClick={() => applyFilters()} className="h-9 bg-slate-900 hover:bg-slate-800 text-white">
+                                    <Button size="sm" onClick={() => applyFilters()} className="h-9 bg-white hover:bg-gray-50 text-[#0d1f5c] border border-gray-200 hover:border-[#0d1f5c]">
                                         <Search className="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -284,7 +266,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                                         {payments.links.map((link, idx) => (
                                             <Button key={idx} variant={link.active ? "default" : "outline"} size="sm"
                                                 onClick={() => link.url && router.get(link.url)} disabled={!link.url}
-                                                className={`h-8 min-w-[32px] text-xs ${link.active ? "bg-slate-900 hover:bg-slate-800" : ""}`}>
+                                                className={`h-8 min-w-[32px] text-xs ${link.active ? "bg-white text-[#0d1f5c] border-[#0d1f5c] ring-1 ring-[#0d1f5c] font-bold hover:bg-gray-50" : ""}`}>
                                                 <span dangerouslySetInnerHTML={{ __html: link.label }} />
                                             </Button>
                                         ))}
@@ -293,8 +275,6 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                             )}
                         </CardContent>
                     </Card>
-                </div>
-            </SidebarInset>
 
             {/* Details Modal */}
             <Dialog open={showDetails} onOpenChange={setShowDetails}>
@@ -391,6 +371,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </SidebarProvider>
+        </SuperAdminLayout>
+        </>
     );
 }

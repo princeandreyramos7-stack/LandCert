@@ -62,8 +62,10 @@ export const calculateVerificationRate = (payment_stats) => {
 };
 
 export const calculateCollectionRate = (certificate_stats) => {
-    if (certificate_stats.total_issued === 0) return 0;
-    return Math.round((certificate_stats.collected / certificate_stats.total_issued) * 100);
+    const total = certificate_stats?.total_issued ?? 0;
+    const collected = certificate_stats?.collected ?? 0;
+    if (total === 0) return 0;
+    return Math.round((collected / total) * 100);
 };
 
 export const calculateAveragePerUser = (top_users) => {

@@ -1,122 +1,116 @@
 import { Link } from '@inertiajs/react';
 import { Toaster } from '@/Components/ui/toaster';
-import { Building2, MapPin, Shield } from 'lucide-react';
 
 export default function GuestLayout({ children }) {
     return (
-        <div className="flex min-h-screen bg-gray-50">
-            {/* Left Side - Branding & Design (Hidden on mobile) */}
-            <div className="hidden lg:flex lg:w-1/2 xl:w-2/5 relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 overflow-hidden">
-                {/* Animated Background Elements */}
-                <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute -top-40 -right-40 w-96 h-96 bg-cyan-400/20 rounded-full mix-blend-overlay filter blur-3xl animate-blob"></div>
-                    <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-300/20 rounded-full mix-blend-overlay filter blur-3xl animate-blob" style={{ animationDelay: '2s' }}></div>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-sky-300/20 rounded-full mix-blend-overlay filter blur-3xl animate-blob" style={{ animationDelay: '4s' }}></div>
-                </div>
+        <div className="flex min-h-screen" style={{ background: "#f0f4ff" }}>
 
-                {/* Pattern Overlay */}
-                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE4YzMuMzEgMCA2LTIuNjkgNi02cy0yLjY5LTYtNi02LTYgMi42OS02IDYgMi42OSA2IDYgNk0wIDM2YzMuMzEgMCA2LTIuNjkgNi02cy0yLjY5LTYtNi02LTYgMi42OS02IDYgMi42OSA2IDYgNiIvPjwvZz48L2c+PC9zdmc+')] opacity-20"></div>
+            {/* ── Left panel (desktop only) ─────────────────────────── */}
+            <div className="hidden lg:flex lg:w-[46%] xl:w-[42%] relative overflow-hidden flex-col"
+                style={{ background: "linear-gradient(160deg,#0a1848 0%,#0d1f5c 45%,#112068 100%)" }}>
+
+                {/* Grid overlay */}
+                <svg className="absolute inset-0 w-full h-full opacity-[0.07] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+                    <defs><pattern id="lg" width="52" height="52" patternUnits="userSpaceOnUse">
+                        <path d="M 52 0 L 0 0 0 52" fill="none" stroke="#93c5fd" strokeWidth="0.7"/>
+                    </pattern></defs>
+                    <rect width="100%" height="100%" fill="url(#lg)"/>
+                </svg>
+
+                {/* Glow orbs */}
+                <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full blur-3xl pointer-events-none opacity-40"
+                    style={{ background: "radial-gradient(circle,#1d4ed8,transparent 70%)" }}/>
+                <div className="absolute bottom-0 right-0 w-72 h-72 rounded-full blur-3xl pointer-events-none opacity-30"
+                    style={{ background: "radial-gradient(circle,#d4a017,transparent 70%)" }}/>
 
                 {/* Content */}
-                <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full">
-                    {/* Logo & Header */}
-                    <div>
-                        <Link href="/" className="inline-block group">
-                            <div className="flex items-center gap-4">
-                                <div className="relative">
-                                    <div className="absolute inset-0 bg-cyan-400 rounded-full blur-xl group-hover:blur-2xl transition-all opacity-30"></div>
-                                    <img 
-                                        src="/images/Ilagan.png" 
-                                        alt="CPDO Logo" 
-                                        className="relative h-16 w-16 object-contain transform group-hover:scale-110 transition-transform duration-300 drop-shadow-2xl"
-                                    />
-                                </div>
-                                <div>
-                                    <h1 className="text-2xl font-bold group-hover:translate-x-1 transition-transform">
-                                        CPDO - Ilagan City
-                                    </h1>
-                                    <p className="text-blue-100 text-sm mt-1">
-                                        City Planning & Development Office
-                                    </p>
-                                </div>
-                            </div>
-                        </Link>
-                    </div>
+                <div className="relative z-10 flex flex-col justify-between h-full p-12 text-white">
 
-                    {/* Middle Content */}
+                    {/* Logo */}
+                    <Link href="/" className="inline-flex items-center gap-4 group">
+                        <div className="w-14 h-14 rounded-full border-2 border-[#d4a017]/40 bg-[#d4a017]/10 flex items-center justify-center shrink-0">
+                            <img src="/images/Ilagan.png" alt="CPDO Logo" className="w-9 h-9 object-contain"/>
+                        </div>
+                        <div>
+                            <p className="text-white font-black text-sm tracking-[0.15em] uppercase leading-tight">
+                                Republic of the Philippines
+                            </p>
+                            <p className="text-[#d4a017] font-black text-base tracking-wide leading-tight">
+                                CPDO LandCert
+                            </p>
+                            <p className="text-blue-300 text-[11px] tracking-widest">Ilagan City, Isabela</p>
+                        </div>
+                    </Link>
+
+                    {/* Main pitch */}
                     <div className="space-y-8">
                         <div>
-                            <h2 className="text-4xl font-bold leading-tight mb-4">
-                                Welcome to<br />Digital CPDO Services
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#d4a017]/40 bg-[#d4a017]/10 text-[#d4a017] text-[11px] font-bold tracking-widest uppercase mb-5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#d4a017] animate-pulse"/>
+                                Official Digital Platform
+                            </div>
+                            <h2 className="text-4xl font-black leading-tight mb-4">
+                                Your Land Use<br/>
+                                <span className="text-transparent bg-clip-text"
+                                    style={{ backgroundImage: "linear-gradient(90deg,#d4a017,#f5c842)" }}>
+                                    Permits &amp; Clearances
+                                </span><br/>
+                                Made Simple
                             </h2>
-                            <p className="text-blue-100 text-lg">
-                                Streamlined building permit applications and certificate processing for Ilagan City residents.
+                            <p className="text-blue-200/80 text-base leading-relaxed">
+                                Apply for Zoning Clearances, Special Use Permits, and more — entirely online.
+                                Track your application status in real time.
                             </p>
                         </div>
 
-                        {/* Features */}
+                        {/* Feature list */}
                         <div className="space-y-4">
-                            <div className="flex items-start gap-3 group">
-                                <div className="bg-white/10 backdrop-blur-sm p-2 rounded-lg group-hover:bg-white/20 transition-colors">
-                                    <Building2 className="h-6 w-6" />
+                            {[
+                                { icon: "🖥️", title: "Apply Online, Anytime", desc: "Submit applications 24/7 from anywhere" },
+                                { icon: "📋", title: "Real-time Tracking", desc: "Monitor your application at every stage" },
+                                { icon: "🏛️", title: "Official Certificates", desc: "Receive government-issued digital documents" },
+                            ].map((f, i) => (
+                                <div key={i} className="flex items-center gap-4 p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors">
+                                    <span className="text-2xl">{f.icon}</span>
+                                    <div>
+                                        <p className="font-bold text-white text-sm">{f.title}</p>
+                                        <p className="text-blue-200/70 text-xs">{f.desc}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-semibold">Building Permit Processing</h3>
-                                    <p className="text-sm text-blue-100">Fast and efficient permit applications</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3 group">
-                                <div className="bg-white/10 backdrop-blur-sm p-2 rounded-lg group-hover:bg-white/20 transition-colors">
-                                    <Shield className="h-6 w-6" />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold">Certificate Management</h3>
-                                    <p className="text-sm text-blue-100">Track your certificates in real-time</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3 group">
-                                <div className="bg-white/10 backdrop-blur-sm p-2 rounded-lg group-hover:bg-white/20 transition-colors">
-                                    <MapPin className="h-6 w-6" />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold">Land Use Information</h3>
-                                    <p className="text-sm text-blue-100">Access zoning and land use data</p>
-                                </div>
-                            </div>
+                            ))}
                         </div>
                     </div>
 
                     {/* Footer */}
-                    <div className="text-blue-100 text-sm">
-                        <p>&copy; {new Date().getFullYear()} CPDO Ilagan City. All rights reserved.</p>
-                    </div>
+                    <p className="text-blue-400/50 text-xs">
+                        &copy; {new Date().getFullYear()} City Planning and Development Office — Ilagan City, Isabela
+                    </p>
                 </div>
             </div>
 
-            {/* Right Side - Login Form */}
-            <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 lg:p-12 relative">
-                {/* Mobile Logo (Visible only on mobile) */}
-                <div className="lg:hidden w-full mb-8 mt-4">
-                    <Link href="/" className="flex items-center gap-3 group">
-                        <img 
-                            src="/images/Ilagan.png" 
-                            alt="CPDO Logo" 
-                            className="h-12 w-12 object-contain"
-                        />
+            {/* ── Right panel (form area) ───────────────────────────── */}
+            <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 lg:p-12 relative overflow-y-auto">
+
+                {/* Mobile logo */}
+                <div className="lg:hidden w-full max-w-md mb-8">
+                    <Link href="/" className="flex items-center gap-3">
+                        <img src="/images/Ilagan.png" alt="CPDO" className="w-10 h-10 object-contain"/>
                         <div>
-                            <h1 className="text-lg font-bold text-gray-900">CPDO</h1>
-                            <p className="text-xs text-gray-600">Ilagan City</p>
+                            <p className="text-[#0d1f5c] font-black text-sm tracking-wide">CPDO LandCert</p>
+                            <p className="text-[#d4a017] text-xs font-semibold">Ilagan City, Isabela</p>
                         </div>
                     </Link>
                 </div>
 
-                {/* Form Container */}
+                {/* Form card */}
                 <div className="w-full max-w-md">
-                    {children}
-                    
-                    {/* Mobile Footer */}
-                    <div className="lg:hidden mt-8 text-center text-sm text-gray-600">
-                        <p>&copy; {new Date().getFullYear()} CPDO Ilagan City</p>
+                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 sm:p-10">
+                        {children}
+                    </div>
+
+                    {/* Mobile footer */}
+                    <div className="lg:hidden mt-6 text-center text-xs text-gray-400">
+                        &copy; {new Date().getFullYear()} CPDO Ilagan City. All rights reserved.
                     </div>
                 </div>
             </div>

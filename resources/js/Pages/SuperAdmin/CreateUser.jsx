@@ -1,273 +1,137 @@
-import { SuperAdminSidebar } from "@/Components/super-admin-sidebar";
 import { Head, router } from "@inertiajs/react";
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbList,
-    BreadcrumbPage,
-} from "@/Components/ui/breadcrumb";
-import { Separator } from "@/Components/ui/separator";
-import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
+import { Input } from "@/Components/ui/input";
+import { Label } from "@/Components/ui/label";
+import { Textarea } from "@/Components/ui/textarea";
+import { Button } from "@/Components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select";
+import { useToast } from "@/Components/ui/use-toast";
+import { Toaster } from "@/Components/ui/toaster";
 import { useState } from "react";
 import { UserPlus, User, Mail, Phone, MapPin, Key, Shield } from "lucide-react";
 
 export default function CreateUser() {
     const { toast } = useToast();
     const [formData, setFormData] = useState({
-        name: "",
-        email: "",
-        password: "",
-        user_type: "applicant",
-        contact_number: "",
-        address: "",
+        name: "", email: "", password: "", user_type: "applicant",
+        contact_number: "", address: "",
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
-
         if (!formData.name || !formData.email || !formData.password) {
-            toast({
-                variant: "destructive",
-                title: "Required Fields Missing",
-                description: "Please fill in name, email, and password.",
-            });
+            toast({ variant: "destructive", title: "Required Fields Missing", description: "Please fill in name, email, and password." });
             return;
         }
-
         router.post(route("super-admin.create-admin"), formData, {
             onSuccess: () => {
-                toast({
-                    title: "User Created!",
-                    description: `User "${formData.name}" has been created successfully.`,
-                });
+                toast({ title: "User Created!", description: `User "${formData.name}" has been created successfully.` });
                 router.visit(route("super-admin.users"));
             },
             onError: (errors) => {
-                toast({
-                    variant: "destructive",
-                    title: "Creation Failed!",
-                    description: errors.email || "Failed to create user. Please try again.",
-                });
+                toast({ variant: "destructive", title: "Creation Failed!", description: errors.email || "Failed to create user." });
             },
         });
     };
 
+    const fieldIcon = "h-4 w-4 text-[#d4a017]";
+    const inputCls = "border-gray-200 focus:border-[#d4a017] focus:ring-[#d4a017]/20";
+
     return (
-        <SidebarProvider>
-            <Head title="Create New User - Super Admin" />
-            <SuperAdminSidebar />
-            <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-                    <div className="flex items-center gap-2 px-4">
-                        <SidebarTrigger className="-ml-1" />
-                        <Separator orientation="vertical" className="mr-2 h-4" />
-                        <Breadcrumb>
-                            <BreadcrumbList>
-                                <BreadcrumbItem>
-                                    <a
-                                        href={route("super-admin.users")}
-                                        className="text-gray-600 hover:text-gray-900 transition-colors"
-                                    >
-                                        User Management
-                                    </a>
-                                </BreadcrumbItem>
-                                <BreadcrumbItem>
-                                    <span className="mx-2 text-gray-400">›</span>
-                                </BreadcrumbItem>
-                                <BreadcrumbItem>
-                                    <BreadcrumbPage className="text-gray-900 font-semibold">
-                                        Create New User
-                                    </BreadcrumbPage>
-                                </BreadcrumbItem>
-                            </BreadcrumbList>
-                        </Breadcrumb>
-                    </div>
-                </header>
-                <div
-                    className="flex flex-1 flex-col gap-6 p-6 pt-0 min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50"
-                    style={{
-                        backgroundImage: `
-                            radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-                            radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.1) 0%, transparent 50%),
-                            radial-gradient(circle at 40% 40%, rgba(96, 165, 250, 0.05) 0%, transparent 50%)
-                        `,
-                    }}
-                >
-                    {/* Header */}
-                    <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-2xl">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                                <UserPlus className="h-8 w-8" />
+        <>
+            <Head title="Create New User — CPDO Super Admin"/>
+            <SuperAdminLayout title="Create New User" breadcrumbs={[{ label: "Dashboard", href: "/super-admin/dashboard" }, { label: "Users", href: "/super-admin/users" }]}>
+
+                {/* Page header */}
+                <div className="relative overflow-hidden rounded-2xl text-white mb-6"
+                    style={{ background: "linear-gradient(135deg,#0d1f5c 0%,#1a3a8f 60%,#112068 100%)" }}>
+                    <div className="relative z-10 flex items-center gap-4 p-6">
+                        <div className="p-3 bg-[#d4a017]/20 border border-[#d4a017]/30 rounded-xl">
+                            <UserPlus className="h-7 w-7 text-[#d4a017]"/>
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <div className="w-1 h-4 rounded-full bg-[#d4a017]"/>
+                                <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">Super Admin</p>
                             </div>
-                            <div>
-                                <h1 className="text-3xl font-bold">Create New User</h1>
-                                <p className="text-blue-100">Add a new user to the system</p>
-                            </div>
+                            <h1 className="text-xl font-black text-white">Create New User</h1>
+                            <p className="text-blue-200/70 text-sm">Add a new user account to the system</p>
                         </div>
                     </div>
-
-                    {/* Form */}
-                    <form onSubmit={handleSubmit}>
-                        <Card className="bg-white/80 backdrop-blur-sm shadow-lg">
-                            <CardHeader className="border-b">
-                                <CardTitle className="text-xl font-semibold text-gray-900">
-                                    User Information
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-6">
-                                <div className="grid gap-6 md:grid-cols-2">
-                                    {/* Full Name */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="name" className="flex items-center gap-2">
-                                            <User className="h-4 w-4 text-purple-600" />
-                                            Full Name *
-                                        </Label>
-                                        <Input
-                                            id="name"
-                                            value={formData.name}
-                                            onChange={(e) =>
-                                                setFormData({ ...formData, name: e.target.value })
-                                            }
-                                            placeholder="Enter full name"
-                                            required
-                                        />
-                                    </div>
-
-                                    {/* Email */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="email" className="flex items-center gap-2">
-                                            <Mail className="h-4 w-4 text-purple-600" />
-                                            Email Address *
-                                        </Label>
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            value={formData.email}
-                                            onChange={(e) =>
-                                                setFormData({ ...formData, email: e.target.value })
-                                            }
-                                            placeholder="user@example.com"
-                                            required
-                                        />
-                                    </div>
-
-                                    {/* Password */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="password" className="flex items-center gap-2">
-                                            <Key className="h-4 w-4 text-purple-600" />
-                                            Password *
-                                        </Label>
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            value={formData.password}
-                                            onChange={(e) =>
-                                                setFormData({ ...formData, password: e.target.value })
-                                            }
-                                            placeholder="Enter password (min. 8 characters)"
-                                            required
-                                            minLength={8}
-                                        />
-                                    </div>
-
-                                    {/* User Type */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="user_type" className="flex items-center gap-2">
-                                            <Shield className="h-4 w-4 text-purple-600" />
-                                            User Type *
-                                        </Label>
-                                        <Select
-                                            value={formData.user_type}
-                                            onValueChange={(value) =>
-                                                setFormData({ ...formData, user_type: value })
-                                            }
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="applicant">Applicant</SelectItem>
-                                                <SelectItem value="admin">Admin</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    {/* Contact Number */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="contact" className="flex items-center gap-2">
-                                            <Phone className="h-4 w-4 text-purple-600" />
-                                            Contact Number
-                                        </Label>
-                                        <Input
-                                            id="contact"
-                                            value={formData.contact_number}
-                                            onChange={(e) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    contact_number: e.target.value,
-                                                })
-                                            }
-                                            placeholder="+63 XXX XXX XXXX"
-                                        />
-                                    </div>
-
-                                    {/* Address */}
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label htmlFor="address" className="flex items-center gap-2">
-                                            <MapPin className="h-4 w-4 text-purple-600" />
-                                            Address
-                                        </Label>
-                                        <Textarea
-                                            id="address"
-                                            value={formData.address}
-                                            onChange={(e) =>
-                                                setFormData({ ...formData, address: e.target.value })
-                                            }
-                                            placeholder="Enter complete address"
-                                            rows={3}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Action Buttons */}
-                                <div className="flex justify-end gap-4 mt-6 pt-6 border-t">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => router.visit(route("super-admin.users"))}
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        type="submit"
-                                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                                    >
-                                        <UserPlus className="h-4 w-4 mr-2" />
-                                        Create User
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </form>
                 </div>
-            </SidebarInset>
-        </SidebarProvider>
+
+                {/* Form */}
+                <form onSubmit={handleSubmit}>
+                    <Card className="bg-white border border-gray-100 shadow-sm">
+                        <CardHeader className="border-b border-gray-50 px-6 py-4">
+                            <CardTitle className="text-base font-black text-[#0d1f5c]">User Information</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <div className="grid gap-5 md:grid-cols-2">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="name" className="flex items-center gap-2 text-sm font-semibold text-[#0d1f5c]">
+                                        <User className={fieldIcon}/> Full Name <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input id="name" value={formData.name} placeholder="Juan Dela Cruz" required
+                                        className={inputCls} onChange={e => setFormData({ ...formData, name: e.target.value })}/>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="email" className="flex items-center gap-2 text-sm font-semibold text-[#0d1f5c]">
+                                        <Mail className={fieldIcon}/> Email Address <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input id="email" type="email" value={formData.email} placeholder="user@example.com" required
+                                        className={inputCls} onChange={e => setFormData({ ...formData, email: e.target.value })}/>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="password" className="flex items-center gap-2 text-sm font-semibold text-[#0d1f5c]">
+                                        <Key className={fieldIcon}/> Password <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input id="password" type="password" value={formData.password}
+                                        placeholder="Min. 8 characters" required minLength={8}
+                                        className={inputCls} onChange={e => setFormData({ ...formData, password: e.target.value })}/>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="user_type" className="flex items-center gap-2 text-sm font-semibold text-[#0d1f5c]">
+                                        <Shield className={fieldIcon}/> User Type <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Select value={formData.user_type} onValueChange={v => setFormData({ ...formData, user_type: v })}>
+                                        <SelectTrigger className={inputCls}><SelectValue/></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="applicant">Applicant</SelectItem>
+                                            <SelectItem value="admin">Admin</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="contact" className="flex items-center gap-2 text-sm font-semibold text-[#0d1f5c]">
+                                        <Phone className={fieldIcon}/> Contact Number
+                                    </Label>
+                                    <Input id="contact" value={formData.contact_number} placeholder="09XXXXXXXXX"
+                                        className={inputCls} onChange={e => setFormData({ ...formData, contact_number: e.target.value })}/>
+                                </div>
+                                <div className="space-y-1.5 md:col-span-2">
+                                    <Label htmlFor="address" className="flex items-center gap-2 text-sm font-semibold text-[#0d1f5c]">
+                                        <MapPin className={fieldIcon}/> Address
+                                    </Label>
+                                    <Textarea id="address" value={formData.address} placeholder="Enter complete address" rows={3}
+                                        className={`${inputCls} resize-none`}
+                                        onChange={e => setFormData({ ...formData, address: e.target.value })}/>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-50">
+                                <Button type="button" variant="outline" className="border-gray-200"
+                                    onClick={() => router.visit(route("super-admin.users"))}>Cancel</Button>
+                                <Button type="submit" className="bg-[#0d1f5c] hover:bg-[#1a3a8f] text-white gap-2">
+                                    <UserPlus className="h-4 w-4"/> Create User
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </form>
+            </SuperAdminLayout>
+            <Toaster/>
+        </>
     );
 }

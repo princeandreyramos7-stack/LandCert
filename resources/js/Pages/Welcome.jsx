@@ -1,241 +1,260 @@
 import { Head, Link } from "@inertiajs/react";
 import { useState, useEffect, useRef } from "react";
 
-/* ── Shared grid overlay ──────────────────────────────────────────────────── */
-function Grid() {
-    return (
-        <svg className="absolute inset-0 w-full h-full opacity-[0.09] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <pattern id="g" width="56" height="56" patternUnits="userSpaceOnUse">
-                    <path d="M 56 0 L 0 0 0 56" fill="none" stroke="#3b82f6" strokeWidth="0.6"/>
-                </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#g)"/>
-        </svg>
-    );
-}
-
 /* ── Scroll-reveal wrapper ────────────────────────────────────────────────── */
 function Reveal({ children, delay = 0, className = "" }) {
     const ref = useRef(null);
     const [v, setV] = useState(false);
     useEffect(() => {
-        const o = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setV(true); o.disconnect(); } }, { threshold: 0.1 });
+        const o = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setV(true); o.disconnect(); } }, { threshold: 0.08 });
         if (ref.current) o.observe(ref.current);
         return () => o.disconnect();
     }, []);
     return (
-        <div ref={ref} className={className} style={{ transition: `opacity .8s ease ${delay}ms, transform .8s ease ${delay}ms`, opacity: v ? 1 : 0, transform: v ? "translateY(0)" : "translateY(28px)" }}>
+        <div ref={ref} className={className}
+            style={{ transition: `opacity .7s ease ${delay}ms, transform .7s ease ${delay}ms`, opacity: v ? 1 : 0, transform: v ? "translateY(0)" : "translateY(24px)" }}>
             {children}
         </div>
     );
 }
 
-/* ── Animated counter ────────────────────────────────────────────────────── */
-function Count({ end, suffix = "", label }) {
-    const [n, setN] = useState(0);
-    const ref = useRef(null); const started = useRef(false);
-    useEffect(() => {
-        const o = new IntersectionObserver(([e]) => {
-            if (e.isIntersecting && !started.current) {
-                started.current = true;
-                let c = 0; const step = Math.ceil(end / 60);
-                const t = setInterval(() => { c += step; if (c >= end) { setN(end); clearInterval(t); } else setN(c); }, 20);
-            }
-        }, { threshold: 0.3 });
-        if (ref.current) o.observe(ref.current);
-        return () => o.disconnect();
-    }, [end]);
+/* ── Step pill ───────────────────────────────────────────────────────────── */
+function Step({ n, label }) {
     return (
-        <div ref={ref} className="text-center">
-            <div className="text-4xl font-black text-white tabular-nums">{n.toLocaleString()}{suffix}</div>
-            <div className="text-blue-300 text-xs font-semibold tracking-wide mt-1 uppercase">{label}</div>
+        <div className="flex flex-col items-center text-center gap-3 flex-1 min-w-0">
+            <div className="w-11 h-11 rounded-full border-2 border-[#1a3a8f] bg-[#e8eef8] flex items-center justify-center text-[#1a3a8f] font-black text-base shrink-0">
+                {n}
+            </div>
+            <p className="text-[#1a3a8f] font-bold text-sm leading-snug">{label}</p>
         </div>
     );
 }
 
-/* ── Main ────────────────────────────────────────────────────────────────── */
+/* ── Review card ─────────────────────────────────────────────────────────── */
+const reviews = [
+    { text: "Very convenient! I submitted my zoning clearance request from home and received my certificate within days. No more long queues.", author: "M. Santos" },
+    { text: "The online tracking feature is great. I always knew the status of my application. Highly recommend to all property owners.", author: "R. Dela Cruz" },
+    { text: "The CPDO portal made the process so much easier. The staff also respond quickly through the system. Excellent service!", author: "A. Reyes" },
+    { text: "Smooth and fast. I got my Special Use Permit without hassle. This is the future of government services.", author: "J. Garcia" },
+];
+
 export default function Welcome({ auth }) {
     const [in_, setIn] = useState(false);
+    const [reviewIdx, setReviewIdx] = useState(0);
     useEffect(() => { setIn(true); }, []);
 
-    /* services */
-    const services = [
-        {
-            icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/></svg>,
-            title: "Zoning Clearance",
-            desc: "Verify that your property's intended use is consistent with our Comprehensive Land Use Plan and zoning ordinance.",
-        },
-        {
-            icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>,
-            title: "Special Use Permit (SUP)",
-            desc: "Secure permits for specific land uses that require special approval due to their nature, impact, or location.",
-        },
-        {
-            icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
-            title: "Temporary Use Permit (TUP)",
-            desc: "Obtain permits for temporary land uses or activities limited to a specific duration within the city.",
-        },
-        {
-            icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21"/></svg>,
-            title: "Land Use Compliance",
-            desc: "Ensure your development projects are fully compliant with national and local land use regulations.",
-        },
-        {
-            icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
-            title: "Application Tracking",
-            desc: "Monitor your application status in real time — from submission to certificate release.",
-        },
-        {
-            icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>,
-            title: "Digital Certificates",
-            desc: "Receive official, verifiable digital certificates electronically — no need to visit the office repeatedly.",
-        },
-    ];
+    const prevReview = () => setReviewIdx(i => (i - 1 + reviews.length) % reviews.length);
+    const nextReview = () => setReviewIdx(i => (i + 1) % reviews.length);
 
-    /* particles */
-    const pts = Array.from({ length: 24 }, (_, i) => ({
-        w: `${4 + (i % 4) * 2}px`,
-        left: `${(i * 41 + 7) % 100}%`,
-        top: `${(i * 59 + 11) % 100}%`,
-        dur: `${4 + (i % 4)}s`,
-        del: `${(i * 0.35) % 5}s`,
-    }));
+    /* visible 3 reviews (wrap-around) */
+    const visible = [0, 1, 2].map(o => reviews[(reviewIdx + o) % reviews.length]);
 
     return (
         <>
             <Head title="CPDO — City of Ilagan" />
 
-            {/* ═══════════════════ HERO ═══════════════════════════════════ */}
-            <section className="relative min-h-screen flex flex-col overflow-hidden" style={{ background: "linear-gradient(135deg,#0c2461 0%,#1034a6 40%,#1034a6 100%)" }}>
-                <Grid />
-
-                {/* Orbs */}
-                <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-50 blur-3xl pointer-events-none" style={{ background: "radial-gradient(circle,#1d4ed8,transparent 70%)" }}/>
-                <div className="absolute top-1/3 -right-60 w-[500px] h-[500px] rounded-full opacity-40 blur-3xl pointer-events-none" style={{ background: "radial-gradient(circle,#2563eb,transparent 70%)" }}/>
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] opacity-35 blur-3xl pointer-events-none" style={{ background: "radial-gradient(ellipse,#3b82f6,transparent 70%)" }}/>
-
-                {/* Particles */}
-                {pts.map((p, i) => (
-                    <div key={i} className="absolute rounded-full bg-blue-400 opacity-0 pointer-events-none"
-                        style={{ width: p.w, height: p.w, left: p.left, top: p.top, animation: `cpdo-pt ${p.dur} ${p.del} infinite ease-in` }}/>
-                ))}
-
-                {/* Nav */}
-                <nav className="relative z-20 flex items-center justify-between px-6 lg:px-14 py-5 border-b border-blue-600/40 backdrop-blur-sm">
-                    <div className="flex items-center gap-3" style={{ opacity: in_ ? 1 : 0, transform: in_ ? "none" : "translateX(-16px)", transition: "all .8s ease" }}>
-                        <div className="relative w-11 h-11 rounded-full border border-blue-500/40 bg-blue-800/60 flex items-center justify-center overflow-hidden">
-                            <div className="absolute inset-0 rounded-full bg-blue-600/20 animate-[pulse_3s_ease-in-out_infinite]"/>
-                            <img src="/images/Ilagan.png" alt="Logo" className="w-8 h-8 object-contain relative z-10"/>
-                        </div>
-                        <div>
-                            <p className="text-white font-black text-sm tracking-[0.15em] uppercase">CPDO</p>
-                            <p className="text-blue-400 text-[11px] tracking-widest">City of Ilagan, Isabela</p>
+            {/* ═══════════════════════ NAVBAR ═════════════════════════════ */}
+            <nav className="sticky top-0 z-50 bg-[#0d1f5c] border-b border-[#1a3a8f]/60 shadow-md">
+                <div className="max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between h-16">
+                    {/* Logo */}
+                    <div className="flex items-center gap-3"
+                        style={{ opacity: in_ ? 1 : 0, transform: in_ ? "none" : "translateX(-14px)", transition: "all .7s ease" }}>
+                        <img src="/images/Ilagan.png" alt="CPDO Logo" className="w-9 h-9 object-contain"/>
+                        <div className="leading-tight">
+                            <p className="text-white font-black text-xs tracking-[0.15em] uppercase">Republic of the Philippines</p>
+                            <p className="text-[#d4a017] font-black text-sm tracking-wide uppercase">City Planning &amp; Development Office</p>
+                            <p className="text-blue-300 text-[10px] tracking-widest">Ilagan City, Isabela</p>
                         </div>
                     </div>
-                    <div style={{ opacity: in_ ? 1 : 0, transform: in_ ? "none" : "translateX(16px)", transition: "all .8s ease .3s" }}>
+
+                    {/* Nav links */}
+                    <div className="hidden md:flex items-center gap-7 text-sm font-semibold"
+                        style={{ opacity: in_ ? 1 : 0, transition: "opacity .7s ease .2s" }}>
+                        <a href="#why" className="text-blue-200 hover:text-white transition-colors">About</a>
+                        <a href="#how" className="text-blue-200 hover:text-white transition-colors">How It Works</a>
+                        <a href="#reviews" className="text-blue-200 hover:text-white transition-colors">Reviews</a>
+                        <a href="#contact" className="text-blue-200 hover:text-white transition-colors">Contact</a>
                         {auth.user
-                            ? <Link href={route("dashboard")} className="px-5 py-2 text-sm font-semibold text-blue-200 border border-blue-600/50 rounded-full hover:bg-blue-600/20 hover:text-white transition-all">Dashboard →</Link>
-                            : <Link href={route("login")} className="px-5 py-2 text-sm font-semibold text-blue-200 border border-blue-600/50 rounded-full hover:bg-blue-600/20 hover:text-white transition-all">Sign In →</Link>
+                            ? <Link href={route("dashboard")} className="px-5 py-2 rounded-md bg-[#d4a017] hover:bg-[#b8880d] text-white font-bold transition-colors text-sm shadow">
+                                Dashboard
+                              </Link>
+                            : <Link href={route("login")} className="px-5 py-2 rounded-md bg-[#d4a017] hover:bg-[#b8880d] text-white font-bold transition-colors text-sm shadow">
+                                Login
+                              </Link>
                         }
                     </div>
-                </nav>
 
-                {/* Hero content */}
-                <div className="relative z-10 flex-1 flex items-center justify-center px-6 py-16">
-                    <div className="text-center max-w-5xl mx-auto space-y-9">
+                    {/* Mobile login */}
+                    <div className="md:hidden">
+                        {auth.user
+                            ? <Link href={route("dashboard")} className="px-4 py-2 rounded-md bg-[#d4a017] text-white font-bold text-sm">Dashboard</Link>
+                            : <Link href={route("login")} className="px-4 py-2 rounded-md bg-[#d4a017] text-white font-bold text-sm">Login</Link>
+                        }
+                    </div>
+                </div>
+            </nav>
 
-                        {/* Badge */}
-                        <div style={{ opacity: in_ ? 1 : 0, transition: "opacity 1s ease .2s" }}>
-                            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-500/40 bg-blue-800/60 text-blue-300 text-[11px] font-bold tracking-[0.25em] uppercase">
-                                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-[pulse_2s_ease-in-out_infinite]"/>
-                                City Planning &amp; Land Use Digital Platform
+            {/* ═══════════════════════ HERO ═══════════════════════════════ */}
+            <section className="relative overflow-hidden bg-[#0d1f5c]" style={{ minHeight: "92vh" }}>
+                {/* Subtle grid */}
+                <svg className="absolute inset-0 w-full h-full opacity-[0.06] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+                    <defs><pattern id="hg" width="52" height="52" patternUnits="userSpaceOnUse"><path d="M 52 0 L 0 0 0 52" fill="none" stroke="#93c5fd" strokeWidth="0.7"/></pattern></defs>
+                    <rect width="100%" height="100%" fill="url(#hg)"/>
+                </svg>
+
+                {/* Glow orbs */}
+                <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full blur-3xl pointer-events-none opacity-40"
+                    style={{ background: "radial-gradient(circle,#1d4ed8,transparent 70%)" }}/>
+                <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full blur-3xl pointer-events-none opacity-30"
+                    style={{ background: "radial-gradient(circle,#d4a017,transparent 70%)" }}/>
+
+                <div className="relative max-w-7xl mx-auto px-6 lg:px-12 flex flex-col lg:flex-row items-center justify-between gap-12 py-20 lg:py-28">
+                    {/* Left text */}
+                    <div className="lg:w-1/2 space-y-7"
+                        style={{ opacity: in_ ? 1 : 0, transform: in_ ? "none" : "translateX(-20px)", transition: "all .9s ease .3s" }}>
+
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#d4a017]/50 bg-[#d4a017]/10 text-[#d4a017] text-[11px] font-bold tracking-widest uppercase">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#d4a017] animate-pulse"/>
+                            Official Digital Services Platform
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 rounded-full border-2 border-[#d4a017]/40 bg-[#d4a017]/10 flex items-center justify-center shrink-0">
+                                <img src="/images/Ilagan.png" alt="CPDO" className="w-9 h-9 object-contain"/>
+                            </div>
+                            <div>
+                                <p className="text-blue-300 text-sm font-semibold">Welcome to</p>
+                                <p className="text-white font-black text-2xl lg:text-3xl leading-tight tracking-tight">CPDO LandCert</p>
+                            </div>
+                        </div>
+
+                        <h1 className="text-4xl sm:text-5xl lg:text-[58px] font-black leading-[1.05] tracking-tight text-white">
+                            Apply for Land Use<br/>
+                            <span className="text-transparent bg-clip-text"
+                                style={{ backgroundImage: "linear-gradient(90deg,#d4a017,#f5c842)" }}>
+                                Permits &amp; Clearances
                             </span>
-                        </div>
+                            <br/>Online
+                        </h1>
 
-                        {/* Heading */}
-                        <div style={{ opacity: in_ ? 1 : 0, transform: in_ ? "none" : "translateY(20px)", transition: "all 1s ease .45s" }}>
-                            <h1 className="text-5xl sm:text-6xl lg:text-[82px] font-black leading-[1.04] tracking-tight">
-                                <span className="text-white">City Planning and</span><br/>
-                                <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(90deg,#93c5fd,#3b82f6,#1d4ed8)" }}>
-                                    Development Office
-                                </span>
-                                <br/>
-                                <span className="text-blue-100">Ilagan City</span>
-                            </h1>
-                        </div>
+                        <p className="text-blue-100/85 text-base lg:text-lg leading-relaxed max-w-lg">
+                            Enjoy a fast and convenient way of securing your Zoning Clearance, Special Use Permit,
+                            and other land use certifications — with just a few clicks, right from the comfort of your home.
+                        </p>
 
-                        {/* Sub */}
-                        <div style={{ opacity: in_ ? 1 : 0, transform: in_ ? "none" : "translateY(16px)", transition: "all 1s ease .7s" }}>
-                            <p className="text-blue-100/90 text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed">
-                                The City Planning and Development Office is your trusted partner in land use certification,
-                                zoning compliance, and sustainable urban development for Ilagan City, Isabela.
-                            </p>
-                        </div>
-
-                        {/* Buttons */}
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center" style={{ opacity: in_ ? 1 : 0, transform: in_ ? "none" : "translateY(12px)", transition: "all 1s ease .95s" }}>
+                        <div className="flex flex-col sm:flex-row gap-4 pt-2">
                             {!auth.user ? (<>
-                                <Link href={route("register")} className="group relative px-9 py-4 rounded-full text-base font-bold text-white overflow-hidden shadow-xl shadow-blue-900/50">
-                                    <span className="absolute inset-0 transition-all duration-300" style={{ background: "linear-gradient(90deg,#1d4ed8,#2563eb)" }}/>
-                                    <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "linear-gradient(90deg,#2563eb,#3b82f6)" }}/>
-                                    <span className="relative flex items-center gap-2">
-                                        Apply Online Now
-                                        <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
-                                    </span>
+                                <Link href={route("register")}
+                                    className="px-8 py-3.5 rounded-md bg-[#d4a017] hover:bg-[#b8880d] text-white font-bold text-base shadow-lg transition-colors text-center">
+                                    APPLY ONLINE NOW
                                 </Link>
-                                <Link href={route("login")} className="px-9 py-4 rounded-full text-base font-bold text-blue-200 hover:text-white border border-blue-600/40 hover:border-blue-400 hover:bg-blue-700/45 transition-all backdrop-blur-sm">
+                                <Link href={route("login")}
+                                    className="px-8 py-3.5 rounded-md border border-blue-400/40 text-blue-200 hover:text-white hover:border-blue-300 hover:bg-white/5 font-bold text-base transition-all text-center">
                                     Already Registered?
                                 </Link>
                             </>) : (
-                                <Link href={route("dashboard")} className="group relative px-9 py-4 rounded-full text-base font-bold text-white overflow-hidden shadow-xl shadow-blue-900/50">
-                                    <span className="absolute inset-0 transition-all duration-300" style={{ background: "linear-gradient(90deg,#1d4ed8,#2563eb)" }}/>
-                                    <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "linear-gradient(90deg,#2563eb,#3b82f6)" }}/>
-                                    <span className="relative flex items-center gap-2">
-                                        Open Dashboard
-                                        <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
-                                    </span>
+                                <Link href={route("dashboard")}
+                                    className="px-8 py-3.5 rounded-md bg-[#d4a017] hover:bg-[#b8880d] text-white font-bold text-base shadow-lg transition-colors text-center">
+                                    OPEN DASHBOARD
                                 </Link>
                             )}
                         </div>
                     </div>
+
+                    {/* Right — document mockup */}
+                    <div className="lg:w-1/2 flex justify-center"
+                        style={{ opacity: in_ ? 1 : 0, transform: in_ ? "none" : "translateX(20px)", transition: "all .9s ease .5s" }}>
+                        <div className="relative w-full max-w-md">
+                            {/* Back card */}
+                            <div className="absolute top-4 left-6 right-0 bottom-0 rounded-2xl border border-[#d4a017]/30 bg-[#1a3a8f]/40 backdrop-blur-sm shadow-2xl rotate-3"/>
+                            {/* Front card */}
+                            <div className="relative rounded-2xl bg-white/95 shadow-2xl p-6 border border-gray-100">
+                                <div className="flex items-center gap-3 pb-4 border-b border-gray-200 mb-4">
+                                    <img src="/images/Ilagan.png" alt="Logo" className="w-10 h-10 object-contain"/>
+                                    <div>
+                                        <p className="text-[#0d1f5c] font-black text-xs uppercase tracking-widest">Republic of the Philippines</p>
+                                        <p className="text-[#0d1f5c] font-black text-sm">City of Ilagan, Isabela</p>
+                                        <p className="text-[#d4a017] font-bold text-xs uppercase tracking-wide">City Planning &amp; Development Office</p>
+                                    </div>
+                                </div>
+                                <div className="text-center mb-4">
+                                    <p className="text-[11px] text-gray-500 uppercase tracking-[0.2em] font-semibold">Official Document</p>
+                                    <h3 className="text-[#0d1f5c] font-black text-lg mt-1">ZONING CLEARANCE</h3>
+                                    <p className="text-[#d4a017] font-bold text-sm">No. ZC-2026-00001</p>
+                                </div>
+                                <div className="space-y-2 text-xs text-gray-600 border-t border-gray-100 pt-4">
+                                    <div className="flex gap-2"><span className="font-bold text-gray-800 w-28 shrink-0">Applicant:</span><span>Juan dela Cruz</span></div>
+                                    <div className="flex gap-2"><span className="font-bold text-gray-800 w-28 shrink-0">Property:</span><span>Lot 12, Blk 3, Brgy. Centro, Ilagan City</span></div>
+                                    <div className="flex gap-2"><span className="font-bold text-gray-800 w-28 shrink-0">Purpose:</span><span>Commercial Use</span></div>
+                                    <div className="flex gap-2"><span className="font-bold text-gray-800 w-28 shrink-0">Status:</span>
+                                        <span className="inline-flex items-center gap-1 text-green-600 font-bold">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"/>APPROVED
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-2"><span className="font-bold text-gray-800 w-28 shrink-0">Date Issued:</span><span>August 13, 2026</span></div>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                                    <div className="w-16 h-16 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-gray-400">
+                                        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] text-gray-400 uppercase tracking-widest">Authorized by</p>
+                                        <p className="text-[#0d1f5c] font-black text-sm mt-1">City Planning Officer</p>
+                                        <p className="text-gray-500 text-[11px]">Ilagan City CPDO</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Floating badge */}
+                            <div className="absolute -bottom-4 -left-4 px-4 py-2 rounded-xl bg-[#d4a017] text-white text-xs font-bold shadow-lg flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Digitally Verified
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Scroll caret */}
-                <div className="relative z-10 pb-8 flex justify-center">
-                    <div className="flex flex-col items-center gap-1.5" style={{ animation: "cpdo-bounce 2s ease-in-out infinite" }}>
-                        <span className="text-blue-300/70 text-[10px] tracking-[0.3em] uppercase">Scroll</span>
-                        <svg className="w-4 h-4 text-blue-300/70" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
-                    </div>
+                {/* Scroll cue */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1" style={{ animation: "cpdo-bounce 2s ease-in-out infinite" }}>
+                    <span className="text-blue-400/60 text-[10px] tracking-[0.3em] uppercase">Scroll</span>
+                    <svg className="w-4 h-4 text-blue-400/60" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
                 </div>
             </section>
 
-            {/* ═══════════════════ SERVICES ════════════════════════════════ */}
-            <section className="relative overflow-hidden py-28" style={{ background: "#0c2461" }}>
-                <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 70% 60% at 50% 0%,rgba(59,130,246,.45),transparent)" }}/>
-                <Grid/>
-                <div className="relative max-w-7xl mx-auto px-6 lg:px-10">
-                    <Reveal className="text-center mb-20">
-                        <span className="text-blue-400 text-[11px] font-black tracking-[0.3em] uppercase">Our Services</span>
-                        <h2 className="text-4xl lg:text-5xl font-black text-white leading-tight mt-3">
-                            Land Use &amp; Zoning<br/>
-                            <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(90deg,#93c5fd,#3b82f6)" }}>Certification Services</span>
+            {/* ═══════════════════════ WHY SECTION ════════════════════════ */}
+            <section id="why" className="py-24 bg-[#112068]">
+                <div className="max-w-6xl mx-auto px-6 lg:px-12">
+                    <Reveal className="text-center mb-16">
+                        <h2 className="text-3xl lg:text-4xl font-black text-white">
+                            Why use <span className="text-[#d4a017]">CPDO LandCert</span>?
                         </h2>
-                        <p className="text-blue-100/80 mt-4 max-w-xl mx-auto text-base">Everything you need to comply with Ilagan City's land use regulations — digitally and efficiently.</p>
+                        <p className="text-blue-200/70 mt-3 text-base max-w-xl mx-auto">
+                            Your one-stop digital platform for all city planning and land use services in Ilagan City.
+                        </p>
                     </Reveal>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {services.map((s, i) => (
-                            <Reveal key={i} delay={i * 70}>
-                                <div className="group relative p-7 rounded-2xl border border-blue-500/40 bg-blue-800/30 hover:bg-blue-700/35 hover:border-blue-500/50 transition-all duration-400 overflow-hidden cursor-default h-full">
-                                    <div className="absolute top-0 right-0 w-36 h-36 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{ background: "radial-gradient(circle,rgba(59,130,246,.15),transparent)", transform: "translate(30%,-30%)" }}/>
-                                    <div className="w-14 h-14 rounded-xl border border-blue-500/50 bg-blue-700/55 flex items-center justify-center text-blue-300 group-hover:text-blue-200 group-hover:border-blue-500 transition-all duration-300 mb-5 relative">
-                                        <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(59,130,246,.1)" }}/>
-                                        {s.icon}
-                                    </div>
-                                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-200 transition-colors">{s.title}</h3>
-                                    <p className="text-blue-100/75 text-sm leading-relaxed">{s.desc}</p>
-                                    <div className="absolute bottom-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: "linear-gradient(90deg,transparent,rgba(59,130,246,.4),transparent)" }}/>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {[
+                            {
+                                emoji: "🖥️",
+                                title: "Apply Online, Anytime",
+                                desc: "Submit your land use permit applications from anywhere — no need to visit the office. Available 24/7.",
+                            },
+                            {
+                                emoji: "📋",
+                                title: "Track Your Application",
+                                desc: "Monitor the real-time status of your application from submission to approval, right on your dashboard.",
+                            },
+                            {
+                                emoji: "🏛️",
+                                title: "Official Government Certificates",
+                                desc: "Receive 100% official and verifiable certificates issued directly by Ilagan City's CPDO.",
+                            },
+                        ].map((item, i) => (
+                            <Reveal key={i} delay={i * 100}>
+                                <div className="flex flex-col items-center text-center p-8 rounded-2xl bg-[#0d1f5c]/60 border border-[#1a3a8f]/60 hover:border-[#d4a017]/50 hover:bg-[#0d1f5c]/80 transition-all duration-300 h-full">
+                                    <div className="text-6xl mb-5 leading-none">{item.emoji}</div>
+                                    <h3 className="text-white font-bold text-lg mb-3">{item.title}</h3>
+                                    <p className="text-blue-200/70 text-sm leading-relaxed">{item.desc}</p>
                                 </div>
                             </Reveal>
                         ))}
@@ -243,108 +262,161 @@ export default function Welcome({ auth }) {
                 </div>
             </section>
 
-            {/* ═══════════════════ CTA ═════════════════════════════════════ */}
-            <section className="relative overflow-hidden py-28" style={{ background: "linear-gradient(180deg,#0c2461 0%,#1034a6 100%)" }}>
-                <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 60% 60% at 50% 50%,rgba(59,130,246,.45),transparent)" }}/>
-                <Grid/>
-                <div className="relative max-w-3xl mx-auto px-6 text-center">
-                    <Reveal>
-                        <span className="text-blue-400 text-[11px] font-black tracking-[0.3em] uppercase">Get Started</span>
-                        <h2 className="text-4xl lg:text-6xl font-black text-white leading-tight mt-3 mb-5">
-                            Ready to Apply for Your<br/>
-                            <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(90deg,#93c5fd,#3b82f6,#60a5fa)" }}>Land Use Certificate?</span>
+            {/* ═══════════════════════ HOW TO SECTION ═════════════════════ */}
+            <section id="how" className="relative py-24 overflow-hidden" style={{ background: "linear-gradient(180deg,#0d1f5c 0%,#112068 60%,#1a3a8f 100%)" }}>
+                {/* Gold diagonal accents */}
+                <div className="absolute bottom-0 left-0 w-56 h-56 pointer-events-none opacity-70"
+                    style={{ background: "linear-gradient(135deg,#d4a017,#f5c842)", clipPath: "polygon(0 100%,0 40%,100% 100%)" }}/>
+                <div className="absolute bottom-0 right-0 w-40 h-40 pointer-events-none opacity-60"
+                    style={{ background: "linear-gradient(225deg,#0d1f5c,#112068)", clipPath: "polygon(100% 100%,100% 0,0 100%)" }}/>
+
+                <div className="relative max-w-5xl mx-auto px-6 lg:px-12">
+                    <Reveal className="text-center mb-12">
+                        <h2 className="text-3xl lg:text-4xl font-black text-white">
+                            How to apply for a permit <span className="text-[#d4a017]">online?</span>
                         </h2>
-                        <p className="text-blue-100/80 text-lg mb-10 leading-relaxed">
-                            Join Ilagan City's digital transformation. Submit your application online, track it in real time,
-                            and receive your official certificate without leaving your home.
-                        </p>
-                        {!auth.user ? (
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <Link href={route("register")} className="group relative px-10 py-4 rounded-full text-base font-bold text-white overflow-hidden shadow-2xl shadow-blue-900/60">
-                                    <span className="absolute inset-0 transition-all duration-300" style={{ background: "linear-gradient(90deg,#1d4ed8,#2563eb)" }}/>
-                                    <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "linear-gradient(90deg,#2563eb,#3b82f6)" }}/>
-                                    <span className="relative flex items-center justify-center gap-2">
-                                        Create Free Account
-                                        <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
-                                    </span>
-                                </Link>
-                                <Link href={route("login")} className="px-10 py-4 rounded-full text-base font-bold text-blue-300 hover:text-white border border-blue-600/40 hover:border-blue-400 hover:bg-blue-700/45 transition-all">
-                                    Sign In Instead
-                                </Link>
+                    </Reveal>
+
+                    <Reveal delay={100}>
+                        <div className="bg-white rounded-2xl shadow-2xl p-8 lg:p-10">
+                            {/* Steps row */}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                                <Step n="1" label={"Create an\naccount"}/>
+                                {/* Arrow */}
+                                <div className="hidden sm:block text-gray-300 text-2xl font-thin shrink-0">›</div>
+                                <Step n="2" label={"Login your\naccount"}/>
+                                <div className="hidden sm:block text-gray-300 text-2xl font-thin shrink-0">›</div>
+                                <Step n="3" label={"Select permit\ntype & fill form"}/>
+                                <div className="hidden sm:block text-gray-300 text-2xl font-thin shrink-0">›</div>
+                                <Step n="4" label={"Submit\nDocuments"}/>
+                                <div className="hidden sm:block text-gray-300 text-2xl font-thin shrink-0">›</div>
+                                <Step n="5" label={"Pay the\nFee"}/>
+                                <div className="hidden sm:block text-gray-300 text-2xl font-thin shrink-0">›</div>
+                                <Step n="6" label={"Receive your\nCertificate"}/>
                             </div>
+                        </div>
+                    </Reveal>
+
+                    {/* CTA button */}
+                    <Reveal delay={200} className="mt-14 flex justify-center">
+                        {!auth.user ? (
+                            <Link href={route("register")}
+                                className="px-12 py-4 rounded-full bg-white text-[#0d1f5c] font-black text-base tracking-wide hover:bg-[#f0f4ff] shadow-xl transition-colors uppercase">
+                                APPLY FOR A PERMIT NOW!
+                            </Link>
                         ) : (
-                            <Link href={route("dashboard")} className="group relative inline-flex px-10 py-4 rounded-full text-base font-bold text-white overflow-hidden shadow-2xl shadow-blue-900/60">
-                                <span className="absolute inset-0 transition-all duration-300" style={{ background: "linear-gradient(90deg,#1d4ed8,#2563eb)" }}/>
-                                <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "linear-gradient(90deg,#2563eb,#3b82f6)" }}/>
-                                <span className="relative flex items-center gap-2">
-                                    Open Dashboard
-                                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
-                                </span>
+                            <Link href={route("dashboard")}
+                                className="px-12 py-4 rounded-full bg-white text-[#0d1f5c] font-black text-base tracking-wide hover:bg-[#f0f4ff] shadow-xl transition-colors uppercase">
+                                OPEN DASHBOARD
                             </Link>
                         )}
                     </Reveal>
                 </div>
             </section>
 
-            {/* ═══════════════════ FOOTER ══════════════════════════════════ */}
-            <footer className="relative border-t border-blue-600/40 py-14" style={{ background: "#0c2461" }}>
-                <Grid/>
-                <div className="relative max-w-7xl mx-auto px-6 lg:px-10">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
+            {/* ═══════════════════════ REVIEWS ════════════════════════════ */}
+            <section id="reviews" className="py-24 bg-white">
+                <div className="max-w-6xl mx-auto px-6 lg:px-12">
+                    <Reveal className="text-center mb-12">
+                        <h2 className="text-3xl lg:text-4xl font-black text-[#0d1f5c]">Reviews</h2>
+                    </Reveal>
+
+                    <div className="relative flex items-center gap-4">
+                        {/* Prev */}
+                        <button onClick={prevReview}
+                            className="shrink-0 w-10 h-10 rounded-full border-2 border-[#1a3a8f]/30 text-[#1a3a8f] hover:bg-[#0d1f5c] hover:text-white hover:border-[#0d1f5c] transition-all flex items-center justify-center shadow">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+
+                        {/* Cards */}
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-5 overflow-hidden">
+                            {visible.map((r, i) => (
+                                <div key={i} className="bg-[#e8eef8] rounded-xl p-6 flex flex-col gap-3 min-h-[160px]">
+                                    <div className="text-[#1a3a8f] text-3xl font-serif leading-none">"</div>
+                                    <p className="text-[#1a3a8f] text-sm leading-relaxed flex-1">{r.text} <span className="text-[#1a3a8f]">"</span></p>
+                                    <p className="text-[#0d1f5c] font-bold text-sm">— {r.author}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Next */}
+                        <button onClick={nextReview}
+                            className="shrink-0 w-10 h-10 rounded-full border-2 border-[#1a3a8f]/30 text-[#1a3a8f] hover:bg-[#0d1f5c] hover:text-white hover:border-[#0d1f5c] transition-all flex items-center justify-center shadow">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            {/* ═══════════════════════ FOOTER ═════════════════════════════ */}
+            <footer id="contact" className="bg-[#0d1f5c] border-t border-[#1a3a8f]/60">
+                <div className="max-w-7xl mx-auto px-6 lg:px-12 py-12">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
                         {/* Brand */}
                         <div>
                             <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-full border border-blue-500/50 bg-blue-900 flex items-center justify-center overflow-hidden">
-                                    <img src="/images/Ilagan.png" alt="Logo" className="w-7 h-7 object-contain"/>
-                                </div>
+                                <img src="/images/Ilagan.png" alt="Logo" className="w-9 h-9 object-contain"/>
                                 <div>
-                                    <p className="text-white font-black text-sm tracking-widest">CPDO</p>
-                                    <p className="text-blue-500 text-xs">City of Ilagan, Isabela</p>
+                                    <p className="text-white font-black text-sm tracking-widest uppercase">CPDO</p>
+                                    <p className="text-[#d4a017] text-xs font-semibold">City of Ilagan, Isabela</p>
                                 </div>
                             </div>
-                            <p className="text-blue-200/75 text-sm leading-relaxed max-w-xs">
-                                Committed to responsible land use planning, sustainable development, and accessible government services for all residents of Ilagan City.
+                            <p className="text-blue-300/70 text-sm leading-relaxed max-w-xs">
+                                Committed to responsible land use planning, sustainable development, and accessible government services for all Ilagan City residents.
                             </p>
                         </div>
+
+                        {/* Quick links */}
+                        <div>
+                            <h4 className="text-white font-bold mb-4 text-sm tracking-wide">Quick Links</h4>
+                            <ul className="space-y-2 text-blue-300/70 text-sm">
+                                <li><a href="#why" className="hover:text-[#d4a017] transition-colors">About CPDO LandCert</a></li>
+                                <li><a href="#how" className="hover:text-[#d4a017] transition-colors">How It Works</a></li>
+                                <li>
+                                    {!auth.user
+                                        ? <Link href={route("register")} className="hover:text-[#d4a017] transition-colors">Create Account</Link>
+                                        : <Link href={route("dashboard")} className="hover:text-[#d4a017] transition-colors">Dashboard</Link>
+                                    }
+                                </li>
+                                <li><Link href={route("login")} className="hover:text-[#d4a017] transition-colors">Login</Link></li>
+                            </ul>
+                        </div>
+
                         {/* Contact */}
                         <div>
-                            <h4 className="text-white font-bold mb-4 tracking-wide text-sm">Contact Us</h4>
-                            <ul className="space-y-3 text-blue-400/65 text-sm">
+                            <h4 className="text-white font-bold mb-4 text-sm tracking-wide">Contact Us</h4>
+                            <ul className="space-y-3 text-blue-300/70 text-sm">
                                 <li className="flex items-start gap-2">
-                                    <svg className="w-4 h-4 mt-0.5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                                    Ground Floor, City Hall Bldg,<br/>City of Ilagan, Isabela
+                                    <svg className="w-4 h-4 mt-0.5 text-[#d4a017] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                                    Ground Floor, City Hall Bldg,<br/>Ilagan City, Isabela
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
+                                    <svg className="w-4 h-4 text-[#d4a017] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
                                     624-0009
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                                    <svg className="w-4 h-4 text-[#d4a017] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
                                     cpdo@cityofilagan.gov.ph
                                 </li>
-                            </ul>
-                        </div>
-                        {/* Hours */}
-                        <div>
-                            <h4 className="text-white font-bold mb-4 tracking-wide text-sm">Office Hours</h4>
-                            <ul className="space-y-2.5 text-blue-400/65 text-sm">
                                 <li className="flex items-center gap-2">
-                                    <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>
-                                    Monday – Friday: 8:00 AM – 5:00 PM
-                                </li>
-                                <li className="text-blue-700/60 pl-6 text-xs">Except public holidays</li>
-                                <li className="flex items-center gap-2">
-                                    <svg className="w-4 h-4 text-blue-900/60 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>
-                                    Saturday – Sunday: Closed
+                                    <svg className="w-4 h-4 text-[#d4a017] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>
+                                    Mon – Fri: 8:00 AM – 5:00 PM
                                 </li>
                             </ul>
                         </div>
                     </div>
-                    <div className="border-t border-blue-900/30 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-                        <p className="text-blue-300/55 text-xs">&copy; {new Date().getFullYear()} City Planning and Development Office — Ilagan City. All rights reserved.</p>
-                        <div className="flex items-center gap-2 text-blue-300/55 text-xs">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-[pulse_2s_ease-in-out_infinite]"/>
-                            System Online
+
+                    {/* Bottom bar */}
+                    <div className="border-t border-[#1a3a8f]/50 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <p className="text-blue-400/50 text-xs">
+                            &copy; {new Date().getFullYear()} City Planning and Development Office — Ilagan City, Isabela. All rights reserved.
+                        </p>
+                        <div className="flex items-center gap-5 text-blue-400/50 text-xs">
+                            <a href="#" className="hover:text-[#d4a017] transition-colors">FAQs</a>
+                            <span>|</span>
+                            <a href="#" className="hover:text-[#d4a017] transition-colors">Terms and Conditions</a>
+                            <span>|</span>
+                            <a href="#contact" className="hover:text-[#d4a017] transition-colors">Contact Us</a>
                         </div>
                     </div>
                 </div>
@@ -352,19 +424,9 @@ export default function Welcome({ auth }) {
 
             {/* Keyframes */}
             <style>{`
-                @keyframes cpdo-pt {
-                    0%   { opacity:0; transform:translateY(0) scale(1); }
-                    20%  { opacity:.45; }
-                    80%  { opacity:.15; }
-                    100% { opacity:0; transform:translateY(-70px) scale(.4); }
-                }
                 @keyframes cpdo-bounce {
-                    0%,100% { transform:translateY(0); }
-                    50%     { transform:translateY(7px); }
-                }
-                @keyframes cpdo-ring {
-                    0%,100% { opacity:.4; transform:scale(1); }
-                    50%     { opacity:.8; transform:scale(1.08); }
+                    0%,100% { transform:translate(-50%,0); }
+                    50%     { transform:translate(-50%,7px); }
                 }
             `}</style>
         </>

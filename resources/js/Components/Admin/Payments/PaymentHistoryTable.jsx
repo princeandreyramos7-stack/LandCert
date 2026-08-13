@@ -107,10 +107,28 @@ export function PaymentHistoryTable({
         setCurrentPage(1);
     };
 
-    // Handle export (placeholder)
-    const handleExport = () => {
-        // TODO: Implement export functionality
-        alert("Export functionality will be implemented in the next phase");
+    // Export Excel (CSV)
+    const handleExportExcel = () => {
+        const params = new URLSearchParams();
+        params.set('format', 'excel');
+        if (statusFilter !== 'all') params.set('status', statusFilter);
+        if (paymentMethodFilter !== 'all') params.set('payment_method', paymentMethodFilter);
+        if (dateFrom) params.set('date_from', dateFrom);
+        if (dateTo) params.set('date_to', dateTo);
+        if (searchTerm) params.set('search', searchTerm);
+        window.open(route('admin.export.payments') + '?' + params.toString(), '_blank');
+    };
+
+    // Export PDF
+    const handleExportPdf = () => {
+        const params = new URLSearchParams();
+        params.set('format', 'pdf');
+        if (statusFilter !== 'all') params.set('status', statusFilter);
+        if (paymentMethodFilter !== 'all') params.set('payment_method', paymentMethodFilter);
+        if (dateFrom) params.set('date_from', dateFrom);
+        if (dateTo) params.set('date_to', dateTo);
+        if (searchTerm) params.set('search', searchTerm);
+        window.open(route('admin.export.payments') + '?' + params.toString(), '_blank');
     };
 
     // Get unique payment methods
@@ -223,11 +241,20 @@ export function PaymentHistoryTable({
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={handleExport}
-                            className="h-10 px-4 border-slate-200 hover:bg-slate-50"
+                            onClick={handleExportExcel}
+                            className="h-10 px-4 border-slate-200 hover:bg-slate-50 text-green-700 border-green-200 hover:bg-green-50"
                         >
                             <Download className="h-4 w-4 mr-2" />
-                            Export
+                            Export Excel
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExportPdf}
+                            className="h-10 px-4 border-slate-200 hover:bg-slate-50 text-red-700 border-red-200 hover:bg-red-50"
+                        >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Export PDF
                         </Button>
                     </div>
                 </div>
@@ -360,9 +387,10 @@ export function PaymentHistoryTable({
                                                 )}
                                             >
                                                 <span className="flex items-center gap-1">
-                                                    {getStatusIcon(
-                                                        payment.payment_status
-                                                    )}
+                                                    {(() => {
+                                                        const { Icon, className } = getStatusIcon(payment.payment_status);
+                                                        return <Icon className={className}/>;
+                                                    })()}
                                                     {payment.payment_status
                                                         ?.charAt(0)
                                                         .toUpperCase() +

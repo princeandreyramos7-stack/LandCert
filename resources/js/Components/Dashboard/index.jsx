@@ -1,8 +1,5 @@
 import React, { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
-import { Badge } from "@/Components/ui/badge";
-import { Button } from "@/Components/ui/button";
-import { Link } from "@inertiajs/react";
+import { Link, usePage } from "@inertiajs/react";
 import {
     FileText,
     Clock,
@@ -12,278 +9,279 @@ import {
     TrendingUp,
     Calendar,
     ArrowRight,
-    Activity,
+    FilePlus,
+    FolderOpen,
 } from "lucide-react";
 
+/* ── Helpers ────────────────────────────────────────────────────── */
+function formatDate(ds) {
+    if (!ds) return "—";
+    return new Date(ds).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" });
+}
+
+const STATUS_MAP = {
+    pending:      { label: "Pending",      icon: Clock,        bg: "bg-yellow-50",  text: "text-yellow-700",  border: "border-yellow-200", dot: "bg-yellow-500" },
+    approved:     { label: "Approved",     icon: CheckCircle,  bg: "bg-green-50",   text: "text-green-700",   border: "border-green-200",  dot: "bg-green-500"  },
+    rejected:     { label: "Rejected",     icon: XCircle,      bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200",    dot: "bg-red-500"    },
+    "under review":{ label: "Under Review", icon: AlertCircle, bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200",   dot: "bg-blue-500"   },
+    released:     { label: "Released",     icon: CheckCircle,  bg: "bg-purple-50",  text: "text-purple-700",  border: "border-purple-200", dot: "bg-purple-500" },
+};
+
+function statusCfg(s) {
+    return STATUS_MAP[s?.toLowerCase()] || STATUS_MAP.pending;
+}
+
+/* ── Stat card ──────────────────────────────────────────────────── */
+function StatCard({ label, value, icon: Icon, accent, desc }) {
+    return (
+        <div className={`bg-white rounded-xl border ${accent.border} border-l-4 ${accent.left} p-5 hover:shadow-md transition-shadow`}>
+            <div className="flex items-start justify-between mb-3">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</p>
+                <div className={`w-9 h-9 rounded-lg ${accent.iconBg} flex items-center justify-center`}>
+                    <Icon className={`w-5 h-5 ${accent.iconColor}`}/>
+                </div>
+            </div>
+            <p className="text-3xl font-black text-[#0d1f5c]">{value}</p>
+            <p className="text-xs text-gray-400 mt-1">{desc}</p>
+        </div>
+    );
+}
+
+/* ── Quick action card ──────────────────────────────────────────── */
+function ActionCard({ href, icon: Icon, title, desc, iconBg, iconColor }) {
+    return (
+        <Link href={href}
+            className="flex items-center gap-4 bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md hover:border-[#d4a017]/40 transition-all group">
+            <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
+                <Icon className={`w-6 h-6 ${iconColor}`}/>
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="font-bold text-[#0d1f5c] text-sm">{title}</p>
+                <p className="text-xs text-gray-500 truncate">{desc}</p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-[#d4a017] group-hover:translate-x-1 transition-all shrink-0"/>
+        </Link>
+    );
+}
+
+/* ── Status badge ───────────────────────────────────────────────── */
+function StatusBadge({ status }) {
+    const cfg = statusCfg(status);
+    const Icon = cfg.icon;
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}/>
+            {cfg.label}
+        </span>
+    );
+}
+
+/* ── Main component ─────────────────────────────────────────────── */
 export function Dashboard({ requests }) {
-    const requestsData = requests?.data || requests || [];
+    const { auth } = usePage().props;
+    const userName = auth?.user?.name || "User";
+    const firstName = userName.split(" ")[0];
 
-    // Calculate statistics
-    const stats = useMemo(() => {
-        const total = requestsData.length;
-        const pending = requestsData.filter(r => r.status?.toLowerCase() === 'pending').length;
-        const approved = requestsData.filter(r => r.status?.toLowerCase() === 'approved').length;
-        const rejected = requestsData.filter(r => r.status?.toLowerCase() === 'rejected').length;
-        const underReview = requestsData.filter(r => r.status?.toLowerCase() === 'under review').length;
+    const data = requests?.data || requests || [];
 
-        return { total, pending, approved, rejected, underReview };
-    }, [requestsData]);
+    const stats = useMemo(() => ({
+        total:       data.length,
+        pending:     data.filter(r => r.status?.toLowerCase() === "pending").length,
+        approved:    data.filter(r => r.status?.toLowerCase() === "approved").length,
+        underReview: data.filter(r => r.status?.toLowerCase() === "under review").length,
+        rejected:    data.filter(r => r.status?.toLowerCase() === "rejected").length,
+    }), [data]);
 
-    // Get recent applications (last 5)
-    const recentApplications = useMemo(() => {
-        return requestsData.slice(0, 5);
-    }, [requestsData]);
+    const recent = useMemo(() => data.slice(0, 5), [data]);
 
-    // Get status config
-    const getStatusConfig = (status) => {
-        const configs = {
-            pending: { 
-                icon: Clock, 
-                label: "Pending",
-                className: "bg-yellow-50 text-yellow-700 border-yellow-200"
-            },
-            approved: { 
-                icon: CheckCircle, 
-                label: "Approved",
-                className: "bg-green-50 text-green-700 border-green-200"
-            },
-            rejected: { 
-                icon: XCircle, 
-                label: "Rejected",
-                className: "bg-red-50 text-red-700 border-red-200"
-            },
-            "under review": { 
-                icon: AlertCircle, 
-                label: "Under Review",
-                className: "bg-blue-50 text-blue-700 border-blue-200"
-            },
-        };
-        return configs[status?.toLowerCase()] || configs.pending;
-    };
-
-    // Format date
-    const formatDate = (dateString) => {
-        if (!dateString) return "N/A";
-        return new Date(dateString).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        });
-    };
+    const statCards = [
+        {
+            label: "Total Applications",
+            value: stats.total,
+            icon: FileText,
+            desc: "All submitted applications",
+            accent: { border: "border-gray-100", left: "border-l-[#0d1f5c]", iconBg: "bg-[#0d1f5c]/10", iconColor: "text-[#0d1f5c]" },
+        },
+        {
+            label: "Pending Review",
+            value: stats.pending,
+            icon: Clock,
+            desc: "Awaiting processing",
+            accent: { border: "border-yellow-50", left: "border-l-yellow-500", iconBg: "bg-yellow-50", iconColor: "text-yellow-600" },
+        },
+        {
+            label: "Under Review",
+            value: stats.underReview,
+            icon: AlertCircle,
+            desc: "Being evaluated",
+            accent: { border: "border-blue-50", left: "border-l-blue-500", iconBg: "bg-blue-50", iconColor: "text-blue-600" },
+        },
+        {
+            label: "Approved",
+            value: stats.approved,
+            icon: CheckCircle,
+            desc: "Successfully approved",
+            accent: { border: "border-green-50", left: "border-l-green-500", iconBg: "bg-green-50", iconColor: "text-green-600" },
+        },
+        {
+            label: "Rejected",
+            value: stats.rejected,
+            icon: XCircle,
+            desc: "Not approved",
+            accent: { border: "border-red-50", left: "border-l-red-500", iconBg: "bg-red-50", iconColor: "text-red-500" },
+        },
+    ];
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            {/* Welcome Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white shadow-lg">
-                <div className="flex items-center justify-between">
+        <div className="space-y-6">
+
+            {/* ── Welcome banner ──────────────────────────────────── */}
+            <div className="relative overflow-hidden rounded-2xl text-white"
+                style={{ background: "linear-gradient(135deg,#0d1f5c 0%,#1a3a8f 60%,#112068 100%)" }}>
+                {/* Grid overlay */}
+                <svg className="absolute inset-0 w-full h-full opacity-[0.07] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+                    <defs><pattern id="dg" width="48" height="48" patternUnits="userSpaceOnUse">
+                        <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#93c5fd" strokeWidth="0.7"/>
+                    </pattern></defs>
+                    <rect width="100%" height="100%" fill="url(#dg)"/>
+                </svg>
+                {/* Gold orb */}
+                <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full blur-3xl opacity-30 pointer-events-none"
+                    style={{ background: "radial-gradient(circle,#d4a017,transparent 70%)" }}/>
+                <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 lg:p-8">
                     <div>
-                        <h1 className="text-3xl font-bold mb-2">Welcome Back!</h1>
-                        <p className="text-blue-100">
-                            Track and manage your applications in one place
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-1 h-5 rounded-full bg-[#d4a017]"/>
+                            <p className="text-[#d4a017] text-xs font-black tracking-[0.2em] uppercase">CPDO LandCert</p>
+                        </div>
+                        <h1 className="text-2xl lg:text-3xl font-black leading-tight">
+                            Good day, {firstName}!
+                        </h1>
+                        <p className="text-blue-200/80 text-sm mt-1">
+                            Track and manage your land use permit applications in one place.
                         </p>
                     </div>
-                    <Activity className="h-16 w-16 opacity-20" />
+                    <Link href="/request"
+                        className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#d4a017] hover:bg-[#b8880d] text-white text-sm font-bold shadow transition-colors whitespace-nowrap">
+                        <FilePlus className="w-4 h-4"/>
+                        New Application
+                    </Link>
                 </div>
             </div>
 
-            {/* Statistics Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {/* Total Applications */}
-                <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-600">
-                            Total Applications
-                        </CardTitle>
-                        <FileText className="h-5 w-5 text-blue-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
-                        <p className="text-xs text-gray-500 mt-1">
-                            All submitted applications
-                        </p>
-                    </CardContent>
-                </Card>
-
-                {/* Pending Applications */}
-                <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-yellow-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-600">
-                            Pending Review
-                        </CardTitle>
-                        <Clock className="h-5 w-5 text-yellow-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-gray-900">{stats.pending}</div>
-                        <p className="text-xs text-gray-500 mt-1">
-                            Awaiting processing
-                        </p>
-                    </CardContent>
-                </Card>
-
-                {/* Approved Applications */}
-                <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-green-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-600">
-                            Approved
-                        </CardTitle>
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-gray-900">{stats.approved}</div>
-                        <p className="text-xs text-gray-500 mt-1">
-                            Successfully approved
-                        </p>
-                    </CardContent>
-                </Card>
-
-                {/* Under Review */}
-                <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-600">
-                            Under Review
-                        </CardTitle>
-                        <AlertCircle className="h-5 w-5 text-blue-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-gray-900">{stats.underReview}</div>
-                        <p className="text-xs text-gray-500 mt-1">
-                            Being evaluated
-                        </p>
-                    </CardContent>
-                </Card>
-
-                {/* Rejected */}
-                <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-red-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-600">
-                            Rejected
-                        </CardTitle>
-                        <XCircle className="h-5 w-5 text-red-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-gray-900">{stats.rejected}</div>
-                        <p className="text-xs text-gray-500 mt-1">
-                            Not approved
-                        </p>
-                    </CardContent>
-                </Card>
+            {/* ── Stat cards ──────────────────────────────────────── */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                {statCards.map((s, i) => (
+                    <StatCard key={i} {...s}/>
+                ))}
             </div>
 
-            {/* Recent Applications */}
-            <Card className="shadow-lg">
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="text-xl font-bold">Recent Applications</CardTitle>
-                            <p className="text-sm text-gray-500 mt-1">
-                                Your latest submitted applications
-                            </p>
+            {/* ── Recent Applications ─────────────────────────────── */}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+                    <div>
+                        <h2 className="font-black text-[#0d1f5c] text-base">Recent Applications</h2>
+                        <p className="text-xs text-gray-400 mt-0.5">Your latest submitted applications</p>
+                    </div>
+                    <Link href="/my-applications"
+                        className="flex items-center gap-1.5 text-xs font-bold text-[#0d1f5c] hover:text-[#d4a017] transition-colors group">
+                        View All
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"/>
+                    </Link>
+                </div>
+
+                {recent.length === 0 ? (
+                    /* Empty state */
+                    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-[#0d1f5c]/5 flex items-center justify-center mb-4">
+                            <FileText className="w-8 h-8 text-[#0d1f5c]/30"/>
                         </div>
-                        <Link href="/my-applications">
-                            <Button variant="outline" size="sm" className="gap-2">
-                                View All
-                                <ArrowRight className="h-4 w-4" />
-                            </Button>
+                        <h3 className="font-bold text-gray-700 text-base mb-1">No Applications Yet</h3>
+                        <p className="text-sm text-gray-400 mb-5 max-w-xs">
+                            Start by submitting your first land use permit application.
+                        </p>
+                        <Link href="/request"
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-white text-sm font-bold shadow transition-colors"
+                            style={{ background: "linear-gradient(90deg,#0d1f5c,#1a3a8f)" }}>
+                            <FilePlus className="w-4 h-4"/>
+                            Start New Application
                         </Link>
                     </div>
-                </CardHeader>
-                <CardContent>
-                    {recentApplications.length === 0 ? (
-                        <div className="text-center py-12">
-                            <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                No Applications Yet
-                            </h3>
-                            <p className="text-gray-600 mb-4">
-                                Start by submitting your first application
-                            </p>
-                            <Link href="/request">
-                                <Button className="gap-2">
-                                    <FileText className="h-4 w-4" />
-                                    New Application
-                                </Button>
-                            </Link>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {recentApplications.map((application) => {
-                                const statusConfig = getStatusConfig(application.status);
-                                const StatusIcon = statusConfig.icon;
-
-                                return (
-                                    <div
-                                        key={application.id}
-                                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
-                                    >
-                                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                                            <div className="flex-shrink-0">
-                                                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                                                    #{application.id}
-                                                </div>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="font-semibold text-gray-900 truncate">
-                                                    {application.applicant_name}
-                                                </h4>
-                                                <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
-                                                    <Calendar className="h-3 w-3" />
-                                                    <span>{formatDate(application.created_at)}</span>
-                                                    {application.project_type && (
-                                                        <>
-                                                            <span>•</span>
-                                                            <span className="truncate">{application.project_type}</span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <Badge variant="outline" className={`flex items-center gap-1 ${statusConfig.className}`}>
-                                            <StatusIcon className="h-3 w-3" />
-                                            {statusConfig.label}
-                                        </Badge>
+                ) : (
+                    <div className="divide-y divide-gray-50">
+                        {recent.map((app) => {
+                            const cfg = statusCfg(app.status);
+                            return (
+                                <div key={app.id}
+                                    className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/60 transition-colors group">
+                                    {/* ID badge */}
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-sm text-white"
+                                        style={{ background: "linear-gradient(135deg,#0d1f5c,#1a3a8f)" }}>
+                                        #{app.id}
                                     </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
 
-            {/* Quick Actions */}
-            <div className="grid gap-4 md:grid-cols-2">
-                <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
-                    <Link href="/request">
-                        <CardContent className="p-6">
-                            <div className="flex items-center gap-4">
-                                <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                                    <FileText className="h-6 w-6 text-blue-600" />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-gray-900">New Application</h3>
-                                    <p className="text-sm text-gray-600">Submit a new request</p>
-                                </div>
-                                <ArrowRight className="h-5 w-5 text-gray-400 ml-auto group-hover:translate-x-1 transition-transform" />
-                            </div>
-                        </CardContent>
-                    </Link>
-                </Card>
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold text-[#0d1f5c] text-sm truncate">
+                                            {app.applicant_name || "Unnamed Applicant"}
+                                        </p>
+                                        <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400 flex-wrap">
+                                            <span className="flex items-center gap-1">
+                                                <Calendar className="w-3 h-3"/>
+                                                {formatDate(app.created_at)}
+                                            </span>
+                                            {app.project_type && (
+                                                <span className="truncate max-w-[160px]">{app.project_type}</span>
+                                            )}
+                                        </div>
+                                    </div>
 
-                <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
-                    <Link href="/my-applications">
-                        <CardContent className="p-6">
-                            <div className="flex items-center gap-4">
-                                <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                                    <TrendingUp className="h-6 w-6 text-purple-600" />
+                                    {/* Status */}
+                                    <StatusBadge status={app.status}/>
                                 </div>
-                                <div>
-                                    <h3 className="font-semibold text-gray-900">Track Applications</h3>
-                                    <p className="text-sm text-gray-600">View all your applications</p>
-                                </div>
-                                <ArrowRight className="h-5 w-5 text-gray-400 ml-auto group-hover:translate-x-1 transition-transform" />
-                            </div>
-                        </CardContent>
-                    </Link>
-                </Card>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* ── Quick Actions ────────────────────────────────────── */}
+            <div>
+                <h2 className="font-black text-[#0d1f5c] text-base mb-3">Quick Actions</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <ActionCard
+                        href="/request"
+                        icon={FilePlus}
+                        title="New Application"
+                        desc="Submit a new zoning or land use permit request"
+                        iconBg="bg-[#0d1f5c]/10"
+                        iconColor="text-[#0d1f5c]"
+                    />
+                    <ActionCard
+                        href="/my-applications"
+                        icon={FolderOpen}
+                        title="Track My Applications"
+                        desc="View all your submitted applications and their status"
+                        iconBg="bg-[#d4a017]/10"
+                        iconColor="text-[#d4a017]"
+                    />
+                    <ActionCard
+                        href="/notifications"
+                        icon={AlertCircle}
+                        title="Notifications"
+                        desc="Check updates and messages from CPDO"
+                        iconBg="bg-blue-50"
+                        iconColor="text-blue-600"
+                    />
+                    <ActionCard
+                        href="/profile"
+                        icon={TrendingUp}
+                        title="My Profile"
+                        desc="Manage your account information and settings"
+                        iconBg="bg-green-50"
+                        iconColor="text-green-600"
+                    />
+                </div>
             </div>
         </div>
     );

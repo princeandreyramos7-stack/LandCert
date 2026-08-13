@@ -141,117 +141,61 @@ export function SuperAdminUserManagement({ users }) {
     };
 
     return (
-        <div
-            className="space-y-6 min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 p-6"
-            style={{
-                backgroundImage: `
-                    radial-gradient(circle at 20% 80%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
-                    radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
-                    radial-gradient(circle at 40% 40%, rgba(139, 92, 246, 0.05) 0%, transparent 50%)
-                `,
-            }}
-        >
-            {/* Enhanced Header with Pure Blue Background */}
-            <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-2xl">
+        <div className="space-y-6 p-6">
+            {/* Enhanced Header */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-0">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                            <Shield className="h-8 w-8" />
+                        <div className="p-3 bg-[#0d1f5c]/8 rounded-xl" style={{background:"rgba(13,31,92,0.06)"}}>
+                            <Shield className="h-7 w-7 text-[#0d1f5c]"/>
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold">User Management</h1>
-                            <p className="text-blue-100">Manage all system users and permissions</p>
+                            <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase mb-0.5">User Management</p>
+                            <h1 className="text-xl font-black text-[#0d1f5c]">System Users</h1>
+                            <p className="text-gray-400 text-sm">Manage all system users and permissions</p>
                         </div>
                     </div>
-                    <Button
-                        onClick={() => router.visit(route("super-admin.users.create"))}
-                        className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                        <UserPlus className="h-5 w-5" />
-                        Create New User
+                    <Button onClick={() => router.visit(route("super-admin.users.create"))}
+                        className="gap-2 bg-[#0d1f5c] hover:bg-[#1a3a8f] text-white font-bold shadow">
+                        <UserPlus className="h-4 w-4"/> Create New User
                     </Button>
                 </div>
             </div>
 
-            {/* Advanced Statistics Cards */}
+            {/* Statistics Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="border-l-4 border-l-purple-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Total Users</p>
-                                <p className="text-3xl font-bold text-purple-700">{stats.total}</p>
+                {[
+                    { label: "Total Users",   value: stats.total,        icon: Users,  border: "border-l-[#0d1f5c]", iconBg: "bg-[#0d1f5c]/10", iconColor: "text-[#0d1f5c]" },
+                    { label: "Super Admins",  value: stats.super_admins, icon: Shield, border: "border-l-[#d4a017]",  iconBg: "bg-[#d4a017]/10",  iconColor: "text-[#d4a017]"  },
+                    { label: "Admins",        value: stats.admins,       icon: TrendingUp, border: "border-l-blue-500", iconBg: "bg-blue-50", iconColor: "text-blue-600" },
+                    { label: "Applicants",    value: stats.applicants,   icon: Users,  border: "border-l-gray-400",   iconBg: "bg-gray-50",       iconColor: "text-gray-500"   },
+                ].map((s, i) => (
+                    <Card key={i} className={`border-l-4 ${s.border} bg-white shadow-sm hover:shadow-md transition-shadow`}>
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">{s.label}</p>
+                                    <p className="text-3xl font-black text-[#0d1f5c]">{s.value}</p>
+                                </div>
+                                <div className={`h-9 w-9 rounded-lg ${s.iconBg} flex items-center justify-center`}>
+                                    <s.icon className={`h-5 w-5 ${s.iconColor}`}/>
+                                </div>
                             </div>
-                            <Users className="h-8 w-8 text-purple-500" />
-                        </div>
-                        <div className="mt-2 h-1 bg-purple-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full" style={{ width: '100%' }}></div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-indigo-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Super Admins</p>
-                                <p className="text-3xl font-bold text-indigo-700">{stats.super_admins}</p>
-                            </div>
-                            <Shield className="h-8 w-8 text-indigo-500" />
-                        </div>
-                        <div className="mt-2 h-1 bg-indigo-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style={{ width: `${(stats.super_admins / stats.total) * 100}%` }}></div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-blue-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Admins</p>
-                                <p className="text-3xl font-bold text-blue-700">{stats.admins}</p>
-                            </div>
-                            <TrendingUp className="h-8 w-8 text-blue-500" />
-                        </div>
-                        <div className="mt-2 h-1 bg-blue-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" style={{ width: `${(stats.admins / stats.total) * 100}%` }}></div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-gray-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Applicants</p>
-                                <p className="text-3xl font-bold text-gray-700">{stats.applicants}</p>
-                            </div>
-                            <Users className="h-8 w-8 text-gray-500" />
-                        </div>
-                        <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-gray-400 to-gray-500 rounded-full" style={{ width: `${(stats.applicants / stats.total) * 100}%` }}></div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
 
-            {/* Search and Filter Section */}
-            <Card className="bg-white/80 backdrop-blur-sm shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-purple-100 to-indigo-100 border-b">
+            {/* Search and Filter */}
+            <Card className="bg-white shadow-sm border border-gray-100">
+                <CardHeader className="border-b border-gray-50 px-6 py-4">
                     <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2">
-                            <Filter className="h-5 w-5 text-purple-600" />
-                            Filter & Search
+                        <CardTitle className="text-sm font-bold text-[#0d1f5c] uppercase tracking-wide flex items-center gap-2">
+                            <Filter className="h-4 w-4 text-[#d4a017]"/> Filter & Search
                         </CardTitle>
-                        <Button
-                            onClick={() => window.open(route("admin.export.users", { format: "pdf" }), "_blank")}
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                        >
-                            <Download className="h-4 w-4" />
-                            Export PDF
+                        <Button onClick={() => window.open(route("admin.export.users", { format: "pdf" }), "_blank")}
+                            variant="outline" size="sm" className="gap-2 border-gray-200 text-[#0d1f5c] hover:border-[#d4a017]">
+                            <Download className="h-4 w-4"/> Export PDF
                         </Button>
                     </div>
                 </CardHeader>
@@ -282,12 +226,12 @@ export function SuperAdminUserManagement({ users }) {
             </Card>
 
             {/* Users Table */}
-            <Card className="bg-white/80 backdrop-blur-sm shadow-lg">
+            <Card className="bg-white shadow-sm border border-gray-100">
                 <CardContent className="p-6">
-                    <div className="rounded-xl border overflow-hidden">
+                    <div className="rounded-xl border border-gray-100 overflow-hidden">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-gradient-to-r from-purple-50 to-indigo-50">
+                                <TableRow className="bg-gray-50">
                                     <TableHead>Name</TableHead>
                                     <TableHead>Email</TableHead>
                                     <TableHead>Contact</TableHead>
@@ -310,7 +254,7 @@ export function SuperAdminUserManagement({ users }) {
                                     filteredUsers.map((user) => (
                                         <TableRow
                                             key={user.id}
-                                            className="hover:bg-gradient-to-r hover:from-purple-50 hover:to-indigo-50 transition-all duration-300"
+                                            className="hover:bg-[#0d1f5c]/[0.02] transition-colors"
                                         >
                                             <TableCell className="font-medium">{user.name}</TableCell>
                                             <TableCell>{user.email}</TableCell>

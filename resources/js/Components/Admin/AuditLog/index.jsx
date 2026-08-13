@@ -14,14 +14,18 @@ export function AuditLogComponent({
     actions,
     modelTypes,
     filters,
+    routePrefix = "admin",
 }) {
     const [selectedLog, setSelectedLog] = useState(null);
     const [showDetails, setShowDetails] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [localFilters, setLocalFilters] = useState(filters || {});
 
+    const auditLogsRoute = routePrefix === "super-admin" ? "super-admin.audit-logs" : "admin.audit-logs";
+    const exportRoute    = routePrefix === "super-admin" ? "super-admin.audit-logs.export" : "admin.audit-logs.export";
+
     const handleFilter = () => {
-        router.get(route("admin.audit-logs"), localFilters, {
+        router.get(route(auditLogsRoute), localFilters, {
             preserveState: true,
             preserveScroll: true,
         });
@@ -29,18 +33,14 @@ export function AuditLogComponent({
 
     const handleClearFilters = () => {
         setLocalFilters({});
-        router.get(
-            route("admin.audit-logs"),
-            {},
-            {
-                preserveState: true,
-                preserveScroll: true,
-            }
-        );
+        router.get(route(auditLogsRoute), {}, {
+            preserveState: true,
+            preserveScroll: true,
+        });
     };
 
     const handleExport = () => {
-        window.location.href = route("admin.audit-logs.export", localFilters);
+        window.location.href = route(exportRoute, localFilters);
     };
 
     const handleViewDetails = (log) => {
@@ -72,16 +72,16 @@ export function AuditLogComponent({
             />
 
             <Card className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <CardHeader className="bg-blue-600 border-b border-blue-700 p-3">
+                <CardHeader className="bg-white border-b border-gray-100 p-3">
                     <div className="flex items-center justify-between">
                         <div>
-                            <CardTitle className="text-xl font-bold flex items-center gap-2 text-white">
-                                <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
-                                    <Activity className="h-5 w-5 text-white" />
+                            <CardTitle className="text-xl font-bold flex items-center gap-2 text-[#0d1f5c]">
+                                <div className="p-1.5 rounded-lg" style={{background:"rgba(13,31,92,0.06)"}}>
+                                    <Activity className="h-5 w-5 text-[#0d1f5c]" />
                                 </div>
                                 Activity History
                             </CardTitle>
-                            <p className="text-blue-100 mt-1 text-sm">
+                            <p className="text-gray-400 mt-1 text-sm">
                                 Total: {logs.total} records
                             </p>
                         </div>
@@ -89,7 +89,7 @@ export function AuditLogComponent({
                             onClick={handleExport}
                             variant="outline"
                             size="sm"
-                            className="gap-1 bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm h-8 text-xs"
+                            className="gap-1 border-gray-200 text-[#0d1f5c] hover:border-[#d4a017] hover:text-[#d4a017] h-8 text-xs"
                         >
                             <Download className="h-3.5 w-3.5" />
                             Export PDF

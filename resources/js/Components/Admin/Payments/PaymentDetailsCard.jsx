@@ -67,7 +67,7 @@ export function PaymentDetailsCard({ payment }) {
                     <InfoField
                         icon={<User className="w-4 h-4 text-gray-500" />}
                         label="Applicant Name"
-                        value={payment.applicant_name || payment.request?.applicant?.name || "N/A"}
+                        value={payment.applicant_name || payment.request?.applicant?.applicant_name || payment.request?.applicant?.name || "N/A"}
                     />
                     <InfoField
                         icon={<CreditCard className="w-4 h-4 text-gray-500" />}
@@ -128,20 +128,44 @@ export function PaymentDetailsCard({ payment }) {
             </div>
 
             {/* Request Details Card */}
-            {payment.request && (
+            {(payment.request || payment.project_type || payment.applicant_name || payment.user_email) && (
                 <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <FileText className="w-5 h-5 text-gray-600" />
                         Request Details
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {payment.request.project_type && (
+                        {/* Applicant name — from relationship or flat column */}
+                        {(payment.applicant_name || payment.request?.applicant?.applicant_name) && (
                             <InfoField
-                                label="Project Type"
-                                value={payment.request.project_type}
+                                icon={<User className="w-4 h-4 text-gray-500" />}
+                                label="Applicant Name"
+                                value={payment.applicant_name || payment.request?.applicant?.applicant_name}
                             />
                         )}
-                        {payment.request.status && (
+                        {/* Project type — from flat column or relationship */}
+                        {(payment.project_type || payment.request?.project_type) && (
+                            <InfoField
+                                label="Project Type"
+                                value={payment.project_type || payment.request?.project_type}
+                            />
+                        )}
+                        {/* Submitted by user */}
+                        {(payment.user_name || payment.request?.user?.name) && (
+                            <InfoField
+                                icon={<User className="w-4 h-4 text-gray-500" />}
+                                label="Submitted By"
+                                value={payment.user_name || payment.request?.user?.name}
+                            />
+                        )}
+                        {(payment.user_email || payment.request?.user?.email) && (
+                            <InfoField
+                                label="User Email"
+                                value={payment.user_email || payment.request?.user?.email}
+                            />
+                        )}
+                        {/* Request status */}
+                        {(payment.request?.status) && (
                             <InfoField
                                 label="Request Status"
                                 value={
@@ -151,7 +175,8 @@ export function PaymentDetailsCard({ payment }) {
                                 }
                             />
                         )}
-                        {payment.request.payment_order_number && (
+                        {/* Payment order number */}
+                        {payment.request?.payment_order_number && (
                             <InfoField
                                 label="Payment Order Number"
                                 value={payment.request.payment_order_number}
