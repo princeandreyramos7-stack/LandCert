@@ -451,12 +451,17 @@ class NotificationService
         try {
             $smsService = app(SmsService::class);
             $user = $request->user;
-            if ($smsService->isEnabled() && $user && $user->phone) {
-                $message = "Your certificate {$certificate->certificate_number} is ready for pickup at CPDO office. Bring valid ID. Contact: 078-123-4567";
-                $smsService->send($user->phone, $message);
+            $phone = $smsService->resolvePhone($user);
+            if ($smsService->isEnabled() && $user && $phone) {
+                $smsService->sendCertificateReady(
+                    $phone,
+                    $user->name ?? 'Applicant',
+                    $request->id,
+                    $certificate->certificate_number
+                );
                 \Log::info("Certificate ready SMS sent", [
                     'certificate_id' => $certificate->id,
-                    'recipient' => $user->phone
+                    'recipient' => $phone
                 ]);
             }
         } catch (\Exception $e) {

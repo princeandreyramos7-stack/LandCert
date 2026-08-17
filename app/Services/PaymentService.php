@@ -189,12 +189,17 @@ class PaymentService
 
             // Send SMS notification if enabled
             $smsService = app(SmsService::class);
-            if ($smsService->isEnabled() && $user && $user->phone) {
-                $message = "Payment confirmed! OR: {$payment->receipt_number}. Amount: ₱{$payment->amount}. Your certificate will be processed next.";
-                $smsService->send($user->phone, $message);
+            $phone = $smsService->resolvePhone($user);
+            if ($smsService->isEnabled() && $user && $phone) {
+                $smsService->sendPaymentVerified(
+                    $phone,
+                    $user->name ?? $applicantName,
+                    $request->id,
+                    (float) $payment->amount
+                );
                 Log::info("Payment confirmation SMS sent", [
                     'payment_id' => $payment->id,
-                    'recipient' => $user->phone
+                    'recipient' => $phone
                 ]);
             }
 

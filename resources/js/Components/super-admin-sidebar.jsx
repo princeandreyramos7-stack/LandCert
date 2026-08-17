@@ -3,6 +3,7 @@ import { Link, router, usePage } from "@inertiajs/react";
 import {
     LayoutDashboard, FileText, Users, Shield, ScrollText,
     CreditCard, Award, Clock, History, ChevronsUpDown, LogOut,
+    MessageSquare,
 } from "lucide-react";
 import {
     Sidebar, SidebarContent, SidebarFooter, SidebarHeader,
@@ -34,8 +35,9 @@ const navGroups = [
     {
         label: "Management",
         items: [
-            { title: "Users",        url: "/super-admin/users",         icon: Users },
-            { title: "Audit Logs",   url: "/super-admin/audit-logs",    icon: ScrollText },
+            { title: "Users",         url: "/super-admin/users",        icon: Users },
+            { title: "Audit Logs",    url: "/super-admin/audit-logs",   icon: ScrollText },
+            { title: "SMS Broadcast", url: "/super-admin/sms",          icon: MessageSquare },
         ],
     },
 ];

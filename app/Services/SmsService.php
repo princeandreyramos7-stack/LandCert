@@ -7,227 +7,238 @@ use Illuminate\Support\Facades\Log;
 
 class SmsService
 {
-    protected $apiKey;
-    protected $senderName;
-    protected $enabled;
-    protected $provider;
-    
+    protected string $apiKey;
+    protected string $senderName;
+    protected bool   $enabled;
+    protected string $provider;
+
     public function __construct()
     {
-        $this->apiKey = config('services.sms.api_key');
-        $this->senderName = config('services.sms.sender_name');
-        $this->enabled = config('services.sms.enabled', false);
-        $this->provider = config('services.sms.provider', 'semaphore');
+        $this->apiKey     = config('services.sms.api_key', '');
+        $this->senderName = config('services.sms.sender_name', 'Matcare');
+        $this->enabled    = (bool) config('services.sms.enabled', false);
+        $this->provider   = config('services.sms.provider', 'semaphore');
     }
-    
+
+    /* ─────────────────────────────────────────────────────────────
+     * Core send
+     * ───────────────────────────────────────────────────────────── */
+
     /**
-     * Send SMS via Semaphore API
+     * Send an SMS. Returns true on success, false on failure.
      */
     public function send(string $phoneNumber, string $message): bool
     {
         if (!$this->enabled) {
-            Log::info('SMS sending is disabled', [
-                'phone' => $phoneNumber,
-                'message' => $message
-            ]);
+            Log::info('[SMS] Sending disabled — skipped', ['phone' => $phoneNumber, 'msg' => $message]);
             return false;
         }
-        
+
         if (empty($this->apiKey)) {
-            Log::error('SMS API key not configured');
+            Log::error('[SMS] API key not configured');
             return false;
         }
-        
+
         try {
-            $formattedPhone = $this->formatPhoneNumber($phoneNumber);
-            
+            $phone = $this->formatPhoneNumber($phoneNumber);
+
             if ($this->provider === 'semaphore') {
-                return $this->sendViaSemaphore($formattedPhone, $message);
+                return $this->sendViaSemaphore($phone, $message);
             }
-            
-            Log::error('Unsupported SMS provider: ' . $this->provider);
+
+            Log::error('[SMS] Unsupported provider: ' . $this->provider);
             return false;
-            
+
         } catch (\Exception $e) {
-            Log::error('SMS sending failed: ' . $e->getMessage(), [
+            Log::error('[SMS] Exception: ' . $e->getMessage(), [
                 'phone' => $phoneNumber,
-                'message' => $message,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
             return false;
         }
     }
-    
-    /**
-     * Send SMS via Semaphore API
-     */
+
+    /* ─────────────────────────────────────────────────────────────
+     * Semaphore transport
+     * ───────────────────────────────────────────────────────────── */
+
     protected function sendViaSemaphore(string $phoneNumber, string $message): bool
     {
-        $response = Http::asForm()->post('https://api.semaphore.co/api/v4/messages', [
-            'apikey' => $this->apiKey,
-            'number' => $phoneNumber,
-            'message' => $message,
-            'sendername' => $this->senderName
+        $response = Http::timeout(15)->asForm()->post('https://api.semaphore.co/api/v4/messages', [
+            'apikey'     => $this->apiKey,
+            'number'     => $phoneNumber,
+            'message'    => $message,
+            'sendername' => $this->senderName,
         ]);
-        
+
         if ($response->successful()) {
-            $data = $response->json();
-            Log::info('SMS sent successfully', [
-                'phone' => $phoneNumber,
-                'response' => $data
-            ]);
+            Log::info('[SMS] Sent successfully', ['phone' => $phoneNumber, 'resp' => $response->json()]);
             return true;
         }
-        
-        Log::error('Semaphore API error', [
+
+        Log::error('[SMS] Semaphore API error', [
             'status' => $response->status(),
-            'response' => $response->body()
+            'body'   => $response->body(),
         ]);
-        
         return false;
     }
-    
-    /**
-     * Format phone number to Philippine format
-     */
+
+    /* ─────────────────────────────────────────────────────────────
+     * Phone formatting (Philippine numbers)
+     * ───────────────────────────────────────────────────────────── */
+
     protected function formatPhoneNumber(string $phoneNumber): string
     {
-        // Remove all non-numeric characters
         $phone = preg_replace('/[^0-9]/', '', $phoneNumber);
-        
-        // If starts with 0, replace with +63
-        if (substr($phone, 0, 1) === '0') {
+
+        if (str_starts_with($phone, '0')) {
             $phone = '63' . substr($phone, 1);
-        }
-        
-        // If doesn't start with 63, add it
-        if (substr($phone, 0, 2) !== '63') {
+        } elseif (!str_starts_with($phone, '63')) {
             $phone = '63' . $phone;
         }
-        
+
         return $phone;
     }
-    
-    /**
-     * Send application submitted notification
-     */
-    public function sendApplicationSubmitted(string $phoneNumber, string $applicantName, int $requestId): bool
+
+    /* ─────────────────────────────────────────────────────────────
+     * Resolve the contact number from a user model
+     * Handles both `contact_number` and `phone` columns.
+     * ───────────────────────────────────────────────────────────── */
+
+    public function resolvePhone($user): ?string
     {
-        $message = "CPDO: Hello {$applicantName}! Your land certification application (#{$requestId}) has been submitted successfully. We will review it and notify you of the status.";
-        return $this->send($phoneNumber, $message);
+        return $user->contact_number ?? $user->phone ?? null;
     }
-    
-    /**
-     * Send application approved notification
-     */
-    public function sendApplicationApproved(string $phoneNumber, string $applicantName, int $requestId): bool
-    {
-        $message = "CPDO: Good news {$applicantName}! Your application (#{$requestId}) has been APPROVED. Please proceed to CPDO office for payment and document submission.";
-        return $this->send($phoneNumber, $message);
-    }
-    
-    /**
-     * Send application rejected notification
-     */
-    public function sendApplicationRejected(string $phoneNumber, string $applicantName, int $requestId, string $reason = ''): bool
-    {
-        $message = "CPDO: {$applicantName}, your application (#{$requestId}) has been rejected.";
-        if ($reason) {
-            $message .= " Reason: {$reason}";
-        }
-        $message .= " Please contact our office for more details.";
-        return $this->send($phoneNumber, $message);
-    }
-    
-    /**
-     * Send payment due reminder
-     */
-    public function sendPaymentReminder(string $phoneNumber, string $applicantName, int $requestId, int $daysRemaining = 0): bool
-    {
-        if ($daysRemaining > 0) {
-            $message = "CPDO: Reminder for {$applicantName}. Your payment for application #{$requestId} is due in {$daysRemaining} days. Please visit our office to complete payment.";
-        } else {
-            $message = "CPDO: Reminder for {$applicantName}. Your payment for application #{$requestId} is now due. Please visit our office to complete payment.";
-        }
-        return $this->send($phoneNumber, $message);
-    }
-    
-    /**
-     * Send payment verified notification
-     */
-    public function sendPaymentVerified(string $phoneNumber, string $applicantName, int $requestId, float $amount): bool
-    {
-        $formattedAmount = number_format($amount, 2);
-        $message = "CPDO: {$applicantName}, your payment of PHP {$formattedAmount} for application #{$requestId} has been verified. You may now collect your certificate at our office.";
-        return $this->send($phoneNumber, $message);
-    }
-    
-    /**
-     * Send payment rejected notification
-     */
-    public function sendPaymentRejected(string $phoneNumber, string $applicantName, int $requestId, string $reason = ''): bool
-    {
-        $message = "CPDO: {$applicantName}, your payment receipt for application #{$requestId} was rejected.";
-        if ($reason) {
-            $message .= " Reason: {$reason}";
-        }
-        $message .= " Please resubmit or contact our office.";
-        return $this->send($phoneNumber, $message);
-    }
-    
-    /**
-     * Send document pending reminder
-     */
-    public function sendDocumentReminder(string $phoneNumber, string $applicantName, int $requestId): bool
-    {
-        $message = "CPDO: Reminder for {$applicantName}. Please submit the required documents for your application #{$requestId}. Visit our office during office hours.";
-        return $this->send($phoneNumber, $message);
-    }
-    
-    /**
-     * Send certificate ready for pickup
-     */
-    public function sendCertificateReady(string $phoneNumber, string $applicantName, int $requestId, string $certificateNumber): bool
-    {
-        $message = "CPDO: {$applicantName}, your land use certificate (#{$certificateNumber}) for application #{$requestId} is ready for pickup at our office. Bring valid ID.";
-        return $this->send($phoneNumber, $message);
-    }
-    
-    /**
-     * Send certificate preparing notification
-     */
-    public function sendCertificatePreparing(string $phoneNumber, string $applicantName, string $certificateNumber): bool
-    {
-        $message = "CPDO: {$applicantName}, your certificate (#{$certificateNumber}) is being prepared. You will be notified when it's ready for pickup at our office.";
-        return $this->send($phoneNumber, $message);
-    }
-    
-    /**
-     * Send general status update
-     */
-    public function sendStatusUpdate(string $phoneNumber, string $applicantName, int $requestId, string $oldStatus, string $newStatus): bool
-    {
-        $message = "CPDO: {$applicantName}, your application #{$requestId} status has been updated from '{$oldStatus}' to '{$newStatus}'. Check your account for details.";
-        return $this->send($phoneNumber, $message);
-    }
-    
-    /**
-     * Send custom message
-     */
-    public function sendCustomMessage(string $phoneNumber, string $message): bool
-    {
-        // Prepend sender name if not already present
-        if (strpos($message, 'CPDO:') !== 0) {
-            $message = 'CPDO: ' . $message;
-        }
-        return $this->send($phoneNumber, $message);
-    }
-    
-    /**
-     * Check if SMS is enabled
-     */
+
     public function isEnabled(): bool
     {
         return $this->enabled;
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+     * Template-driven send helpers
+     * These read from the sms_templates table so admins can edit.
+     * ───────────────────────────────────────────────────────────── */
+
+    protected function sendTemplate(string $eventKey, string $phone, array $vars): bool
+    {
+        $tpl = \App\Models\SmsTemplate::forEvent($eventKey);
+
+        if (!$tpl) {
+            // Fallback: log and skip (template disabled or missing)
+            Log::warning("[SMS] Template '{$eventKey}' not found or disabled, skipping.");
+            return false;
+        }
+
+        return $this->send($phone, $this->truncate($tpl->render($vars)));
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+     * Pre-built message templates
+     * All messages are kept under ~155 chars for single-segment SMS.
+     * ───────────────────────────────────────────────────────────── */
+
+    public function sendApplicationSubmitted(string $phone, string $name, int $requestId): bool
+    {
+        return $this->sendTemplate('application_submitted', $phone, [
+            '{name}'       => $name,
+            '{request_id}' => $requestId,
+        ]);
+    }
+
+    public function sendApplicationApproved(string $phone, string $name, int $requestId): bool
+    {
+        return $this->sendTemplate('application_approved', $phone, [
+            '{name}'       => $name,
+            '{request_id}' => $requestId,
+        ]);
+    }
+
+    public function sendApplicationRejected(string $phone, string $name, int $requestId, string $reason = ''): bool
+    {
+        return $this->sendTemplate('application_rejected', $phone, [
+            '{name}'       => $name,
+            '{request_id}' => $requestId,
+            '{reason}'     => $reason ?: 'Please contact CPDO office',
+        ]);
+    }
+
+    public function sendPaymentReminder(string $phone, string $name, int $requestId, int $daysRemaining = 0): bool
+    {
+        return $this->sendTemplate('payment_reminder', $phone, [
+            '{name}'           => $name,
+            '{request_id}'     => $requestId,
+            '{days_remaining}' => $daysRemaining > 0 ? "in {$daysRemaining} day(s)" : 'now',
+        ]);
+    }
+
+    public function sendPaymentVerified(string $phone, string $name, int $requestId, float $amount): bool
+    {
+        return $this->sendTemplate('payment_verified', $phone, [
+            '{name}'       => $name,
+            '{request_id}' => $requestId,
+            '{amount}'     => number_format($amount, 2),
+        ]);
+    }
+
+    public function sendPaymentRejected(string $phone, string $name, int $requestId, string $reason = ''): bool
+    {
+        return $this->sendTemplate('payment_rejected', $phone, [
+            '{name}'       => $name,
+            '{request_id}' => $requestId,
+            '{reason}'     => $reason ?: 'Please contact CPDO office',
+        ]);
+    }
+
+    public function sendDocumentReminder(string $phone, string $name, int $requestId): bool
+    {
+        // Reuse payment_reminder template or send custom
+        $msg = "Reminder: {$name}, please submit required documents for application #{$requestId} at the CPDO office. - CPDO LandCert";
+        return $this->send($phone, $this->truncate($msg));
+    }
+
+    public function sendCertificatePreparing(string $phone, string $name, string $certNumber): bool
+    {
+        return $this->sendTemplate('certificate_preparing', $phone, [
+            '{name}'        => $name,
+            '{cert_number}' => $certNumber,
+        ]);
+    }
+
+    public function sendCertificateReady(string $phone, string $name, int $requestId, string $certNumber): bool
+    {
+        return $this->sendTemplate('certificate_ready', $phone, [
+            '{name}'        => $name,
+            '{request_id}'  => $requestId,
+            '{cert_number}' => $certNumber,
+        ]);
+    }
+
+    public function sendStatusUpdate(string $phone, string $name, int $requestId, string $oldStatus, string $newStatus): bool
+    {
+        $msg = "{$name}, application #{$requestId} status updated: {$oldStatus} → {$newStatus}. Log in for details. - CPDO LandCert";
+        return $this->send($phone, $this->truncate($msg));
+    }
+
+    public function sendCustomMessage(string $phone, string $message): bool
+    {
+        return $this->send($phone, $this->truncate($message . ' - CPDO LandCert'));
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+     * Helpers
+     * ───────────────────────────────────────────────────────────── */
+
+    /**
+     * Truncate to 160 chars (single SMS segment) to avoid extra charges.
+     * If > 160 chars the Semaphore API splits into multiple segments automatically,
+     * but truncating keeps costs predictable.
+     */
+    protected function truncate(string $message, int $limit = 160): string
+    {
+        if (mb_strlen($message) <= $limit) {
+            return $message;
+        }
+        return mb_substr($message, 0, $limit - 3) . '...';
     }
 }

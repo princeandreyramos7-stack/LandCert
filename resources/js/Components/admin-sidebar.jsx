@@ -12,6 +12,7 @@ import {
     LogOut,
     ChevronsUpDown,
     Shield,
+    MessageSquare,
 } from "lucide-react";
 import {
     Sidebar,
@@ -61,6 +62,7 @@ const navGroups = [
         items: [
             { title: "Users",      url: "/admin/users",       icon: Users },
             { title: "Audit Logs", url: "/admin/audit-logs",  icon: Activity },
+            { title: "SMS Broadcast", url: "/admin/sms",      icon: MessageSquare },
         ],
     },
 ];

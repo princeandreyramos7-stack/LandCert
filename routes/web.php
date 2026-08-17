@@ -76,6 +76,12 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
     Route::post('/certificates-old/{certificate}/mark-ready', [\App\Http\Controllers\SuperAdminController::class, 'markCertificateReady'])->name('certificates-old.mark-ready');
     Route::post('/certificates-old/{certificate}/release', [\App\Http\Controllers\SuperAdminController::class, 'releaseCertificate'])->name('certificates-old.release');
     
+    // SMS Broadcast + Auto-Templates
+    Route::get('/sms', [\App\Http\Controllers\SmsController::class, 'index'])->name('sms.index');
+    Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
+    Route::put('/sms/templates/{id}', [\App\Http\Controllers\SmsController::class, 'updateTemplate'])->name('sms.templates.update');
+    Route::post('/sms/templates/{id}/reset', [\App\Http\Controllers\SmsController::class, 'resetTemplate'])->name('sms.templates.reset');
+
     // Export routes
     Route::get('/export/requests', [\App\Http\Controllers\AdminController::class, 'exportRequests'])->name('export.requests');
     Route::get('/export/users', [\App\Http\Controllers\AdminController::class, 'exportUsers'])->name('export.users');
@@ -83,7 +89,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
     
     // Audit log export
     Route::get('/audit-logs/export', [\App\Http\Controllers\AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
-    
+
     // Payment Management Routes (Physical Payments)
     Route::get('/payments', [\App\Http\Controllers\SuperAdminController::class, 'payments'])->name('payments');
     Route::get('/payments/pending', [PaymentController::class, 'pending'])->name('payments.pending');
@@ -150,6 +156,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/export/requests', [AdminController::class, 'exportRequests'])->name('export.requests');
     Route::get('/export/users', [AdminController::class, 'exportUsers'])->name('export.users');
     Route::get('/export/payments', [AdminController::class, 'exportPayments'])->name('export.payments');
+
+    // SMS Broadcast only (admins can broadcast but NOT edit templates)
+    Route::get('/sms', [\App\Http\Controllers\SmsController::class, 'index'])->name('sms.index');
+    Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
     
     // Bulk action routes
     Route::post('/bulk/approve', [AdminController::class, 'bulkApprove'])->name('bulk.approve');

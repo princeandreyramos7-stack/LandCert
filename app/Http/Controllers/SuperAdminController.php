@@ -326,15 +326,54 @@ class SuperAdminController extends Controller
         ]);
 
         $report = Report::findOrFail($reportId);
+        $requestModel = $report->request;
+        $oldValues = ['evaluation' => $report->evaluation];
         
         $report->update([
             'evaluation' => 'rejected',
             'description' => $validated['description'],
             'date_reported' => now(),
-            'issued_by' => 'Super Admin',
+            'issued_by' => auth()->user()->name,
         ]);
 
-        return back()->with('success', 'Request rejected successfully!');
+        // Log the rejection
+        AuditLogService::logUpdate(
+            'Report',
+            $report->id,
+            $oldValues,
+            ['evaluation' => 'rejected'],
+            "SuperAdmin rejected application #{$report->request_id} — Reason: " . $validated['description']
+        );
+
+        // Notify applicant
+        try {
+            if ($requestModel && $requestModel->user) {
+                $requestModel->status = 'rejected';
+                $requestModel->save();
+
+                \Mail::to($requestModel->user->email)->send(
+                    new \App\Mail\ApplicationRejected(
+                        $requestModel,
+                        $requestModel->applicant->applicant_name ?? 'Applicant',
+                        $requestModel->id,
+                        $validated['description']
+                    )
+                );
+
+                if ($requestModel->user->contact_number) {
+                    app(\App\Services\SmsService::class)->sendApplicationRejected(
+                        $requestModel->user->contact_number,
+                        $requestModel->user->name,
+                        $requestModel->id,
+                        $validated['description']
+                    );
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send rejection notification: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Request rejected successfully! Applicant has been notified.');
     }
 
     /**
