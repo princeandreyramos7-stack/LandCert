@@ -29,7 +29,7 @@ export function RequestTableHeader({
                             className="gap-2 border-gray-200 text-[#0d1f5c] hover:border-[#d4a017] hover:text-[#d4a017] transition-all"
                         >
                             <Download className="h-4 w-4" />
-                            Export PDF
+                            Export Excel
                         </Button>
                         <div className="relative w-64">
                             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />

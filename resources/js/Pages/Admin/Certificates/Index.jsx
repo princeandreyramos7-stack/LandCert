@@ -4,6 +4,7 @@ import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import { CertificatesTable } from "@/Components/Admin/Certificates/CertificatesTable";
 import { MarkReadyDialog } from "@/Components/Admin/Certificates/MarkReadyDialog";
 import { RecordReleaseDialog } from "@/Components/Admin/Certificates/RecordReleaseDialog";
+import { UploadCertificateModal } from "@/Components/Admin/Certificates/UploadCertificateModal";
 import { Button } from "@/Components/ui/button";
 import { useState } from "react";
 import { Award, RefreshCw, FileDown } from "lucide-react";
@@ -12,6 +13,7 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
     const [selectedCertificate, setSelectedCertificate] = useState(null);
     const [showMarkReadyDialog, setShowMarkReadyDialog] = useState(false);
     const [showRecordReleaseDialog, setShowRecordReleaseDialog] = useState(false);
+    const [showUploadModal, setShowUploadModal] = useState(false);
 
     const isSuperAdmin = userType === 'super_admin';
     const routePrefix = isSuperAdmin ? 'super-admin' : 'admin';
@@ -22,6 +24,7 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
     const handleRecordRelease = (certificate) => { setSelectedCertificate(certificate); setShowRecordReleaseDialog(true); };
     const handleDownload = (certificate) => { window.open(route(`${routePrefix}.certificates.download`, certificate.id), '_blank'); };
     const handlePreview = (certificate) => { window.open(route(`${routePrefix}.certificates.preview`, certificate.id), '_blank'); };
+    const handleUploadCertificate = (certificate) => { setSelectedCertificate(certificate); setShowUploadModal(true); };
     const handleRefresh = () => { router.reload({ only: ['certificates'] }); };
     const handleExport = () => {
         window.open(route(`${routePrefix}.export.payments`) + '?format=pdf', '_blank');
@@ -65,6 +68,7 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
                     onRecordRelease={handleRecordRelease}
                     onDownload={handleDownload}
                     onPreview={handlePreview}
+                    onUploadCertificate={handleUploadCertificate}
                 />
             </Layout>
 
@@ -78,6 +82,12 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
                 certificate={selectedCertificate}
                 open={showRecordReleaseDialog}
                 onOpenChange={setShowRecordReleaseDialog}
+                routePrefix={routePrefix}
+            />
+            <UploadCertificateModal
+                isOpen={showUploadModal}
+                onClose={() => setShowUploadModal(false)}
+                certificate={selectedCertificate}
                 routePrefix={routePrefix}
             />
         </>

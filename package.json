@@ -39,6 +39,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "date-fns": "^4.4.0",
+        "html2pdf.js": "^0.14.0",
         "leaflet": "^1.9.4",
         "lucide-react": "^0.548.0",
         "recharts": "^3.3.0",

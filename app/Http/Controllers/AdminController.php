@@ -319,31 +319,136 @@ class AdminController extends Controller
      */
     public function requests(Request $request): Response
     {
-        $perPage = $request->input('per_page', 25); // Increased default pagination
-        
-        // Get all requests with their related data (using normalized structure)
-        $requestsData = RequestModel::with(['user', 'reports'])->orderBy('created_at', 'desc')->paginate($perPage);
+        // Get ALL requests with their related data (using normalized structure)
+        $requestsData = RequestModel::with(['user', 'reports', 'applicant', 'project', 'location'])
+            ->orderBy('created_at', 'desc')
+            ->get();
         
         // Merge the data
-        $requests = $requestsData->through(function($request) {
+        $requests = $requestsData->map(function($request) {
             // Get the latest report for this request
             $report = $request->reports->first();
             
             // Convert to array and add additional fields
             $requestArray = $request->toArray();
-            $requestArray['application_id'] = $request->id; // Using request ID as application ID
-            $requestArray['authorization_letter_path'] = $request->authorization_letter_path ?? null;
-            $requestArray['report_id'] = $report?->report_id;
-            $requestArray['evaluation'] = $report?->evaluation;
-            $requestArray['user_name'] = $request->user?->name;
-            $requestArray['user_email'] = $request->user?->email;
-            $requestArray['status'] = $report?->evaluation ?? $request->status;
+            $requestArray['application_id']           = $request->id;
+            $requestArray['authorization_letter_path']= $request->authorization_letter_path ?? null;
+            $requestArray['report_id']                = $report?->report_id;
+            $requestArray['evaluation']               = $report?->evaluation;
+            $requestArray['user_name']                = $request->user?->name;
+            $requestArray['user_email']               = $request->user?->email;
+            $requestArray['status']                   = $report?->evaluation ?? $request->status;
+
+            // Applicant
+            $requestArray['applicant_name']           = $request->applicant?->applicant_name;
+
+            // Project type from normalized_projects
+            $requestArray['project_type']             = $request->project?->project_type;
+
+            // Location fields from locations table
+            $requestArray['project_location_street']      = $request->location?->street_address;
+            $requestArray['project_location_barangay']    = $request->location?->barangay;
+            $requestArray['project_location_city']        = $request->location?->city_municipality;
+            $requestArray['project_location_municipality']= $request->location?->city_municipality;
+            $requestArray['project_location_province']    = $request->location?->province;
             
             return $requestArray;
         });
 
         return Inertia::render('Admin/Request', [
             'requests' => $requests,
+        ]);
+    }
+
+    /**
+     * Print-preview page for the CPD-001-0 application form
+     */
+    public function printForm($id): Response
+    {
+        $request = RequestModel::with([
+            'user',
+            'reports',
+            'applicant.corporation',
+            'applicant.primaryRepresentative',
+            'project',
+            'location',
+            'property',
+        ])->findOrFail($id);
+
+        // Security: applicants can only print their own applications
+        $currentUser = auth()->user();
+        if (!in_array($currentUser->user_type, ['admin', 'super_admin'])) {
+            abort_if($request->user_id !== $currentUser->id, 403, 'You are not authorized to print this application.');
+        }
+
+        $report = $request->reports->first();
+
+        $data = [
+            'id'             => $request->id,
+            'control_number' => $request->control_number ?? sprintf('CPD-%03d-0', $request->id),
+            'created_at'     => $request->created_at?->format('F j, Y'),
+
+            // Applicant
+            'applicant_name'    => $request->applicant?->applicant_name ?? '',
+            'applicant_address' => $request->applicant?->applicant_address ?? '',
+
+            // Corporation
+            'corporation_name'    => $request->applicant?->corporation?->corporation_name ?? '',
+            'corporation_address' => $request->applicant?->corporation?->corporation_address ?? '',
+
+            // Representative
+            'representative_name'    => $request->applicant?->primaryRepresentative?->representative_name ?? '',
+            'representative_address' => $request->applicant?->primaryRepresentative?->representative_address ?? '',
+
+            // Project
+            'project_type'             => $request->project?->project_type ?? '',
+            'project_nature'           => $request->project?->project_nature ?? '',
+            'project_nature_duration'  => $request->project?->project_nature_duration ?? '',
+            'project_nature_years'     => $request->project?->project_nature_years ?? '',
+            'project_cost'             => $request->project?->project_cost ?? null,
+
+            // Location
+            'location_number'       => '',
+            'location_street'       => $request->location?->street_address ?? '',
+            'location_barangay'     => $request->location?->barangay ?? '',
+            'location_city'         => $request->location?->city_municipality ?? 'City of Ilagan',
+            'location_province'     => $request->location?->province ?? 'Isabela',
+
+            // Property
+            'project_area_sqm'        => $request->property?->lot_area_sqm ?? '',
+            'bldg_improvement_sqm'    => $request->property?->bldg_improvement_sqm ?? '',
+            'right_over_land'         => $request->property?->right_over_land ?? '',
+            'existing_land_use'       => $request->property?->existing_land_use ?? '',
+
+            // Land use / notices
+            'has_written_notice'          => $request->has_written_notice ?? '',
+            'notice_officer_name'         => $request->notice_officer_name ?? '',
+            'notice_dates'                => $request->notice_dates?->format('F j, Y') ?? '',
+            'has_similar_application'     => $request->has_similar_application ?? '',
+            'similar_application_offices' => $request->similar_application_offices ?? '',
+            'similar_application_dates'   => $request->similar_application_dates?->format('F j, Y') ?? '',
+
+            // Release
+            'preferred_release_mode' => $request->preferred_release_mode ?? '',
+            'release_address'        => $request->release_address ?? '',
+
+            // Report info (for receipt fields — may be empty for unprocessed requests)
+            'or_number'  => $report?->or_number ?? '',
+            'amount_paid' => $report?->amount ?? '',
+            'evaluation' => $report?->evaluation ?? $request->status ?? 'pending',
+        ];
+
+        return Inertia::render('Admin/PrintForm', [
+            'application' => $data,
+            'auth' => [
+                'user' => [
+                    'id' => $currentUser->id,
+                    'name' => $currentUser->name,
+                    'email' => $currentUser->email,
+                    'user_type' => $currentUser->user_type,
+                    'role' => $currentUser->user_type, // Alias for backward compatibility
+                ],
+            ],
         ]);
     }
 
@@ -385,7 +490,8 @@ class AdminController extends Controller
             'applicant.primaryRepresentative',
             'project',
             'location',
-            'property'
+            'property',
+            'requirementDocuments' // Add requirement documents
         ])->findOrFail($id);
         
         // Get the latest report for this request
@@ -452,6 +558,19 @@ class AdminController extends Controller
             'report_id' => $report?->report_id,
             'evaluation' => $report?->evaluation,
             'application_id' => $request->id,
+            
+            // Requirement documents
+            'uploaded_requirements' => $request->requirementDocuments->map(function($doc) {
+                return [
+                    'id' => $doc->id,
+                    'requirement_name' => $doc->requirement_name,
+                    'original_filename' => $doc->original_filename,
+                    'file_path' => $doc->file_path,
+                    'mime_type' => $doc->mime_type,
+                    'file_size' => $doc->file_size,
+                    'created_at' => $doc->created_at,
+                ];
+            }),
         ];
         
         return Inertia::render('Admin/ReviewRequest', [
@@ -627,14 +746,9 @@ class AdminController extends Controller
             'action' => 'required|in:reviewed,rejected',
             
             // For "reviewed" action
-            'appointment_date' => 'required_if:action,reviewed|nullable|date|after:today',
-            'appointment_time' => 'required_if:action,reviewed|nullable',
+            'appointment_date' => 'required_if:action,reviewed|nullable|date|after_or_equal:today',
+            'appointment_time' => 'nullable|date_format:H:i',
             'payment_amount' => 'required_if:action,reviewed|nullable|numeric|min:0',
-            'requirements' => 'required_if:action,reviewed|nullable|array',
-            'requirements.*.id' => 'nullable|integer',
-            'requirements.*.name' => 'nullable|string',
-            'requirements.*.checked' => 'nullable|boolean',
-            'requirements.*.required' => 'nullable|boolean',
             'admin_notes' => 'nullable|string|max:1000',
             
             // For "rejected" action
@@ -647,24 +761,23 @@ class AdminController extends Controller
         $requestModel = RequestModel::with(['applicant', 'project', 'user'])->findOrFail($validated['request_id']);
 
         if ($validated['action'] === 'reviewed') {
-            // Create or update report with review details
+            // Create or update report with review details including payment info
             $report = Report::updateOrCreate(
                 ['request_id' => $requestModel->id],
                 [
                     'evaluation' => 'reviewed',
                     'issued_by' => auth()->user()->name,
                     'date_reported' => now(),
-                    'appointment_date' => $validated['appointment_date'],
-                    'appointment_time' => $validated['appointment_time'],
-                    'payment_amount' => $validated['payment_amount'],
-                    'requirements' => json_encode($validated['requirements']),
+                    'description' => 'Application reviewed by ' . auth()->user()->name . '. Pending SuperAdmin approval.',
+                    'appointment_date' => $validated['appointment_date'] ?? null,
+                    'appointment_time' => $validated['appointment_time'] ?? null,
+                    'payment_amount' => $validated['payment_amount'] ?? null,
                     'admin_notes' => $validated['admin_notes'] ?? null,
-                    'description' => 'Application reviewed by ' . auth()->user()->name . '. Pending SuperAdmin approval.'
                 ]
             );
 
             // Update request status
-            $requestModel->status = 'pending_superadmin_approval';
+            $requestModel->status = 'reviewed';
             $requestModel->save();
 
             // Log the action
@@ -676,23 +789,26 @@ class AdminController extends Controller
             );
 
             // Notify SuperAdmins
-            $superAdmins = User::where('user_type', 'admin')->get();
+            $superAdmins = User::where('user_type', 'super_admin')->get();
             foreach ($superAdmins as $superAdmin) {
                 \App\Models\Notification::createForUser(
                     $superAdmin->id,
                     'application_pending_approval',
                     'Application Pending Your Approval',
-                    "Application #{$requestModel->id} from " . ($requestModel->applicant->applicant_name ?? 'Applicant') . " has been reviewed and requires your approval.",
-                    "/super-admin/applications",
+                    "Application #{$requestModel->id} from " . ($requestModel->applicant->applicant_name ?? 'Applicant') . " has been reviewed and requires your approval. Payment details have been set by admin.",
+                    "/super-admin/requests/{$requestModel->id}/review",
                     [
                         'request_id' => $requestModel->id,
                         'applicant_name' => $requestModel->applicant->applicant_name ?? 'N/A',
                         'project_type' => $requestModel->project->project_type ?? 'N/A',
+                        'payment_amount' => $validated['payment_amount'] ?? null,
+                        'appointment_date' => $validated['appointment_date'] ?? null,
                     ]
                 );
             }
 
-            return back()->with('success', 'Application reviewed successfully! Waiting for SuperAdmin approval.');
+            // Note: SMS will be sent to applicant ONLY after SuperAdmin approves
+            return back()->with('success', 'Application marked as reviewed with payment details! Sent to SuperAdmin for final approval. SMS will be sent to applicant after approval.');
 
         } else {
             // Rejection flow
@@ -810,37 +926,73 @@ class AdminController extends Controller
     }
 
     /**
-     * Display all payments for verification
+     * Unified payments page with tabs for pending, verified, and all payments
      */
     public function payments(Request $request): Response
     {
-        $search = $request->input('search', '');
-        $statusFilter = $request->input('payment_status', '');
-        $methodFilter = $request->input('payment_method', '');
+        // Get ALL approved requests (by Super Admin) - these are requests awaiting payment
+        $approvedRequests = RequestModel::with(['applicant', 'project', 'location', 'user', 'payments'])
+            ->where('status', 'approved')
+            ->orWhere('status', 'payment_confirmed')
+            ->orderBy('updated_at', 'desc')
+            ->get()
+            ->map(function($request) {
+                // Check if there's a verified payment
+                $verifiedPayment = $request->payments->where('payment_status', 'verified')->first();
+                
+                // Calculate days waiting since approval
+                $daysWaiting = $request->updated_at->diffInDays(now());
+                
+                return [
+                    'request_id' => $request->id,
+                    'control_number' => $request->control_number ?? '#' . $request->id,
+                    'applicant_name' => $request->applicant->applicant_name ?? 'Unknown',
+                    'expected_amount' => 500.00, // TODO: Make dynamic
+                    'approved_at' => $request->updated_at->format('Y-m-d'),
+                    'days_waiting' => $daysWaiting,
+                    'project_type' => $request->project->project_type ?? 'N/A',
+                    'payment_order_number' => "PO-{$request->id}",
+                    'payment_status' => $verifiedPayment ? 'verified' : 'pending',
+                    'has_payment' => $verifiedPayment !== null,
+                    'payment_id' => $verifiedPayment?->id,
+                    'status' => $request->status,
+                ];
+            });
         
-        $query = \App\Models\Payment::with(['request.user', 'request.applicant', 'request.project', 'verifiedByUser']);
-        
-        // Apply filters
-        if ($search) {
-            $query->whereHas('request.applicant', function($q) use ($search) {
-                $q->where('applicant_name', 'like', '%' . $search . '%');
-            })->orWhere('receipt_number', 'like', '%' . $search . '%');
-        }
-        
-        if ($statusFilter) {
-            $query->where('payment_status', $statusFilter);
-        }
-        
-        if ($methodFilter) {
-            $query->where('payment_method', $methodFilter);
-        }
-        
-        $payments = $query->orderBy('created_at', 'desc')
-            ->paginate(15)
-            ->through(function($payment) {
+        // Get ALL verified payments
+        $verifiedPayments = \App\Models\Payment::with(['request.applicant', 'verifiedByUser'])
+            ->where('payment_status', 'verified')
+            ->orderBy('verified_at', 'desc')
+            ->get()
+            ->map(function($payment) {
                 return [
                     'id' => $payment->id,
                     'request_id' => $payment->request_id,
+                    'control_number' => $payment->request->control_number ?? null,
+                    'amount' => $payment->amount,
+                    'payment_method' => $payment->payment_method,
+                    'receipt_number' => $payment->receipt_number,
+                    'payment_date' => $payment->payment_date,
+                    'payment_status' => $payment->payment_status,
+                    'verified_by' => $payment->verified_by,
+                    'verified_at' => $payment->verified_at,
+                    'notes' => $payment->notes,
+                    'created_at' => $payment->created_at,
+                    'applicant_name' => $payment->request->applicant->applicant_name ?? 'N/A',
+                    'project_type' => $payment->request->project->project_type ?? 'N/A',
+                    'verified_by_name' => $payment->verifiedByUser->name ?? 'N/A',
+                ];
+            });
+        
+        // Get ALL payments (including pending, verified, rejected)
+        $allPayments = \App\Models\Payment::with(['request.applicant', 'verifiedByUser'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function($payment) {
+                return [
+                    'id' => $payment->id,
+                    'request_id' => $payment->request_id,
+                    'control_number' => $payment->request->control_number ?? null,
                     'amount' => $payment->amount,
                     'payment_method' => $payment->payment_method,
                     'receipt_number' => $payment->receipt_number,
@@ -852,25 +1004,58 @@ class AdminController extends Controller
                     'rejection_reason' => $payment->rejection_reason,
                     'notes' => $payment->notes,
                     'created_at' => $payment->created_at,
-                    'request' => $payment->request ? [
-                        'id' => $payment->request->id,
-                        'applicant_name' => $payment->request->applicant->applicant_name ?? 'N/A',
-                        'project_type' => $payment->request->project->project_type ?? 'N/A',
-                    ] : null,
-                    'verified_by_user' => $payment->verifiedByUser ? [
-                        'name' => $payment->verifiedByUser->name,
-                    ] : null,
+                    'applicant_name' => $payment->request->applicant->applicant_name ?? 'N/A',
+                    'project_type' => $payment->request->project->project_type ?? 'N/A',
+                    'verified_by_name' => $payment->verifiedByUser->name ?? 'N/A',
                 ];
             });
 
-        return Inertia::render('Admin/Payments', [
-            'payments' => $payments,
-            'filters' => [
-                'search' => $search,
-                'payment_status' => $statusFilter,
-                'payment_method' => $methodFilter,
-            ],
+        return Inertia::render('Admin/PaymentsUnified', [
+            'pendingPayments' => $approvedRequests, // ALL approved requests (with or without payment)
+            'verifiedPayments' => $verifiedPayments,
+            'allPayments' => $allPayments,
         ]);
+    }
+
+    /**
+     * Upload payment receipt (image or PDF)
+     */
+    public function uploadReceipt(Request $request)
+    {
+        $validated = $request->validate([
+            'payment_id' => 'required|exists:payments,id',
+            'receipt_file' => 'required|file|mimes:jpeg,jpg,png,gif,pdf|max:5120', // 5MB max
+        ]);
+
+        $payment = \App\Models\Payment::findOrFail($validated['payment_id']);
+
+        // Delete old receipt if exists
+        if ($payment->receipt_file_path && \Storage::disk('public')->exists($payment->receipt_file_path)) {
+            \Storage::disk('public')->delete($payment->receipt_file_path);
+        }
+
+        // Store the new receipt
+        $file = $request->file('receipt_file');
+        $filename = 'receipts/' . time() . '_' . $payment->id . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs('receipts', basename($filename), 'public');
+
+        // Update payment record
+        $payment->update([
+            'receipt_file_path' => $path,
+            'receipt_uploaded_at' => now(),
+            'receipt_uploaded_by' => auth()->id(),
+        ]);
+
+        // Log the action
+        AuditLogService::logUpdate(
+            'Payment',
+            $payment->id,
+            ['receipt_file_path' => null],
+            ['receipt_file_path' => $path],
+            "Uploaded payment receipt for Request #{$payment->request_id}"
+        );
+
+        return back()->with('success', 'Payment receipt uploaded successfully!');
     }
 
     /**
@@ -900,14 +1085,20 @@ class AdminController extends Controller
         // Clear dashboard cache so analytics refresh immediately
         $this->cacheService->clearCache();
 
-        // Log audit
-        AuditLogService::logUpdate(
-            'Payment',
-            $payment->id,
-            ['payment_status' => 'pending'],
-            ['payment_status' => 'verified'],
-            'Payment verified by admin'
-        );
+        // Send payment-verified SMS immediately
+        try {
+            $pmtReq = $payment->request()->with('user')->first();
+            if ($pmtReq && $pmtReq->user && $pmtReq->user->contact_number) {
+                app(\App\Services\SmsService::class)->sendPaymentVerified(
+                    $pmtReq->user->contact_number,
+                    $pmtReq->user->name,
+                    $pmtReq->id,
+                    (float) $payment->amount
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send payment verified SMS (Admin): ' . $e->getMessage());
+        }
 
         // Generate certificate after payment verification
         try {
@@ -1023,7 +1214,31 @@ class AdminController extends Controller
             'Payment rejected by admin: ' . $validated['rejection_reason']
         );
 
-        return back()->with('success', 'Payment rejected!');
+        // Notify applicant of payment rejection
+        try {
+            $rejReq = $payment->request()->with('user')->first();
+            if ($rejReq && $rejReq->user) {
+                if ($rejReq->user->contact_number) {
+                    app(\App\Services\SmsService::class)->sendPaymentRejected(
+                        $rejReq->user->contact_number,
+                        $rejReq->user->name,
+                        $rejReq->id,
+                        $validated['rejection_reason']
+                    );
+                }
+                if ($rejReq->user->email) {
+                    try {
+                        \Mail::to($rejReq->user->email)->send(new \App\Mail\PaymentRejected($payment, $rejReq));
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to send payment rejection email: ' . $e->getMessage());
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send payment rejection SMS: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Payment rejected! Applicant has been notified.');
     }
 
     /**
@@ -1050,19 +1265,22 @@ class AdminController extends Controller
             $query->where('status', $statusFilter);
         }
         
+        // Get ALL certificates
         $certificates = $query->orderBy('issued_at', 'desc')
-            ->paginate(15)
-            ->through(function($certificate) {
+            ->get()
+            ->map(function($certificate) {
                 return [
                     'id' => $certificate->id,
                     'request_id' => $certificate->request_id,
                     'certificate_number' => $certificate->certificate_number,
+                    'certificate_file_path' => $certificate->certificate_file_path,
                     'status' => $certificate->status,
                     'issued_at' => $certificate->issued_at,
                     'valid_until' => $certificate->valid_until,
                     'created_at' => $certificate->created_at,
                     'request' => $certificate->request ? [
                         'id' => $certificate->request->id,
+                        'control_number' => $certificate->request->control_number,
                         'applicant_name' => $certificate->request->applicant->applicant_name ?? 'N/A',
                         'project_type' => $certificate->request->project->project_type ?? 'N/A',
                     ] : null,
@@ -1112,7 +1330,23 @@ class AdminController extends Controller
             'Certificate marked as ready for collection by admin'
         );
 
-        return back()->with('success', 'Certificate marked as ready for collection!');
+        // Notify applicant certificate is ready for pickup
+        try {
+            $certificate->load('request.user');
+            $certUser = $certificate->request?->user;
+            if ($certUser && $certUser->contact_number) {
+                app(\App\Services\SmsService::class)->sendCertificateReady(
+                    $certUser->contact_number,
+                    $certUser->name,
+                    $certificate->request_id,
+                    $validated['certificate_number']
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send certificate ready SMS: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Certificate marked as ready for collection! Applicant has been notified.');
     }
 
     /**
@@ -1158,6 +1392,21 @@ class AdminController extends Controller
             ['status' => 'collected'],
             'Certificate collection recorded by admin'
         );
+
+        // Notify applicant certificate has been released
+        try {
+            $certificate->load('request.user');
+            $relUser = $certificate->request?->user;
+            if ($relUser && $relUser->contact_number) {
+                app(\App\Services\SmsService::class)->sendCertificateReleased(
+                    $relUser->contact_number,
+                    $relUser->name,
+                    $certificate->certificate_number ?? $certificate->id
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send certificate released SMS: ' . $e->getMessage());
+        }
 
         return back()->with('success', 'Certificate collection recorded successfully!');
     }
@@ -1974,7 +2223,12 @@ class AdminController extends Controller
         $perPage = $request->input('per_page', 25);
         
         $query = AuditLog::with('user')
-            ->orderBy('created_at', 'desc');
+            ->leftJoin('requests', function($join) {
+                $join->on('audit_logs.model_type', '=', \DB::raw("'Request'"))
+                     ->on('audit_logs.model_id', '=', 'requests.id');
+            })
+            ->select('audit_logs.*', 'requests.control_number')
+            ->orderBy('audit_logs.created_at', 'desc');
 
         // Apply filters
         if ($request->filled('user_id')) {
@@ -2090,5 +2344,41 @@ class AdminController extends Controller
         $log = AuditLog::with('user')->findOrFail($id);
 
         return response()->json($log);
+    }
+
+    /**
+     * Update project type for a request
+     */
+    public function updateProjectType(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'project_type' => 'nullable|string|in:N/A,TUP,SUP,Zoning',
+        ]);
+
+        $requestModel = RequestModel::findOrFail($id);
+        
+        // Update the project type in normalized_projects table
+        $project = $requestModel->project;
+        if ($project) {
+            $oldProjectType = $project->project_type;
+            $project->update([
+                'project_type' => $validated['project_type'] ?? null
+            ]);
+            
+            // Log the update
+            AuditLogService::logUpdate(
+                'Project',
+                $project->id,
+                ['project_type' => $oldProjectType],
+                ['project_type' => $validated['project_type']],
+                "Updated project type from '{$oldProjectType}' to '{$validated['project_type']}'"
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Project type updated successfully',
+            'project_type' => $validated['project_type']
+        ]);
     }
 }

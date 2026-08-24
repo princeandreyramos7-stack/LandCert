@@ -211,6 +211,24 @@ class CertificateService
                 'released_to'        => $data['released_to_name'],
             ]);
 
+            // Notify applicant certificate has been released
+            try {
+                $certRequest = $certificate->request()->with('user')->first();
+                $certUser = $certRequest?->user;
+                if ($certUser) {
+                    $phone = app(\App\Services\SmsService::class)->resolvePhone($certUser);
+                    if ($phone) {
+                        app(\App\Services\SmsService::class)->sendCertificateReleased(
+                            $phone,
+                            $certUser->name,
+                            $certificate->certificate_number ?? (string) $certificate->id
+                        );
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error("Failed to send certificate released SMS: " . $e->getMessage());
+            }
+
             return $certificate->fresh();
         });
     }
@@ -223,8 +241,15 @@ class CertificateService
         $query = Certificate::with(['request.applicant', 'request.project', 'payment', 'issuedBy'])
             ->orderBy('issued_at', 'desc');
 
+        // Filter by status based on certificate_file_path
         if (isset($filters['status']) && $filters['status'] !== 'all') {
-            $query->where('status', $filters['status']);
+            if ($filters['status'] === 'preparing') {
+                // No softcopy uploaded yet
+                $query->whereNull('certificate_file_path');
+            } elseif ($filters['status'] === 'released') {
+                // Has softcopy uploaded
+                $query->whereNotNull('certificate_file_path');
+            }
         }
 
         if (!empty($filters['from_date'])) {

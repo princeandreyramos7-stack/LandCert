@@ -58,7 +58,7 @@ export default function GuestLayout({ children }) {
                                 Made Simple
                             </h2>
                             <p className="text-blue-200/80 text-base leading-relaxed">
-                                Apply for Zoning Clearances, Special Use Permits, and more — entirely online.
+                                Apply for Locational Clearances, Special Use Permits, and more — entirely online.
                                 Track your application status in real time.
                             </p>
                         </div>

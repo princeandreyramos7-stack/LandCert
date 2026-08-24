@@ -132,7 +132,7 @@ class RequestController extends Controller
                 DB::raw('COALESCE(reports.evaluation, requests.status) as status')
             )
             ->orderBy('requests.created_at', 'desc')
-            ->get();
+            ->paginate(10); // Changed from ->get() to ->paginate(10)
 
         return Inertia::render('MyApplications', [
             'applications' => $applications
@@ -308,6 +308,13 @@ class RequestController extends Controller
             \Log::error('Failed to send application email: ' . $e->getMessage());
         }
 
-        return back()->with('success', 'Request submitted successfully! Your request ID is #' . $result['request']->id);
+        // Return with application data for the success dialog
+        return back()->with([
+            'success' => 'Request submitted successfully! Your request ID is #' . $result['request']->id,
+            'application' => [
+                'id' => $result['request']->id,
+                'control_number' => $result['request']->control_number,
+            ]
+        ]);
     }
 }

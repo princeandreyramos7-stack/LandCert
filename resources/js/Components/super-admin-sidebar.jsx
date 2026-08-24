@@ -26,9 +26,7 @@ const navGroups = [
     {
         label: "Processing",
         items: [
-            { title: "Payments Pending", url: "/super-admin/payments/pending",  icon: Clock },
-            { title: "Payment History",  url: "/super-admin/payments/history",  icon: History },
-            { title: "All Payments",     url: "/super-admin/payments",          icon: CreditCard },
+            { title: "Payments", url: "/super-admin/payments", icon: CreditCard },
             { title: "Certificates", url: "/super-admin/certificates",  icon: Award },
         ],
     },
@@ -145,7 +143,12 @@ export function SuperAdminSidebar({ ...props }) {
                                 <DropdownMenuSeparator/>
                                 <DropdownMenuItem
                                     className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-                                    onClick={() => router.post("/logout")}>
+                                    onClick={() => {
+                                        router.post("/logout", {}, {
+                                            onSuccess: () => window.location.href = '/',
+                                            onError: () => window.location.href = '/'
+                                        });
+                                    }}>
                                     <LogOut className="w-4 h-4 mr-2"/>Log Out
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

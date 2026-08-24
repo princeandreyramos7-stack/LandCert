@@ -146,6 +146,33 @@ class SmsService
         ]);
     }
 
+    public function sendApplicationReviewed(string $phone, string $name, int $requestId): bool
+    {
+        return $this->sendTemplate('application_reviewed', $phone, [
+            '{name}'       => $name,
+            '{request_id}' => $requestId,
+        ]);
+    }
+
+    public function sendApplicationApprovedWithNextSteps(string $phone, string $name, int $requestId, float $amount, string $appointmentDate = '', string $appointmentTime = ''): bool
+    {
+        return $this->sendTemplate('application_approved_next_steps', $phone, [
+            '{name}'             => $name,
+            '{request_id}'       => $requestId,
+            '{amount}'           => number_format($amount, 2),
+            '{appointment_date}' => $appointmentDate ?: 'TBD',
+            '{appointment_time}' => $appointmentTime ?: 'TBD',
+        ]);
+    }
+
+    public function sendCertificateReleased(string $phone, string $name, string $certNumber): bool
+    {
+        return $this->sendTemplate('certificate_released', $phone, [
+            '{name}'        => $name,
+            '{cert_number}' => $certNumber,
+        ]);
+    }
+
     public function sendApplicationApproved(string $phone, string $name, int $requestId): bool
     {
         return $this->sendTemplate('application_approved', $phone, [

@@ -13,6 +13,7 @@ import {
     MoreVertical,
     CheckCircle,
     Trash2,
+    Printer,
 } from "lucide-react";
 import { getStatusColor, getStatusIcon, formatDate, formatLocation, formatProjectType } from "./utils";
 
@@ -29,23 +30,15 @@ export function RequestTable({
         <div className="overflow-x-auto">
             <table className="w-full">
                 <thead>
-                    <tr className="border-b">
-                        <th className="text-left p-3 font-semibold">ID</th>
-                        <th className="text-left p-3 font-semibold">
-                            Applicant
-                        </th>
-                        <th className="text-left p-3 font-semibold">User</th>
-                        <th className="text-left p-3 font-semibold">
-                            Project Type
-                        </th>
-                        <th className="text-left p-3 font-semibold">
-                            Location
-                        </th>
-                        <th className="text-left p-3 font-semibold">Date</th>
-                        <th className="text-left p-3 font-semibold">Status</th>
-                        <th className="text-left p-3 font-semibold">
-                            Actions
-                        </th>
+                    <tr className="border-b bg-gray-50">
+                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Control No.</th>
+                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Applicant</th>
+                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">User</th>
+                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Project Type</th>
+                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Location</th>
+                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Date</th>
+                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Status</th>
+                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -61,8 +54,8 @@ export function RequestTable({
                                 key={request.id}
                                 className="border-b hover:bg-gray-50 transition-colors"
                             >
-                                <td className="p-3 font-mono text-sm">
-                                    #{request.id}
+                                <td className="p-3 font-mono text-sm font-bold text-[#0d1f5c]">
+                                    {request.control_number || `#${request.id}`}
                                 </td>
                                 <td className="p-3">
                                     <div>
@@ -92,7 +85,10 @@ export function RequestTable({
                                     )}
                                 </td>
                                 <td className="p-3 text-sm max-w-xs truncate">
-                                    {formatLocation(request)}
+                                    {formatLocation(request) !== "Location not specified"
+                                        ? formatLocation(request)
+                                        : <span className="text-slate-400 italic text-xs">Not specified</span>
+                                    }
                                 </td>
                                 <td className="p-3 text-sm">
                                     {formatDate(request.created_at)}
@@ -128,6 +124,13 @@ export function RequestTable({
                                             >
                                                 <CheckCircle className="h-4 w-4 mr-2" />
                                                 Review Application
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={() => window.open(route('admin.requests.print', request.id), '_blank')}
+                                                className="text-[#0d1f5c] font-medium"
+                                            >
+                                                <Printer className="h-4 w-4 mr-2" />
+                                                Print Form
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem

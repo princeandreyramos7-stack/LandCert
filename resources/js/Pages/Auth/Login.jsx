@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Checkbox from '@/Components/Checkbox';
 import InputError from '@/Components/InputError';
 import GuestLayout from '@/Layouts/GuestLayout';
@@ -37,6 +37,36 @@ export default function Login({ status, canResetPassword }) {
         remember: false,
     });
     const [showPassword, setShowPassword] = useState(false);
+    const [formKey, setFormKey] = useState(Date.now()); // Force form remount
+
+    // Clear form on mount to prevent autofill from showing after logout
+    useEffect(() => {
+        // Force a new form key to remount the form completely
+        setFormKey(Date.now());
+        
+        // Clear the form data
+        setData({
+            email: '',
+            password: '',
+            remember: false,
+        });
+
+        // Clear the actual input fields after a small delay
+        setTimeout(() => {
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            if (emailInput) {
+                emailInput.value = '';
+                emailInput.setAttribute('readonly', 'readonly');
+                setTimeout(() => emailInput.removeAttribute('readonly'), 100);
+            }
+            if (passwordInput) {
+                passwordInput.value = '';
+                passwordInput.setAttribute('readonly', 'readonly');
+                setTimeout(() => passwordInput.removeAttribute('readonly'), 100);
+            }
+        }, 50);
+    }, []);
 
     const submit = (e) => {
         e.preventDefault();
@@ -67,7 +97,7 @@ export default function Login({ status, canResetPassword }) {
                 </div>
             )}
 
-            <form onSubmit={submit} className="space-y-5">
+            <form key={formKey} onSubmit={submit} className="space-y-5" autoComplete="off">
                 {/* Email */}
                 <Field label="Email Address" required error={errors.email}>
                     <div className="relative">
@@ -75,8 +105,13 @@ export default function Login({ status, canResetPassword }) {
                             <Mail className="h-4 w-4 text-gray-400"/>
                         </div>
                         <input
-                            id="email" type="email" name="email"
-                            value={data.email} autoComplete="username" autoFocus
+                            key={`email-${formKey}`}
+                            id="email" 
+                            type="email" 
+                            name="email-new"
+                            value={data.email} 
+                            autoComplete="new-password"
+                            autoFocus
                             placeholder="you@example.com"
                             className={inputCls(errors.email)}
                             onChange={(e) => setData('email', e.target.value)}
@@ -91,9 +126,12 @@ export default function Login({ status, canResetPassword }) {
                             <Lock className="h-4 w-4 text-gray-400"/>
                         </div>
                         <input
-                            id="password" type={showPassword ? 'text' : 'password'}
-                            name="password" value={data.password}
-                            autoComplete="current-password"
+                            key={`password-${formKey}`}
+                            id="password" 
+                            type={showPassword ? 'text' : 'password'}
+                            name="password-new" 
+                            value={data.password}
+                            autoComplete="new-password"
                             placeholder="Enter your password"
                             className={`${inputCls(errors.password)} pr-11`}
                             onChange={(e) => setData('password', e.target.value)}

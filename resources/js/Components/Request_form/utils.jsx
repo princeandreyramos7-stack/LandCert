@@ -4,10 +4,10 @@
 
 // Validation regex patterns
 const PATTERNS = {
-    // Only letters, spaces, hyphens, apostrophes, and periods (for names)
-    NAME: /^[a-zA-Z\s\-'.]+$/,
-    // Letters, numbers, spaces, and common address characters
-    ADDRESS: /^[a-zA-Z0-9\s,.\-#/]+$/,
+    // Only letters, spaces, hyphens, apostrophes, periods, and forward slash (for N/A)
+    NAME: /^[a-zA-Z0-9\s\-'./]+$/,
+    // Letters, numbers, spaces, and common address characters (including parentheses)
+    ADDRESS: /^[a-zA-Z0-9\s,.\-#/()]+$/,
     // Valid email format
     EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     // Only numbers (positive integers)
@@ -18,13 +18,22 @@ const PATTERNS = {
     PHONE: /^(09|\+639)\d{9}$/,
 };
 
+// Check if a value is N/A (user explicitly marking field as not applicable)
+const isNA = (value) => {
+    if (!value) return false;
+    const v = value.trim().toLowerCase();
+    return v === 'n/a' || v === 'na' || v === 'n.a.' || v === 'none';
+};
+
 // Validation helper functions
 const validateName = (value, fieldName) => {
     if (!value || value.trim() === "") {
         return `${fieldName} is required`;
     }
+    // Allow N/A explicitly
+    if (isNA(value)) return null;
     if (!PATTERNS.NAME.test(value.trim())) {
-        return `${fieldName} must contain only letters, spaces, hyphens, apostrophes, and periods`;
+        return `${fieldName} must contain only letters, spaces, hyphens, apostrophes, periods, or N/A`;
     }
     if (value.trim().length < 2) {
         return `${fieldName} must be at least 2 characters long`;
@@ -39,6 +48,8 @@ const validateAddress = (value, fieldName) => {
     if (!value || value.trim() === "") {
         return `${fieldName} is required`;
     }
+    // Allow N/A explicitly
+    if (isNA(value)) return null;
     if (!PATTERNS.ADDRESS.test(value.trim())) {
         return `${fieldName} contains invalid characters`;
     }
@@ -91,14 +102,16 @@ export const validateStep1 = (data) => {
 
     // Corporation validation (if provided)
     if (data.corporation_name && data.corporation_name.trim() !== "") {
-        // Corporation name validation
-        if (!PATTERNS.NAME.test(data.corporation_name.trim()) && !PATTERNS.ADDRESS.test(data.corporation_name.trim())) {
+        // Corporation name validation — allow N/A
+        if (!isNA(data.corporation_name) && !PATTERNS.NAME.test(data.corporation_name.trim()) && !PATTERNS.ADDRESS.test(data.corporation_name.trim())) {
             errors.push("Corporation Name contains invalid characters");
         }
         
-        // Corporation address required
-        const corpAddressError = validateAddress(data.corporation_address, "Corporation Address");
-        if (corpAddressError) errors.push(corpAddressError);
+        // Corporation address required only if corp name is not N/A
+        if (!isNA(data.corporation_name)) {
+            const corpAddressError = validateAddress(data.corporation_address, "Corporation Address");
+            if (corpAddressError) errors.push(corpAddressError);
+        }
     }
 
     // Authorized Representative validation (if provided)
@@ -127,10 +140,8 @@ export const validateStep1 = (data) => {
 export const validateStep2 = (data) => {
     const errors = [];
 
-    // Project Type (Required)
-    if (!data.project_type || data.project_type.trim() === "") {
-        errors.push("Project Type is required");
-    }
+    // Project Type is now optional - admin can update later
+    // No validation needed for project_type
 
     // Project Nature (Required)
     if (!data.project_nature || data.project_nature.trim() === "") {

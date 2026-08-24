@@ -34,6 +34,8 @@ import {
     MessageSquare,
     Loader2,
     History,
+    Edit2,
+    Save,
 } from "lucide-react";
 import { formatDate } from "@/Components/Admin/Request/utils";
 import { useState } from "react";
@@ -134,7 +136,7 @@ export default function SuperAdminReviewRequest({ request }) {
 
     return (
         <SidebarProvider>
-            <Head title={`Review Request #${request.id} - Super Admin`} />
+            <Head title={`Review ${request.control_number || `CPDO-${request.id}`} - Super Admin`} />
             <SuperAdminSidebar />
             <SidebarInset>
                 <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b bg-white">
@@ -166,7 +168,7 @@ export default function SuperAdminReviewRequest({ request }) {
                                     <span className="mx-2 text-gray-400">›</span>
                                 </BreadcrumbItem>
                                 <BreadcrumbItem>
-                                    <BreadcrumbPage>Review #{request.id}</BreadcrumbPage>
+                                    <BreadcrumbPage>{request.control_number || `CPDO-${request.id}`}</BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
                         </Breadcrumb>
@@ -201,7 +203,7 @@ export default function SuperAdminReviewRequest({ request }) {
                                         </div>
                                         <div>
                                             <CardTitle className="text-2xl text-gray-900">
-                                                Request #{request.id}
+                                                {request.control_number || `CPDO-${request.id}`}
                                             </CardTitle>
                                             <p className="text-sm text-gray-600 mt-1">
                                                 Application Type: <span className="font-semibold text-gray-900">{request.application_category || "N/A"}</span>
@@ -261,6 +263,75 @@ export default function SuperAdminReviewRequest({ request }) {
                                 </div>
                             </CardHeader>
                             <CardContent className="pt-6">
+                                {/* Uploaded Requirements Section */}
+                                {request.uploaded_requirements && request.uploaded_requirements.length > 0 && (
+                                    <div className="mb-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-5 border-2 border-indigo-200">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <div className="p-2 bg-indigo-600 rounded-lg">
+                                                <FileText className="h-5 w-5 text-white" />
+                                            </div>
+                                            <h3 className="text-lg font-bold text-gray-900">Uploaded Requirements</h3>
+                                            <span className="ml-auto bg-indigo-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                                                {request.uploaded_requirements.length} {request.uploaded_requirements.length === 1 ? 'file' : 'files'}
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                            {request.uploaded_requirements.map((doc, index) => (
+                                                <div 
+                                                    key={doc.id}
+                                                    className="bg-white border-2 border-indigo-100 rounded-lg p-3 hover:border-indigo-300 hover:shadow-md transition-all duration-200"
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                            <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                                                <FileText className="h-5 w-5 text-indigo-600" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-semibold text-gray-900 truncate">
+                                                                    {doc.requirement_name}
+                                                                </p>
+                                                                <p className="text-xs text-gray-500 truncate">
+                                                                    {doc.original_filename}
+                                                                </p>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <span className="text-xs text-gray-400">
+                                                                        {(doc.file_size / 1024).toFixed(2)} KB
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-300">•</span>
+                                                                    <span className="text-xs text-gray-400">
+                                                                        {new Date(doc.created_at).toLocaleDateString()}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <a
+                                                            href={`/storage/${doc.file_path}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex-shrink-0 ml-3 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                                                        >
+                                                            <FileText className="h-4 w-4" />
+                                                            View
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* No Requirements Message */}
+                                {(!request.uploaded_requirements || request.uploaded_requirements.length === 0) && (
+                                    <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                        <div className="text-sm text-amber-800">
+                                            <p className="font-semibold">No Requirements Uploaded</p>
+                                            <p className="text-xs mt-1">The applicant has not uploaded any requirement documents yet.</p>
+                                        </div>
+                                    </div>
+                                )}
+                                
                                 <form onSubmit={handleSubmit} className="space-y-6">
                                     {/* Action Selection */}
                                     <div>
@@ -671,12 +742,97 @@ function Step1Content({ request }) {
 }
 
 function Step2Content({ request }) {
+    const [editingProjectType, setEditingProjectType] = useState(false);
+    const [projectType, setProjectType] = useState(request.project_type || '');
+    const [savingProjectType, setSavingProjectType] = useState(false);
+    const { toast } = useToast();
+
+    const handleSaveProjectType = async () => {
+        setSavingProjectType(true);
+        try {
+            await axios.post(`/admin/update-project-type/${request.id}`, {
+                project_type: projectType
+            });
+            toast({
+                title: "Success!",
+                description: "Project type updated successfully.",
+            });
+            setEditingProjectType(false);
+            request.project_type = projectType;
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to update project type.",
+            });
+        } finally {
+            setSavingProjectType(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <SectionTitle icon={Building2} title="Project Details" />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InfoField label="Project Type" value={request.project_type} />
+                {/* EDITABLE PROJECT TYPE */}
+                <div className="group">
+                    <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            Project Type
+                        </p>
+                        {!editingProjectType ? (
+                            <button
+                                onClick={() => setEditingProjectType(true)}
+                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                                <Edit2 className="h-3 w-3" />
+                                Edit
+                            </button>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleSaveProjectType}
+                                    disabled={savingProjectType}
+                                    className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
+                                >
+                                    {savingProjectType ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        <Save className="h-3 w-3" />
+                                    )}
+                                    Save
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setProjectType(request.project_type || '');
+                                        setEditingProjectType(false);
+                                    }}
+                                    disabled={savingProjectType}
+                                    className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    {editingProjectType ? (
+                        <select
+                            value={projectType}
+                            onChange={(e) => setProjectType(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value="">N/A</option>
+                            <option value="TUP">TUP (Temporary Use Permit)</option>
+                            <option value="SUP">SUP (Special Use Permit)</option>
+                            <option value="Zoning">Zoning (Zoning Clearance)</option>
+                        </select>
+                    ) : (
+                        <p className="text-sm text-gray-900 font-medium">
+                            {projectType || <span className="text-gray-400 italic">Not set</span>}
+                        </p>
+                    )}
+                </div>
                 <InfoField label="Project Nature" value={request.project_nature} />
             </div>
 

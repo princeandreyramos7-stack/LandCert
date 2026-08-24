@@ -283,12 +283,12 @@ export function AdminRequestList({ requests, flash = {} }) {
     const handleExport = () => {
         const url = route("admin.export.requests", {
             status: filterStatus,
-            format: "pdf",
+            format: "csv",
         });
         window.location.href = url;
         toast({
             title: "Export Started",
-            description: "Your PDF file will download shortly.",
+            description: "Your Excel file will download shortly.",
         });
     };
 

@@ -89,7 +89,8 @@ export const formatProjectType = (type) => {
     if (!type) return null;
     const labels = {
         "TUP": "TUP (Temporary Use Permit)",
-        "Zoning Clearance": "Zoning Clearance",
+        "Locational Clearance": "Locational Clearance",
+        "Zoning Clearance": "Locational Clearance",
         "SUP": "SUP (Special Use Permit)",
     };
     return labels[type] || type;

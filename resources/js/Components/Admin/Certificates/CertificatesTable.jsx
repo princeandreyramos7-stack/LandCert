@@ -10,6 +10,13 @@ import {
     SelectValue,
 } from "@/Components/ui/select";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+} from "@/Components/ui/dropdown-menu";
+import {
     Search,
     FileText,
     CheckCircle,
@@ -17,6 +24,8 @@ import {
     Download,
     RefreshCw,
     Filter,
+    MoreVertical,
+    Upload,
 } from "lucide-react";
 import { router } from "@inertiajs/react";
 
@@ -28,6 +37,7 @@ export function CertificatesTable({
     onRecordRelease,
     onDownload,
     onPreview,
+    onUploadCertificate,
     className = "",
 }) {
     const [searchTerm, setSearchTerm] = useState(filters.search || "");
@@ -143,9 +153,7 @@ export function CertificatesTable({
                         <SelectContent>
                             <SelectItem value="all">All Statuses</SelectItem>
                             <SelectItem value="preparing">Preparing</SelectItem>
-                            <SelectItem value="ready_for_pickup">Ready for Pickup</SelectItem>
                             <SelectItem value="released">Released</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
                         </SelectContent>
                     </Select>
 
@@ -202,6 +210,9 @@ export function CertificatesTable({
                                     Certificate No.
                                 </th>
                                 <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
+                                    Control Number
+                                </th>
+                                <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
                                     Applicant
                                 </th>
                                 <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
@@ -222,7 +233,7 @@ export function CertificatesTable({
                             {certificatesData.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan="6"
+                                        colSpan="7"
                                         className="px-4 py-12 text-center text-slate-500"
                                     >
                                         <div className="flex flex-col items-center justify-center">
@@ -248,6 +259,11 @@ export function CertificatesTable({
                                             </div>
                                         </td>
                                         <td className="p-3">
+                                            <div className="font-mono text-sm font-semibold text-[#0d1f5c]">
+                                                {certificate.request?.control_number || `#${certificate.request_id}`}
+                                            </div>
+                                        </td>
+                                        <td className="p-3">
                                             <div className="font-medium text-slate-800">
                                                 {certificate.request?.applicant?.applicant_name || "Unknown"}
                                             </div>
@@ -266,53 +282,52 @@ export function CertificatesTable({
                                             </div>
                                         </td>
                                         <td className="p-3">
-                                            <Badge className={getStatusBadge(certificate.status)}>
-                                                {certificate.status?.replace(/_/g, " ").split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+                                            <Badge className={getStatusBadge(certificate.certificate_file_path ? 'released' : 'preparing')}>
+                                                {certificate.certificate_file_path ? 'Released' : 'Preparing'}
                                             </Badge>
                                         </td>
                                         <td className="p-3">
-                                            <div className="flex items-center gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => onDownload(certificate)}
-                                                    className="h-8 px-2 text-green-600 hover:bg-green-50 hover:text-green-700"
-                                                    title="Download PDF"
-                                                >
-                                                    <Download className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => onPreview(certificate)}
-                                                    className="h-8 px-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                                                    title="Preview"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                                {certificate.status === "preparing" && (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => onMarkReady(certificate)}
-                                                        className="h-8 px-2 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
-                                                        title="Mark Ready"
+                                                        className="h-8 w-8 p-0"
                                                     >
-                                                        <CheckCircle className="h-4 w-4" />
+                                                        <MoreVertical className="h-4 w-4" />
                                                     </Button>
-                                                )}
-                                                {certificate.status === "ready_for_pickup" && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => onRecordRelease(certificate)}
-                                                        className="h-8 px-2 text-purple-600 hover:bg-purple-50 hover:text-purple-700"
-                                                        title="Record Release"
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-56">
+                                                    {certificate.certificate_file_path && (
+                                                        <>
+                                                            <DropdownMenuItem
+                                                                onClick={() => onPreview(certificate)}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                <Eye className="h-4 w-4 mr-2 text-blue-600" />
+                                                                <span>Preview Certificate</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => onDownload(certificate)}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                <Download className="h-4 w-4 mr-2 text-emerald-600" />
+                                                                <span>Download PDF</span>
+                                                            </DropdownMenuItem>
+                                                            
+                                                            <DropdownMenuSeparator />
+                                                        </>
+                                                    )}
+                                                    
+                                                    <DropdownMenuItem
+                                                        onClick={() => onUploadCertificate?.(certificate)}
+                                                        className="cursor-pointer"
                                                     >
-                                                        <FileText className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                            </div>
+                                                        <Upload className="h-4 w-4 mr-2 text-purple-600" />
+                                                        <span>{certificate.certificate_file_path ? 'Replace Softcopy' : 'Upload Softcopy'}</span>
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </td>
                                     </tr>
                                 ))

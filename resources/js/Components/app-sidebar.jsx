@@ -151,7 +151,12 @@ export function AppSidebar({ ...props }) {
                                 <DropdownMenuSeparator/>
                                 <DropdownMenuItem
                                     className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-                                    onClick={() => router.post("/logout")}>
+                                    onClick={() => {
+                                        router.post("/logout", {}, {
+                                            onSuccess: () => window.location.href = '/',
+                                            onError: () => window.location.href = '/'
+                                        });
+                                    }}>
                                     <LogOut className="w-4 h-4 mr-2"/>Log Out
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

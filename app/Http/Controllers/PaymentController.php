@@ -154,6 +154,7 @@ class PaymentController extends Controller
                 'id' => $payment->id,
                 'receipt_number' => $payment->receipt_number,
                 'request_id' => $payment->request_id,
+                'control_number' => $payment->request->control_number ?? null,
                 'applicant_name' => $payment->request->applicant->applicant_name ?? 'Unknown',
                 'amount' => $payment->amount,
                 'payment_date' => $payment->payment_date,
@@ -254,6 +255,44 @@ class PaymentController extends Controller
     }
 
     /**
+     * Show the upload receipt page for a specific application
+     */
+    public function uploadReceiptPage($requestId)
+    {
+        $request = \App\Models\Request::findOrFail($requestId);
+
+        // Security: applicants can only upload receipts for their own applications
+        $currentUser = auth()->user();
+        if ($currentUser->user_type === 'applicant' && $request->user_id !== $currentUser->id) {
+            abort(403, 'You are not authorized to upload a receipt for this application.');
+        }
+
+        // Check if application is approved
+        if (strtolower($request->status) !== 'approved') {
+            return redirect()->route('my-applications')
+                ->with('error', 'You can only upload payment receipt after your application is approved.');
+        }
+
+        // Get existing payment if any
+        $existingPayment = Payment::where('request_id', $requestId)->first();
+
+        $applicationData = [
+            'id' => $request->id,
+            'control_number' => $request->control_number,
+            'applicant_name' => $request->applicant?->applicant_name ?? '',
+            'project_type' => $request->project?->project_type ?? '',
+            'project_nature' => $request->project?->project_nature ?? '',
+            'status' => $request->status,
+            'report_amount' => $request->report_amount,
+        ];
+
+        return Inertia::render('UploadReceipt', [
+            'application' => $applicationData,
+            'existingPayment' => $existingPayment,
+        ]);
+    }
+
+    /**
      * Store a newly created payment.
      */
     public function store(Request $request)
@@ -266,6 +305,26 @@ class PaymentController extends Controller
             'payment_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
+
+        // Get the request and check if it's approved
+        $requestModel = \App\Models\Request::findOrFail($validated['request_id']);
+        
+        // Check if application is approved
+        if (strtolower($requestModel->status) !== 'approved') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment receipts can only be uploaded for approved applications.'
+            ], 403);
+        }
+
+        // Security check: applicants can only upload for their own applications
+        $currentUser = auth()->user();
+        if ($currentUser->user_type === 'applicant' && $requestModel->user_id !== $currentUser->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to upload a receipt for this application.'
+            ], 403);
+        }
 
         // Handle file upload
         if ($request->hasFile('receipt')) {
@@ -282,8 +341,6 @@ class PaymentController extends Controller
 
         $payment = Payment::create($validated);
 
-        // Get the request
-        $requestModel = \App\Models\Request::find($validated['request_id']);
         if ($requestModel) {
             // Create notification for payment receipt upload
             NotificationService::paymentReceiptUploaded($requestModel, $payment);

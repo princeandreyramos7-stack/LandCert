@@ -48,6 +48,7 @@ export function Step3LandUse({
                             />
                             <span>No</span>
                         </label>
+                    
                     </div>
                     {errors.has_written_notice && (
                         <p className="text-sm text-red-500">

@@ -40,6 +40,11 @@ class HandleInertiaRequests extends Middleware
                     'roles' => $request->user()->roles,
                 ] : null,
             ],
+            // Add flash messages
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+            ],
         ];
     }
 }

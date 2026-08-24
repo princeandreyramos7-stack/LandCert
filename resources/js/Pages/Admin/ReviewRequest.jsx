@@ -19,10 +19,8 @@ import {
     User,
     Building2,
     MapPin,
-    DollarSign,
     Home,
     FileText,
-    CalendarDays,
     ArrowLeft,
     Clock,
     CheckCircle2,
@@ -31,9 +29,11 @@ import {
     Check,
     Sparkles,
     Loader2,
+    Edit2,
+    Save,
 } from "lucide-react";
 import { formatDate } from "@/Components/Admin/Request/utils";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/Components/ui/use-toast";
 import { Toaster } from "@/Components/ui/toaster";
 import axios from "axios";
@@ -42,61 +42,17 @@ export default function ReviewRequest({ request }) {
     const [currentStep, setCurrentStep] = useState(1);
     const [action, setAction] = useState('');
     const [formData, setFormData] = useState({
+        rejection_reason: '', // Only needed for rejection
         appointment_date: '',
-        appointment_time: '09:00',
+        appointment_time: '',
         payment_amount: '',
-        requirements: [],
         admin_notes: '',
-        rejection_reason: '',
-        other_requirement_text: '' // Add field for "Other" specification
     });
     const [loading, setLoading] = useState(false);
-    const [availableRequirements, setAvailableRequirements] = useState([]);
-    const [loadingRequirements, setLoadingRequirements] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const { toast } = useToast();
 
-    // Fetch requirements when action is set to 'reviewed'
-    useEffect(() => {
-        if (action === 'reviewed' && request?.project_type) {
-            fetchRequirements(request.project_type);
-        }
-    }, [action, request?.project_type]);
-
-    const fetchRequirements = async (projectType) => {
-        setLoadingRequirements(true);
-        try {
-            const response = await axios.get('/admin/get-requirements', {
-                params: { project_type: projectType }
-            });
-            
-            const requirements = response.data.requirements.map(req => ({
-                ...req,
-                checked: req.required
-            }));
-            
-            setAvailableRequirements(requirements);
-            setFormData(prev => ({ ...prev, requirements }));
-        } catch (error) {
-            console.error('Failed to fetch requirements:', error);
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Failed to load requirements.",
-            });
-        } finally {
-            setLoadingRequirements(false);
-        }
-    };
-
-    const handleRequirementToggle = (id) => {
-        setFormData(prev => ({
-            ...prev,
-            requirements: prev.requirements.map(req =>
-                req.id === id ? { ...req, checked: !req.checked } : req
-            )
-        }));
-    };
+    // Remove the useEffect for fetching requirements - no longer needed
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -192,7 +148,7 @@ export default function ReviewRequest({ request }) {
 
     return (
         <SidebarProvider>
-            <Head title={`Review Request #${request.id}`} />
+            <Head title={`Review ${request.control_number || `CPDO-${request.id}`}`} />
             <AdminSidebar />
             <SidebarInset>
                 <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b bg-white">
@@ -232,7 +188,7 @@ export default function ReviewRequest({ request }) {
                                 </BreadcrumbItem>
                                 <BreadcrumbItem>
                                     <BreadcrumbPage>
-                                        Review #{request.id}
+                                        {request.control_number || `CPDO-${request.id}`}
                                     </BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
@@ -262,7 +218,7 @@ export default function ReviewRequest({ request }) {
                                         </div>
                                         <div>
                                             <CardTitle className="text-2xl text-gray-900">
-                                                Request #{request.id}
+                                                {request.control_number || `CPDO-${request.id}`}
                                             </CardTitle>
                                             <p className="text-sm text-gray-600 mt-1">
                                                 Application Type: <span className="font-semibold text-gray-900">{request.application_category || "N/A"}</span>
@@ -331,6 +287,75 @@ export default function ReviewRequest({ request }) {
                                 </div>
                             </CardHeader>
                             <CardContent className="pt-6">
+                                {/* Uploaded Requirements Section */}
+                                {request.uploaded_requirements && request.uploaded_requirements.length > 0 && (
+                                    <div className="mb-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-5 border-2 border-indigo-200">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <div className="p-2 bg-indigo-600 rounded-lg">
+                                                <FileText className="h-5 w-5 text-white" />
+                                            </div>
+                                            <h3 className="text-lg font-bold text-gray-900">Uploaded Requirements</h3>
+                                            <span className="ml-auto bg-indigo-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                                                {request.uploaded_requirements.length} {request.uploaded_requirements.length === 1 ? 'file' : 'files'}
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                            {request.uploaded_requirements.map((doc, index) => (
+                                                <div 
+                                                    key={doc.id}
+                                                    className="bg-white border-2 border-indigo-100 rounded-lg p-3 hover:border-indigo-300 hover:shadow-md transition-all duration-200"
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                            <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                                                <FileText className="h-5 w-5 text-indigo-600" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-semibold text-gray-900 truncate">
+                                                                    {doc.requirement_name}
+                                                                </p>
+                                                                <p className="text-xs text-gray-500 truncate">
+                                                                    {doc.original_filename}
+                                                                </p>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <span className="text-xs text-gray-400">
+                                                                        {(doc.file_size / 1024).toFixed(2)} KB
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-300">•</span>
+                                                                    <span className="text-xs text-gray-400">
+                                                                        {new Date(doc.created_at).toLocaleDateString()}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <a
+                                                            href={`/storage/${doc.file_path}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex-shrink-0 ml-3 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                                                        >
+                                                            <FileText className="h-4 w-4" />
+                                                            View
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* No Requirements Message */}
+                                {(!request.uploaded_requirements || request.uploaded_requirements.length === 0) && (
+                                    <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                        <div className="text-sm text-amber-800">
+                                            <p className="font-semibold">No Requirements Uploaded</p>
+                                            <p className="text-xs mt-1">The applicant has not uploaded any requirement documents yet.</p>
+                                        </div>
+                                    </div>
+                                )}
+                                
                                 <form onSubmit={handleSubmit} className="space-y-6">
                                     {/* Action Selection */}
                                     <div>
@@ -355,9 +380,9 @@ export default function ReviewRequest({ request }) {
                                                 <div className="ml-3">
                                                     <div className="flex items-center gap-2 font-semibold text-green-700 mb-1">
                                                         <CheckCircle2 className="h-5 w-5" />
-                                                        APPROVE & REVIEW
+                                                        MARK AS REVIEWED
                                                     </div>
-                                                    <div className="text-xs text-gray-600">Set appointment & requirements</div>
+                                                    <div className="text-xs text-gray-600">Mark this application as reviewed</div>
                                                 </div>
                                                 {action === 'reviewed' && (
                                                     <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
@@ -396,172 +421,81 @@ export default function ReviewRequest({ request }) {
                                         </div>
                                     </div>
 
-                                    {/* Reviewed Form */}
+                                    {/* Reviewed Form - Simplified */}
                                     {action === 'reviewed' && (
-                                        <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
-                                            {/* Appointment Details */}
-                                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-200">
-                                                <div className="flex items-center gap-2 mb-4">
-                                                    <div className="p-2 bg-blue-600 rounded-lg">
-                                                        <CalendarDays className="h-5 w-5 text-white" />
+                                        <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border-2 border-green-200">
+                                                <div className="flex items-center gap-3 mb-4">
+                                                    <div className="p-3 bg-green-600 rounded-full">
+                                                        <CheckCircle2 className="h-6 w-6 text-white" />
                                                     </div>
-                                                    <h3 className="text-lg font-bold text-gray-800">Appointment Details</h3>
-                                                </div>
-                                                
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                            Date <span className="text-red-500">*</span>
-                                                        </label>
-                                                        <input
-                                                            type="date"
-                                                            value={formData.appointment_date}
-                                                            onChange={(e) => setFormData({ ...formData, appointment_date: e.target.value })}
-                                                            min={new Date().toISOString().split('T')[0]}
-                                                            required
-                                                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                            Time <span className="text-red-500">*</span>
-                                                        </label>
-                                                        <div className="relative">
-                                                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                                            <select
-                                                                value={formData.appointment_time}
-                                                                onChange={(e) => setFormData({ ...formData, appointment_time: e.target.value })}
-                                                                required
-                                                                className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
-                                                            >
-                                                                <option value="08:00">08:00 AM</option>
-                                                                <option value="09:00">09:00 AM</option>
-                                                                <option value="10:00">10:00 AM</option>
-                                                                <option value="11:00">11:00 AM</option>
-                                                                <option value="13:00">01:00 PM</option>
-                                                                <option value="14:00">02:00 PM</option>
-                                                                <option value="15:00">03:00 PM</option>
-                                                                <option value="16:00">04:00 PM</option>
-                                                            </select>
-                                                        </div>
+                                                        <h3 className="text-lg font-bold text-gray-900">Payment & Schedule Information</h3>
+                                                        <p className="text-sm text-gray-600 mt-1">
+                                                            Set the payment details and schedule for the applicant. This information will be sent via SMS.
+                                                        </p>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Payment Amount */}
-                                            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-5 border border-emerald-200">
-                                                <div className="flex items-center gap-2 mb-4">
-                                                    <div className="p-2 bg-emerald-600 rounded-lg">
-                                                        <DollarSign className="h-5 w-5 text-white" />
-                                                    </div>
-                                                    <h3 className="text-lg font-bold text-gray-800">Payment Information</h3>
-                                                </div>
-                                                
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Amount to Pay <span className="text-red-500">*</span>
+                                                {/* Payment Amount */}
+                                                <div className="mb-4">
+                                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
+                                                        Payment Amount (₱) <span className="text-red-500">*</span>
                                                     </label>
-                                                    <div className="relative">
-                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">₱</span>
-                                                        <input
-                                                            type="number"
-                                                            step="0.01"
-                                                            min="0"
-                                                            value={formData.payment_amount}
-                                                            onChange={(e) => setFormData({ ...formData, payment_amount: e.target.value })}
-                                                            required
-                                                            placeholder="0.00"
-                                                            className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Requirements */}
-                                            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-5 border border-purple-200">
-                                                <div className="flex items-center gap-2 mb-4">
-                                                    <div className="p-2 bg-purple-600 rounded-lg">
-                                                        <FileText className="h-5 w-5 text-white" />
-                                                    </div>
-                                                    <h3 className="text-lg font-bold text-gray-800">Requirements Checklist</h3>
-                                                </div>
-                                                
-                                                <div className="bg-white/70 border border-purple-200 rounded-lg p-3 mb-4">
-                                                    <p className="text-sm font-medium text-purple-900">
-                                                        <span className="font-bold">Project Type:</span> {request?.project_type}
-                                                    </p>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        value={formData.payment_amount}
+                                                        onChange={(e) => setFormData({ ...formData, payment_amount: e.target.value })}
+                                                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                                                        placeholder="Enter amount to be paid"
+                                                        required
+                                                    />
                                                 </div>
 
-                                                {loadingRequirements ? (
-                                                    <div className="flex items-center justify-center py-8">
-                                                        <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
-                                                        <span className="ml-2 text-sm text-gray-600">Loading requirements...</span>
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                                                            {formData.requirements.map((req) => (
-                                                                <label
-                                                                    key={req.id}
-                                                                    className="flex items-start p-3 bg-white border-2 border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer transition-all duration-200"
-                                                                >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={req.checked}
-                                                                        onChange={() => handleRequirementToggle(req.id)}
-                                                                        className="mt-1 w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
-                                                                    />
-                                                                    <span className="ml-3 text-sm font-medium text-gray-800">
-                                                                        {req.name}
-                                                                        {req.required && (
-                                                                            <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
-                                                                                Required
-                                                                            </span>
-                                                                        )}
-                                                                    </span>
-                                                                </label>
-                                                            ))}
-                                                        </div>
-                                                        
-                                                        {/* Show text input when "Other" requirement is checked */}
-                                                        {formData.requirements.some(req => 
-                                                            req.checked && (req.name.toLowerCase().includes('other') || req.name.toLowerCase().includes('specify'))
-                                                        ) && (
-                                                            <div className="mt-4 animate-in slide-in-from-top-2 duration-300">
-                                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                                    Specify Other Requirement <span className="text-red-500">*</span>
-                                                                </label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={formData.other_requirement_text}
-                                                                    onChange={(e) => setFormData({ ...formData, other_requirement_text: e.target.value })}
-                                                                    placeholder="Please specify the requirement..."
-                                                                    className="w-full px-4 py-2.5 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                                                    required
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </div>
+                                                {/* Appointment Date */}
+                                                <div className="mb-4">
+                                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
+                                                        Scheduled Payment Date <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        value={formData.appointment_date}
+                                                        onChange={(e) => setFormData({ ...formData, appointment_date: e.target.value })}
+                                                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                                                        min={new Date().toISOString().split('T')[0]}
+                                                        required
+                                                    />
+                                                </div>
 
-                                            {/* Admin Notes */}
-                                            <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                                    Additional Notes (Optional)
-                                                </label>
-                                                <textarea
-                                                    value={formData.admin_notes}
-                                                    onChange={(e) => setFormData({ ...formData, admin_notes: e.target.value })}
-                                                    rows="3"
-                                                    maxLength="1000"
-                                                    placeholder="Any special instructions or notes for the applicant..."
-                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
-                                                />
-                                                <div className="flex justify-between items-center mt-2">
-                                                    <p className="text-xs text-gray-500">
-                                                        {formData.admin_notes.length}/1000 characters
+                                                {/* Appointment Time */}
+                                                <div className="mb-4">
+                                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
+                                                        Scheduled Payment Time
+                                                    </label>
+                                                    <input
+                                                        type="time"
+                                                        value={formData.appointment_time}
+                                                        onChange={(e) => setFormData({ ...formData, appointment_time: e.target.value })}
+                                                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                                                    />
+                                                </div>
+
+                                                {/* Admin Notes */}
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
+                                                        Notes for Applicant
+                                                    </label>
+                                                    <textarea
+                                                        value={formData.admin_notes}
+                                                        onChange={(e) => setFormData({ ...formData, admin_notes: e.target.value })}
+                                                        rows={4}
+                                                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 resize-none"
+                                                        placeholder="Additional instructions or information for the applicant (optional)"
+                                                    />
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        This message will be included in the SMS notification to the applicant.
                                                     </p>
                                                 </div>
                                             </div>
@@ -696,28 +630,19 @@ export default function ReviewRequest({ request }) {
                         
                         <div className="px-6 py-5">
                             <div className="mb-6">
-                                <p className="text-gray-700 mb-4">
+                                <div className="text-gray-700 mb-4">
                                     {action === 'reviewed' ? (
                                         <>
-                                            You are about to <span className="font-bold text-green-600">APPROVE</span> this application and set up:
-                                            <ul className="mt-3 space-y-2 text-sm">
-                                                <li className="flex items-center gap-2">
-                                                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                                                    Appointment: <span className="font-semibold">{formData.appointment_date} at {formData.appointment_time}</span>
-                                                </li>
-                                                <li className="flex items-center gap-2">
-                                                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                                                    Payment: <span className="font-semibold">₱{parseFloat(formData.payment_amount || 0).toLocaleString()}</span>
-                                                </li>
-                                                <li className="flex items-center gap-2">
-                                                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                                                    Requirements: <span className="font-semibold">{formData.requirements.filter(r => r.checked).length} selected</span>
-                                                </li>
-                                            </ul>
+                                            <p className="mb-3">You are about to <span className="font-bold text-green-600">MARK AS REVIEWED</span> this application.</p>
+                                            <div className="mt-3 p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                                                <p className="text-sm text-green-900">
+                                                    This application will be marked as reviewed and forwarded to SuperAdmin for final approval.
+                                                </p>
+                                            </div>
                                         </>
                                     ) : (
                                         <>
-                                            You are about to <span className="font-bold text-red-600">REJECT</span> this application with the following reason:
+                                            <p className="mb-3">You are about to <span className="font-bold text-red-600">REJECT</span> this application with the following reason:</p>
                                             <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                                                 <p className="text-sm text-red-900 italic">
                                                     "{formData.rejection_reason || 'No reason provided'}"
@@ -725,13 +650,13 @@ export default function ReviewRequest({ request }) {
                                             </div>
                                         </>
                                     )}
-                                </p>
+                                </div>
                                 
                                 <div className="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
                                     <div className="flex items-start gap-2">
                                         <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                                         <p className="text-sm text-yellow-800">
-                                            <span className="font-semibold">Important:</span> The applicant will be notified via email immediately. This action cannot be undone.
+                                            <span className="font-semibold">Important:</span> {action === 'reviewed' ? 'The application will be sent to SuperAdmin for final approval.' : 'The applicant will be notified via email immediately.'} This action cannot be undone.
                                         </p>
                                     </div>
                                 </div>
@@ -912,17 +837,101 @@ function Step1Content({ request }) {
     );
 }
 
-// Step 2: Project Details
+// Step 2: Project Details - WITH EDITABLE PROJECT TYPE
 function Step2Content({ request }) {
+    const [editingProjectType, setEditingProjectType] = useState(false);
+    const [projectType, setProjectType] = useState(request.project_type || '');
+    const [savingProjectType, setSavingProjectType] = useState(false);
+    const { toast } = useToast();
+
+    const handleSaveProjectType = async () => {
+        setSavingProjectType(true);
+        try {
+            await axios.post(`/admin/update-project-type/${request.id}`, {
+                project_type: projectType
+            });
+            toast({
+                title: "Success!",
+                description: "Project type updated successfully.",
+            });
+            setEditingProjectType(false);
+            // Update the request object
+            request.project_type = projectType;
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to update project type.",
+            });
+        } finally {
+            setSavingProjectType(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <SectionTitle icon={Building2} title="Project Details" />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InfoField
-                    label="Project Type"
-                    value={request.project_type}
-                />
+                {/* EDITABLE PROJECT TYPE */}
+                <div className="group">
+                    <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            Project Type
+                        </p>
+                        {!editingProjectType ? (
+                            <button
+                                onClick={() => setEditingProjectType(true)}
+                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                                <Edit2 className="h-3 w-3" />
+                                Edit
+                            </button>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleSaveProjectType}
+                                    disabled={savingProjectType}
+                                    className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
+                                >
+                                    {savingProjectType ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        <Save className="h-3 w-3" />
+                                    )}
+                                    Save
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setProjectType(request.project_type || '');
+                                        setEditingProjectType(false);
+                                    }}
+                                    disabled={savingProjectType}
+                                    className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    {editingProjectType ? (
+                        <select
+                            value={projectType}
+                            onChange={(e) => setProjectType(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value="">N/A</option>
+                            <option value="TUP">TUP (Temporary Use Permit)</option>
+                            <option value="SUP">SUP (Special Use Permit)</option>
+                            <option value="Zoning">Zoning (Zoning Clearance)</option>
+                        </select>
+                    ) : (
+                        <p className="text-sm text-gray-900 font-medium">
+                            {projectType || <span className="text-gray-400 italic">Not set</span>}
+                        </p>
+                    )}
+                </div>
+
                 <InfoField
                     label="Project Nature"
                     value={request.project_nature}
@@ -993,10 +1002,7 @@ function Step2Content({ request }) {
             </div>
 
             <div className="pt-4 border-t">
-                <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    Project Nature & Cost
-                </h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-4">Project Nature & Cost</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InfoField
                         label="Project Nature"

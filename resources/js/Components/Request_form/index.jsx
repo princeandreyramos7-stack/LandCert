@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { useForm, usePage } from "@inertiajs/react";
+import { useForm, usePage, router } from "@inertiajs/react";
 import { useToast } from "@/Components/ui/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { FileText } from "lucide-react";
 
 // Local Components
-import { CategorySelection } from "./CategorySelection";
 import { StepIndicator } from "./StepIndicator";
 import { Step1ApplicantInfo } from "./Step1ApplicantInfo";
 import { Step2ProjectDetails } from "./Step2ProjectDetails";
@@ -16,7 +15,6 @@ import { ConfirmationDialog } from "./ConfirmationDialog";
 import { validateStep1, validateStep2, validateStep3 } from "./utils";
 
 export default function RequestForm() {
-    const [selectedCategory, setSelectedCategory] = useState(null);
     const [currentStep, setCurrentStep] = useState(1);
     const [completedSteps, setCompletedSteps] = useState([]);
     const [hasRepresentative, setHasRepresentative] = useState(false);
@@ -82,16 +80,24 @@ export default function RequestForm() {
         }
     }, [flash]);
 
-    // Handle category selection
-    const handleCategorySelect = (category) => {
-        setSelectedCategory(category);
-        setData("project_type", category);
-    };
-
     // Handle data changes
     const handleDataChange = (field, value) => {
         setData(field, value);
     };
+
+    // Check if current step should be marked as completed based on validation
+    useEffect(() => {
+        if (currentStep === 3) {
+            // For the last step, check if it's valid and mark as completed
+            const step3Errors = validateStep3(data);
+            if (step3Errors.length === 0 && !completedSteps.includes(3)) {
+                setCompletedSteps([...completedSteps, 3]);
+            } else if (step3Errors.length > 0 && completedSteps.includes(3)) {
+                // Remove from completed if validation fails
+                setCompletedSteps(completedSteps.filter(s => s !== 3));
+            }
+        }
+    }, [data, currentStep]);
 
     // Handle representative toggle
     const handleRepresentativeToggle = (checked) => {
@@ -182,6 +188,12 @@ export default function RequestForm() {
         if (!validateCurrentStep()) {
             return;
         }
+        
+        // Mark final step as completed when validation passes
+        if (!completedSteps.includes(currentStep)) {
+            setCompletedSteps([...completedSteps, currentStep]);
+        }
+        
         setIsConfirmDialogOpen(true);
     };
 
@@ -189,17 +201,34 @@ export default function RequestForm() {
     const confirmSubmit = () => {
         post("/request", {
             onSuccess: () => {
-                toast({
-                    title: "Application Submitted!",
-                    description:
-                        "Your application has been submitted successfully. You will receive a confirmation email shortly.",
-                });
+                // Get the application data from flash message
+                const applicationData = flash.application;
+                
+                setIsConfirmDialogOpen(false);
+                
+                // Reset form
                 reset();
                 setCurrentStep(1);
                 setCompletedSteps([]);
                 setHasRepresentative(false);
-                setSelectedCategory(null);
-                setIsConfirmDialogOpen(false);
+                
+                // Show success toast
+                toast({
+                    title: "Application Submitted! 🎉",
+                    description: "Redirecting to upload requirements...",
+                });
+                
+                // Redirect to requirements upload page immediately
+                if (applicationData?.id) {
+                    setTimeout(() => {
+                        router.visit(route('requirements.upload.page', applicationData.id));
+                    }, 500); // Small delay to show toast
+                } else {
+                    // Fallback to my applications if no ID
+                    setTimeout(() => {
+                        router.visit(route('my-applications'));
+                    }, 500);
+                }
             },
             onError: (errors) => {
                 toast({
@@ -223,9 +252,9 @@ export default function RequestForm() {
                     {/* Top accent bar */}
                     <div className="h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
                     
-                    {!selectedCategory ? (
-                        <div className="animate-fadeIn">
-                            <CardHeader className="pb-6">
+                    <div className="animate-fadeIn">
+                        <CardHeader className="pb-6">
+                            <div className="flex items-center justify-between flex-wrap gap-4">
                                 <div className="flex items-center gap-4">
                                     <div className="relative group">
                                         <div className="absolute inset-0 bg-blue-500 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
@@ -233,120 +262,78 @@ export default function RequestForm() {
                                             <FileText className="h-7 w-7 text-white" />
                                         </div>
                                     </div>
-                                    <div className="flex-1">
-                                        <CardTitle className="text-3xl bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                                    <div>
+                                        <CardTitle className="text-2xl bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
                                             Land Certification Request Form
                                         </CardTitle>
                                         <p className="text-sm text-gray-600 mt-2 flex items-center gap-2">
                                             <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                            Select your application category to begin
+                                            Complete all required fields to submit your application
                                         </p>
                                     </div>
                                 </div>
-                            </CardHeader>
-                            <CardContent className="pt-2">
-                                <CategorySelection onSelectCategory={handleCategorySelect} />
-                            </CardContent>
-                        </div>
-                    ) : (
-                        <div className="animate-fadeIn">
-                            <CardHeader className="pb-6">
-                                <div className="flex items-center justify-between flex-wrap gap-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="relative group">
-                                            <div className="absolute inset-0 bg-blue-500 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
-                                            <div className="relative p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full shadow-lg">
-                                                <FileText className="h-7 w-7 text-white" />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <CardTitle className="text-2xl bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                                                Land Certification Request Form
-                                            </CardTitle>
-                                            <p className="text-sm text-gray-600 mt-2 flex items-center gap-2">
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md">
-                                                    {selectedCategory}
-                                                </span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                            setSelectedCategory(null);
-                                            setData("project_type", "");
-                                        }}
-                                        className="group hover:bg-gray-50 transition-all duration-300 hover:shadow-md"
-                                    >
-                                        <svg className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                        </svg>
-                                        Change Category
-                                    </Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-8">
-                                {/* Step Indicator with animation */}
-                                <div className="animate-slideIn">
-                                    <StepIndicator
-                                        currentStep={currentStep}
-                                        completedSteps={completedSteps}
-                                        onStepClick={handleStepClick}
-                                    />
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-8">
+                            {/* Step Indicator with animation */}
+                            <div className="animate-slideIn">
+                                <StepIndicator
+                                    currentStep={currentStep}
+                                    completedSteps={completedSteps}
+                                    onStepClick={handleStepClick}
+                                />
+                            </div>
+
+                            {/* Step Content with smooth transitions */}
+                            <div className="relative min-h-[400px]">
+                                <div className={`transition-all duration-500 ${currentStep === 1 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8 absolute inset-0 pointer-events-none'}`}>
+                                    {currentStep === 1 && (
+                                        <Step1ApplicantInfo
+                                            data={data}
+                                            errors={errors}
+                                            hasRepresentative={hasRepresentative}
+                                            onDataChange={handleDataChange}
+                                            onRepresentativeToggle={handleRepresentativeToggle}
+                                        />
+                                    )}
                                 </div>
 
-                                {/* Step Content with smooth transitions */}
-                                <div className="relative min-h-[400px]">
-                                    <div className={`transition-all duration-500 ${currentStep === 1 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8 absolute inset-0 pointer-events-none'}`}>
-                                        {currentStep === 1 && (
-                                            <Step1ApplicantInfo
-                                                data={data}
-                                                errors={errors}
-                                                hasRepresentative={hasRepresentative}
-                                                onDataChange={handleDataChange}
-                                                onRepresentativeToggle={handleRepresentativeToggle}
-                                            />
-                                        )}
-                                    </div>
-
-                                    <div className={`transition-all duration-500 ${currentStep === 2 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8 absolute inset-0 pointer-events-none'}`}>
-                                        {currentStep === 2 && (
-                                            <Step2ProjectDetails
-                                                data={data}
-                                                errors={errors}
-                                                onDataChange={handleDataChange}
-                                            />
-                                        )}
-                                    </div>
-
-                                    <div className={`transition-all duration-500 ${currentStep === 3 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8 absolute inset-0 pointer-events-none'}`}>
-                                        {currentStep === 3 && (
-                                            <Step3LandUse
-                                                data={data}
-                                                errors={errors}
-                                                hasRepresentative={hasRepresentative}
-                                                onDataChange={handleDataChange}
-                                                onToast={toast}
-                                            />
-                                        )}
-                                    </div>
+                                <div className={`transition-all duration-500 ${currentStep === 2 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8 absolute inset-0 pointer-events-none'}`}>
+                                    {currentStep === 2 && (
+                                        <Step2ProjectDetails
+                                            data={data}
+                                            errors={errors}
+                                            onDataChange={handleDataChange}
+                                        />
+                                    )}
                                 </div>
 
-                                {/* Navigation with enhanced styling */}
-                                <div className="animate-slideUp">
-                                    <FormNavigation
-                                        currentStep={currentStep}
-                                        totalSteps={3}
-                                        processing={processing}
-                                        onPrevious={handlePrevious}
-                                        onNext={handleNext}
-                                        onSubmit={handleSubmit}
-                                    />
+                                <div className={`transition-all duration-500 ${currentStep === 3 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8 absolute inset-0 pointer-events-none'}`}>
+                                    {currentStep === 3 && (
+                                        <Step3LandUse
+                                            data={data}
+                                            errors={errors}
+                                            hasRepresentative={hasRepresentative}
+                                            onDataChange={handleDataChange}
+                                            onToast={toast}
+                                        />
+                                    )}
                                 </div>
-                            </CardContent>
-                        </div>
-                    )}
+                            </div>
+
+                            {/* Navigation with enhanced styling */}
+                            <div className="animate-slideUp">
+                                <FormNavigation
+                                    currentStep={currentStep}
+                                    totalSteps={3}
+                                    processing={processing}
+                                    onPrevious={handlePrevious}
+                                    onNext={handleNext}
+                                    onSubmit={handleSubmit}
+                                />
+                            </div>
+                        </CardContent>
+                    </div>
                 </Card>
             </div>
 

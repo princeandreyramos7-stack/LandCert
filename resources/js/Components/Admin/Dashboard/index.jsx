@@ -55,18 +55,18 @@ export function AdminDashboard({ analytics = null, pendingPaymentsCount = 0, rec
                 </div>
             </div>
 
-            {/* Payments Pending Widget */}
-            <PaymentsPendingWidget pendingPaymentsCount={pendingPaymentsCount}/>
-
-            {/* Recent Payment Activity Widget */}
-            <RecentPaymentsWidget recentPayments={recentPayments}/>
-
-            {/* Analytics Section */}
+            {/* Analytics Section - Moved to top */}
             {showAnalytics && analytics && (
                 <div className="animate-in fade-in slide-in-from-bottom duration-500">
                     <AnalyticsDashboard analytics={analytics}/>
                 </div>
             )}
+
+            {/* Payments Pending Widget */}
+            <PaymentsPendingWidget pendingPaymentsCount={pendingPaymentsCount}/>
+
+            {/* Recent Payment Activity Widget */}
+            <RecentPaymentsWidget recentPayments={recentPayments}/>
 
             {/* Logo splash when analytics hidden */}
             {!showAnalytics && (

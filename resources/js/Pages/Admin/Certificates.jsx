@@ -33,6 +33,13 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -41,7 +48,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Eye, CheckCircle, Package } from 'lucide-react';
+import { Search, Eye, CheckCircle, Package, MoreVertical } from 'lucide-react';
 
 export default function Certificates({ auth, certificates, filters }) {
     const { flash } = usePage().props;
@@ -248,35 +255,52 @@ export default function Certificates({ auth, certificates, filters }) {
                                                     {certificate.valid_until ? new Date(certificate.valid_until).toLocaleDateString() : 'N/A'}
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleViewDetails(certificate)}
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </Button>
-                                                        {certificate.status === 'generated' && (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
                                                             <Button
+                                                                variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => handleMarkReady(certificate)}
-                                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                                className="h-8 w-8 p-0"
                                                             >
-                                                                <Package className="h-4 w-4 mr-1" />
-                                                                Mark Ready
+                                                                <MoreVertical className="h-4 w-4" />
                                                             </Button>
-                                                        )}
-                                                        {certificate.status === 'ready_for_collection' && (
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => handleRelease(certificate)}
-                                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-56">
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleViewDetails(certificate)}
+                                                                className="cursor-pointer"
                                                             >
-                                                                <CheckCircle className="h-4 w-4 mr-1" />
-                                                                Record Collection
-                                                            </Button>
-                                                        )}
-                                                    </div>
+                                                                <Eye className="h-4 w-4 mr-2 text-blue-600" />
+                                                                <span>View Details</span>
+                                                            </DropdownMenuItem>
+                                                            
+                                                            {certificate.status === 'generated' && (
+                                                                <>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => handleMarkReady(certificate)}
+                                                                        className="cursor-pointer"
+                                                                    >
+                                                                        <Package className="h-4 w-4 mr-2 text-blue-600" />
+                                                                        <span>Mark Ready</span>
+                                                                    </DropdownMenuItem>
+                                                                </>
+                                                            )}
+                                                            
+                                                            {certificate.status === 'ready_for_collection' && (
+                                                                <>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => handleRelease(certificate)}
+                                                                        className="cursor-pointer"
+                                                                    >
+                                                                        <CheckCircle className="h-4 w-4 mr-2 text-emerald-600" />
+                                                                        <span>Record Collection</span>
+                                                                    </DropdownMenuItem>
+                                                                </>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         ))

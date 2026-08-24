@@ -81,6 +81,12 @@ class CertificatePDFService
      */
     public function download(Certificate $certificate)
     {
+        // Check if a softcopy (uploaded PDF) exists
+        if ($certificate->certificate_file_path && Storage::disk('public')->exists($certificate->certificate_file_path)) {
+            return Storage::disk('public')->download($certificate->certificate_file_path, $this->generateFilename($certificate));
+        }
+        
+        // Otherwise, generate PDF on the fly (fallback for backward compatibility)
         $data = $this->buildData($certificate);
         $pdf  = $this->makePdf($data);
         return $pdf->download($this->generateFilename($certificate));
@@ -91,6 +97,12 @@ class CertificatePDFService
      */
     public function stream(Certificate $certificate)
     {
+        // Check if a softcopy (uploaded PDF) exists
+        if ($certificate->certificate_file_path && Storage::disk('public')->exists($certificate->certificate_file_path)) {
+            return response()->file(Storage::disk('public')->path($certificate->certificate_file_path));
+        }
+        
+        // Otherwise, generate PDF on the fly (fallback for backward compatibility)
         $data = $this->buildData($certificate);
         $pdf  = $this->makePdf($data);
         return $pdf->stream($this->generateFilename($certificate));

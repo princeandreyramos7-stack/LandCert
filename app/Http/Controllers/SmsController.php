@@ -176,12 +176,14 @@ class SmsController extends Controller
     private function getBroadcastTemplates(): array
     {
         return [
-            ['label' => 'Application Reminder',  'message' => 'Hi {name}! This is a reminder from CPDO LandCert regarding your land use permit application. Please log in to check your status. - CPDO LandCert'],
-            ['label' => 'Payment Reminder',       'message' => 'Hi {name}! Your approved application has a pending payment. Please visit CPDO office (Mon-Fri 8AM-5PM) to complete payment. - CPDO LandCert'],
-            ['label' => 'Document Submission',    'message' => 'Hi {name}! Please submit the required documents for your application at CPDO office. Bring all requirements. - CPDO LandCert'],
-            ['label' => 'Office Announcement',    'message' => 'CPDO LandCert announcement: Please bring all required documents for walk-in transactions. Office hours: Mon-Fri 8AM-5PM. - CPDO LandCert'],
-            ['label' => 'Certificate Ready',      'message' => 'Hi {name}! Your certificate is ready for pickup at CPDO office. Bring a valid government-issued ID. - CPDO LandCert'],
-            ['label' => 'Custom Message',         'message' => ''],
+            ['label' => 'Application Reminder',       'message' => 'Hi {name}! This is a reminder from CPDO LandCert regarding your land use permit application. Please log in to check your status. - CPDO LandCert'],
+            ['label' => 'Payment Reminder',            'message' => 'Hi {name}! Your approved application has a pending payment. Please pay at the City Treasury Office and bring your Official Receipt to the CPDO office (Mon-Fri 8AM-5PM). - CPDO LandCert'],
+            ['label' => 'Document Submission',         'message' => 'Hi {name}! Please submit the required documents for your application at CPDO office. Bring all requirements. - CPDO LandCert'],
+            ['label' => 'Office Announcement',         'message' => 'CPDO LandCert announcement: Please bring all required documents for walk-in transactions. Office hours: Mon-Fri 8AM-5PM. - CPDO LandCert'],
+            ['label' => 'Certificate Ready for Pickup','message' => 'Hi {name}! Your certificate is ready for pickup at CPDO office. Bring a valid government-issued ID. Office hours: Mon-Fri 8AM-5PM. - CPDO LandCert'],
+            ['label' => 'Payment Instructions',        'message' => 'Hi {name}! Your application is approved. Please pay the required fee at the City Treasury Office and bring the Official Receipt to the CPDO office to proceed. - CPDO LandCert'],
+            ['label' => 'General Reminder',            'message' => 'Hi {name}! This is a reminder from CPDO LandCert. Please log in to your account or visit our office for more information. Office hours: Mon-Fri 8AM-5PM. - CPDO LandCert'],
+            ['label' => 'Custom Message',              'message' => ''],
         ];
     }
 

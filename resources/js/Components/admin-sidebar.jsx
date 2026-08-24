@@ -52,9 +52,8 @@ const navGroups = [
     {
         label: "Processing",
         items: [
-            { title: "Payments Pending", url: "/admin/payments/pending",  icon: CreditCard },
-            { title: "Payment History",  url: "/admin/payments/history",  icon: History },
-            { title: "Certificates",     url: "/admin/certificates",       icon: Award },
+            { title: "Payments", url: "/admin/payments", icon: CreditCard },
+            { title: "Certificates", url: "/admin/certificates", icon: Award },
         ],
     },
     {
@@ -195,7 +194,12 @@ export function AdminSidebar({ ...props }) {
                                 <DropdownMenuSeparator/>
                                 <DropdownMenuItem
                                     className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-                                    onClick={() => router.post("/logout")}>
+                                    onClick={() => {
+                                        router.post("/logout", {}, {
+                                            onSuccess: () => window.location.href = '/',
+                                            onError: () => window.location.href = '/'
+                                        });
+                                    }}>
                                     <LogOut className="w-4 h-4 mr-2"/>Log Out
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

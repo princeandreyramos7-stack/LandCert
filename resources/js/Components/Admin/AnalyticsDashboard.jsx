@@ -374,31 +374,7 @@ export function AnalyticsDashboard({ analytics }) {
                             </CardContent>
                         </Card>
 
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-base">Certificate Status</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                                <div className="flex justify-between">
-                                    <span className="text-sm">Total Issued</span>
-                                    <Badge>{certificate_stats.total_issued}</Badge>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-sm">Sent</span>
-                                    <Badge variant="outline">{certificate_stats.sent}</Badge>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-sm">Collected</span>
-                                    <Badge variant="outline">{certificate_stats.collected}</Badge>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-sm">This Month</span>
-                                    <Badge variant="outline">{certificate_stats.issued_this_month}</Badge>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
+                    </div>                        <Card>
                             <CardHeader>
                                 <CardTitle className="text-base">Efficiency Metrics</CardTitle>
                             </CardHeader>

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { router } from "@inertiajs/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Badge } from "@/Components/ui/badge";
 import { Button } from "@/Components/ui/button";
@@ -33,9 +34,13 @@ import {
     Sparkles,
     ListChecks,
     Award,
+    Upload,
+    ChevronLeft,
+    ChevronRight,
+    Download,
 } from "lucide-react";
 
-export function MyApplicationsList({ applications = [] }) {
+export function MyApplicationsList({ applications }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [selectedApplication, setSelectedApplication] = useState(null);
@@ -45,12 +50,18 @@ export function MyApplicationsList({ applications = [] }) {
     const [receiptFile, setReceiptFile] = useState(null);
     const [receiptPreview, setReceiptPreview] = useState(null);
     const [uploadingReceipt, setUploadingReceipt] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
 
-    // Filter applications
+    // Handle pagination data from Laravel
+    const paginationData = applications?.data ? applications : { data: applications || [], total: applications?.length || 0 };
+    const applicationsList = paginationData.data || [];
+    const currentPage = paginationData.current_page || 1;
+    const lastPage = paginationData.last_page || 1;
+    const total = paginationData.total || 0;
+    const perPage = paginationData.per_page || 10;
+
+    // Filter applications (client-side for current page)
     const filteredApplications = useMemo(() => {
-        let filtered = applications;
+        let filtered = applicationsList;
 
         // Filter by status
         if (statusFilter !== "all") {
@@ -69,18 +80,14 @@ export function MyApplicationsList({ applications = [] }) {
         }
 
         return filtered;
-    }, [applications, statusFilter, searchTerm]);
+    }, [applicationsList, statusFilter, searchTerm]);
 
-    // Pagination
-    const totalPages = Math.ceil(filteredApplications.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedApplications = filteredApplications.slice(startIndex, endIndex);
-
-    // Reset to page 1 when filters change
-    useMemo(() => {
-        setCurrentPage(1);
-    }, [statusFilter, searchTerm]);
+    // Handle page change
+    const handlePageChange = (page) => {
+        router.get(route('my-applications'), { page }, {
+            preserveState: true,
+        });
+    };
 
     // Get category color scheme - Single Blue Theme
     const getCategoryTheme = (category) => {
@@ -259,9 +266,9 @@ export function MyApplicationsList({ applications = [] }) {
 
     // Get unique statuses for filter
     const uniqueStatuses = useMemo(() => {
-        const statuses = [...new Set(applications.map((app) => app.status))];
+        const statuses = [...new Set(applicationsList.map((app) => app.status))];
         return statuses.filter(Boolean);
-    }, [applications]);
+    }, [applicationsList]);
 
     // Requirements data based on project type
     const getRequirements = (projectType) => {
@@ -371,14 +378,14 @@ export function MyApplicationsList({ applications = [] }) {
                             <div className="flex items-center gap-6 bg-white rounded-xl px-6 py-4 shadow-md border border-blue-100 hover:shadow-lg transition-all duration-300">
                                 <div className="text-center">
                                     <p className="text-3xl font-bold text-blue-600">
-                                        {applications.length}
+                                        {total}
                                     </p>
                                     <p className="text-xs font-medium text-slate-600 mt-1">Total</p>
                                 </div>
                                 <div className="h-12 w-px bg-blue-300"></div>
                                 <div className="text-center">
                                     <p className="text-3xl font-bold text-blue-600">
-                                        {applications.filter(app => app.status === 'pending').length}
+                                        {applicationsList.filter(app => app.status === 'pending').length}
                                     </p>
                                     <p className="text-xs font-medium text-slate-600 mt-1">Pending</p>
                                 </div>
@@ -438,7 +445,7 @@ export function MyApplicationsList({ applications = [] }) {
                 </div>
             ) : (
                 <div className="grid gap-4">
-                    {paginatedApplications.map((application, index) => {
+                    {filteredApplications.map((application, index) => {
                         const theme = getCategoryTheme(application.project_type);
                         return (
                             <div
@@ -451,14 +458,14 @@ export function MyApplicationsList({ applications = [] }) {
                                 <div className={`absolute inset-0 ${theme.bg} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
                                 
                                 <div className="relative">
-                                    <div className="px-5 pt-5 pb-3">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex-1 min-w-0 space-y-2">
+                                    <div className="px-3 sm:px-5 pt-3 sm:pt-5 pb-2 sm:pb-3">
+                                        <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+                                            <div className="flex-1 min-w-0 w-full space-y-2">
                                                 {/* ID and Status Row */}
                                                 <div className="flex items-center gap-3 flex-wrap">
                                                     <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-600 shadow-sm">
                                                         <span className="text-xs font-bold text-white">
-                                                            #{application.id}
+                                                            {application.control_number}
                                                         </span>
                                                     </div>
                                                     {getStatusBadge(application.status)}
@@ -483,22 +490,75 @@ export function MyApplicationsList({ applications = [] }) {
                                                 )}
                                             </div>
                                             
-                                            {/* View Button */}
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleViewDetails(application);
-                                                }}
-                                                className="shrink-0 h-10 w-10 rounded-xl text-blue-600 hover:bg-blue-100 transition-all duration-300 hover:scale-110 hover:rotate-3"
-                                            >
-                                                <Eye className="h-5 w-5" />
-                                            </Button>
+                                            {/* Action Buttons - Responsive */}
+                                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
+                                                {/* Upload Docs Button */}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        window.location.href = route('requirements.upload.page', application.id);
+                                                    }}
+                                                    className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-200 text-[10px] sm:text-xs font-semibold"
+                                                    title="Upload Requirements"
+                                                >
+                                                    <Upload className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                    <span className="hidden sm:inline">Upload Docs</span>
+                                                </Button>
+                                                
+                                                {/* Upload Receipt button - only show if application is approved */}
+                                                {application.status?.toLowerCase() === 'approved' && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            window.location.href = route('receipt.upload.page', application.id);
+                                                        }}
+                                                        className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-green-600 hover:bg-green-50 border border-green-200 text-[10px] sm:text-xs font-semibold"
+                                                        title="Upload Payment Receipt"
+                                                    >
+                                                        <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                        <span className="hidden sm:inline">Receipt</span>
+                                                    </Button>
+                                                )}
+                                                
+                                                {/* Print Button */}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        window.open(route('my-applications.print', application.id), '_blank');
+                                                    }}
+                                                    className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-[#0d1f5c] hover:bg-[#0d1f5c]/5 border border-[#0d1f5c]/20 text-[10px] sm:text-xs font-semibold"
+                                                    title="Print Application Form"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a1 1 0 00-1-1H9a1 1 0 00-1 1v4h8z" />
+                                                    </svg>
+                                                    <span className="hidden sm:inline">Print</span>
+                                                </Button>
+                                                
+                                                {/* View Button - Icon only */}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleViewDetails(application);
+                                                    }}
+                                                    className="h-8 w-8 sm:h-10 sm:w-10 p-0 rounded-xl text-blue-600 hover:bg-blue-100 transition-all duration-300 hover:scale-110 hover:rotate-3"
+                                                    title="View Details"
+                                                >
+                                                    <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                     
-                                    <div className="px-5 pb-5 space-y-3">
+                                    <div className="px-3 sm:px-5 pb-3 sm:pb-5 space-y-3">
                                         {/* Location Section - Enhanced */}
                                         <div className="relative overflow-hidden">
                                             <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 group/item hover:border-blue-300 transition-all duration-300">
@@ -585,33 +645,36 @@ export function MyApplicationsList({ applications = [] }) {
             )}
 
             {/* Enhanced Pagination */}
-            {totalPages > 1 && (
+            {lastPage > 1 && (
                 <div className="bg-white rounded-xl shadow-md border border-blue-100 p-4 animate-in slide-in-from-bottom duration-700">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <p className="text-sm font-medium text-slate-600 text-center sm:text-left">
-                            Showing <span className="font-bold text-blue-600">{startIndex + 1}</span> to{" "}
-                            <span className="font-bold text-blue-600">{Math.min(endIndex, filteredApplications.length)}</span> of{" "}
-                            <span className="font-bold text-blue-600">{filteredApplications.length}</span> applications
+                            Showing <span className="font-bold text-blue-600">{((currentPage - 1) * perPage) + 1}</span> to{" "}
+                            <span className="font-bold text-blue-600">{Math.min(currentPage * perPage, total)}</span> of{" "}
+                            <span className="font-bold text-blue-600">{total}</span> applications
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-2">
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                onClick={() => handlePageChange(currentPage - 1)}
                                 disabled={currentPage === 1}
                                 className="h-10 px-4 border-blue-200 hover:bg-blue-50 hover:border-blue-400 disabled:opacity-50 transition-all duration-300 hover:scale-105 disabled:hover:scale-100 rounded-lg"
                             >
+                                <ChevronLeft className="h-4 w-4 mr-1" />
                                 Previous
                             </Button>
                         <div className="flex items-center gap-1">
-                            {totalPages <= 5 ? (
-                                Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            {lastPage <= 5 ? (
+                                Array.from({ length: lastPage }, (_, i) => i + 1).map((page) => (
                                     <Button
                                         key={page}
                                         variant={currentPage === page ? "default" : "outline"}
                                         size="sm"
-                                        onClick={() => setCurrentPage(page)}
-                                        className="w-10 transition-all duration-300 hover:scale-110"
+                                        onClick={() => handlePageChange(page)}
+                                        className={`w-10 transition-all duration-300 hover:scale-110 ${
+                                            currentPage === page ? 'bg-[#0d1f5c] hover:bg-[#1a3a8f] text-white' : ''
+                                        }`}
                                     >
                                         {page}
                                     </Button>
@@ -623,7 +686,7 @@ export function MyApplicationsList({ applications = [] }) {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => setCurrentPage(1)}
+                                                onClick={() => handlePageChange(1)}
                                                 className="w-10 transition-all duration-300 hover:scale-110"
                                             >
                                                 1
@@ -635,31 +698,33 @@ export function MyApplicationsList({ applications = [] }) {
                                     )}
                                     
                                     {[currentPage - 1, currentPage, currentPage + 1]
-                                        .filter((page) => page > 0 && page <= totalPages)
+                                        .filter((page) => page > 0 && page <= lastPage)
                                         .map((page) => (
                                             <Button
                                                 key={page}
                                                 variant={currentPage === page ? "default" : "outline"}
                                                 size="sm"
-                                                onClick={() => setCurrentPage(page)}
-                                                className="w-10 transition-all duration-300 hover:scale-110"
+                                                onClick={() => handlePageChange(page)}
+                                                className={`w-10 transition-all duration-300 hover:scale-110 ${
+                                                    currentPage === page ? 'bg-[#0d1f5c] hover:bg-[#1a3a8f] text-white' : ''
+                                                }`}
                                             >
                                                 {page}
                                             </Button>
                                         ))}
                                     
-                                    {currentPage < totalPages - 1 && (
+                                    {currentPage < lastPage - 1 && (
                                         <>
-                                            {currentPage < totalPages - 2 && (
+                                            {currentPage < lastPage - 2 && (
                                                 <span className="px-2 text-gray-500">...</span>
                                             )}
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => setCurrentPage(totalPages)}
+                                                onClick={() => handlePageChange(lastPage)}
                                                 className="w-10 transition-all duration-300 hover:scale-110"
                                             >
-                                                {totalPages}
+                                                {lastPage}
                                             </Button>
                                         </>
                                     )}
@@ -669,11 +734,12 @@ export function MyApplicationsList({ applications = [] }) {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                            disabled={currentPage === totalPages}
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === lastPage}
                             className="h-10 px-4 border-blue-200 hover:bg-blue-50 hover:border-blue-400 disabled:opacity-50 transition-all duration-300 hover:scale-105 disabled:hover:scale-100 rounded-lg"
                         >
                             Next
+                            <ChevronRight className="h-4 w-4 ml-1" />
                         </Button>
                         </div>
                     </div>
@@ -897,6 +963,69 @@ export function MyApplicationsList({ applications = [] }) {
                                                     </h3>
                                                 </div>
                                                 <div className="p-4 space-y-3">
+                                                    {/* Certificate Section - Show if certificate is available */}
+                                                    {selectedApplication.certificate_number && selectedApplication.certificate_file_path && (
+                                                        <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 border-2 border-emerald-300 rounded-xl p-4 space-y-3 mb-4">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="p-2 bg-emerald-200 rounded-full">
+                                                                    <Award className="h-5 w-5 text-emerald-700" />
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="font-bold text-emerald-900 text-sm">Certificate Ready</h4>
+                                                                    <p className="text-xs text-emerald-700">Your certificate is available</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <div>
+                                                                    <p className="text-xs font-medium text-emerald-600">Certificate No.</p>
+                                                                    <p className="font-mono font-bold text-emerald-900">{selectedApplication.certificate_number}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs font-medium text-emerald-600">Issued</p>
+                                                                    <p className="font-semibold text-emerald-900">{formatDate(selectedApplication.certificate_issued_at)}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex gap-2 pt-2">
+                                                                <Button
+                                                                    asChild
+                                                                    size="sm"
+                                                                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                                                                >
+                                                                    <a href={`/certificate/${selectedApplication.certificate_id}/download`} target="_blank" rel="noopener noreferrer">
+                                                                        <Download className="h-3.5 w-3.5 mr-1.5" />
+                                                                        Download Certificate
+                                                                    </a>
+                                                                </Button>
+                                                                <Button
+                                                                    asChild
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                                                                >
+                                                                    <a href={`/certificate/${selectedApplication.certificate_id}/preview`} target="_blank" rel="noopener noreferrer">
+                                                                        <Eye className="h-3.5 w-3.5 mr-1.5" />
+                                                                        View
+                                                                    </a>
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Certificate Preparing - Show if approved but no certificate yet */}
+                                                    {selectedApplication.status === 'approved' && !selectedApplication.certificate_file_path && (
+                                                        <div className="bg-gradient-to-r from-amber-50 to-amber-100 border-2 border-amber-300 rounded-xl p-4 space-y-2 mb-4">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="p-2 bg-amber-200 rounded-full">
+                                                                    <Clock className="h-5 w-5 text-amber-700" />
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="font-bold text-amber-900 text-sm">Certificate Preparing</h4>
+                                                                    <p className="text-xs text-amber-700">Your certificate is being prepared</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     <div className="space-y-1">
                                                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Preferred Release Mode</p>
                                                         <p className="text-sm font-semibold text-gray-900">{selectedApplication.preferred_release_mode || "N/A"}</p>
@@ -931,6 +1060,28 @@ export function MyApplicationsList({ applications = [] }) {
                                             View Requirements
                                         </Button>
                                         <div className="flex gap-3">
+                                            {/* Certificate Download Button - Show if certificate is available */}
+                                            {selectedApplication.certificate_number && selectedApplication.certificate_file_path && (
+                                                <Button
+                                                    asChild
+                                                    className="px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                                                >
+                                                    <a href={`/certificate/${selectedApplication.certificate_id}/download`} target="_blank" rel="noopener noreferrer">
+                                                        <Download className="h-4 w-4 mr-2" />
+                                                        Download Certificate
+                                                    </a>
+                                                </Button>
+                                            )}
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => window.open(route('my-applications.print', selectedApplication.id), '_blank')}
+                                                className="px-6 border-[#0d1f5c]/30 text-[#0d1f5c] hover:bg-[#0d1f5c]/5 font-semibold"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a1 1 0 00-1-1H9a1 1 0 00-1 1v4h8z" />
+                                                </svg>
+                                                Print Form
+                                            </Button>
                                             <Button
                                                 variant="outline"
                                                 onClick={() => setIsModalOpen(false)}

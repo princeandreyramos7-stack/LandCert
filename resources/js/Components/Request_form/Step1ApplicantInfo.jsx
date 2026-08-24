@@ -33,7 +33,7 @@ export function Step1ApplicantInfo({
                     id="corporation_name"
                     value={data.corporation_name}
                     onChange={(e) => onDataChange("corporation_name", e.target.value)}
-                    placeholder="Enter corporation name"
+                    placeholder="Enter corporation name or type N/A"
                 />
                 {errors.corporation_name && (
                     <p className="text-sm text-red-500">{errors.corporation_name}</p>
@@ -61,7 +61,7 @@ export function Step1ApplicantInfo({
                     id="corporation_address"
                     value={data.corporation_address}
                     onChange={(e) => onDataChange("corporation_address", e.target.value)}
-                    placeholder="Enter corporation address"
+                    placeholder="Enter corporation address or type N/A"
                 />
                 {errors.corporation_address && (
                     <p className="text-sm text-red-500">{errors.corporation_address}</p>

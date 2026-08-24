@@ -14,14 +14,24 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
         <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
                 <Label htmlFor="project_type">
-                    Project Type <span className="text-red-500">*</span>
+                    Locational Clearance
                 </Label>
-                <Input
-                    id="project_type"
+                <Select
                     value={data.project_type}
-                    onChange={(e) => onDataChange("project_type", e.target.value)}
-                    placeholder="Enter project type"
-                />
+                    onValueChange={(value) => onDataChange("project_type", value)}
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select project type (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Zoning">Zoning Clearance</SelectItem>
+                        <SelectItem value="TUP">TUP (Temporary Use Permit)</SelectItem>
+                        <SelectItem value="SUP">SUP (Special Use Permit)</SelectItem>
+                    </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-400">
+                    Admin can update this field later if needed
+                </p>
                 {errors.project_type && (
                     <p className="text-sm text-red-500">{errors.project_type}</p>
                 )}
@@ -29,7 +39,7 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
 
             <div className="space-y-2">
                 <Label htmlFor="project_nature">
-                    Project Nature <span className="text-red-500">*</span>
+                    Project Nature 
                 </Label>
                 <Input
                     id="project_nature"

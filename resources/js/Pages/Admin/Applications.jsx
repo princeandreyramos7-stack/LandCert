@@ -38,7 +38,7 @@ import {
   ClipboardCheck
 } from "lucide-react";
 
-export default function Applications({ applications = [] }) {
+export default function Applications({ applications = { data: [] } }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedApp, setSelectedApp] = useState(null);
@@ -46,12 +46,15 @@ export default function Applications({ applications = [] }) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviewingApp, setReviewingApp] = useState(null);
 
+  // Handle both array and paginated object
+  const applicationsData = Array.isArray(applications) ? applications : (applications?.data || []);
+
   // Calculate statistics
   const stats = {
-    total: applications.length,
-    pending: applications.filter(app => app.status === 'pending').length,
-    approved: applications.filter(app => app.status === 'approved').length,
-    rejected: applications.filter(app => app.status === 'rejected').length,
+    total: applicationsData.length,
+    pending: applicationsData.filter(app => app.status === 'pending').length,
+    approved: applicationsData.filter(app => app.status === 'approved').length,
+    rejected: applicationsData.filter(app => app.status === 'rejected').length,
   };
 
   const getStatusColor = (status) => {
@@ -96,7 +99,7 @@ export default function Applications({ applications = [] }) {
     return parts.join(', ') || 'Location not specified';
   };
 
-  const filteredApplications = applications.filter(app => {
+  const filteredApplications = applicationsData.filter(app => {
     // Filter by status
     if (filterStatus !== "all" && app.status !== filterStatus) {
       return false;

@@ -25,6 +25,7 @@ import {
     XCircle,
     FileText,
     FileCheck,
+    Download,
 } from "lucide-react";
 import { getStatusColor, getStatusIcon, formatDate, formatLocation } from "@/Components/Admin/Request/utils";
 import { ApproveDialog } from "./ApproveDialog";
@@ -169,6 +170,18 @@ export function SuperAdminRequestList({ requests }) {
         );
     };
 
+    const handleExport = () => {
+        const url = route("super-admin.export.requests", {
+            status: filterStatus,
+            format: "csv",
+        });
+        window.location.href = url;
+        toast({
+            title: "Export Started",
+            description: "Your Excel file will download shortly.",
+        });
+    };
+
     return (
         <div
             className="space-y-6 min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 p-6"
@@ -289,11 +302,10 @@ export function SuperAdminRequestList({ requests }) {
                             variant="outline"
                             size="sm"
                             className="gap-2"
+                            onClick={handleExport}
                         >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            Export PDF
+                            <Download className="h-4 w-4" />
+                            Export Excel
                         </Button>
                     </div>
                 </CardHeader>
@@ -331,15 +343,15 @@ export function SuperAdminRequestList({ requests }) {
                     <div className="rounded-xl border overflow-hidden">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-gradient-to-r from-purple-50 to-indigo-50">
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Applicant</TableHead>
-                                    <TableHead>User</TableHead>
-                                    <TableHead>Project Type</TableHead>
-                                    <TableHead>Location</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
+                                <TableRow className="bg-gray-50">
+                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Control No.</TableHead>
+                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Applicant</TableHead>
+                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">User</TableHead>
+                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Project Type</TableHead>
+                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Location</TableHead>
+                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Date</TableHead>
+                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Status</TableHead>
+                                    <TableHead className="text-right font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -357,7 +369,9 @@ export function SuperAdminRequestList({ requests }) {
                                             key={request.id}
                                             className="hover:bg-gradient-to-r hover:from-purple-50 hover:to-indigo-50 transition-all duration-300"
                                         >
-                                            <TableCell className="font-mono font-bold">#{request.id}</TableCell>
+                                            <TableCell className="font-mono font-bold text-[#0d1f5c] text-sm">
+                                                {request.control_number || `#${request.id}`}
+                                            </TableCell>
                                             <TableCell>
                                                 <div>
                                                     <p className="font-medium text-gray-900">{request.applicant_name}</p>
@@ -372,8 +386,15 @@ export function SuperAdminRequestList({ requests }) {
                                                     <p className="text-xs text-gray-500">{request.user_email}</p>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-sm text-gray-700">{request.project_type || "?"}</TableCell>
-                                            <TableCell className="text-sm text-gray-700 max-w-xs truncate">{formatLocation(request)}</TableCell>
+                                            <TableCell className="text-sm text-gray-700">
+                                                {request.project_type || <span className="text-slate-400 italic text-xs">Not specified</span>}
+                                            </TableCell>
+                                            <TableCell className="text-sm text-gray-700 max-w-xs truncate">
+                                                {formatLocation(request) !== "Location not specified"
+                                                    ? formatLocation(request)
+                                                    : <span className="text-slate-400 italic text-xs">Not specified</span>
+                                                }
+                                            </TableCell>
                                             <TableCell className="text-sm text-gray-700">{formatDate(request.created_at)}</TableCell>
                                             <TableCell>
                                                 <Badge className={getStatusColor(request.status)}>
@@ -398,6 +419,13 @@ export function SuperAdminRequestList({ requests }) {
                                                         >
                                                             <FileCheck className="h-4 w-4 mr-2" />
                                                             Review Application
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => window.open(route('super-admin.requests.print', request.id), '_blank')}
+                                                            className="text-[#0d1f5c] font-medium"
+                                                        >
+                                                            <FileText className="h-4 w-4 mr-2" />
+                                                            Print Form
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             onClick={() => handleApprove(request)}

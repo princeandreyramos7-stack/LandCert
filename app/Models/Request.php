@@ -110,6 +110,14 @@ class Request extends Model
     }
 
     /**
+     * Get the requirement documents for this request.
+     */
+    public function requirementDocuments(): HasMany
+    {
+        return $this->hasMany(RequirementDocument::class);
+    }
+
+    /**
      * Generate a unique CPD control number in the format CPD-XXX-0.
      * Should be called right after the request record is created.
      *

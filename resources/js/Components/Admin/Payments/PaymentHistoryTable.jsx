@@ -10,6 +10,13 @@ import {
     SelectValue,
 } from "@/Components/ui/select";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+} from "@/Components/ui/dropdown-menu";
+import {
     Search,
     Eye,
     Calendar,
@@ -17,6 +24,9 @@ import {
     Download,
     RefreshCw,
     FileText,
+    Upload,
+    Image,
+    MoreVertical,
 } from "lucide-react";
 import { getStatusColor, getStatusIcon, formatDate, formatCurrency } from "./utils";
 import { router } from "@inertiajs/react";
@@ -24,6 +34,7 @@ import { router } from "@inertiajs/react";
 export function PaymentHistoryTable({
     payments = [],
     onViewDetails,
+    onAddReceipt,
     className = "",
 }) {
     // State for filters
@@ -296,7 +307,7 @@ export function PaymentHistoryTable({
                                     OR Number
                                 </th>
                                 <th className="text-left p-3 font-semibold text-slate-700 text-sm">
-                                    Request ID
+                                    Control Number
                                 </th>
                                 <th className="text-left p-3 font-semibold text-slate-700 text-sm">
                                     Applicant
@@ -314,9 +325,6 @@ export function PaymentHistoryTable({
                                     Status
                                 </th>
                                 <th className="text-left p-3 font-semibold text-slate-700 text-sm">
-                                    Certificate
-                                </th>
-                                <th className="text-left p-3 font-semibold text-slate-700 text-sm">
                                     Actions
                                 </th>
                             </tr>
@@ -325,7 +333,7 @@ export function PaymentHistoryTable({
                             {paginatedPayments.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan="9"
+                                        colSpan="8"
                                         className="p-12 text-center text-slate-500"
                                     >
                                         <div className="flex flex-col items-center justify-center">
@@ -354,8 +362,11 @@ export function PaymentHistoryTable({
                                             </div>
                                         </td>
                                         <td className="p-3">
-                                            <div className="font-mono text-sm text-slate-700">
-                                                #{payment.request_id}
+                                            <div className="font-mono text-sm font-semibold text-[#0d1f5c]">
+                                                {payment.control_number || `#${payment.request_id}`}
+                                            </div>
+                                            <div className="text-xs text-gray-400 mt-0.5">
+                                                Req #{payment.request_id}
                                             </div>
                                         </td>
                                         <td className="p-3">
@@ -401,43 +412,56 @@ export function PaymentHistoryTable({
                                             </Badge>
                                         </td>
                                         <td className="p-3">
-                                            {payment.certificate ? (
-                                                <div className="flex flex-col gap-1">
-                                                    <div className="text-xs font-mono text-blue-600 font-semibold">
-                                                        {payment.certificate.certificate_number}
-                                                    </div>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
+                                                        className="h-8 w-8 p-0"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-48">
+                                                    <DropdownMenuItem
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            window.open(route('admin.certificates.download', payment.certificate.id), '_blank');
+                                                            onViewDetails?.(payment);
                                                         }}
-                                                        className="h-7 px-2 text-xs text-green-600 hover:bg-green-50 hover:text-green-700"
+                                                        className="cursor-pointer"
                                                     >
-                                                        <FileText className="h-3 w-3 mr-1" />
-                                                        Download PDF
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <span className="text-xs text-slate-400">
-                                                    No certificate
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="p-3">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onViewDetails?.(payment);
-                                                }}
-                                                className="h-8 px-3 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                                            >
-                                                <Eye className="h-4 w-4 mr-1" />
-                                                View
-                                            </Button>
+                                                        <Eye className="h-4 w-4 mr-2 text-blue-600" />
+                                                        <span>View Details</span>
+                                                    </DropdownMenuItem>
+                                                    
+                                                    <DropdownMenuSeparator />
+                                                    
+                                                    {payment.receipt_file_path ? (
+                                                        <DropdownMenuItem
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                window.open(`/storage/${payment.receipt_file_path}`, '_blank');
+                                                            }}
+                                                            className="cursor-pointer"
+                                                        >
+                                                            <FileText className="h-4 w-4 mr-2 text-emerald-600" />
+                                                            <span>View Receipt</span>
+                                                        </DropdownMenuItem>
+                                                    ) : (
+                                                        <DropdownMenuItem
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onAddReceipt?.(payment);
+                                                            }}
+                                                            className="cursor-pointer"
+                                                        >
+                                                            <Upload className="h-4 w-4 mr-2 text-amber-600" />
+                                                            <span>Add Receipt</span>
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </td>
                                     </tr>
                                 ))

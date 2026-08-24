@@ -179,6 +179,45 @@ class CertificateController extends Controller
     }
 
     /**
+     * Upload certificate softcopy (digital PDF)
+     */
+    public function uploadSoftcopy(Request $request)
+    {
+        $validated = $request->validate([
+            'certificate_id' => 'required|exists:certificates,id',
+            'certificate_file' => 'required|file|mimes:pdf|max:10240', // 10MB max
+        ]);
+
+        $certificate = Certificate::findOrFail($validated['certificate_id']);
+
+        // Delete old certificate file if exists
+        if ($certificate->certificate_file_path && \Storage::disk('public')->exists($certificate->certificate_file_path)) {
+            \Storage::disk('public')->delete($certificate->certificate_file_path);
+        }
+
+        // Store the new certificate file
+        $file = $request->file('certificate_file');
+        $filename = 'certificates/' . time() . '_' . $certificate->id . '.pdf';
+        $path = $file->storeAs('certificates', basename($filename), 'public');
+
+        // Update certificate record
+        $certificate->update([
+            'certificate_file_path' => $path,
+        ]);
+
+        // Log the action
+        \App\Services\AuditLogService::logUpdate(
+            'Certificate',
+            $certificate->id,
+            ['certificate_file_path' => $certificate->certificate_file_path],
+            ['certificate_file_path' => $path],
+            "Uploaded certificate softcopy for Certificate #{$certificate->certificate_number}"
+        );
+
+        return back()->with('success', 'Certificate softcopy uploaded successfully! Applicant can now download it.');
+    }
+
+    /**
      * Delete a certificate record.
      */
     public function destroy(Certificate $certificate)

@@ -37,7 +37,20 @@ export function NavUser({
   const { isMobile } = useSidebar()
 
   const handleLogout = () => {
-    router.post('/logout')
+    // Clear any client-side auth state if exists
+    // (localStorage, sessionStorage, etc.)
+    
+    // Post logout request with proper options
+    router.post('/logout', {}, {
+      onSuccess: () => {
+        // Force a full page reload to clear all state
+        window.location.href = '/';
+      },
+      onError: () => {
+        // Fallback: still redirect to home on error
+        window.location.href = '/';
+      }
+    });
   }
 
   return (

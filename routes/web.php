@@ -18,9 +18,9 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', [RequestController::class, 'dashboard'])->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [RequestController::class, 'dashboard'])->middleware(['auth', 'verified', 'prevent.back'])->name('dashboard');
 
-Route::middleware(['auth', 'throttle:60,1'])->group(function () {
+Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -29,6 +29,15 @@ Route::middleware(['auth', 'throttle:60,1'])->group(function () {
     Route::get('/request', [RequestController::class, 'index'])->name('request.index');
     Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:10,1')->name('request.store');
     Route::get('/my-applications', [RequestController::class, 'myApplications'])->name('my-applications');
+    Route::get('/my-applications/{id}/print', [\App\Http\Controllers\AdminController::class, 'printForm'])->name('my-applications.print');
+    
+    // Requirement document routes
+    Route::get('/requirements/upload/{requestId}', [\App\Http\Controllers\RequirementDocumentController::class, 'index'])->name('requirements.upload.page');
+    Route::post('/requirements/upload', [\App\Http\Controllers\RequirementDocumentController::class, 'upload'])->name('requirements.upload');
+    Route::delete('/requirements/{id}', [\App\Http\Controllers\RequirementDocumentController::class, 'destroy'])->name('requirements.destroy');
+    
+    // Payment receipt upload routes
+    Route::get('/receipt/upload/{requestId}', [PaymentController::class, 'uploadReceiptPage'])->name('receipt.upload.page');
     
     // Payment routes for applicants
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
@@ -36,10 +45,12 @@ Route::middleware(['auth', 'throttle:60,1'])->group(function () {
 });
 
 // Super Admin routes (highest privilege)
-Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('super-admin.')->group(function () {
+Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-admin')->name('super-admin.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\SuperAdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/requests', [\App\Http\Controllers\SuperAdminController::class, 'requests'])->name('requests');
     Route::get('/requests/{id}/review', [\App\Http\Controllers\SuperAdminController::class, 'reviewRequest'])->name('requests.review');
+    Route::get('/requests/{id}/print', [\App\Http\Controllers\AdminController::class, 'printForm'])->name('requests.print');
+    Route::get('/export/requests', [\App\Http\Controllers\SuperAdminController::class, 'exportRequests'])->name('export.requests');
     
     // Management
     Route::get('/users', [\App\Http\Controllers\SuperAdminController::class, 'users'])->name('users');
@@ -65,6 +76,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
         Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
         Route::post('/{certificate}/mark-ready', [CertificateController::class, 'markReady'])->name('mark-ready');
         Route::post('/{certificate}/record-release', [CertificateController::class, 'recordRelease'])->name('record-release');
+        Route::post('/upload-softcopy', [CertificateController::class, 'uploadSoftcopy'])->name('upload-softcopy');
         Route::post('/', [CertificateController::class, 'store'])->name('store');
         Route::put('/{certificate}', [CertificateController::class, 'update'])->name('update');
         Route::delete('/{certificate}', [CertificateController::class, 'destroy'])->name('destroy');
@@ -82,7 +94,8 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
     Route::put('/sms/templates/{id}', [\App\Http\Controllers\SmsController::class, 'updateTemplate'])->name('sms.templates.update');
     Route::post('/sms/templates/{id}/reset', [\App\Http\Controllers\SmsController::class, 'resetTemplate'])->name('sms.templates.reset');
 
-    // Export routes
+    // Print form
+    Route::get('/requests/{id}/print', [\App\Http\Controllers\AdminController::class, 'printForm'])->name('requests.print');
     Route::get('/export/requests', [\App\Http\Controllers\AdminController::class, 'exportRequests'])->name('export.requests');
     Route::get('/export/users', [\App\Http\Controllers\AdminController::class, 'exportUsers'])->name('export.users');
     Route::get('/export/payments', [\App\Http\Controllers\AdminController::class, 'exportPayments'])->name('export.payments');
@@ -90,12 +103,11 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
     // Audit log export
     Route::get('/audit-logs/export', [\App\Http\Controllers\AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
 
-    // Payment Management Routes (Physical Payments)
+    // Payment Management Routes - Unified Page
     Route::get('/payments', [\App\Http\Controllers\SuperAdminController::class, 'payments'])->name('payments');
-    Route::get('/payments/pending', [PaymentController::class, 'pending'])->name('payments.pending');
     Route::post('/payments/record', [PaymentController::class, 'recordPayment'])->name('payments.record');
     Route::post('/payments/check-duplicate', [PaymentController::class, 'checkDuplicate'])->name('payments.check-duplicate');
-    Route::get('/payments/history', [PaymentController::class, 'history'])->name('payments.history');
+    Route::post('/payments/upload-receipt', [\App\Http\Controllers\SuperAdminController::class, 'uploadReceipt'])->name('payments.upload-receipt');
     Route::get('/payments/{id}/show', [PaymentController::class, 'show'])->name('payments.show');
     Route::put('/payments/{payment}', [\App\Http\Controllers\SuperAdminController::class, 'updatePayment'])->name('payments.update');
     Route::post('/payments/{payment}/verify', [\App\Http\Controllers\SuperAdminController::class, 'verifyPayment'])->name('payments.verify');
@@ -103,7 +115,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
 });
 
 // Admin routes
-Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/search', [AdminController::class, 'search'])->name('search');
     Route::get('/requests', [AdminController::class, 'requests'])->name('requests');
@@ -122,13 +134,13 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // NEW: Streamlined Review Workflow
     Route::post('/review-application', [AdminController::class, 'reviewApplication'])->name('review-application');
     Route::get('/get-requirements', [AdminController::class, 'getRequirements'])->name('get-requirements');
+    Route::post('/update-project-type/{id}', [AdminController::class, 'updateProjectType'])->name('update-project-type');
     
-    // Payment Management Routes (Admin can verify/reject)
+    // Payment Management Routes - Unified Page
     Route::get('/payments', [AdminController::class, 'payments'])->name('payments');
-    Route::get('/payments/pending', [PaymentController::class, 'pending'])->name('payments.pending');
     Route::post('/payments/record', [PaymentController::class, 'recordPayment'])->name('payments.record');
     Route::post('/payments/check-duplicate', [PaymentController::class, 'checkDuplicate'])->name('payments.check-duplicate');
-    Route::get('/payments/history', [PaymentController::class, 'history'])->name('payments.history');
+    Route::post('/payments/upload-receipt', [AdminController::class, 'uploadReceipt'])->name('payments.upload-receipt');
     Route::get('/payments/{id}/show', [PaymentController::class, 'show'])->name('payments.show');
     Route::post('/payments/{payment}/verify', [AdminController::class, 'verifyPayment'])->name('payments.verify');
     Route::post('/payments/{payment}/reject', [AdminController::class, 'rejectPayment'])->name('payments.reject');
@@ -141,6 +153,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
         Route::post('/{certificate}/mark-ready', [CertificateController::class, 'markReady'])->name('mark-ready');
         Route::post('/{certificate}/record-release', [CertificateController::class, 'recordRelease'])->name('record-release');
+        Route::post('/upload-softcopy', [CertificateController::class, 'uploadSoftcopy'])->name('upload-softcopy');
         Route::post('/', [CertificateController::class, 'store'])->name('store');
         Route::put('/{certificate}', [CertificateController::class, 'update'])->name('update');
         Route::delete('/{certificate}', [CertificateController::class, 'destroy'])->name('destroy');
@@ -160,6 +173,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // SMS Broadcast only (admins can broadcast but NOT edit templates)
     Route::get('/sms', [\App\Http\Controllers\SmsController::class, 'index'])->name('sms.index');
     Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
+
+    // Print form
+    Route::get('/requests/{id}/print', [AdminController::class, 'printForm'])->name('requests.print');
     
     // Bulk action routes
     Route::post('/bulk/approve', [AdminController::class, 'bulkApprove'])->name('bulk.approve');
@@ -173,7 +189,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 });
 
 // Notification routes
-Route::middleware('auth')->prefix('notifications')->name('notifications.')->group(function () {
+Route::middleware(['auth', 'prevent.back'])->prefix('notifications')->name('notifications.')->group(function () {
     Route::get('/', [\App\Http\Controllers\NotificationController::class, 'page'])->name('page');
     Route::get('/list', [\App\Http\Controllers\NotificationController::class, 'index'])->name('index');
     Route::get('/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount'])->name('unread-count');

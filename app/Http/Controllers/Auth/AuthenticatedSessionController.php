@@ -52,12 +52,35 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        // Logout the user
         Auth::guard('web')->logout();
 
+        // Invalidate the session
         $request->session()->invalidate();
 
+        // Regenerate CSRF token
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        // Flush all session data
+        $request->session()->flush();
+
+        // Clear authentication cookies
+        cookie()->queue(cookie()->forget('laravel_session'));
+        cookie()->queue(cookie()->forget('XSRF-TOKEN'));
+
+        // Create response with no-cache headers and Inertia location header
+        $response = redirect('/');
+        
+        // Add headers to prevent caching
+        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
+        
+        // For Inertia, add X-Inertia-Location header to force full page reload
+        if ($request->inertia()) {
+            $response->headers->set('X-Inertia-Location', '/');
+        }
+
+        return $response;
     }
 }
