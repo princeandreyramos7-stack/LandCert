@@ -980,16 +980,16 @@ export default function UploadRequirements({ application, requirements = [], upl
                 {/* Upload Confirmation Dialog */}
                 <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
                     <DialogContent className="w-[calc(100vw-1rem)] max-w-lg sm:w-full max-h-[92vh] overflow-y-auto p-0 gap-0">
-                        {/* Friendly header banner */}
-                        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#0d1f5c] to-[#1a3a8f] px-4 py-4 text-white sm:px-6 sm:py-5">
+                        {/* Simple header */}
+                        <div className="sticky top-0 z-10 border-b border-gray-100 bg-white px-4 py-4 sm:px-6 sm:py-5">
                             <DialogHeader className="space-y-1.5 text-left">
-                                <DialogTitle className="flex items-center gap-2.5 pr-8 text-white text-base sm:gap-3 sm:text-lg">
-                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 sm:h-10 sm:w-10">
-                                        <Upload className="h-4 w-4 sm:h-5 sm:w-5" />
+                                <DialogTitle className="flex items-center gap-2.5 pr-8 text-gray-900 text-base sm:gap-3 sm:text-lg">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 sm:h-10 sm:w-10">
+                                        <Upload className="h-4 w-4 text-[#0d1f5c] sm:h-5 sm:w-5" />
                                     </div>
                                     Ready to upload your documents?
                                 </DialogTitle>
-                                <DialogDescription className="text-blue-100 text-xs sm:text-sm sm:pl-[52px]">
+                                <DialogDescription className="text-gray-500 text-xs sm:text-sm sm:pl-[52px]">
                                     Please double-check your files before sending them to the CPDO office.
                                 </DialogDescription>
                             </DialogHeader>
