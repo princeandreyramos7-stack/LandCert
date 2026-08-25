@@ -38,7 +38,7 @@ import {
     Save,
 } from "lucide-react";
 import { formatDate } from "@/Components/Admin/Request/utils";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useToast } from "@/Components/ui/use-toast";
 import { Toaster } from "@/Components/ui/toaster";
 import axios from "axios";
@@ -47,15 +47,44 @@ export default function SuperAdminReviewRequest({ request }) {
     const [currentStep, setCurrentStep] = useState(1);
     const [action, setAction] = useState('');
     const [formData, setFormData] = useState({
-        approval_notes: '',
         rejection_reason: '',
-        assign_to_admin: false,
-        priority_level: 'normal',
-        special_instructions: ''
+        assign_to_admin: false
     });
     const [loading, setLoading] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const { toast} = useToast();
+
+    // Group uploaded documents by requirement so a requirement with multiple
+    // files (e.g. "1. Application Form" uploaded as 3 separate pages) shows
+    // as one entry with all of its files listed, instead of duplicate-looking cards.
+    // Also split into "Main" vs "Additional" sections using requirements_reference
+    // (the full requirement list for this project type) so this matches what the
+    // applicant saw when uploading.
+    const groupedRequirements = useMemo(() => {
+        const docs = request.uploaded_requirements || [];
+        const reference = request.requirements_reference || [];
+        const sectionById = new Map(reference.map((r) => [r.id, r.section || 'main']));
+
+        const groups = new Map();
+
+        docs.forEach((doc) => {
+            const key = doc.requirement_id ?? doc.requirement_name;
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    key,
+                    requirement_name: doc.requirement_name,
+                    section: sectionById.get(doc.requirement_id) || 'main',
+                    files: [],
+                });
+            }
+            groups.get(key).files.push(doc);
+        });
+
+        return Array.from(groups.values());
+    }, [request.uploaded_requirements, request.requirements_reference]);
+
+    const mainUploadedGroups = groupedRequirements.filter((g) => g.section !== 'additional');
+    const additionalUploadedGroups = groupedRequirements.filter((g) => g.section === 'additional');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -72,10 +101,8 @@ export default function SuperAdminReviewRequest({ request }) {
                 : route('super-admin.reject-request', request.report_id);
 
             await axios.post(endpoint, {
-                description: action === 'approved' ? formData.approval_notes : formData.rejection_reason,
+                description: action === 'rejected' ? formData.rejection_reason : 'Application approved by Super Admin',
                 issued_by: 'Super Admin',
-                priority_level: formData.priority_level,
-                special_instructions: formData.special_instructions,
                 assign_to_admin: formData.assign_to_admin
             });
 
@@ -263,7 +290,7 @@ export default function SuperAdminReviewRequest({ request }) {
                                 </div>
                             </CardHeader>
                             <CardContent className="pt-6">
-                                {/* Uploaded Requirements Section */}
+                                {/* Uploaded Requirements Section - split into Main and Additional */}
                                 {request.uploaded_requirements && request.uploaded_requirements.length > 0 && (
                                     <div className="mb-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-5 border-2 border-indigo-200">
                                         <div className="flex items-center gap-2 mb-4">
@@ -275,49 +302,34 @@ export default function SuperAdminReviewRequest({ request }) {
                                                 {request.uploaded_requirements.length} {request.uploaded_requirements.length === 1 ? 'file' : 'files'}
                                             </span>
                                         </div>
-                                        
-                                        <div className="space-y-2">
-                                            {request.uploaded_requirements.map((doc, index) => (
-                                                <div 
-                                                    key={doc.id}
-                                                    className="bg-white border-2 border-indigo-100 rounded-lg p-3 hover:border-indigo-300 hover:shadow-md transition-all duration-200"
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                            <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                                                                <FileText className="h-5 w-5 text-indigo-600" />
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-semibold text-gray-900 truncate">
-                                                                    {doc.requirement_name}
-                                                                </p>
-                                                                <p className="text-xs text-gray-500 truncate">
-                                                                    {doc.original_filename}
-                                                                </p>
-                                                                <div className="flex items-center gap-2 mt-1">
-                                                                    <span className="text-xs text-gray-400">
-                                                                        {(doc.file_size / 1024).toFixed(2)} KB
-                                                                    </span>
-                                                                    <span className="text-xs text-gray-300">•</span>
-                                                                    <span className="text-xs text-gray-400">
-                                                                        {new Date(doc.created_at).toLocaleDateString()}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <a
-                                                            href={`/storage/${doc.file_path}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex-shrink-0 ml-3 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                                                        >
-                                                            <FileText className="h-4 w-4" />
-                                                            View
-                                                        </a>
-                                                    </div>
+
+                                        {mainUploadedGroups.length > 0 && (
+                                            <div className="mb-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold shrink-0">1</span>
+                                                    <h4 className="text-sm font-bold text-gray-700">Main Requirements</h4>
                                                 </div>
-                                            ))}
-                                        </div>
+                                                <div className="space-y-2">
+                                                    {mainUploadedGroups.map((group) => (
+                                                        <UploadedRequirementGroup key={group.key} group={group} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {additionalUploadedGroups.length > 0 && (
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-amber-500 text-white text-[10px] font-bold shrink-0">2</span>
+                                                    <h4 className="text-sm font-bold text-gray-700">Additional Requirements</h4>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    {additionalUploadedGroups.map((group) => (
+                                                        <UploadedRequirementGroup key={group.key} group={group} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -390,62 +402,6 @@ export default function SuperAdminReviewRequest({ request }) {
                                     {/* Approved Form */}
                                     {action === 'approved' && (
                                         <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
-                                            {/* Priority Level */}
-                                            <div className="bg-white rounded-lg p-5 border-2 border-gray-200">
-                                                <label className="block text-sm font-semibold text-gray-800 mb-3">
-                                                    Priority Level
-                                                </label>
-                                                
-                                                <select
-                                                    value={formData.priority_level}
-                                                    onChange={(e) => setFormData({ ...formData, priority_level: e.target.value })}
-                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
-                                                >
-                                                    <option value="low">Low Priority - Standard Processing</option>
-                                                    <option value="normal">Normal Priority - Regular Timeline</option>
-                                                    <option value="high">High Priority - Expedited Processing</option>
-                                                    <option value="urgent">Urgent - Immediate Attention Required</option>
-                                                </select>
-                                            </div>
-
-                                            {/* Approval Notes */}
-                                            <div className="bg-white rounded-lg p-5 border-2 border-gray-200">
-                                                <label className="block text-sm font-semibold text-gray-800 mb-3">
-                                                    Approval Notes (Optional)
-                                                </label>
-                                                
-                                                <textarea
-                                                    value={formData.approval_notes}
-                                                    onChange={(e) => setFormData({ ...formData, approval_notes: e.target.value })}
-                                                    rows="4"
-                                                    maxLength="1000"
-                                                    placeholder="Add any notes, conditions, or special remarks for this approval..."
-                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all resize-none"
-                                                />
-                                                <p className="text-xs text-gray-500 mt-2">
-                                                    {formData.approval_notes.length}/1000 characters
-                                                </p>
-                                            </div>
-
-                                            {/* Special Instructions */}
-                                            <div className="bg-white rounded-lg p-5 border-2 border-gray-200">
-                                                <label className="block text-sm font-semibold text-gray-800 mb-3">
-                                                    Special Instructions for Admin (Optional)
-                                                </label>
-                                                
-                                                <textarea
-                                                    value={formData.special_instructions}
-                                                    onChange={(e) => setFormData({ ...formData, special_instructions: e.target.value })}
-                                                    rows="3"
-                                                    maxLength="500"
-                                                    placeholder="Instructions for the admin handling this application..."
-                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all resize-none"
-                                                />
-                                                <p className="text-xs text-gray-500 mt-2">
-                                                    {formData.special_instructions.length}/500 characters
-                                                </p>
-                                            </div>
-
                                             {/* Assign to Admin */}
                                             <div className="flex items-center gap-3 p-4 bg-gray-50 border-2 border-gray-200 rounded-lg">
                                                 <input
@@ -562,16 +518,10 @@ export default function SuperAdminReviewRequest({ request }) {
                                 <p className="text-gray-700 mb-4">
                                     {action === 'approved' ? (
                                         <>
-                                            You are about to <span className="font-bold text-green-600">APPROVE</span> this application:
-                                            <ul className="mt-3 space-y-2 text-sm text-gray-600">
-                                                <li>• Priority: <span className="font-semibold">{formData.priority_level.toUpperCase()}</span></li>
-                                                {formData.assign_to_admin && (
-                                                    <li>• <span className="font-semibold">Will be assigned to Admin immediately</span></li>
-                                                )}
-                                                {formData.approval_notes && (
-                                                    <li>• Includes approval notes</li>
-                                                )}
-                                            </ul>
+                                            You are about to <span className="font-bold text-green-600">APPROVE</span> this application.
+                                            <p className="mt-3 text-sm text-gray-600">
+                                                The applicant will be notified and can proceed to the payment stage.
+                                            </p>
                                         </>
                                     ) : (
                                         <>
@@ -725,7 +675,7 @@ function Step1Content({ request }) {
                     {request.authorization_letter_path && (
                         <div className="mt-4">
                             <a
-                                href={`/storage/${request.authorization_letter_path}`}
+                                href={`/requests/${request.application_id || request.id}/authorization-letter`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
@@ -927,6 +877,65 @@ function InfoField({ label, value }) {
             <p className="text-sm text-gray-900 font-medium">
                 {value || <span className="text-gray-400 italic">Not provided</span>}
             </p>
+        </div>
+    );
+}
+
+function UploadedRequirementGroup({ group }) {
+    return (
+        <div className="bg-white border-2 border-indigo-100 rounded-lg p-3 hover:border-indigo-300 hover:shadow-md transition-all duration-200">
+            <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-indigo-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                        {group.requirement_name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                        {group.files.length} {group.files.length === 1 ? 'file' : 'files'} uploaded
+                    </p>
+                </div>
+                {group.files.length > 1 && (
+                    <span className="flex-shrink-0 bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                        {group.files.length}
+                    </span>
+                )}
+            </div>
+
+            {/* Every file for this requirement, always visible */}
+            <div className="mt-2.5 space-y-1.5 pl-0 sm:pl-[52px]">
+                {group.files.map((doc) => (
+                    <div
+                        key={doc.id}
+                        className="flex items-center justify-between gap-2 bg-indigo-50/60 rounded-lg px-3 py-2"
+                    >
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-gray-800 truncate">
+                                {doc.original_filename}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-[11px] text-gray-400">
+                                    {(doc.file_size / 1024).toFixed(0)} KB
+                                </span>
+                                <span className="text-[11px] text-gray-300">•</span>
+                                <span className="text-[11px] text-gray-400">
+                                    {new Date(doc.created_at).toLocaleDateString()}
+                                </span>
+                            </div>
+                        </div>
+                        <a
+                            href={`/requirements/${doc.id}/view`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-shrink-0 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
+                        >
+                            <FileText className="h-3.5 w-3.5" />
+                            View
+                        </a>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }

@@ -198,6 +198,7 @@ class SmsController extends Controller
             'certificate_preparing' => '{name}, certificate #{cert_number} is being prepared. You will be notified when ready for pickup. - CPDO LandCert',
             'certificate_ready'     => '{name}, certificate #{cert_number} (App #{request_id}) is READY for pickup. Bring valid ID. - CPDO LandCert',
             'payment_reminder'      => 'Reminder: {name}, payment for application #{request_id} is due. Visit CPDO office. - CPDO LandCert',
+            'requirements_submitted'=> 'Hi {name}! Your requirements for application #{request_id} were submitted successfully. Please wait while our staff reviews your application. Once reviewed, you will be notified of your scheduled payment. - CPDO LandCert',
         ];
     }
 }

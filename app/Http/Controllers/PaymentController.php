@@ -276,6 +276,13 @@ class PaymentController extends Controller
         // Get existing payment if any
         $existingPayment = Payment::where('request_id', $requestId)->first();
 
+        // Get the payment amount the admin set during review (Report.payment_amount).
+        // This is the authoritative "amount to pay" - not Report.amount, which is a
+        // separate legacy/certificate field. Use the most recent report for this request.
+        $latestReport = \App\Models\Report::where('request_id', $requestId)
+            ->orderByDesc('report_id')
+            ->first();
+
         $applicationData = [
             'id' => $request->id,
             'control_number' => $request->control_number,
@@ -283,7 +290,7 @@ class PaymentController extends Controller
             'project_type' => $request->project?->project_type ?? '',
             'project_nature' => $request->project?->project_nature ?? '',
             'status' => $request->status,
-            'report_amount' => $request->report_amount,
+            'report_amount' => $latestReport?->payment_amount,
         ];
 
         return Inertia::render('UploadReceipt', [
@@ -326,11 +333,11 @@ class PaymentController extends Controller
             ], 403);
         }
 
-        // Handle file upload
+        // Handle file upload (stored on the private disk, not publicly web-accessible)
         if ($request->hasFile('receipt')) {
             $file = $request->file('receipt');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('receipts', $filename, 'public');
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('receipts', $filename, 'local');
             $validated['receipt_file_path'] = $path;
         }
 
@@ -510,5 +517,25 @@ class PaymentController extends Controller
         $payment->delete();
 
         return redirect()->back()->with('success', 'Payment record deleted successfully.');
+    }
+
+    /**
+     * Stream/download a payment receipt file.
+     * Only the owning applicant or admin/super_admin may access the file.
+     */
+    public function viewReceipt(Payment $payment)
+    {
+        $currentUser = auth()->user();
+        $requestModel = $payment->request;
+
+        if ($currentUser->user_type === 'applicant' && $requestModel && $requestModel->user_id !== $currentUser->id) {
+            abort(403, 'You are not authorized to view this receipt.');
+        }
+
+        if (!$payment->receipt_file_path || !\Storage::disk('local')->exists($payment->receipt_file_path)) {
+            abort(404, 'Receipt file not found.');
+        }
+
+        return \Storage::disk('local')->response($payment->receipt_file_path);
     }
 }

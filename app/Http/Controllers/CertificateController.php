@@ -91,6 +91,61 @@ class CertificateController extends Controller
     }
 
     /**
+     * Ensure the current user is allowed to view this certificate.
+     */
+    private function authorizeApplicantAccess(Certificate $certificate): void
+    {
+        $user = Auth::user();
+
+        if (in_array($user->user_type, ['admin', 'super_admin'])) {
+            return;
+        }
+
+        $ownsCertificate = $certificate->user_id === $user->id
+            || ($certificate->request && $certificate->request->user_id === $user->id);
+
+        abort_unless($ownsCertificate, 403, 'You are not authorized to access this certificate.');
+    }
+
+    /**
+     * Applicant-facing certificate download (with ownership check).
+     */
+    public function applicantDownload(Certificate $certificate)
+    {
+        $this->authorizeApplicantAccess($certificate);
+
+        try {
+            return $this->certificatePDFService->download($certificate);
+        } catch (\Exception $e) {
+            \Log::error('Failed to download certificate', [
+                'certificate_id' => $certificate->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()->with('error', 'Failed to download certificate. Please try again.');
+        }
+    }
+
+    /**
+     * Applicant-facing certificate preview (with ownership check).
+     */
+    public function applicantPreview(Certificate $certificate)
+    {
+        $this->authorizeApplicantAccess($certificate);
+
+        try {
+            return $this->certificatePDFService->stream($certificate);
+        } catch (\Exception $e) {
+            \Log::error('Failed to preview certificate', [
+                'certificate_id' => $certificate->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()->with('error', 'Failed to preview certificate. Please try again.');
+        }
+    }
+
+    /**
      * Store a newly created certificate.
      */
     public function store(Request $request)
@@ -191,14 +246,14 @@ class CertificateController extends Controller
         $certificate = Certificate::findOrFail($validated['certificate_id']);
 
         // Delete old certificate file if exists
-        if ($certificate->certificate_file_path && \Storage::disk('public')->exists($certificate->certificate_file_path)) {
-            \Storage::disk('public')->delete($certificate->certificate_file_path);
+        if ($certificate->certificate_file_path && \Storage::disk('local')->exists($certificate->certificate_file_path)) {
+            \Storage::disk('local')->delete($certificate->certificate_file_path);
         }
 
-        // Store the new certificate file
+        // Store the new certificate file on the private disk with a non-guessable name
         $file = $request->file('certificate_file');
-        $filename = 'certificates/' . time() . '_' . $certificate->id . '.pdf';
-        $path = $file->storeAs('certificates', basename($filename), 'public');
+        $filename = time() . '_' . uniqid() . '.pdf';
+        $path = $file->storeAs('certificates', $filename, 'local');
 
         // Update certificate record
         $certificate->update([

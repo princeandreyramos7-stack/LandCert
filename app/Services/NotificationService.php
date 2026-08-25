@@ -68,7 +68,7 @@ class NotificationService
                 'new_application',
                 'New Application Received',
                 "A new {$projectType} application #{$request->id} from {$applicantName} has been submitted and requires review.",
-                "/admin/applications/{$request->id}",
+                "/admin/requests/{$request->id}",
                 [
                     'application_id' => $request->id,
                     'project_type' => $projectType,
@@ -111,7 +111,7 @@ class NotificationService
                     'application_awaiting_approval',
                     'Application Awaiting Final Approval',
                     "Application #{$request->id} from {$applicantName} has been reviewed and approved by {$reviewerName}. Awaiting your final approval.",
-                    "/super-admin/applications/{$request->id}",
+                    "/super-admin/requests/{$request->id}/review",
                     [
                         'application_id' => $request->id,
                         'project_type' => $projectType,
@@ -153,7 +153,7 @@ class NotificationService
                 'application_final_approved',
                 'Application Finally Approved',
                 "Application #{$request->id} from {$applicantName} has been finally approved by {$approverName}.",
-                "/admin/applications/{$request->id}",
+                "/admin/requests/{$request->id}",
                 [
                     'application_id' => $request->id,
                     'applicant_name' => $applicantName,

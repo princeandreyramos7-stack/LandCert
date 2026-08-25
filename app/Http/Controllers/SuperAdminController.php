@@ -369,6 +369,7 @@ class SuperAdminController extends Controller
             'uploaded_requirements' => $request->requirementDocuments->map(function($doc) {
                 return [
                     'id' => $doc->id,
+                    'requirement_id' => $doc->requirement_id,
                     'requirement_name' => $doc->requirement_name,
                     'original_filename' => $doc->original_filename,
                     'file_path' => $doc->file_path,
@@ -377,6 +378,12 @@ class SuperAdminController extends Controller
                     'created_at' => $doc->created_at,
                 ];
             }),
+
+            // Full requirements list for this project type, so the frontend can
+            // group uploaded documents into "Main" vs "Additional" sections.
+            'requirements_reference' => \App\Constants\ApplicationRequirements::getRequirements(
+                $request->project?->project_type ?? 'ZONING CLEARANCE'
+            ),
         ];
         
         return Inertia::render('SuperAdmin/ReviewRequest', [
@@ -486,10 +493,11 @@ class SuperAdminController extends Controller
                     }
                     
                     if (!empty($report->admin_notes)) {
-                        $message .= "\nIMPORTANT NOTE:\n{$report->admin_notes}\n";
+                        $message .= "\nNOTE FROM CPDO:\n{$report->admin_notes}\n";
                     }
                     
-                    $message .= "\nPlease pay at the Municipal Treasury Office on or before the scheduled date.\n\n";
+                    $message .= "\nNEXT STEP: Please proceed to the Treasury Office to pay the amount above on or before the scheduled date. ";
+                    $message .= "After payment, bring your Official Receipt (OR) and requirements to CPDO to continue processing.\n\n";
                     $message .= "Thank you!\n- CPDO";
                     
                     // Send the SMS
@@ -908,8 +916,7 @@ class SuperAdminController extends Controller
     {
         // Get ALL approved requests (by Super Admin) - these are requests awaiting payment
         $approvedRequests = RequestModel::with(['applicant', 'project', 'location', 'user', 'payments'])
-            ->where('status', 'approved')
-            ->orWhere('status', 'payment_confirmed')
+            ->whereIn('status', ['approved', 'payment_confirmed'])
             ->orderBy('updated_at', 'desc')
             ->get()
             ->map(function($request) {
@@ -1006,14 +1013,14 @@ class SuperAdminController extends Controller
         $payment = Payment::findOrFail($validated['payment_id']);
 
         // Delete old receipt if exists
-        if ($payment->receipt_file_path && \Storage::disk('public')->exists($payment->receipt_file_path)) {
-            \Storage::disk('public')->delete($payment->receipt_file_path);
+        if ($payment->receipt_file_path && \Storage::disk('local')->exists($payment->receipt_file_path)) {
+            \Storage::disk('local')->delete($payment->receipt_file_path);
         }
 
-        // Store the new receipt
+        // Store the new receipt on the private disk with a non-guessable name
         $file = $request->file('receipt_file');
-        $filename = 'receipts/' . time() . '_' . $payment->id . '.' . $file->getClientOriginalExtension();
-        $path = $file->storeAs('receipts', basename($filename), 'public');
+        $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs('receipts', $filename, 'local');
 
         // Update payment record
         $payment->update([

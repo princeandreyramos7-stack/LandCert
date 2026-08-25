@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
             AdminUserSeeder::class,
-            DocumentTypeSeeder::class, // Seed document types
+            // DocumentTypeSeeder::class, // REMOVED: document_types table no longer exists (dropped in migration)
             // RequestSeeder::class, // Uncomment to seed 100 test requests
         ]);
     }

@@ -79,9 +79,9 @@ This document provides a detailed system architecture based on the actual LandCe
 │  │    auditLogs(), settings(), zoningMap(), storeProperty()              │  │
 │  │                                                                         │  │
 │  │  AdminController:                                                      │  │
-│  │  - dashboard(), applications(), requests(), viewRequest(),            │  │
+│  │  - dashboard(), requests(), viewRequest(), reviewApplication(),       │  │
 │  │    deleteRequest(), updateEvaluation(), users(), payments(),          │  │
-│  │    exportPayments(), exportApplications()                             │  │
+│  │    exportPayments(), exportRequests()                                 │  │
 │  │                                                                         │  │
 │  │  RequestController:                                                    │  │
 │  │  - dashboard(), index(), myApplications(), store()                    │  │

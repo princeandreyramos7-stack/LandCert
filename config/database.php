@@ -64,6 +64,11 @@ return [
                 PDO::ATTR_PERSISTENT => true,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]) : [],
+            // Used by spatie/laravel-backup to locate mysqldump when it's not on the system PATH
+            // (e.g. XAMPP installs). Set DB_DUMP_PATH in .env to your mysql/bin directory if needed.
+            'dump' => array_filter([
+                'dump_binary_path' => env('DB_DUMP_PATH'),
+            ]),
         ],
 
         'mariadb' => [

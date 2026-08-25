@@ -3,13 +3,6 @@ import { Badge } from "@/Components/ui/badge";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/Components/ui/select";
-import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -27,20 +20,23 @@ import {
     Upload,
     Image,
     MoreVertical,
+    ThumbsUp,
+    ThumbsDown,
 } from "lucide-react";
-import { getStatusColor, getStatusIcon, formatDate, formatCurrency } from "./utils";
+import { formatDate, formatCurrency } from "./utils";
 import { router } from "@inertiajs/react";
+import { VerifyPaymentDialog } from "./VerifyPaymentDialog";
 
 export function PaymentHistoryTable({
     payments = [],
     onViewDetails,
     onAddReceipt,
+    routePrefix = "admin",
     className = "",
 }) {
+    const [verifyingPayment, setVerifyingPayment] = useState(null);
     // State for filters
     const [searchTerm, setSearchTerm] = useState("");
-    const [statusFilter, setStatusFilter] = useState("all");
-    const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -51,18 +47,6 @@ export function PaymentHistoryTable({
         // Handle both array and paginated object
         const paymentsArray = Array.isArray(payments) ? payments : (payments?.data || []);
         let filtered = [...paymentsArray];
-
-        // Filter by status
-        if (statusFilter !== "all") {
-            filtered = filtered.filter((p) => p.payment_status === statusFilter);
-        }
-
-        // Filter by payment method
-        if (paymentMethodFilter !== "all") {
-            filtered = filtered.filter(
-                (p) => p.payment_method === paymentMethodFilter
-            );
-        }
 
         // Filter by date range
         if (dateFrom) {
@@ -90,8 +74,6 @@ export function PaymentHistoryTable({
         return filtered;
     }, [
         payments,
-        statusFilter,
-        paymentMethodFilter,
         dateFrom,
         dateTo,
         searchTerm,
@@ -106,13 +88,11 @@ export function PaymentHistoryTable({
     // Reset to page 1 when filters change
     useMemo(() => {
         setCurrentPage(1);
-    }, [statusFilter, paymentMethodFilter, dateFrom, dateTo, searchTerm]);
+    }, [dateFrom, dateTo, searchTerm]);
 
     // Clear all filters
     const handleClearFilters = () => {
         setSearchTerm("");
-        setStatusFilter("all");
-        setPaymentMethodFilter("all");
         setDateFrom("");
         setDateTo("");
         setCurrentPage(1);
@@ -122,8 +102,6 @@ export function PaymentHistoryTable({
     const handleExportExcel = () => {
         const params = new URLSearchParams();
         params.set('format', 'excel');
-        if (statusFilter !== 'all') params.set('status', statusFilter);
-        if (paymentMethodFilter !== 'all') params.set('payment_method', paymentMethodFilter);
         if (dateFrom) params.set('date_from', dateFrom);
         if (dateTo) params.set('date_to', dateTo);
         if (searchTerm) params.set('search', searchTerm);
@@ -134,23 +112,11 @@ export function PaymentHistoryTable({
     const handleExportPdf = () => {
         const params = new URLSearchParams();
         params.set('format', 'pdf');
-        if (statusFilter !== 'all') params.set('status', statusFilter);
-        if (paymentMethodFilter !== 'all') params.set('payment_method', paymentMethodFilter);
         if (dateFrom) params.set('date_from', dateFrom);
         if (dateTo) params.set('date_to', dateTo);
         if (searchTerm) params.set('search', searchTerm);
         window.open(route('admin.export.payments') + '?' + params.toString(), '_blank');
     };
-
-    // Get unique payment methods
-    const uniquePaymentMethods = useMemo(() => {
-        // Handle both array and paginated object
-        const paymentsArray = Array.isArray(payments) ? payments : (payments?.data || []);
-        const methods = [
-            ...new Set(paymentsArray.map((p) => p.payment_method).filter(Boolean)),
-        ];
-        return methods;
-    }, [payments]);
 
     return (
         <div className={`space-y-4 ${className}`}>
@@ -171,44 +137,6 @@ export function PaymentHistoryTable({
                         />
                     </div>
 
-                    {/* Status Filter */}
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-full lg:w-48 h-10 border-slate-200 bg-slate-50/50 hover:bg-white transition-all duration-300">
-                            <SelectValue placeholder="All Statuses" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Statuses</SelectItem>
-                            <SelectItem value="verified">Verified</SelectItem>
-                            <SelectItem value="rejected">Rejected</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                        </SelectContent>
-                    </Select>
-
-                    {/* Payment Method Filter */}
-                    <Select
-                        value={paymentMethodFilter}
-                        onValueChange={setPaymentMethodFilter}
-                    >
-                        <SelectTrigger className="w-full lg:w-48 h-10 border-slate-200 bg-slate-50/50 hover:bg-white transition-all duration-300">
-                            <SelectValue placeholder="All Methods" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Methods</SelectItem>
-                            {uniquePaymentMethods.map((method) => (
-                                <SelectItem key={method} value={method}>
-                                    {method
-                                        ?.replace(/_/g, " ")
-                                        .split(" ")
-                                        .map(
-                                            (w) =>
-                                                w.charAt(0).toUpperCase() +
-                                                w.slice(1)
-                                        )
-                                        .join(" ")}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
                 </div>
 
                 {/* Date Range Row */}
@@ -284,11 +212,7 @@ export function PaymentHistoryTable({
                         </span>{" "}
                         payments
                     </p>
-                    {(searchTerm ||
-                        statusFilter !== "all" ||
-                        paymentMethodFilter !== "all" ||
-                        dateFrom ||
-                        dateTo) && (
+                    {(searchTerm || dateFrom || dateTo) && (
                         <Badge variant="outline" className="text-xs">
                             <Filter className="h-3 w-3 mr-1" />
                             Filters Active
@@ -322,9 +246,6 @@ export function PaymentHistoryTable({
                                     Verified By
                                 </th>
                                 <th className="text-left p-3 font-semibold text-slate-700 text-sm">
-                                    Status
-                                </th>
-                                <th className="text-left p-3 font-semibold text-slate-700 text-sm">
                                     Actions
                                 </th>
                             </tr>
@@ -333,7 +254,7 @@ export function PaymentHistoryTable({
                             {paginatedPayments.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan="8"
+                                        colSpan="7"
                                         className="p-12 text-center text-slate-500"
                                     >
                                         <div className="flex flex-col items-center justify-center">
@@ -392,26 +313,6 @@ export function PaymentHistoryTable({
                                             </div>
                                         </td>
                                         <td className="p-3">
-                                            <Badge
-                                                className={getStatusColor(
-                                                    payment.payment_status
-                                                )}
-                                            >
-                                                <span className="flex items-center gap-1">
-                                                    {(() => {
-                                                        const { Icon, className } = getStatusIcon(payment.payment_status);
-                                                        return <Icon className={className}/>;
-                                                    })()}
-                                                    {payment.payment_status
-                                                        ?.charAt(0)
-                                                        .toUpperCase() +
-                                                        payment.payment_status?.slice(
-                                                            1
-                                                        )}
-                                                </span>
-                                            </Badge>
-                                        </td>
-                                        <td className="p-3">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button
@@ -434,6 +335,19 @@ export function PaymentHistoryTable({
                                                         <Eye className="h-4 w-4 mr-2 text-blue-600" />
                                                         <span>View Details</span>
                                                     </DropdownMenuItem>
+
+                                                    {payment.payment_status === "pending" && (
+                                                        <DropdownMenuItem
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setVerifyingPayment(payment);
+                                                            }}
+                                                            className="cursor-pointer text-emerald-600"
+                                                        >
+                                                            <ThumbsUp className="h-4 w-4 mr-2" />
+                                                            <span>Verify Payment</span>
+                                                        </DropdownMenuItem>
+                                                    )}
                                                     
                                                     <DropdownMenuSeparator />
                                                     
@@ -441,7 +355,7 @@ export function PaymentHistoryTable({
                                                         <DropdownMenuItem
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                window.open(`/storage/${payment.receipt_file_path}`, '_blank');
+                                                                window.open(`/payments/${payment.id}/receipt`, '_blank');
                                                             }}
                                                             className="cursor-pointer"
                                                         >
@@ -505,6 +419,14 @@ export function PaymentHistoryTable({
                     </div>
                 )}
             </div>
+
+            {/* Verify / Reject Payment Dialog */}
+            <VerifyPaymentDialog
+                isOpen={!!verifyingPayment}
+                onClose={() => setVerifyingPayment(null)}
+                payment={verifyingPayment}
+                routePrefix={routePrefix}
+            />
         </div>
     );
 }

@@ -10,3 +10,9 @@ Artisan::command('inspire', function () {
 
 // Schedule automated reminders to run hourly
 Schedule::command('reminders:send')->hourly();
+
+// Database + uploaded files backup, once a day
+Schedule::command('backup:run')->dailyAt('02:00');
+
+// Clean up old backups according to the retention strategy in config/backup.php
+Schedule::command('backup:clean')->dailyAt('03:00');

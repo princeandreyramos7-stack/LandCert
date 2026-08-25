@@ -53,12 +53,12 @@ export default function GuestLayout({ children }) {
                                 Your Land Use<br/>
                                 <span className="text-transparent bg-clip-text"
                                     style={{ backgroundImage: "linear-gradient(90deg,#d4a017,#f5c842)" }}>
-                                    Permits &amp; Clearances
+                                    Zoning Clearances
                                 </span><br/>
                                 Made Simple
                             </h2>
                             <p className="text-blue-200/80 text-base leading-relaxed">
-                                Apply for Locational Clearances, Special Use Permits, and more — entirely online.
+                                Apply for Zoning Clearance, Special Use Permit, and Temporary Use Permit.
                                 Track your application status in real time.
                             </p>
                         </div>

@@ -256,65 +256,6 @@ class AdminController extends Controller
     }
 
     /**
-     * Display all applications for admin to review
-     */
-    public function applications(Request $request): Response
-    {
-        $perPage = $request->input('per_page', 25);
-        
-        // Get all requests with normalized table joins
-        $applications = RequestModel::leftJoin('reports', 'requests.id', '=', 'reports.request_id')
-            ->leftJoin('applicants', 'requests.applicant_id', '=', 'applicants.id')
-            ->leftJoin('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
-            ->leftJoin('locations', 'requests.id', '=', 'locations.request_id')
-            ->leftJoin('properties', 'requests.id', '=', 'properties.request_id')
-            ->leftJoin('normalized_corporations', 'applicants.id', '=', 'normalized_corporations.applicant_id')
-            ->leftJoin('users', 'requests.user_id', '=', 'users.id')
-            ->select(
-                'requests.id',
-                'requests.user_id',
-                'requests.status as request_status',
-                'requests.created_at',
-                'requests.updated_at',
-                // Applicant fields
-                'applicants.applicant_name',
-                'applicants.applicant_address',
-                // Corporation fields
-                'normalized_corporations.corporation_name',
-                // Project fields
-                'normalized_projects.project_type',
-                'normalized_projects.project_nature',
-                'normalized_projects.project_cost',
-                // Location fields
-                'locations.street_address as project_location_street',
-                'locations.barangay as project_location_barangay',
-                'locations.city_municipality as project_location_city',
-                'locations.province as project_location_province',
-                // Property fields
-                'properties.lot_area_sqm',
-                // Report fields
-                'reports.report_id',
-                'reports.evaluation',
-                'reports.description as report_description',
-                'reports.amount as report_amount',
-                'reports.date_certified',
-                'reports.date_reported',
-                'reports.issued_by',
-                // User fields
-                'users.name as user_name',
-                'users.email as user_email',
-                // Status
-                DB::raw('COALESCE(reports.evaluation, requests.status) as status')
-            )
-            ->orderBy('requests.created_at', 'desc')
-            ->paginate($perPage);
-
-        return Inertia::render('Admin/Applications', [
-            'applications' => $applications,
-        ]);
-    }
-
-    /**
      * Display all requests for admin
      */
     public function requests(Request $request): Response
@@ -563,6 +504,7 @@ class AdminController extends Controller
             'uploaded_requirements' => $request->requirementDocuments->map(function($doc) {
                 return [
                     'id' => $doc->id,
+                    'requirement_id' => $doc->requirement_id,
                     'requirement_name' => $doc->requirement_name,
                     'original_filename' => $doc->original_filename,
                     'file_path' => $doc->file_path,
@@ -571,6 +513,12 @@ class AdminController extends Controller
                     'created_at' => $doc->created_at,
                 ];
             }),
+
+            // Full requirements list for this project type, so the frontend can
+            // group uploaded documents into "Main" vs "Additional" sections.
+            'requirements_reference' => \App\Constants\ApplicationRequirements::getRequirements(
+                $request->project?->project_type ?? 'ZONING CLEARANCE'
+            ),
         ];
         
         return Inertia::render('Admin/ReviewRequest', [
@@ -932,8 +880,7 @@ class AdminController extends Controller
     {
         // Get ALL approved requests (by Super Admin) - these are requests awaiting payment
         $approvedRequests = RequestModel::with(['applicant', 'project', 'location', 'user', 'payments'])
-            ->where('status', 'approved')
-            ->orWhere('status', 'payment_confirmed')
+            ->whereIn('status', ['approved', 'payment_confirmed'])
             ->orderBy('updated_at', 'desc')
             ->get()
             ->map(function($request) {
@@ -1030,14 +977,14 @@ class AdminController extends Controller
         $payment = \App\Models\Payment::findOrFail($validated['payment_id']);
 
         // Delete old receipt if exists
-        if ($payment->receipt_file_path && \Storage::disk('public')->exists($payment->receipt_file_path)) {
-            \Storage::disk('public')->delete($payment->receipt_file_path);
+        if ($payment->receipt_file_path && \Storage::disk('local')->exists($payment->receipt_file_path)) {
+            \Storage::disk('local')->delete($payment->receipt_file_path);
         }
 
-        // Store the new receipt
+        // Store the new receipt on the private disk with a non-guessable name
         $file = $request->file('receipt_file');
-        $filename = 'receipts/' . time() . '_' . $payment->id . '.' . $file->getClientOriginalExtension();
-        $path = $file->storeAs('receipts', basename($filename), 'public');
+        $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs('receipts', $filename, 'local');
 
         // Update payment record
         $payment->update([
@@ -1520,165 +1467,6 @@ class AdminController extends Controller
         return $pdf->download($filename);
     }
     
-    /**
-     * Export applications to CSV or PDF
-     */
-    public function exportApplications(Request $request)
-    {
-        $status = $request->input('status', 'all');
-        $format = $request->input('format', 'csv');
-        
-        // Get all requests with their related data and reports (using normalized structure)
-        $requests = RequestModel::with([
-            'user', 
-            'reports', 
-            'applicant.corporation', 
-            'project', 
-            'location', 
-            'property'
-        ])->orderBy('created_at', 'desc')->get();
-        
-        $applications = $requests->map(function($request) {
-            // Get the latest report for this request
-            $report = $request->reports->first();
-            
-            // Build project location
-            $projectLocation = collect([
-                $request->location->street_address ?? null,
-                $request->location->barangay ?? null,
-                $request->location->city_municipality ?? null,
-                $request->location->province ?? null
-            ])->filter()->implode(', ');
-            
-            return (object)[
-                'id' => $request->id,
-                'full_name' => $request->user?->name,
-                'email_address' => $request->user?->email,
-                'applicant_name' => $request->applicant->applicant_name ?? 'N/A',
-                'corporation_name' => $request->applicant->corporation->corporation_name ?? null,
-                'applicant_address' => $request->applicant->applicant_address ?? 'N/A',
-                'current_status' => $report?->evaluation ?? $request->status,
-                'submission_date' => $request->created_at?->format('M j, Y'),
-                'project_type' => $request->project->project_type ?? 'N/A',
-                'project_nature' => $request->project->project_nature ?? 'N/A',
-                'project_location' => $projectLocation,
-                'project_area' => $request->property->lot_area_sqm ?? null,
-                'lot_area' => $request->property->lot_area_sqm ?? null,
-                'building_area' => $request->property->bldg_improvement_sqm ?? null,
-                'project_cost' => $request->project->project_cost ? '₱' . number_format($request->project->project_cost, 2) : '',
-                'right_over_land' => $request->property->right_over_land ?? 'Owner',
-                'project_duration' => $request->project->project_nature_duration ?? 'Permanent',
-                'existing_land_use' => $request->property->existing_land_use ?? 'Not Tenanted',
-                'written_notice_to_tenants' => $request->property->has_written_notice ? 'YES' : 'NO',
-                'similar_application_filed' => $request->property->has_similar_application ? 'YES' : 'NO',
-                'release_preference' => $request->preferred_release_mode ?? 'mail applicant',
-                'authorized_representative' => $request->authorization_letter_path ? 'Yes' : 'No Authorized Representative',
-                'authorization_note' => $request->authorization_letter_path ? 'Has authorized representative' : 'This application was submitted directly by the applicant',
-                'created_at' => $request->created_at,
-            ];
-        });
-        
-        if ($status !== 'all') {
-            $applications = $applications->filter(function($app) use ($status) {
-                return $app->current_status === $status;
-            });
-        }
-
-        if ($format === 'pdf') {
-            return $this->exportApplicationsPDF($applications, $status);
-        }
-        
-        // CSV Export
-        $filename = 'applications_export_' . now()->format('Y-m-d_His') . '.csv';
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"$filename\"",
-        ];
-        
-        $callback = function() use ($applications) {
-            $file = fopen('php://output', 'w');
-            
-            // Headers - User Information
-            fputcsv($file, [
-                'Request ID',
-                'Full Name',
-                'Email Address',
-                'Applicant Name',
-                'Corporation Name',
-                'Corporation Address',
-                'Current Status',
-                'Submission Date',
-                'Project Type',
-                'Project Nature',
-                'Project Location',
-                'Project Area (sqm)',
-                'Lot Area (sqm)',
-                'Building Area (sqm)',
-                'Project Cost',
-                'Right Over Land',
-                'Project Duration',
-                'Existing Land Use',
-                'Written Notice to Tenants',
-                'Similar Application Filed',
-                'Release Preference',
-                'Authorized Representative',
-                'Authorization Note'
-            ]);
-            
-            // Data
-            foreach ($applications as $app) {
-                fputcsv($file, [
-                    $app->id,
-                    $app->full_name ?? '',
-                    $app->email_address ?? '',
-                    $app->applicant_name ?? '',
-                    $app->corporation_name ?? '',
-                    $app->applicant_address ?? '',
-                    ucfirst($app->current_status ?? 'Pending'),
-                    $app->submission_date ?? '',
-                    $app->project_type ?? '',
-                    $app->project_nature ?? '',
-                    $app->project_location ?? '',
-                    $app->project_area ?? '',
-                    $app->lot_area ?? '',
-                    $app->building_area ?? '',
-                    $app->project_cost ?? '',
-                    $app->right_over_land ?? '',
-                    $app->project_duration ?? '',
-                    $app->existing_land_use ?? '',
-                    $app->written_notice_to_tenants ?? '',
-                    $app->similar_application_filed ?? '',
-                    $app->release_preference ?? '',
-                    $app->authorized_representative ?? '',
-                    $app->authorization_note ?? '',
-                ]);
-            }
-            
-            fclose($file);
-        };
-        
-        return response()->stream($callback, 200, $headers);
-    }
-
-    /**
-     * Export applications to PDF
-     */
-    private function exportApplicationsPDF($applications, $status)
-    {
-        $data = [
-            'applications' => $applications,
-            'status' => $status,
-            'exportDate' => now()->format('F j, Y'),
-            'totalApplications' => $applications->count(),
-        ];
-
-        $pdf = \PDF::loadView('exports.applications-pdf', $data);
-        $pdf->setPaper('a4', 'landscape');
-        $filename = 'applications_export_' . now()->format('Y-m-d_His') . '.pdf';
-        
-        return $pdf->download($filename);
-    }
-
     /**
      * Global search across all modules
      */

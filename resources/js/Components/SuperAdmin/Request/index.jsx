@@ -50,12 +50,14 @@ export function SuperAdminRequestList({ requests }) {
         }
 
         if (searchTerm) {
+            const term = searchTerm.toLowerCase();
             filtered = filtered.filter(
                 (r) =>
-                    r.applicant_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    r.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    r.project_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    r.id?.toString().includes(searchTerm)
+                    r.applicant_name?.toLowerCase().includes(term) ||
+                    r.user_email?.toLowerCase().includes(term) ||
+                    r.project_type?.toLowerCase().includes(term) ||
+                    r.control_number?.toLowerCase().includes(term) ||
+                    r.id?.toString().includes(term)
             );
         }
 

@@ -21,6 +21,11 @@ class RoleMiddleware
             abort(403, 'Unauthorized access.');
         }
         
+        // `user_type` is the single source of truth for authorization.
+        // Spatie roles are kept in sync with it automatically (see User::booted())
+        // and are used only for granular permission checks elsewhere, not as a
+        // second independent authorization path here.
+
         // Check if user has the exact role required
         if ($user->user_type === $role) {
             return $next($request);
@@ -28,11 +33,6 @@ class RoleMiddleware
         
         // Super admin can access admin routes, but not vice versa
         if ($role === 'admin' && $user->user_type === 'super_admin') {
-            return $next($request);
-        }
-        
-        // Check if user has the required role using Spatie
-        if ($user->hasRole($role)) {
             return $next($request);
         }
 

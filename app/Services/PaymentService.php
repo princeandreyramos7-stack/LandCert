@@ -83,8 +83,8 @@ class PaymentService
                 $extension = $file->getClientOriginalExtension();
                 $uniqueFilename = 'receipt_' . $payment->id . '_' . time() . '_' . uniqid() . '.' . $extension;
                 
-                // Store in storage/app/public/receipts
-                $path = $file->storeAs('receipts', $uniqueFilename, 'public');
+                // Store on the private disk (not publicly web-accessible)
+                $path = $file->storeAs('receipts', $uniqueFilename, 'local');
                 $payment->update(['receipt_file_path' => $path]);
             }
 

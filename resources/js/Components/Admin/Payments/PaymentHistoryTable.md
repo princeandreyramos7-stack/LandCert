@@ -17,7 +17,7 @@ This component displays a filterable and searchable table of payment history rec
 - ✓ Amount
 - ✓ Date (payment_date)
 - ✓ Verified By (verified_by_name)
-- ✓ Status (payment_status with badge)
+- Status column removed from the table per product decision; still available via the status filter dropdown and the Verify/Reject action
 
 ### FR5.3: Filter by Status, Date Range, Payment Method ✓
 - ✓ Status filter dropdown (All, Verified, Rejected, Pending)

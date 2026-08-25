@@ -63,24 +63,6 @@ export default function RequestPage() {
                         {/* Decorative gradient border */}
                         <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-xl" />
                         
-                        {/* Enhanced header with icon */}
-                        <div className="mb-8 text-center animate-slideDown">
-                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-300/50 mb-4 animate-bounce-slow">
-                                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                            </div>
-                            <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
-                                Submit New Request
-                            </h2>
-                            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                                Fill out the form below to submit your land certification request
-                            </p>
-                            
-                            {/* Progress indicator line */}
-                            <div className="mt-6 h-1 w-32 mx-auto bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full animate-pulse" />
-                        </div>
-                        
                         <RequestForm />
                     </div>
                 </div>

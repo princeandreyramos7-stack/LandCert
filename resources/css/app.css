@@ -81,7 +81,15 @@
     * {
         @apply border-border;
     }
+    html,
     body {
         @apply bg-background text-foreground;
+        /* Prevent the page from scrolling horizontally on mobile.
+           Without this, a single element slightly wider than the viewport
+           (e.g. a fixed-width table or badge) can make the whole page
+           scrollable sideways, which also drags fixed/centered modals
+           along with it and makes them appear cut off. */
+        overflow-x: hidden;
+        max-width: 100vw;
     }
 }

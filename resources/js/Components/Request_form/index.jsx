@@ -6,6 +6,7 @@ import { Button } from "@/Components/ui/button";
 import { FileText } from "lucide-react";
 
 // Local Components
+import { WelcomeBoard } from "./WelcomeBoard";
 import { StepIndicator } from "./StepIndicator";
 import { Step1ApplicantInfo } from "./Step1ApplicantInfo";
 import { Step2ProjectDetails } from "./Step2ProjectDetails";
@@ -15,6 +16,8 @@ import { ConfirmationDialog } from "./ConfirmationDialog";
 import { validateStep1, validateStep2, validateStep3 } from "./utils";
 
 export default function RequestForm() {
+    // Welcome/requirements board is shown first; applicants proceed to Step 1 when ready
+    const [showWelcome, setShowWelcome] = useState(true);
     const [currentStep, setCurrentStep] = useState(1);
     const [completedSteps, setCompletedSteps] = useState([]);
     const [hasRepresentative, setHasRepresentative] = useState(false);
@@ -170,7 +173,19 @@ export default function RequestForm() {
 
     // Handle previous step
     const handlePrevious = () => {
+        if (currentStep === 1) {
+            // Go back to the welcome/requirements board instead of nowhere
+            setShowWelcome(true);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            return;
+        }
         setCurrentStep(currentStep - 1);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    // Handle continuing from the welcome board into the actual form
+    const handleContinueFromWelcome = () => {
+        setShowWelcome(false);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
     
@@ -242,6 +257,31 @@ export default function RequestForm() {
         });
     };
 
+    if (showWelcome) {
+        return (
+            <div className="max-w-5xl mx-auto">
+                <div className="relative">
+                    <div className="absolute -inset-4 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 rounded-3xl opacity-10 blur-2xl animate-pulse-slow" />
+                    <Card className="relative border-none shadow-2xl shadow-blue-200/30 overflow-hidden backdrop-blur-sm bg-white/95">
+                        <div className="h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+                        <CardContent className="p-6 sm:p-8">
+                            <WelcomeBoard onContinue={handleContinueFromWelcome} />
+                        </CardContent>
+                    </Card>
+                </div>
+                <style>{`
+                    @keyframes pulse-slow {
+                        0%, 100% { opacity: 0.1; }
+                        50% { opacity: 0.2; }
+                    }
+                    .animate-pulse-slow {
+                        animation: pulse-slow 3s ease-in-out infinite;
+                    }
+                `}</style>
+            </div>
+        );
+    }
+
     return (
         <div className="max-w-5xl mx-auto">
             <div className="relative">
@@ -264,11 +304,11 @@ export default function RequestForm() {
                                     </div>
                                     <div>
                                         <CardTitle className="text-2xl bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                                            Land Certification Request Form
+                                            Submit New Request
                                         </CardTitle>
                                         <p className="text-sm text-gray-600 mt-2 flex items-center gap-2">
                                             <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                            Complete all required fields to submit your application
+                                            Fill out the form below to submit your land certification request
                                         </p>
                                     </div>
                                 </div>
@@ -343,6 +383,7 @@ export default function RequestForm() {
                 onClose={() => setIsConfirmDialogOpen(false)}
                 onConfirm={confirmSubmit}
                 processing={processing}
+                data={data}
             />
             
             {/* Add custom animations */}

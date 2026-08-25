@@ -33,10 +33,50 @@ import {
     Save,
 } from "lucide-react";
 import { formatDate } from "@/Components/Admin/Request/utils";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useToast } from "@/Components/ui/use-toast";
 import { Toaster } from "@/Components/ui/toaster";
 import axios from "axios";
+
+/**
+ * Display-only formatting for peso amount fields.
+ * Adds thousand separators while keeping any decimal point the user is typing.
+ * The raw (unformatted) value is what stays in state and gets submitted.
+ */
+const formatAmountForDisplay = (rawValue) => {
+    if (rawValue === null || rawValue === undefined || rawValue === "") return "";
+
+    const raw = String(rawValue);
+    const [integerPart, ...decimalParts] = raw.split(".");
+    const hasDecimalPoint = raw.includes(".");
+
+    const groupedInteger =
+        integerPart === "" ? "" : Number(integerPart).toLocaleString("en-US");
+
+    return hasDecimalPoint
+        ? `${groupedInteger}.${decimalParts.join("")}`
+        : groupedInteger;
+};
+
+/**
+ * Strips the display formatting back down to a plain number string,
+ * allowing a single decimal point and at most 2 decimal places.
+ */
+const parseAmountInput = (displayValue) => {
+    let cleaned = String(displayValue).replace(/[^\d.]/g, "");
+
+    const firstDot = cleaned.indexOf(".");
+    if (firstDot !== -1) {
+        const integerPart = cleaned.slice(0, firstDot);
+        const decimalPart = cleaned
+            .slice(firstDot + 1)
+            .replace(/\./g, "")
+            .slice(0, 2);
+        cleaned = `${integerPart}.${decimalPart}`;
+    }
+
+    return cleaned;
+};
 
 export default function ReviewRequest({ request }) {
     const [currentStep, setCurrentStep] = useState(1);
@@ -51,6 +91,38 @@ export default function ReviewRequest({ request }) {
     const [loading, setLoading] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const { toast } = useToast();
+
+    // Group uploaded documents by requirement so a requirement with multiple
+    // files (e.g. "1. Application Form" uploaded as 3 separate pages) shows
+    // as one entry with all of its files listed, instead of 3 duplicate-looking cards.
+    // Also split into "Main" vs "Additional" sections using requirements_reference
+    // (the full requirement list for this project type) so admins see the same
+    // two-section structure the applicant saw when uploading.
+    const groupedRequirements = useMemo(() => {
+        const docs = request.uploaded_requirements || [];
+        const reference = request.requirements_reference || [];
+        const sectionById = new Map(reference.map((r) => [r.id, r.section || 'main']));
+
+        const groups = new Map();
+
+        docs.forEach((doc) => {
+            const key = doc.requirement_id ?? doc.requirement_name;
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    key,
+                    requirement_name: doc.requirement_name,
+                    section: sectionById.get(doc.requirement_id) || 'main',
+                    files: [],
+                });
+            }
+            groups.get(key).files.push(doc);
+        });
+
+        return Array.from(groups.values());
+    }, [request.uploaded_requirements, request.requirements_reference]);
+
+    const mainUploadedGroups = groupedRequirements.filter((g) => g.section !== 'additional');
+    const additionalUploadedGroups = groupedRequirements.filter((g) => g.section === 'additional');
 
     // Remove the useEffect for fetching requirements - no longer needed
 
@@ -287,7 +359,7 @@ export default function ReviewRequest({ request }) {
                                 </div>
                             </CardHeader>
                             <CardContent className="pt-6">
-                                {/* Uploaded Requirements Section */}
+                                {/* Uploaded Requirements Section - split into Main and Additional */}
                                 {request.uploaded_requirements && request.uploaded_requirements.length > 0 && (
                                     <div className="mb-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-5 border-2 border-indigo-200">
                                         <div className="flex items-center gap-2 mb-4">
@@ -299,49 +371,34 @@ export default function ReviewRequest({ request }) {
                                                 {request.uploaded_requirements.length} {request.uploaded_requirements.length === 1 ? 'file' : 'files'}
                                             </span>
                                         </div>
-                                        
-                                        <div className="space-y-2">
-                                            {request.uploaded_requirements.map((doc, index) => (
-                                                <div 
-                                                    key={doc.id}
-                                                    className="bg-white border-2 border-indigo-100 rounded-lg p-3 hover:border-indigo-300 hover:shadow-md transition-all duration-200"
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                            <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                                                                <FileText className="h-5 w-5 text-indigo-600" />
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-semibold text-gray-900 truncate">
-                                                                    {doc.requirement_name}
-                                                                </p>
-                                                                <p className="text-xs text-gray-500 truncate">
-                                                                    {doc.original_filename}
-                                                                </p>
-                                                                <div className="flex items-center gap-2 mt-1">
-                                                                    <span className="text-xs text-gray-400">
-                                                                        {(doc.file_size / 1024).toFixed(2)} KB
-                                                                    </span>
-                                                                    <span className="text-xs text-gray-300">•</span>
-                                                                    <span className="text-xs text-gray-400">
-                                                                        {new Date(doc.created_at).toLocaleDateString()}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <a
-                                                            href={`/storage/${doc.file_path}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex-shrink-0 ml-3 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                                                        >
-                                                            <FileText className="h-4 w-4" />
-                                                            View
-                                                        </a>
-                                                    </div>
+
+                                        {mainUploadedGroups.length > 0 && (
+                                            <div className="mb-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold shrink-0">1</span>
+                                                    <h4 className="text-sm font-bold text-gray-700">Main Requirements</h4>
                                                 </div>
-                                            ))}
-                                        </div>
+                                                <div className="space-y-2">
+                                                    {mainUploadedGroups.map((group) => (
+                                                        <UploadedRequirementGroup key={group.key} group={group} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {additionalUploadedGroups.length > 0 && (
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-amber-500 text-white text-[10px] font-bold shrink-0">2</span>
+                                                    <h4 className="text-sm font-bold text-gray-700">Additional Requirements</h4>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    {additionalUploadedGroups.map((group) => (
+                                                        <UploadedRequirementGroup key={group.key} group={group} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -442,16 +499,37 @@ export default function ReviewRequest({ request }) {
                                                     <label className="block text-sm font-semibold text-gray-800 mb-2">
                                                         Payment Amount (₱) <span className="text-red-500">*</span>
                                                     </label>
-                                                    <input
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        value={formData.payment_amount}
-                                                        onChange={(e) => setFormData({ ...formData, payment_amount: e.target.value })}
-                                                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200"
-                                                        placeholder="Enter amount to be paid"
-                                                        required
-                                                    />
+                                                    <div className="relative">
+                                                        {/* Visual-only peso indicator - not part of the submitted value */}
+                                                        <span
+                                                            aria-hidden="true"
+                                                            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 select-none text-base font-semibold text-gray-500"
+                                                        >
+                                                            ₱
+                                                        </span>
+                                                        <input
+                                                            type="text"
+                                                            inputMode="decimal"
+                                                            autoComplete="off"
+                                                            // Commas are display-only; state keeps the plain number
+                                                            value={formatAmountForDisplay(formData.payment_amount)}
+                                                            onChange={(e) =>
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    payment_amount: parseAmountInput(e.target.value),
+                                                                })
+                                                            }
+                                                            className="w-full pl-8 pr-16 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                                                            placeholder="e.g., 5,000.00"
+                                                            required
+                                                        />
+                                                        <span
+                                                            aria-hidden="true"
+                                                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-500"
+                                                        >
+                                                            PHP
+                                                        </span>
+                                                    </div>
                                                 </div>
 
                                                 {/* Appointment Date */}
@@ -820,7 +898,7 @@ function Step1Content({ request }) {
                                     Authorization Letter
                                 </p>
                                 <a
-                                    href={`/storage/${request.authorization_letter_path}`}
+                                    href={`/requests/${request.application_id || request.id}/authorization-letter`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-all"
@@ -1118,6 +1196,65 @@ function InfoField({ label, value }) {
             <p className="text-sm text-gray-900 font-medium">
                 {value || <span className="text-gray-400 italic">Not provided</span>}
             </p>
+        </div>
+    );
+}
+
+function UploadedRequirementGroup({ group }) {
+    return (
+        <div className="bg-white border-2 border-indigo-100 rounded-lg p-3 hover:border-indigo-300 hover:shadow-md transition-all duration-200">
+            <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-indigo-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                        {group.requirement_name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                        {group.files.length} {group.files.length === 1 ? 'file' : 'files'} uploaded
+                    </p>
+                </div>
+                {group.files.length > 1 && (
+                    <span className="flex-shrink-0 bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                        {group.files.length}
+                    </span>
+                )}
+            </div>
+
+            {/* Every file for this requirement, always visible */}
+            <div className="mt-2.5 space-y-1.5 pl-0 sm:pl-[52px]">
+                {group.files.map((doc) => (
+                    <div
+                        key={doc.id}
+                        className="flex items-center justify-between gap-2 bg-indigo-50/60 rounded-lg px-3 py-2"
+                    >
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-gray-800 truncate">
+                                {doc.original_filename}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-[11px] text-gray-400">
+                                    {(doc.file_size / 1024).toFixed(0)} KB
+                                </span>
+                                <span className="text-[11px] text-gray-300">•</span>
+                                <span className="text-[11px] text-gray-400">
+                                    {new Date(doc.created_at).toLocaleDateString()}
+                                </span>
+                            </div>
+                        </div>
+                        <a
+                            href={`/requirements/${doc.id}/view`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-shrink-0 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
+                        >
+                            <FileText className="h-3.5 w-3.5" />
+                            View
+                        </a>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }

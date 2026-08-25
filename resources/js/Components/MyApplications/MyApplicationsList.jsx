@@ -271,75 +271,97 @@ export function MyApplicationsList({ applications }) {
     }, [applicationsList]);
 
     // Requirements data based on project type
+    // Mirrors app/Constants/ApplicationRequirements.php (HLURB Memo Circular No. 03 s. 1998, Annex B)
     const getRequirements = (projectType) => {
-        // Normalize the project type to handle variations
-        const normalizedType = projectType?.trim();
-        
+        // Normalize so stored values ("Zoning", "TUP", "SUP") and longer
+        // variations ("Zoning Clearance", "Temporary Use Permit") all resolve
+        const raw = (projectType || "").trim().toUpperCase();
+
+        let key = "ZONING";
+        if (raw.includes("TUP") || raw.includes("TEMPORARY")) {
+            key = "TUP";
+        } else if (raw.includes("SUP") || raw.includes("SPECIAL")) {
+            key = "SUP";
+        }
+
         const requirements = {
-            "TUP": {
-                title: "Requirements for TUP (Temporary Use Permit)",
-                description: "Please bring the following documents to your scheduled appointment at the CPDO office",
-                items: [
-                    "Accomplished application form",
-                    "Letter request stating temporary use/purpose",
-                    "Valid ID of applicant",
-                    "Proof of ownership / authorization from owner",
-                    "Sketch plan / vicinity map",
-                    "Barangay clearance",
-                    "Business permit (if commercial activity)",
-                    "Photos of site/location (if required)",
-                    "Payment of processing fees"
-                ]
-            },
-            "Zoning Clearance": {
+            ZONING: {
                 title: "Requirements for Zoning Clearance",
-                description: "Please bring the following documents to your scheduled appointment at the CPDO office",
+                description:
+                    "Based on ANNEX B of HLURB Memorandum Circular No. 03 Series of 1998. Please bring the following documents to your scheduled appointment at the CPDO office.",
                 items: [
-                    "Duly accomplished and notarized APPLICATION FORM",
-                    "Any of the following requirements relative to RIGHT OVER LAND:",
-                    "• Photocopy of the Cert. of Title in case registered in the name of the applicant & latest Tax declaration",
-                    "• In the absence of any existing certification of title, submit (1) certified true copy of the latest tax declaration and (2) pro forma affidavit",
-                    "VICINITY MAP showing the existing land uses within the prescribed radius from the lot boundary of the project site",
-                    "SITE DEVELOPMENT PLAN showing the project site, lot area boundaries & dimension of proposed improvement",
-                    "ESTIMATED PROJECT COST / BILL OF MATERIALS",
-                    "Barangay clearance",
-                    "For projects in Tenanted Rice and/or Corn lands: Endorsement/recommendation from the Department of Agrarian Reform",
-                    "For manufacturing projects: DESCRIPTION OF INDUSTRY",
-                    "AFFIDAVIT OF NO OBJECTION",
-                    "ENVIRONMENTAL COMPLIANCE CERTIFICATE (ECC)/CERTIFICATE OF NON-COVERAGE(CNC)",
-                    "Certification of road right-of-way from DPWH (if the project is located within the National Road)"
-                ]
+                    "1. Duly accomplished and notarized APPLICATION FORM",
+                    "2. Any of the following requirements relative to RIGHT OVER LAND:",
+                    "   a. Photocopy of the Certificate of Title in case registered in the name of the applicant & latest Tax Declaration",
+                    "   b. In the absence of any existing certificate of title in the name of the applicant, submit (1) certified true copy of the latest tax declaration and (2) pro forma affidavit (Annex C) to the effect that:",
+                    "      - The applicant is the owner of the property subject of the application",
+                    "      - The reason why the property is not yet titled",
+                    "      - That the property is situated within alienable and disposable land outside land reserved for the public domain",
+                    "      - That the property is free from liens and encumbrances, or stating the liens & encumbrances of the property",
+                    "      - That the property is not tenanted (in case the property is planted to rice and corn)",
+                    "   c. In case the property is not registered in the name of the applicant, submit duly accomplished deed of sale, deed of donation, contract of lease, or authorization to use land, whichever is applicable, plus a photocopy of the owner's certificate of title; in the absence of title, the tax declaration and pro forma affidavit as described in item b",
+                    "3. VICINITY MAP showing the existing land uses within the prescribed radius from the lot boundary of the project site",
+                    "   a. For projects of local significance, the vicinity should cover a minimum of 100 meters radius; the map need not be drawn to scale provided the relative distance of existing land uses to the project site lot boundaries are indicated",
+                    "   b. For projects of national significance, the vicinity should cover a minimum of one (1) kilometer radius and be drawn to scale",
+                    "4. SITE DEVELOPMENT PLAN showing the project site, lot area boundaries & dimension of proposed improvements within the project site",
+                    "   - For projects of local significance, the plan need not be drawn to scale",
+                    "5. ESTIMATED PROJECT COST / BILL OF MATERIALS",
+                    "Additional Requirements:",
+                    "1. For all projects to be situated in tenanted rice and/or corn lands: Endorsement/recommendation from the Department of Agrarian Reform advising the conversion into other uses",
+                    "2. For manufacturing projects, DESCRIPTION OF INDUSTRY citing among others the following:",
+                    "   2.1 Type and volume of raw materials used",
+                    "   2.2 Products manufactured or stored",
+                    "   2.3 Average daily output/capacity per day/week/month",
+                    "   2.4 Industrial waste & plans for pollution control",
+                    "   2.5 Description of manufacturing processes",
+                    "3. If filed by an authorized representative, SWORN SPECIAL POWER OF ATTORNEY for the representative to file/follow up the application",
+                    "4. AFFIDAVIT OF NO OBJECTION",
+                    "5. ENVIRONMENTAL COMPLIANCE CERTIFICATE (ECC) / CERTIFICATE OF NON-COVERAGE (CNC)",
+                    "6. Certification of road right-of-way from DPWH (if the project is located within the National Road)",
+                    "7. Barangay Clearance",
+                ],
             },
-            "SUP": {
-                title: "Requirements for SUP (Special Use Permit)",
-                description: "Please bring the following documents to your scheduled appointment at the CPDO office",
+            TUP: {
+                title: "Requirements for TUP (Temporary Use Permit)",
+                description:
+                    "Please bring the following documents to your scheduled appointment at the CPDO office.",
                 items: [
-                    "Accomplished application form",
-                    "Letter request describing proposed special use",
-                    "Valid ID of applicant",
-                    "Land title / tax declaration / lease contract",
-                    "Site development plan / lot plan",
-                    "Zoning clearance or locational clearance request",
-                    "Barangay clearance / endorsement",
-                    "Environmental or safety clearances (if needed)",
-                    "Business documents (if company/applicant is business)",
-                    "Payment of fees"
-                ]
-            }
+                    "1. Duly accomplished and notarized APPLICATION FORM",
+                    "2. Letter request stating the temporary use/purpose",
+                    "3. Valid government-issued ID of the applicant",
+                    "4. Proof of ownership / authorization from the owner",
+                    "   - Certificate of Title, Tax Declaration, or contract of lease",
+                    "   - If not the owner, written authorization from the registered owner",
+                    "5. Sketch plan / vicinity map of the site",
+                    "6. Barangay Clearance",
+                    "7. Business permit (if the activity is commercial)",
+                    "8. Photos of the site/location (if required)",
+                    "9. Payment of processing fees",
+                ],
+            },
+            SUP: {
+                title: "Requirements for SUP (Special Use Permit)",
+                description:
+                    "Please bring the following documents to your scheduled appointment at the CPDO office.",
+                items: [
+                    "1. Duly accomplished and notarized APPLICATION FORM",
+                    "2. Letter request describing the proposed special use",
+                    "3. Valid government-issued ID of the applicant",
+                    "4. Proof of right over land",
+                    "   - Land title, Tax Declaration, or lease contract",
+                    "   - If not the owner, written authorization from the registered owner",
+                    "5. Site development plan / lot plan",
+                    "6. Zoning clearance or locational clearance request",
+                    "7. Barangay Clearance / endorsement",
+                    "8. Environmental or safety clearances (if needed)",
+                    "   - ENVIRONMENTAL COMPLIANCE CERTIFICATE (ECC) or CERTIFICATE OF NON-COVERAGE (CNC)",
+                    "9. Business documents (if the applicant is a company)",
+                    "10. Payment of processing fees",
+                ],
+            },
         };
 
-        return requirements[normalizedType] || {
-            title: `Requirements for ${normalizedType || 'Application'}`,
-            description: "Please bring the following documents to your scheduled appointment at the CPDO office",
-            items: [
-                "Valid ID of applicant",
-                "Proof of ownership or authorization letter from property owner",
-                "Barangay clearance",
-                "Location/vicinity map of the project site",
-                "Any previous permits or clearances related to the property",
-                "Please contact CPDO office for complete list of specific requirements for this application type"
-            ]
-        };
+        return requirements[key];
     };
 
     const handleViewRequirements = () => {
@@ -1050,45 +1072,47 @@ export function MyApplicationsList({ applications }) {
                                     </div>
 
                                     {/* Action Buttons Footer */}
-                                    <div className="sticky bottom-0 bg-white border-t-2 border-gray-200 px-6 py-4 flex justify-between gap-3 shadow-lg">
-                                        <Button
-                                            variant="outline"
-                                            onClick={handleViewRequirements}
-                                            className="px-6 border-purple-300 text-purple-700 hover:bg-purple-50"
-                                        >
-                                            <ListChecks className="h-5 w-5 mr-2" />
-                                            View Requirements
-                                        </Button>
-                                        <div className="flex gap-3">
-                                            {/* Certificate Download Button - Show if certificate is available */}
-                                            {selectedApplication.certificate_number && selectedApplication.certificate_file_path && (
+                                    <div className="sticky bottom-0 bg-white border-t-2 border-gray-200 px-3 py-3 sm:px-6 sm:py-4 shadow-lg">
+                                        <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-3">
+                                            <Button
+                                                variant="outline"
+                                                onClick={handleViewRequirements}
+                                                className="w-full sm:w-auto px-4 sm:px-6 border-purple-300 text-purple-700 hover:bg-purple-50"
+                                            >
+                                                <ListChecks className="h-5 w-5 mr-2 shrink-0" />
+                                                View Requirements
+                                            </Button>
+                                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                                                {/* Certificate Download Button - Show if certificate is available */}
+                                                {selectedApplication.certificate_number && selectedApplication.certificate_file_path && (
+                                                    <Button
+                                                        asChild
+                                                        className="w-full sm:w-auto px-4 sm:px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                                                    >
+                                                        <a href={`/certificate/${selectedApplication.certificate_id}/download`} target="_blank" rel="noopener noreferrer">
+                                                            <Download className="h-4 w-4 mr-2 shrink-0" />
+                                                            Download Certificate
+                                                        </a>
+                                                    </Button>
+                                                )}
                                                 <Button
-                                                    asChild
-                                                    className="px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                                                    variant="outline"
+                                                    onClick={() => window.open(route('my-applications.print', selectedApplication.id), '_blank')}
+                                                    className="w-full sm:w-auto px-4 sm:px-6 border-[#0d1f5c]/30 text-[#0d1f5c] hover:bg-[#0d1f5c]/5 font-semibold"
                                                 >
-                                                    <a href={`/certificate/${selectedApplication.certificate_id}/download`} target="_blank" rel="noopener noreferrer">
-                                                        <Download className="h-4 w-4 mr-2" />
-                                                        Download Certificate
-                                                    </a>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a1 1 0 00-1-1H9a1 1 0 00-1 1v4h8z" />
+                                                    </svg>
+                                                    Print Form
                                                 </Button>
-                                            )}
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => window.open(route('my-applications.print', selectedApplication.id), '_blank')}
-                                                className="px-6 border-[#0d1f5c]/30 text-[#0d1f5c] hover:bg-[#0d1f5c]/5 font-semibold"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a1 1 0 00-1-1H9a1 1 0 00-1 1v4h8z" />
-                                                </svg>
-                                                Print Form
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => setIsModalOpen(false)}
-                                                className="px-6"
-                                            >
-                                                Close
-                                            </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() => setIsModalOpen(false)}
+                                                    className="w-full sm:w-auto px-4 sm:px-6"
+                                                >
+                                                    Close
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1114,25 +1138,28 @@ export function MyApplicationsList({ applications }) {
                             </DialogDescription>
                         </DialogHeader>
                         
-                        <div className="mt-6 space-y-3">
-                            {getRequirements(selectedApplication.project_type).items.map((requirement, index) => (
-                                <div 
-                                    key={index} 
-                                    className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200 flex items-start gap-4"
-                                >
-                                    <div className="flex-shrink-0 mt-1">
-                                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 font-semibold text-sm">
-                                            {index + 1}
+                        <div className="mt-6 space-y-2">
+                            {getRequirements(selectedApplication.project_type).items.map((requirement, index) => {
+                                // Count leading spaces to determine indentation level
+                                const leadingSpaces = requirement.match(/^ */)[0].length;
+                                const indentLevel = Math.floor(leadingSpaces / 3); // Every 3 spaces = 1 indent level
+                                const trimmedRequirement = requirement.trim();
+                                
+                                return (
+                                    <div 
+                                        key={index} 
+                                        className="bg-white p-3 rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200 flex items-start gap-3"
+                                        style={{ marginLeft: `${indentLevel * 24}px` }}
+                                    >
+                                        <div className="flex-shrink-0 mt-0.5">
+                                            <CheckCircle className="h-4 w-4 text-green-500" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-gray-800 leading-relaxed text-sm">{trimmedRequirement}</p>
                                         </div>
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="text-gray-800 leading-relaxed">{requirement}</p>
-                                    </div>
-                                    <div className="flex-shrink-0">
-                                        <CheckCircle className="h-5 w-5 text-green-500" />
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                         
                         <div className="mt-6 p-5 bg-white border-l-4 border-yellow-500 rounded-lg shadow-md">

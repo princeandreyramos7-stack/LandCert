@@ -296,7 +296,7 @@ export default function PrintForm({ application: a, auth }) {
         if (userRole === 'super_admin') {
             return route('super-admin.requests');
         } else if (userRole === 'admin') {
-            return route('admin.applications');
+            return route('admin.requests');
         } else {
             // applicant
             return route('my-applications');

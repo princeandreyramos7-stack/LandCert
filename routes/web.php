@@ -30,11 +30,13 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:10,1')->name('request.store');
     Route::get('/my-applications', [RequestController::class, 'myApplications'])->name('my-applications');
     Route::get('/my-applications/{id}/print', [\App\Http\Controllers\AdminController::class, 'printForm'])->name('my-applications.print');
+    Route::get('/requests/{id}/authorization-letter', [RequestController::class, 'authorizationLetter'])->name('requests.authorization-letter');
     
     // Requirement document routes
     Route::get('/requirements/upload/{requestId}', [\App\Http\Controllers\RequirementDocumentController::class, 'index'])->name('requirements.upload.page');
     Route::post('/requirements/upload', [\App\Http\Controllers\RequirementDocumentController::class, 'upload'])->name('requirements.upload');
     Route::delete('/requirements/{id}', [\App\Http\Controllers\RequirementDocumentController::class, 'destroy'])->name('requirements.destroy');
+    Route::get('/requirements/{id}/view', [\App\Http\Controllers\RequirementDocumentController::class, 'view'])->name('requirements.view');
     
     // Payment receipt upload routes
     Route::get('/receipt/upload/{requestId}', [PaymentController::class, 'uploadReceiptPage'])->name('receipt.upload.page');
@@ -42,6 +44,11 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     // Payment routes for applicants
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
+    Route::get('/payments/{payment}/receipt', [PaymentController::class, 'viewReceipt'])->name('payments.receipt.view');
+
+    // Certificate download/preview (applicant-facing, ownership checked in controller)
+    Route::get('/certificate/{certificate}/download', [CertificateController::class, 'applicantDownload'])->name('certificate.download');
+    Route::get('/certificate/{certificate}/preview', [CertificateController::class, 'applicantPreview'])->name('certificate.preview');
 });
 
 // Super Admin routes (highest privilege)
@@ -121,7 +128,6 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::get('/requests', [AdminController::class, 'requests'])->name('requests');
     Route::get('/requests/{id}', [AdminController::class, 'viewRequest'])->name('requests.view');
     Route::get('/requests/{id}/review', [AdminController::class, 'reviewRequest'])->name('requests.review');
-    Route::get('/applications', [AdminController::class, 'applications'])->name('applications');
     Route::get('/reports', function () {
         return Inertia::render('Admin/Reports');
     })->name('reports');
@@ -165,7 +171,6 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::post('/certificates-old/{certificate}/release', [AdminController::class, 'releaseCertificate'])->name('certificates-old.release');
     
     // Export routes
-    Route::get('/export/applications', [AdminController::class, 'exportApplications'])->name('export.applications');
     Route::get('/export/requests', [AdminController::class, 'exportRequests'])->name('export.requests');
     Route::get('/export/users', [AdminController::class, 'exportUsers'])->name('export.users');
     Route::get('/export/payments', [AdminController::class, 'exportPayments'])->name('export.payments');

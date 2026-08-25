@@ -8,74 +8,120 @@ import {
     DialogTitle,
 } from "@/Components/ui/dialog";
 import { Button } from "@/Components/ui/button";
-import { AlertCircle, CheckCircle2, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileText, Loader2, Send, User } from "lucide-react";
 
-export function ConfirmationDialog({ isOpen, onClose, onConfirm, processing }) {
+export function ConfirmationDialog({ isOpen, onClose, onConfirm, processing, data = {} }) {
+    const applicantName = data.corporation_name || data.applicant_name || "Applicant";
+    const projectType = data.project_type || "N/A";
+    const projectNature = data.project_nature || "N/A";
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-lg">
-                <DialogHeader>
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-full">
-                            <CheckCircle2 className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <DialogTitle>Confirm Submission</DialogTitle>
-                    </div>
-                    <DialogDescription>
-                        Are you sure you want to submit this application? Please review
-                        all information before proceeding.
-                    </DialogDescription>
-                </DialogHeader>
-                
-                {/* Content moved outside DialogDescription to avoid HTML nesting issues */}
-                <div className="space-y-3">
-                    {/* Next Step Reminder */}
-                    <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 flex gap-3">
-                        <Upload className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div className="text-sm text-blue-900">
-                            <div className="font-bold mb-2 text-base">📋 Next Step After Submission:</div>
-                            <div className="mb-2">
-                                You will be automatically redirected to upload the required 
-                                <strong> softcopy documents</strong> (scanned copies or photos of your requirements).
+            <DialogContent className="w-[calc(100vw-1rem)] max-w-lg sm:w-full max-h-[92vh] overflow-y-auto p-0 gap-0">
+                {/* Friendly header banner */}
+                <div className="sticky top-0 z-10 bg-gradient-to-r from-[#0d1f5c] to-[#1a3a8f] px-4 py-4 text-white sm:px-6 sm:py-5">
+                    <DialogHeader className="space-y-1.5 text-left">
+                        <DialogTitle className="flex items-center gap-2.5 pr-8 text-white text-base sm:gap-3 sm:text-lg">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 sm:h-10 sm:w-10">
+                                <Send className="h-4 w-4 sm:h-5 sm:w-5" />
                             </div>
-                            <div className="text-xs text-blue-700">
-                                ⏱️ This is an important step to complete your application process.
-                            </div>
+                            Ready to submit your application?
+                        </DialogTitle>
+                        <DialogDescription className="text-blue-100 text-xs sm:text-sm sm:pl-[52px]">
+                            Please double-check your details before sending them to the CPDO office.
+                        </DialogDescription>
+                    </DialogHeader>
+                </div>
+
+                <div className="px-4 py-4 space-y-3.5 sm:px-6 sm:space-y-4">
+                    {/* Quick summary chips */}
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                        <div className="rounded-xl border border-blue-100 bg-blue-50 p-2.5 text-center sm:p-3">
+                            <p className="truncate text-sm font-bold text-[#0d1f5c] sm:text-base">
+                                {projectType}
+                            </p>
+                            <p className="text-[10px] font-medium leading-tight text-blue-700 sm:text-[11px]">
+                                Application Type
+                            </p>
+                        </div>
+                        <div className="rounded-xl border border-blue-100 bg-blue-50 p-2.5 text-center sm:p-3">
+                            <p className="truncate text-sm font-bold text-[#0d1f5c] sm:text-base">
+                                {projectNature}
+                            </p>
+                            <p className="text-[10px] font-medium leading-tight text-blue-700 sm:text-[11px]">
+                                Project Nature
+                            </p>
                         </div>
                     </div>
-                    
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2">
-                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div className="text-sm text-amber-800">
-                            <div className="font-medium mb-1">Important:</div>
-                            <ul className="list-disc list-inside space-y-1">
-                                <li>
-                                    Once submitted, you cannot edit the application
-                                </li>
-                                <li>
-                                    You will receive a confirmation email with your
-                                    application details
-                                </li>
-                                <li>
-                                    The admin will review your application and notify you
-                                    of the decision
-                                </li>
+
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-gray-50 px-3 py-2">
+                        <User className="h-4 w-4 shrink-0 text-gray-400" />
+                        <p className="min-w-0 break-words text-xs text-gray-600">
+                            Applicant{' '}
+                            <span className="font-semibold text-gray-900">{applicantName}</span>
+                        </p>
+                    </div>
+
+                    {/* Next step reminder */}
+                    <div className="rounded-xl border border-gray-200 bg-white p-2.5 sm:p-3">
+                        <div className="mb-2 flex items-start gap-2">
+                            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                            <p className="min-w-0 text-xs font-semibold leading-snug text-gray-900 sm:text-sm">
+                                Next step after submission
+                            </p>
+                        </div>
+                        <p className="pl-0 text-[11px] leading-relaxed text-gray-600 sm:pl-6 sm:text-xs">
+                            You'll be automatically redirected to upload the required softcopy documents
+                            (scanned copies or photos of your requirements).
+                        </p>
+                    </div>
+
+                    {/* Friendly reminder */}
+                    <div className="flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-2.5 sm:p-3">
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                        <div className="min-w-0 text-[11px] leading-relaxed text-amber-900 sm:text-xs">
+                            <p className="mb-1 font-medium">Important:</p>
+                            <ul className="list-disc space-y-0.5 pl-4">
+                                <li>Once submitted, you cannot edit the application</li>
+                                <li>You'll receive a confirmation email with your application details</li>
+                                <li>The admin will review your application and notify you of the decision</li>
                             </ul>
                         </div>
                     </div>
                 </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={processing}>
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={onConfirm}
-                        disabled={processing}
-                        className="bg-green-600 hover:bg-green-700"
-                    >
-                        {processing ? "Submitting..." : "Confirm & Submit"}
-                    </Button>
-                </DialogFooter>
+
+                {/* Actions */}
+                <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-gray-50 px-4 py-3 sm:px-6 sm:py-4">
+                    <DialogFooter className="gap-2 sm:gap-3">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={onClose}
+                            disabled={processing}
+                            className="h-11 w-full rounded-lg border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-100 sm:h-10 sm:w-auto sm:px-5"
+                        >
+                            Let me check again
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={onConfirm}
+                            disabled={processing}
+                            className="h-11 w-full gap-2 rounded-lg bg-[#0d1f5c] px-4 text-sm font-semibold text-white hover:bg-[#1a3a8f] sm:h-10 sm:w-auto sm:px-5"
+                        >
+                            {processing ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Submitting...
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    Yes, submit now
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </div>
             </DialogContent>
         </Dialog>
     );

@@ -32,10 +32,8 @@ class AdminUserSeeder extends Seeder
             ]
         );
 
-        // Ensure super admin role is assigned
-        if (!$superAdmin->hasRole('super_admin')) {
-            $superAdmin->assignRole('super_admin');
-        }
+        // Note: the 'super_admin' Spatie role is assigned automatically via
+        // User::booted(), which keeps roles in sync with the user_type column.
 
         // Create or update admin user
         $admin = User::updateOrCreate(
@@ -50,10 +48,7 @@ class AdminUserSeeder extends Seeder
             ]
         );
 
-        // Ensure admin role is assigned
-        if (!$admin->hasRole('admin')) {
-            $admin->assignRole('admin');
-        }
+        // Note: the 'admin' Spatie role is assigned automatically via User::booted().
 
         $this->command->info('==============================================');
         $this->command->info('Super Admin user created/updated successfully!');

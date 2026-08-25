@@ -103,8 +103,8 @@ class RequirementDocumentController extends Controller
                 $extension = $file->getClientOriginalExtension();
                 $filename = 'requirement_' . $applicationId . '_' . $requirementId . '_' . time() . '_' . uniqid() . '.' . $extension;
                 
-                // Store file
-                $path = $file->storeAs('requirement_documents', $filename, 'public');
+                // Store file on the private disk (not publicly web-accessible)
+                $path = $file->storeAs('requirement_documents', $filename, 'local');
 
                 // Create new document record (don't delete old ones - allow multiple documents per requirement)
                 RequirementDocument::create([
@@ -118,6 +118,26 @@ class RequirementDocumentController extends Controller
                 ]);
 
                 $uploadedCount++;
+            }
+        }
+
+        // Notify the applicant via SMS that their requirements were submitted
+        // and that they should wait for staff review + a scheduled payment.
+        if ($uploadedCount > 0) {
+            try {
+                $requestModel->loadMissing('user');
+                $phone = $requestModel->user?->contact_number;
+                $name = $requestModel->user?->name ?? $requestModel->applicant?->applicant_name ?? 'Applicant';
+
+                if ($phone) {
+                    app(\App\Services\SmsService::class)->sendRequirementsSubmitted(
+                        $phone,
+                        $name,
+                        $requestModel->id
+                    );
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to send requirements submitted SMS: ' . $e->getMessage());
             }
         }
 
@@ -139,11 +159,35 @@ class RequirementDocumentController extends Controller
         }
 
         // Delete file from storage
-        Storage::disk('public')->delete($document->file_path);
+        Storage::disk('local')->delete($document->file_path);
 
         // Delete database record
         $document->delete();
 
         return redirect()->back()->with('success', 'Document deleted successfully.');
+    }
+
+    /**
+     * Stream/download a requirement document.
+     * Only the owning applicant or admin/super_admin/staff may access the file.
+     */
+    public function view($id)
+    {
+        $document = RequirementDocument::findOrFail($id);
+        $requestModel = $document->request;
+
+        $currentUser = auth()->user();
+        if ($currentUser->user_type === 'applicant' && $requestModel->user_id !== $currentUser->id) {
+            abort(403, 'You are not authorized to view this document.');
+        }
+
+        if (!Storage::disk('local')->exists($document->file_path)) {
+            abort(404, 'File not found.');
+        }
+
+        return Storage::disk('local')->response(
+            $document->file_path,
+            $document->original_filename
+        );
     }
 }

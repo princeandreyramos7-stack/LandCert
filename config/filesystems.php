@@ -47,6 +47,15 @@ return [
             'report' => false,
         ],
 
+        // Dedicated disk for database/file backups, kept outside storage/app
+        // so backup archives are not recursively included in future backups.
+        'backups' => [
+            'driver' => 'local',
+            'root' => storage_path('backups'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

@@ -156,9 +156,10 @@
                 <div class="info-value">₱{{ number_format($paymentAmount, 2) }}</div>
             </div>
             <p style="margin-top: 15px; font-size: 14px;">
-                <strong>Payment Options:</strong><br>
-                • Cash payment at CPDO Office during your appointment<br>
-                • Bank deposit (contact office for account details)
+                <strong>Next Step - Where to Pay:</strong><br>
+                Please proceed to the <strong>Municipal/City Treasury Office</strong> to pay the amount above
+                on or before your scheduled date. After payment, bring your <strong>Official Receipt (OR)</strong>
+                together with your requirements to the CPDO office to continue processing your application.
             </p>
         </div>
         
@@ -175,8 +176,8 @@
         </div>
         
         @if($adminNotes)
-        <div class="info-box">
-            <h3>📝 Additional Notes from Admin</h3>
+        <div class="info-box" style="border-left-color: #f59e0b; background: #fffbeb;">
+            <h3 style="color: #b45309;">📝 Note from CPDO</h3>
             <p>{{ $adminNotes }}</p>
         </div>
         @endif
@@ -184,9 +185,9 @@
         <div class="warning-box">
             <strong>⚠️ Important Reminders:</strong>
             <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Pay at the <strong>Treasury Office</strong> on or before your scheduled date</li>
+                <li>Bring your <strong>Official Receipt (OR)</strong> and all required documents (original and photocopy) to CPDO</li>
                 <li>Please arrive <strong>15 minutes before</strong> your scheduled appointment</li>
-                <li>Bring <strong>all required documents</strong> in original and photocopy</li>
-                <li>Payment must be made <strong>before</strong> certificate issuance</li>
                 <li>Bring a <strong>valid government-issued ID</strong> for verification</li>
                 <li>If you cannot attend, please inform us at least 24 hours in advance</li>
             </ul>

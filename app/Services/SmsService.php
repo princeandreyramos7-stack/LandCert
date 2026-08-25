@@ -154,6 +154,14 @@ class SmsService
         ]);
     }
 
+    public function sendRequirementsSubmitted(string $phone, string $name, int $requestId): bool
+    {
+        return $this->sendTemplate('requirements_submitted', $phone, [
+            '{name}'       => $name,
+            '{request_id}' => $requestId,
+        ]);
+    }
+
     public function sendApplicationApprovedWithNextSteps(string $phone, string $name, int $requestId, float $amount, string $appointmentDate = '', string $appointmentTime = ''): bool
     {
         return $this->sendTemplate('application_approved_next_steps', $phone, [

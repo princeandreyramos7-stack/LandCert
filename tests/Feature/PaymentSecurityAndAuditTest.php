@@ -62,7 +62,7 @@ class PaymentSecurityAndAuditTest extends TestCase
             'status' => 'approved'
         ]);
 
-        Storage::fake('public');
+        Storage::fake('local');
     }
 
     // ========================================
@@ -441,7 +441,7 @@ class PaymentSecurityAndAuditTest extends TestCase
 
         $this->assertNotNull($payment->receipt_file_path);
         $this->assertStringStartsWith('receipts/', $payment->receipt_file_path);
-        Storage::disk('public')->assertExists($payment->receipt_file_path);
+        Storage::disk('local')->assertExists($payment->receipt_file_path);
     }
 
     /** @test */

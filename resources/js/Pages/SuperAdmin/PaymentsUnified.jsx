@@ -5,11 +5,13 @@ import { PaymentHistoryTable } from "@/Components/Admin/Payments/PaymentHistoryT
 import { RecordPaymentModal } from "@/Components/Admin/Payments/RecordPaymentModal";
 import { PaymentDetailsCard } from "@/Components/Admin/Payments/PaymentDetailsCard";
 import { AddReceiptModal } from "@/Components/Admin/Payments/AddReceiptModal";
+import { AddPaymentPickerModal } from "@/Components/Admin/Payments/AddPaymentPickerModal";
 import { Card, CardContent } from "@/Components/ui/card";
+import { Button } from "@/Components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
 import { 
     DollarSign, Clock, AlertCircle, CreditCard, 
-    CheckCircle2, XCircle 
+    CheckCircle2, XCircle, Plus 
 } from "lucide-react";
 
 export default function PaymentsUnified({ 
@@ -20,32 +22,50 @@ export default function PaymentsUnified({
 }) {
     const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
     const [isAddReceiptModalOpen, setIsAddReceiptModalOpen] = useState(false);
+    const [isAddPaymentPickerOpen, setIsAddPaymentPickerOpen] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
 
     // Handle both array and paginated object formats
     const allPaymentsData = Array.isArray(allPayments) ? allPayments : (allPayments.data || []);
     const verifiedPaymentsData = Array.isArray(verifiedPayments) ? verifiedPayments : (verifiedPayments.data || []);
+    const pendingPaymentsData = Array.isArray(pendingPayments) ? pendingPayments : [];
 
-    // Calculate comprehensive stats from allPayments
-    const pendingCount = allPaymentsData.filter(p => p.payment_status === 'pending').length;
+    // Calculate stats based on new data structure
+    // pendingPayments now contains ALL approved requests (with or without payment)
+    // Filter to get only those without verified payment
+    const actualPendingPayments = pendingPaymentsData.filter(p => p.payment_status === 'pending' || !p.has_payment);
+    const approvedWithPayment = pendingPaymentsData.filter(p => p.payment_status === 'verified' || p.has_payment);
+    
+    // Count from actual payment records
     const verifiedCount = allPaymentsData.filter(p => p.payment_status === 'verified').length;
     const rejectedCount = allPaymentsData.filter(p => p.payment_status === 'rejected').length;
     
-    // Add pending payments (approved but not yet paid) to the count
-    const totalPendingCount = pendingCount + pendingPayments.length;
+    // Pending count = approved requests without verified payment
+    const pendingCount = actualPendingPayments.length;
 
     const totalVerified = allPaymentsData
         .filter(p => p.payment_status === 'verified')
         .reduce((sum, payment) => sum + (parseFloat(payment.amount) || 0), 0);
 
-    const totalExpected = pendingPayments.reduce(
+    const totalExpected = actualPendingPayments.reduce(
         (sum, payment) => sum + (parseFloat(payment.expected_amount) || 0), 0
     );
 
     const handleRecordPayment = (payment) => {
         setSelectedPayment(payment);
         setIsRecordModalOpen(true);
+    };
+
+    // "Add Payment" button - let admin pick which approved, unpaid
+    // application to manually record a payment (with receipt image) for.
+    const handleOpenAddPayment = () => {
+        setIsAddPaymentPickerOpen(true);
+    };
+
+    const handlePickRequestForPayment = (request) => {
+        setIsAddPaymentPickerOpen(false);
+        handleRecordPayment(request);
     };
 
     const handleViewDetails = (payment) => {
@@ -77,16 +97,25 @@ export default function PaymentsUnified({
             >
                 {/* Page Header */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-5">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/20">
-                            <CreditCard className="h-6 w-6 text-[#d4a017]"/>
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/20">
+                                <CreditCard className="h-6 w-6 text-[#d4a017]"/>
+                            </div>
+                            <div>
+                                <h1 className="text-lg font-black text-[#0d1f5c]">Payments Management</h1>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                    View and manage all payment records
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-lg font-black text-[#0d1f5c]">Payments Management</h1>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                                View and manage all payment records
-                            </p>
-                        </div>
+                        <Button
+                            onClick={handleOpenAddPayment}
+                            className="bg-[#0d1f5c] hover:bg-[#0d1f5c]/90 text-white gap-2"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Add Payment
+                        </Button>
                     </div>
                 </div>
 
@@ -119,7 +148,7 @@ export default function PaymentsUnified({
                                         Pending
                                     </p>
                                     <p className="text-2xl font-black text-amber-900">
-                                        {totalPendingCount}
+                                        {pendingCount}
                                     </p>
                                     <p className="text-xs text-amber-600 mt-0.5">Awaiting payment</p>
                                 </div>
@@ -174,14 +203,23 @@ export default function PaymentsUnified({
                     payments={allPayments}
                     onViewDetails={handleViewDetails}
                     onAddReceipt={handleAddReceipt}
+                    routePrefix="super-admin"
                     showStatusFilter={true}
+                />
+
+                {/* Add Payment - pick which approved application to record a payment for */}
+                <AddPaymentPickerModal
+                    isOpen={isAddPaymentPickerOpen}
+                    onClose={() => setIsAddPaymentPickerOpen(false)}
+                    requests={pendingPaymentsData}
+                    onSelect={handlePickRequestForPayment}
                 />
 
                 {/* Record Payment Modal */}
                 <RecordPaymentModal
                     isOpen={isRecordModalOpen}
                     onClose={handleModalClose}
-                    payment={selectedPayment}
+                    requestData={selectedPayment}
                 />
 
                 {/* Add Receipt Modal */}

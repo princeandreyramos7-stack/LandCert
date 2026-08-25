@@ -317,4 +317,26 @@ class RequestController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Stream/download the authorization letter for a request.
+     * Only the owning applicant or admin/super_admin may access the file.
+     */
+    public function authorizationLetter($id)
+    {
+        $request = RequestModel::with('applicant.primaryRepresentative')->findOrFail($id);
+
+        $currentUser = auth()->user();
+        if ($currentUser->user_type === 'applicant' && $request->user_id !== $currentUser->id) {
+            abort(403, 'You are not authorized to view this file.');
+        }
+
+        $path = $request->applicant?->primaryRepresentative?->authorization_letter_path;
+
+        if (!$path || !\Storage::disk('local')->exists($path)) {
+            abort(404, 'Authorization letter not found.');
+        }
+
+        return \Storage::disk('local')->response($path);
+    }
 }

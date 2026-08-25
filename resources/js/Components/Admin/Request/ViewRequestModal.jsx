@@ -85,7 +85,7 @@ export function ViewRequestModal({ isOpen, onClose, request }) {
                                             Authorization Letter
                                         </p>
                                         <a
-                                            href={`/storage/${request.authorization_letter_path}`}
+                                            href={`/requests/${request.application_id || request.id}/authorization-letter`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors"

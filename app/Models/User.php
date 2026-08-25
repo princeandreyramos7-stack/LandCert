@@ -14,6 +14,26 @@ class User extends Authenticatable
     use HasFactory, Notifiable, HasRoles;
 
     /**
+     * Boot the model.
+     *
+     * The application uses `user_type` as the single source of truth for
+     * authorization. Spatie's role/permission tables are kept in sync
+     * automatically here so the two systems can never drift apart.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (User $user) {
+            if ($user->user_type) {
+                \Spatie\Permission\Models\Role::firstOrCreate([
+                    'name' => $user->user_type,
+                    'guard_name' => 'web',
+                ]);
+                $user->syncRoles([$user->user_type]);
+            }
+        });
+    }
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>

@@ -9,6 +9,49 @@ import {
     SelectValue,
 } from "@/Components/ui/select";
 
+/**
+ * Display-only formatting for the project cost field.
+ * Adds thousand separators while keeping any decimal point the user is typing.
+ * The raw (unformatted) value is what stays in state and gets submitted.
+ */
+const formatCostForDisplay = (rawValue) => {
+    if (rawValue === null || rawValue === undefined || rawValue === "") return "";
+
+    const raw = String(rawValue);
+    const [integerPart, ...decimalParts] = raw.split(".");
+    const hasDecimalPoint = raw.includes(".");
+
+    // Group the whole-number part: 1000000 -> 1,000,000
+    const groupedInteger =
+        integerPart === "" ? "" : Number(integerPart).toLocaleString("en-US");
+
+    return hasDecimalPoint
+        ? `${groupedInteger}.${decimalParts.join("")}`
+        : groupedInteger;
+};
+
+/**
+ * Strips the display formatting back down to a plain number string,
+ * allowing a single decimal point and at most 2 decimal places.
+ */
+const parseCostInput = (displayValue) => {
+    // Drop commas and anything that isn't a digit or a dot
+    let cleaned = String(displayValue).replace(/[^\d.]/g, "");
+
+    const firstDot = cleaned.indexOf(".");
+    if (firstDot !== -1) {
+        // Keep only the first dot, then cap the decimals at 2 digits
+        const integerPart = cleaned.slice(0, firstDot);
+        const decimalPart = cleaned
+            .slice(firstDot + 1)
+            .replace(/\./g, "")
+            .slice(0, 2);
+        cleaned = `${integerPart}.${decimalPart}`;
+    }
+
+    return cleaned;
+};
+
 export function Step2ProjectDetails({ data, errors, onDataChange }) {
     return (
         <div className="grid gap-4 md:grid-cols-2">
@@ -360,14 +403,34 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
                     Project Cost/Capitalization (in Pesos){" "}
                     <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                    id="project_cost"
-                    type="number"
-                    step="0.01"
-                    value={data.project_cost}
-                    onChange={(e) => onDataChange("project_cost", e.target.value)}
-                    placeholder="e.g., 5000000.00"
-                />
+                <div className="relative">
+                    {/* Visual-only peso indicator - not part of the submitted value */}
+                    <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 select-none text-base font-semibold text-gray-500"
+                    >
+                        ₱
+                    </span>
+                    <Input
+                        id="project_cost"
+                        type="text"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        // Commas are display-only; state keeps the plain number
+                        value={formatCostForDisplay(data.project_cost)}
+                        onChange={(e) =>
+                            onDataChange("project_cost", parseCostInput(e.target.value))
+                        }
+                        placeholder="e.g., 5,000,000.00"
+                        className="pl-8 pr-16"
+                    />
+                    <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-500"
+                    >
+                        PHP
+                    </span>
+                </div>
                 {errors.project_cost && (
                     <p className="text-sm text-red-500">{errors.project_cost}</p>
                 )}

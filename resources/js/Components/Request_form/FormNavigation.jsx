@@ -16,11 +16,13 @@ export function FormNavigation({
                 type="button"
                 variant="outline"
                 onClick={onPrevious}
-                disabled={currentStep === 1 || processing}
+                disabled={processing}
                 className="gap-1 sm:gap-2 h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm"
             >
                 <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Previous</span>
+                <span className="hidden sm:inline">
+                    {currentStep === 1 ? "Back to Overview" : "Previous"}
+                </span>
                 <span className="inline sm:hidden">Back</span>
             </Button>
 

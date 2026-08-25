@@ -32,7 +32,7 @@ function Step({ n, label }) {
 
 /* ── Review card ─────────────────────────────────────────────────────────── */
 const reviews = [
-    { text: "Very convenient! I submitted my locational clearance request from home and received my certificate within days. No more long queues.", author: "M. Santos" },
+    { text: "Very convenient! I submitted my zoning compliance/clearance request from home and received my certificate within days. No more long queues.", author: "M. Santos" },
     { text: "The online tracking feature is great. I always knew the status of my application. Highly recommend to all property owners.", author: "R. Dela Cruz" },
     { text: "The CPDO portal made the process so much easier. The staff also respond quickly through the system. Excellent service!", author: "A. Reyes" },
     { text: "Smooth and fast. I got my Special Use Permit without hassle. This is the future of government services.", author: "J. Garcia" },
@@ -132,13 +132,13 @@ export default function Welcome({ auth }) {
                             Apply for Land Use<br/>
                             <span className="text-transparent bg-clip-text"
                                 style={{ backgroundImage: "linear-gradient(90deg,#d4a017,#f5c842)" }}>
-                                Permits &amp; Clearances
+                                Zoning Clearances
                             </span>
                             <br/>Online
                         </h1>
 
                         <p className="text-blue-100/85 text-base lg:text-lg leading-relaxed max-w-lg">
-                            Enjoy a fast and convenient way of securing your Locational Clearance, Special Use Permit,
+                            Enjoy a fast and convenient way of securing your Zoning Compliance/Clearance, Special Use Permit,
                             and other land use certifications — with just a few clicks, right from the comfort of your home.
                         </p>
 
@@ -179,8 +179,8 @@ export default function Welcome({ auth }) {
                                 </div>
                                 <div className="text-center mb-4">
                                     <p className="text-[11px] text-gray-500 uppercase tracking-[0.2em] font-semibold">Official Document</p>
-                                    <h3 className="text-[#0d1f5c] font-black text-lg mt-1">LOCATIONAL CLEARANCE</h3>
-                                    <p className="text-[#d4a017] font-bold text-sm">No. LC-2026-00001</p>
+                                    <h3 className="text-[#0d1f5c] font-black text-lg mt-1">ZONING CLEARANCE</h3>
+                                    <p className="text-[#d4a017] font-bold text-sm">No. CPDO-2026-000001</p>
                                 </div>
                                 <div className="space-y-2 text-xs text-gray-600 border-t border-gray-100 pt-4">
                                     <div className="flex gap-2"><span className="font-bold text-gray-800 w-28 shrink-0">Applicant:</span><span>Juan dela Cruz</span></div>

@@ -72,7 +72,7 @@ const [selectedPayment, setSelectedPayment] = useState(null);
 
 ### Styling
 - Uses Tailwind CSS classes
-- Follows existing design patterns from Admin/Applications.jsx
+- Follows existing admin page design patterns
 - Gradient background: `from-blue-50 to-slate-50`
 - Responsive grid layout for statistics cards
 

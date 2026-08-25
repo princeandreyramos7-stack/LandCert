@@ -82,8 +82,8 @@ class CertificatePDFService
     public function download(Certificate $certificate)
     {
         // Check if a softcopy (uploaded PDF) exists
-        if ($certificate->certificate_file_path && Storage::disk('public')->exists($certificate->certificate_file_path)) {
-            return Storage::disk('public')->download($certificate->certificate_file_path, $this->generateFilename($certificate));
+        if ($certificate->certificate_file_path && Storage::disk('local')->exists($certificate->certificate_file_path)) {
+            return Storage::disk('local')->download($certificate->certificate_file_path, $this->generateFilename($certificate));
         }
         
         // Otherwise, generate PDF on the fly (fallback for backward compatibility)
@@ -98,8 +98,8 @@ class CertificatePDFService
     public function stream(Certificate $certificate)
     {
         // Check if a softcopy (uploaded PDF) exists
-        if ($certificate->certificate_file_path && Storage::disk('public')->exists($certificate->certificate_file_path)) {
-            return response()->file(Storage::disk('public')->path($certificate->certificate_file_path));
+        if ($certificate->certificate_file_path && Storage::disk('local')->exists($certificate->certificate_file_path)) {
+            return response()->file(Storage::disk('local')->path($certificate->certificate_file_path));
         }
         
         // Otherwise, generate PDF on the fly (fallback for backward compatibility)
@@ -118,7 +118,7 @@ class CertificatePDFService
 
         $filename = $this->generateFilename($certificate);
         $path     = "certificates/{$filename}";
-        Storage::put($path, $pdf->output());
+        Storage::disk('local')->put($path, $pdf->output());
         $certificate->update(['certificate_file_path' => $path]);
 
         Log::info("Certificate PDF generated", [

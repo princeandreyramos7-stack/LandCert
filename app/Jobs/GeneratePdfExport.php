@@ -71,10 +71,6 @@ class GeneratePdfExport implements ShouldQueue
                 return Pdf::loadView('exports.payments-pdf', ['payments' => $this->data])
                     ->setPaper('a4', 'landscape');
                     
-            case 'applications':
-                return Pdf::loadView('exports.applications-pdf', ['applications' => $this->data])
-                    ->setPaper('a4', 'landscape');
-                    
             case 'users':
                 return Pdf::loadView('exports.users-pdf', ['users' => $this->data])
                     ->setPaper('a4', 'landscape');

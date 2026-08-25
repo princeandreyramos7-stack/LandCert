@@ -30,12 +30,71 @@ import {
     Receipt
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/Components/ui/dialog';
+import { useToast } from '@/Components/ui/use-toast';
+import { Toaster } from '@/Components/ui/toaster';
+
+/**
+ * Display-only formatting for peso amount fields.
+ * Adds thousand separators while keeping any decimal point the user is typing.
+ * The raw (unformatted) value is what stays in state and gets submitted.
+ */
+const formatAmountForDisplay = (rawValue) => {
+    if (rawValue === null || rawValue === undefined || rawValue === "") return "";
+
+    const raw = String(rawValue);
+    const [integerPart, ...decimalParts] = raw.split(".");
+    const hasDecimalPoint = raw.includes(".");
+
+    const groupedInteger =
+        integerPart === "" ? "" : Number(integerPart).toLocaleString("en-US");
+
+    return hasDecimalPoint
+        ? `${groupedInteger}.${decimalParts.join("")}`
+        : groupedInteger;
+};
+
+/**
+ * Strips the display formatting back down to a plain number string,
+ * allowing a single decimal point and at most 2 decimal places.
+ */
+const parseAmountInput = (displayValue) => {
+    let cleaned = String(displayValue).replace(/[^\d.]/g, "");
+
+    const firstDot = cleaned.indexOf(".");
+    if (firstDot !== -1) {
+        const integerPart = cleaned.slice(0, firstDot);
+        const decimalPart = cleaned
+            .slice(firstDot + 1)
+            .replace(/\./g, "")
+            .slice(0, 2);
+        cleaned = `${integerPart}.${decimalPart}`;
+    }
+
+    return cleaned;
+};
 
 export default function UploadReceipt({ application, existingPayment }) {
     const [receiptFile, setReceiptFile] = useState(null);
     const [receiptPreview, setReceiptPreview] = useState(null);
     const [uploading, setUploading] = useState(false);
-    const [paymentAmount, setPaymentAmount] = useState(application.report_amount || '');
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const { toast } = useToast();
+
+    // If the admin already set a payment amount during review, that is the
+    // amount the applicant must pay - lock the field so the applicant can't
+    // change it and all they need to do is upload the receipt.
+    const hasAdminSetAmount = application.report_amount !== null && application.report_amount !== undefined && application.report_amount !== '';
+    const [paymentAmount, setPaymentAmount] = useState(
+        hasAdminSetAmount ? String(application.report_amount) : ''
+    );
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
     // Handle file selection
@@ -46,13 +105,21 @@ export default function UploadReceipt({ application, existingPayment }) {
         // Validate file type
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
         if (!allowedTypes.includes(file.type)) {
-            alert('Invalid file type. Please upload only images (JPG, PNG) or PDF files');
+            toast({
+                variant: 'destructive',
+                title: 'Unsupported file type',
+                description: 'Please upload only images (JPG, PNG) or PDF files.',
+            });
             return;
         }
 
         // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert('File is too large. File size must be less than 5MB');
+            toast({
+                variant: 'destructive',
+                title: 'File too large',
+                description: 'The receipt file must be smaller than 5MB.',
+            });
             return;
         }
 
@@ -72,18 +139,32 @@ export default function UploadReceipt({ application, existingPayment }) {
         setReceiptPreview(null);
     };
 
-    // Submit upload
-    const handleSubmit = async () => {
+    // Validate, then ask for confirmation before actually uploading
+    const handleUploadClick = () => {
         if (!receiptFile) {
-            alert('Please select a receipt file to upload');
+            toast({
+                variant: 'destructive',
+                title: 'No receipt selected',
+                description: 'Please choose a receipt file to upload.',
+            });
             return;
         }
 
         if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
-            alert('Please enter a valid payment amount');
+            toast({
+                variant: 'destructive',
+                title: 'Invalid payment amount',
+                description: 'Please enter a valid payment amount.',
+            });
             return;
         }
 
+        setConfirmOpen(true);
+    };
+
+    // Submit upload (runs after the user confirms)
+    const handleSubmit = async () => {
+        setConfirmOpen(false);
         setUploading(true);
 
         const formData = new FormData();
@@ -113,14 +194,21 @@ export default function UploadReceipt({ application, existingPayment }) {
             
             if (response.ok && data.success) {
                 // Success
-                alert(data.message || 'Receipt uploaded successfully! Payment is pending verification.');
+                toast({
+                    title: 'Receipt uploaded successfully!',
+                    description: 'Payment is pending verification. You will be notified once verified.',
+                });
                 router.visit(route('my-applications'));
             } else {
                 throw new Error(data.message || 'Upload failed');
             }
         } catch (error) {
             console.error('Upload failed:', error);
-            alert(error.message || 'Failed to upload receipt. Please try again.');
+            toast({
+                variant: 'destructive',
+                title: 'Upload failed',
+                description: error.message || 'Failed to upload receipt. Please try again.',
+            });
         } finally {
             setUploading(false);
         }
@@ -277,43 +365,88 @@ export default function UploadReceipt({ application, existingPayment }) {
                                 <CardTitle>Upload Payment Receipt</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                {/* Payment Amount */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="amount" className="flex items-center gap-2">
-                                        <DollarSign className="h-4 w-4 text-blue-600" />
-                                        Payment Amount <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                        id="amount"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={paymentAmount}
-                                        onChange={(e) => setPaymentAmount(e.target.value)}
-                                        placeholder="Enter amount paid"
-                                        className="max-w-xs"
-                                    />
-                                    {application.report_amount && (
-                                        <p className="text-sm text-gray-600">
-                                            Recommended amount: {formatCurrency(application.report_amount)}
-                                        </p>
-                                    )}
-                                </div>
+                                {/* Payment Amount & Date - side by side on larger screens, full width on mobile */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                    {/* Payment Amount */}
+                                    <div className="space-y-2 min-w-0">
+                                        <Label htmlFor="amount" className="flex items-center gap-2">
+                                            <DollarSign className="h-4 w-4 text-blue-600 shrink-0" />
+                                            Payment Amount <span className="text-red-500">*</span>
+                                        </Label>
 
-                                {/* Payment Date */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="payment_date" className="flex items-center gap-2">
-                                        <FileText className="h-4 w-4 text-blue-600" />
-                                        Payment Date <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                        id="payment_date"
-                                        type="date"
-                                        value={paymentDate}
-                                        onChange={(e) => setPaymentDate(e.target.value)}
-                                        max={new Date().toISOString().split('T')[0]}
-                                        className="max-w-xs"
-                                    />
+                                        {hasAdminSetAmount ? (
+                                            // Amount already set by admin during review - locked, read-only.
+                                            // Applicant just needs to upload the receipt.
+                                            <>
+                                                <div className="relative w-full">
+                                                    <span
+                                                        aria-hidden="true"
+                                                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 select-none text-base font-semibold text-gray-500"
+                                                    >
+                                                        ₱
+                                                    </span>
+                                                    <Input
+                                                        id="amount"
+                                                        type="text"
+                                                        readOnly
+                                                        value={formatAmountForDisplay(paymentAmount)}
+                                                        className="w-full pl-8 pr-16 bg-gray-50 font-semibold text-gray-900 cursor-not-allowed"
+                                                    />
+                                                    <span
+                                                        aria-hidden="true"
+                                                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none rounded bg-gray-200 px-1.5 py-0.5 text-xs font-medium text-gray-600"
+                                                    >
+                                                        PHP
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                                                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                                                    This amount was set by the admin. Just upload your receipt below.
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <div className="relative w-full">
+                                                <span
+                                                    aria-hidden="true"
+                                                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 select-none text-base font-semibold text-gray-500"
+                                                >
+                                                    ₱
+                                                </span>
+                                                <Input
+                                                    id="amount"
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    autoComplete="off"
+                                                    value={formatAmountForDisplay(paymentAmount)}
+                                                    onChange={(e) => setPaymentAmount(parseAmountInput(e.target.value))}
+                                                    placeholder="e.g., 5,000.00"
+                                                    className="w-full pl-8 pr-16"
+                                                />
+                                                <span
+                                                    aria-hidden="true"
+                                                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-500"
+                                                >
+                                                    PHP
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Payment Date */}
+                                    <div className="space-y-2 min-w-0">
+                                        <Label htmlFor="payment_date" className="flex items-center gap-2">
+                                            <FileText className="h-4 w-4 text-blue-600 shrink-0" />
+                                            Payment Date <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="payment_date"
+                                            type="date"
+                                            value={paymentDate}
+                                            onChange={(e) => setPaymentDate(e.target.value)}
+                                            max={new Date().toISOString().split('T')[0]}
+                                            className="w-full"
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* File Upload */}
@@ -398,7 +531,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                     </Button>
                                     <Button
                                         type="button"
-                                        onClick={handleSubmit}
+                                        onClick={handleUploadClick}
                                         disabled={uploading || !receiptFile || !paymentAmount}
                                         className="h-9 sm:h-10 px-4 sm:px-6 bg-[#0d1f5c] hover:bg-[#1a3a8f] text-white gap-2 rounded-lg font-semibold min-w-[120px] sm:min-w-32 text-sm"
                                     >
@@ -446,7 +579,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                         asChild
                                     >
                                         <a
-                                            href={`/storage/${existingPayment.receipt_file_path}`}
+                                            href={`/payments/${existingPayment.id}/receipt`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex items-center justify-center"
@@ -460,6 +593,124 @@ export default function UploadReceipt({ application, existingPayment }) {
                         </Card>
                     )}
                 </div>
+
+                {/* Upload Confirmation Dialog */}
+                <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                    <DialogContent className="w-[calc(100vw-1rem)] max-w-lg sm:w-full max-h-[92vh] overflow-y-auto p-0 gap-0">
+                        {/* Friendly header banner */}
+                        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#0d1f5c] to-[#1a3a8f] px-4 py-4 text-white sm:px-6 sm:py-5">
+                            <DialogHeader className="space-y-1.5 text-left">
+                                <DialogTitle className="flex items-center gap-2.5 pr-8 text-white text-base sm:gap-3 sm:text-lg">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 sm:h-10 sm:w-10">
+                                        <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
+                                    </div>
+                                    Confirm Payment Receipt
+                                </DialogTitle>
+                                <DialogDescription className="text-blue-100 text-xs sm:text-sm sm:pl-[52px]">
+                                    Please review the details below before submitting.
+                                </DialogDescription>
+                            </DialogHeader>
+                        </div>
+
+                        <div className="px-4 py-4 space-y-3.5 sm:px-6 sm:space-y-4">
+                            {/* Application reference */}
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-gray-50 px-3 py-2">
+                                <FileText className="h-4 w-4 shrink-0 text-gray-400" />
+                                <p className="min-w-0 break-words text-xs text-gray-600">
+                                    Application{' '}
+                                    <span className="font-semibold text-gray-900">
+                                        {application.control_number}
+                                    </span>
+                                </p>
+                            </div>
+
+                            {/* Amount & date summary */}
+                            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                                <div className="rounded-xl border border-blue-100 bg-blue-50 p-2.5 text-center sm:p-3">
+                                    <p className="text-lg font-bold text-[#0d1f5c] sm:text-xl">
+                                        ₱{formatAmountForDisplay(paymentAmount) || '0.00'}
+                                    </p>
+                                    <p className="text-[10px] font-medium leading-tight text-blue-700 sm:text-[11px]">
+                                        Amount to Pay
+                                    </p>
+                                </div>
+                                <div className="rounded-xl border border-blue-100 bg-blue-50 p-2.5 text-center sm:p-3">
+                                    <p className="text-lg font-bold text-[#0d1f5c] sm:text-xl">
+                                        {paymentDate
+                                            ? new Date(paymentDate + 'T00:00:00').toLocaleDateString('en-US', {
+                                                  month: 'short',
+                                                  day: 'numeric',
+                                                  year: 'numeric',
+                                              })
+                                            : 'N/A'}
+                                    </p>
+                                    <p className="text-[10px] font-medium leading-tight text-blue-700 sm:text-[11px]">
+                                        Payment Date
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Receipt file preview */}
+                            <div className="rounded-xl border border-gray-200 bg-white p-2.5 sm:p-3">
+                                <div className="flex items-center gap-2.5">
+                                    <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
+                                    <p className="min-w-0 flex-1 truncate text-xs font-medium text-gray-800 sm:text-sm">
+                                        {receiptFile?.name}
+                                    </p>
+                                    {receiptFile && (
+                                        <span className="shrink-0 text-[10px] font-medium text-gray-400">
+                                            {(receiptFile.size / 1024).toFixed(0)} KB
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Friendly reminder */}
+                            <div className="flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-2.5 sm:p-3">
+                                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                                <p className="min-w-0 text-[11px] leading-relaxed text-amber-900 sm:text-xs">
+                                    Make sure the receipt number, date, and amount are clearly visible. This cannot be
+                                    edited once submitted for verification.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-gray-50 px-4 py-3 sm:px-6 sm:py-4">
+                            <DialogFooter className="gap-2 sm:gap-3">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setConfirmOpen(false)}
+                                    disabled={uploading}
+                                    className="h-11 w-full rounded-lg border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-100 sm:h-10 sm:w-auto sm:px-5"
+                                >
+                                    Let me check again
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={handleSubmit}
+                                    disabled={uploading}
+                                    className="h-11 w-full gap-2 rounded-lg bg-[#0d1f5c] px-4 text-sm font-semibold text-white hover:bg-[#1a3a8f] sm:h-10 sm:w-auto sm:px-5"
+                                >
+                                    {uploading ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Uploading...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle2 className="h-4 w-4" />
+                                            Yes, submit receipt
+                                        </>
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                <Toaster />
             </SidebarInset>
         </SidebarProvider>
     );
