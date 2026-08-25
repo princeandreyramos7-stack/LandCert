@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
-import { BarChart3, Shield, Users, FileText, Clock } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/Components/ui/tabs";
+import { BarChart3, Shield, Users, FileText, Clock, Activity } from "lucide-react";
 import { AnalyticsDashboard } from "@/Components/Admin/Analytics";
+import { AdminWorkflowTab } from "./AdminWorkflowTab";
 
-export function SuperAdminDashboard({ analytics = null, systemStats = {} }) {
+export function SuperAdminDashboard({ analytics = null, systemStats = {}, adminActivity = {} }) {
     const [showAnalytics, setShowAnalytics] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -44,7 +46,7 @@ export function SuperAdminDashboard({ analytics = null, systemStats = {} }) {
                                 <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">CPDO Super Admin</p>
                             </div>
                             <h2 className="text-2xl font-black text-white">Dashboard Overview</h2>
-                            <p className="text-blue-200/70 text-sm mt-0.5">Advanced analytics and system monitoring</p>
+                            <p className="text-blue-200/70 text-sm mt-0.5">Advanced analytics, system monitoring & admin workflow</p>
                         </div>
                     </div>
                     <Button variant="outline" onClick={handleToggle} disabled={isTransitioning}
@@ -73,10 +75,29 @@ export function SuperAdminDashboard({ analytics = null, systemStats = {} }) {
                 ))}
             </div>
 
-            {/* Analytics section */}
-            {showAnalytics && analytics && (
+            {/* Analytics and Admin Workflow Tabs */}
+            {showAnalytics && (
                 <div className="animate-in fade-in slide-in-from-bottom duration-500">
-                    <AnalyticsDashboard analytics={analytics}/>
+                    <Tabs defaultValue="analytics" className="space-y-4">
+                        <TabsList className="grid w-full grid-cols-2 max-w-md">
+                            <TabsTrigger value="analytics" className="gap-2">
+                                <BarChart3 className="h-4 w-4" />
+                                System Analytics
+                            </TabsTrigger>
+                            <TabsTrigger value="workflow" className="gap-2">
+                                <Activity className="h-4 w-4" />
+                                Admin Workflow
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="analytics" className="space-y-4">
+                            {analytics && <AnalyticsDashboard analytics={analytics}/>}
+                        </TabsContent>
+
+                        <TabsContent value="workflow" className="space-y-4">
+                            <AdminWorkflowTab adminActivity={adminActivity} />
+                        </TabsContent>
+                    </Tabs>
                 </div>
             )}
 

@@ -20,7 +20,7 @@ import {
     DollarSign,
     Clock
 } from "lucide-react";
-import { formatCurrency, formatDate } from "./utils";
+import { formatCurrency, formatDate } from "./utils.jsx";
 
 /**
  * PaymentsPendingTable Component

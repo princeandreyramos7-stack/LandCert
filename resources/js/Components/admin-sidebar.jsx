@@ -13,6 +13,7 @@ import {
     ChevronsUpDown,
     Shield,
     MessageSquare,
+    User,
 } from "lucide-react";
 import {
     Sidebar,
@@ -191,6 +192,11 @@ export function AdminSidebar({ ...props }) {
                                     <p className="text-xs text-gray-500 truncate">{user.email}</p>
                                     <p className="text-xs text-[#d4a017] font-semibold mt-0.5">Administrator</p>
                                 </div>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/admin/profile" className="flex items-center gap-2 cursor-pointer">
+                                        <User className="w-4 h-4"/>My Profile
+                                    </Link>
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator/>
                                 <DropdownMenuItem
                                     className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"

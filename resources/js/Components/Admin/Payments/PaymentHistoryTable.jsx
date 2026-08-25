@@ -23,7 +23,7 @@ import {
     ThumbsUp,
     ThumbsDown,
 } from "lucide-react";
-import { formatDate, formatCurrency } from "./utils";
+import { formatDate, formatCurrency } from "./utils.jsx";
 import { router } from "@inertiajs/react";
 import { VerifyPaymentDialog } from "./VerifyPaymentDialog";
 

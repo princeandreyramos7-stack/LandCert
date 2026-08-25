@@ -1,99 +1,89 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
-import {
-    TrendingUp,
-    DollarSign,
-    Award,
-    Activity,
-    ArrowUp,
-    Clock,
-} from 'lucide-react';
-import { formatCurrency, calculateCollectionRate } from './utils';
+import { FileText, CheckCircle, TrendingUp, Award, Clock, Users, Activity } from 'lucide-react';
 
-export function StatsCards({ payment_stats = {}, certificate_stats = {}, avg_processing_time = 0 }) {
-    const totalRevenue      = payment_stats?.total_revenue ?? 0;
-    const pendingPayments   = payment_stats?.pending_payments ?? 0;
-    const totalIssued       = certificate_stats?.total_issued ?? 0;
-    const issuedThisMonth   = certificate_stats?.issued_this_month ?? 0;
-    const collected         = certificate_stats?.collected ?? 0;
-    const collectionRate    = calculateCollectionRate(certificate_stats);
+export function StatsCards({ 
+    certificate_stats = {}, 
+    completion_rate = 0, 
+    approval_rate = 0, 
+    avg_documents = 0,
+    user_activity_metrics = {},
+    processing_time_by_status = []
+}) {
+    // Calculate average processing time across all statuses
+    const avgProcessingTime = processing_time_by_status.length > 0
+        ? (processing_time_by_status.reduce((sum, item) => sum + parseFloat(item.avg_days || 0), 0) / processing_time_by_status.length).toFixed(1)
+        : 0;
+
+    const stats = [
+        {
+            title: 'Total Applications',
+            value: (certificate_stats?.total_issued || 0) + ((user_activity_metrics?.total_active_users || 0) * 2),
+            description: `${completion_rate || 0}% completion rate`,
+            icon: FileText,
+            color: 'text-blue-600',
+            bgColor: 'bg-blue-50',
+        },
+        {
+            title: 'Approval Rate',
+            value: `${approval_rate || 0}%`,
+            description: 'Of reviewed applications',
+            icon: CheckCircle,
+            color: 'text-green-600',
+            bgColor: 'bg-green-50',
+        },
+        {
+            title: 'Certificates Issued',
+            value: certificate_stats?.total_issued || 0,
+            description: `${certificate_stats?.issued_this_month || 0} this month`,
+            icon: Award,
+            color: 'text-purple-600',
+            bgColor: 'bg-purple-50',
+        },
+        {
+            title: 'Avg Processing Time',
+            value: `${avgProcessingTime} days`,
+            description: 'Submission to completion',
+            icon: Clock,
+            color: 'text-orange-600',
+            bgColor: 'bg-orange-50',
+        },
+        {
+            title: 'Active Users',
+            value: user_activity_metrics?.active_users_this_month || 0,
+            description: `${user_activity_metrics?.new_users_this_month || 0} new this month`,
+            icon: Users,
+            color: 'text-indigo-600',
+            bgColor: 'bg-indigo-50',
+        },
+        {
+            title: 'Avg Documents',
+            value: avg_documents || 0,
+            description: 'Per application',
+            icon: Activity,
+            color: 'text-teal-600',
+            bgColor: 'bg-teal-50',
+        },
+    ];
+
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <Card className="border-l-4 border-l-green-500">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                    <DollarSign className="h-5 w-5 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-green-700">
-                        {formatCurrency(totalRevenue)}
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">
-                        From verified payments
-                    </p>
-                </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-blue-500">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
-                    <Activity className="h-5 w-5 text-blue-600" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-blue-700">
-                        {pendingPayments}
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">
-                        Awaiting verification
-                    </p>
-                </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-purple-500">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Certificates Issued</CardTitle>
-                    <Award className="h-5 w-5 text-purple-600" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-purple-700">
-                        {totalIssued}
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
-                        <ArrowUp className="h-3 w-3 text-green-600" />
-                        {issuedThisMonth} this month
-                    </p>
-                </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-amber-500">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Collection Rate</CardTitle>
-                    <TrendingUp className="h-5 w-5 text-amber-600" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-amber-700">
-                        {collectionRate}%
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">
-                        {collected} collected
-                    </p>
-                </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-indigo-500">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Avg Processing</CardTitle>
-                    <Clock className="h-5 w-5 text-indigo-600" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-indigo-700">
-                        {avg_processing_time} days
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">
-                        Submission to approval
-                    </p>
-                </CardContent>
-            </Card>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {stats.map((stat, index) => (
+                <Card key={index} className="hover:shadow-md transition-shadow">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-gray-600">
+                            {stat.title}
+                        </CardTitle>
+                        <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                            <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stat.value}</div>
+                        <p className="text-xs text-gray-500 mt-1">{stat.description}</p>
+                    </CardContent>
+                </Card>
+            ))}
         </div>
     );
 }

@@ -10,6 +10,12 @@ export default defineConfig({
         }),
         react(),
     ],
+    server: {
+        host: 'localhost',
+        hmr: {
+            host: 'localhost',
+        },
+    },
     build: {
         rollupOptions: {
             output: {

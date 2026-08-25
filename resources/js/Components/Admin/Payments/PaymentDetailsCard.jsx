@@ -1,5 +1,5 @@
 import React from "react";
-import { formatDate, formatCurrency } from "./utils";
+import { formatDate, formatCurrency } from "./utils.jsx";
 import {
     FileText,
     User,

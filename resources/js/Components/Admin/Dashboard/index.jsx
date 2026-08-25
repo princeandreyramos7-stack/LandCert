@@ -4,10 +4,8 @@ import { Button } from "@/Components/ui/button";
 import { BarChart3, LayoutDashboard } from "lucide-react";
 
 import { AnalyticsDashboard } from "@/Components/Admin/Analytics";
-import { PaymentsPendingWidget } from "./PaymentsPendingWidget";
-import { RecentPaymentsWidget } from "./RecentPaymentsWidget";
 
-export function AdminDashboard({ analytics = null, pendingPaymentsCount = 0, recentPayments = [] }) {
+export function AdminDashboard({ analytics = null }) {
     const [showAnalytics, setShowAnalytics] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -41,6 +39,7 @@ export function AdminDashboard({ analytics = null, pendingPaymentsCount = 0, rec
                                 <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">CPDO Admin</p>
                             </div>
                             <h2 className="text-2xl font-black text-white">Dashboard Overview</h2>
+                            <p className="text-blue-200/70 text-sm mt-0.5">Comprehensive analytics and insights</p>
                         </div>
                     </div>
                     <Button
@@ -55,18 +54,12 @@ export function AdminDashboard({ analytics = null, pendingPaymentsCount = 0, rec
                 </div>
             </div>
 
-            {/* Analytics Section - Moved to top */}
+            {/* Analytics Section */}
             {showAnalytics && analytics && (
                 <div className="animate-in fade-in slide-in-from-bottom duration-500">
                     <AnalyticsDashboard analytics={analytics}/>
                 </div>
             )}
-
-            {/* Payments Pending Widget */}
-            <PaymentsPendingWidget pendingPaymentsCount={pendingPaymentsCount}/>
-
-            {/* Recent Payment Activity Widget */}
-            <RecentPaymentsWidget recentPayments={recentPayments}/>
 
             {/* Logo splash when analytics hidden */}
             {!showAnalytics && (

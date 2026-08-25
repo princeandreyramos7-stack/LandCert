@@ -40,7 +40,7 @@ class PaymentService
                 'request_id' => $request->id,
                 'control_number' => $request->control_number ?? 'N/A',
                 'applicant_name' => $request->applicant->applicant_name ?? 'Unknown',
-                'expected_amount' => 500.00, // TODO: Make this dynamic based on project type
+                'expected_amount' => $this->getExpectedAmount($request->project_type),
                 'approved_at' => $request->updated_at->format('Y-m-d'),
                 'days_waiting' => $daysWaiting,
                 'project_type' => $request->project->project_type ?? 'N/A',
@@ -214,5 +214,22 @@ class PaymentService
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Get expected payment amount based on project type
+     */
+    private function getExpectedAmount(?string $projectType): float
+    {
+        if (!$projectType) {
+            return 500.00; // Default amount
+        }
+
+        return match (strtoupper(trim($projectType))) {
+            'SUP', 'SPECIAL USE PERMIT' => 750.00,
+            'TUP', 'TEMPORARY USE PERMIT' => 350.00,
+            'ZONING CLEARANCE', 'CERTIFICATE OF ZONING COMPLIANCE', 'LOCATIONAL CLEARANCE' => 500.00,
+            default => 500.00, // Default for any other type
+        };
     }
 }

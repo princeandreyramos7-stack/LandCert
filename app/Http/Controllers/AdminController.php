@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Mail\ApplicationRejected;
 use App\Services\DashboardCacheService;
@@ -90,40 +92,11 @@ class AdminController extends Controller
         $stats = $this->cacheService->getStats();
         $evaluationDistribution = $this->cacheService->getEvaluationDistribution();
 
-        // Get recent payment activity (last 5 verified payments) - FR9.3
-        $recentPayments = \App\Models\Payment::with(['request.applicant', 'verifiedByUser'])
-            ->where('payment_status', 'verified')
-            ->whereNotNull('verified_at')
-            ->orderBy('verified_at', 'desc')
-            ->take(5)
-            ->get()
-            ->map(function($payment) {
-                return [
-                    'id' => $payment->id,
-                    'receipt_number' => $payment->receipt_number,
-                    'applicant_name' => $payment->request->applicant->applicant_name ?? 'Unknown',
-                    'amount' => $payment->amount,
-                    'payment_method' => $payment->payment_method,
-                    'verified_by_name' => $payment->verifiedByUser->name ?? 'Unknown',
-                    'verified_at' => $payment->verified_at,
-                ];
-            });
-
-        // Get pending payments count - FR9.1 & FR9.2
-        $pendingPaymentsCount = RequestModel::join('reports', 'requests.id', '=', 'reports.request_id')
-            ->where('reports.evaluation', 'approved')
-            ->whereDoesntHave('payments', function($query) {
-                $query->where('payment_status', 'verified');
-            })
-            ->count();
-
         return Inertia::render('Admin/Dashboard', [
             'applications' => $requests,
             'stats' => $stats,
             'analytics' => $analytics,
             'evaluationDistribution' => $evaluationDistribution,
-            'recentPayments' => $recentPayments,
-            'pendingPaymentsCount' => $pendingPaymentsCount,
         ]);
     }
     
@@ -894,7 +867,7 @@ class AdminController extends Controller
                     'request_id' => $request->id,
                     'control_number' => $request->control_number ?? '#' . $request->id,
                     'applicant_name' => $request->applicant->applicant_name ?? 'Unknown',
-                    'expected_amount' => 500.00, // TODO: Make dynamic
+                    'expected_amount' => $this->getExpectedAmount($request->project_type),
                     'approved_at' => $request->updated_at->format('Y-m-d'),
                     'days_waiting' => $daysWaiting,
                     'project_type' => $request->project->project_type ?? 'N/A',
@@ -2168,5 +2141,73 @@ class AdminController extends Controller
             'message' => 'Project type updated successfully',
             'project_type' => $validated['project_type']
         ]);
+    }
+
+    /**
+     * Show admin profile page
+     */
+    public function profile()
+    {
+        return Inertia::render('Admin/Profile', [
+            'mustVerifyEmail' => false,
+            'status' => session('status'),
+        ]);
+    }
+
+    /**
+     * Update admin profile information
+     */
+    public function updateProfile(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . Auth::id()],
+        ]);
+
+        $user = Auth::user();
+        $user->fill($validated);
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
+
+        return back()->with('status', 'profile-updated');
+    }
+
+    /**
+     * Update admin password
+     */
+    public function updatePassword(Request $request)
+    {
+        $validated = $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = Auth::user();
+        $user->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        return back()->with('status', 'password-updated');
+    }
+
+    /**
+     * Get expected payment amount based on project type
+     */
+    private function getExpectedAmount(?string $projectType): float
+    {
+        if (!$projectType) {
+            return 500.00; // Default amount
+        }
+
+        return match (strtoupper(trim($projectType))) {
+            'SUP', 'SPECIAL USE PERMIT' => 750.00,
+            'TUP', 'TEMPORARY USE PERMIT' => 350.00,
+            'ZONING CLEARANCE', 'CERTIFICATE OF ZONING COMPLIANCE', 'LOCATIONAL CLEARANCE' => 500.00,
+            default => 500.00, // Default for any other type
+        };
     }
 }

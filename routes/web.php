@@ -119,6 +119,11 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::put('/payments/{payment}', [\App\Http\Controllers\SuperAdminController::class, 'updatePayment'])->name('payments.update');
     Route::post('/payments/{payment}/verify', [\App\Http\Controllers\SuperAdminController::class, 'verifyPayment'])->name('payments.verify');
     Route::post('/payments/{payment}/reject', [\App\Http\Controllers\SuperAdminController::class, 'rejectPayment'])->name('payments.reject');
+    
+    // Profile routes
+    Route::get('/profile', [\App\Http\Controllers\SuperAdminController::class, 'profile'])->name('profile');
+    Route::patch('/profile', [\App\Http\Controllers\SuperAdminController::class, 'updateProfile'])->name('profile.update');
+    Route::put('/password', [\App\Http\Controllers\SuperAdminController::class, 'updatePassword'])->name('password.update');
 });
 
 // Admin routes
@@ -191,6 +196,11 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::get('/audit-logs', [AdminController::class, 'auditLogs'])->name('audit-logs');
     Route::get('/audit-logs/export', [AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
     Route::get('/audit-logs/{id}', [AdminController::class, 'viewAuditLog'])->name('audit-logs.view');
+    
+    // Profile routes
+    Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
+    Route::patch('/profile', [AdminController::class, 'updateProfile'])->name('profile.update');
+    Route::put('/password', [AdminController::class, 'updatePassword'])->name('password.update');
 });
 
 // Notification routes

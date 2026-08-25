@@ -2,13 +2,13 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
 import { StatsCards } from './StatsCards';
 import { OverviewTab } from './OverviewTab';
-import { PaymentsTab } from './PaymentsTab';
 import { PerformanceTab } from './PerformanceTab';
 import { UsersTab } from './UsersTab';
+import { GeographicTab } from './GeographicTab';
+import { TrendsTab } from './TrendsTab';
+import { DocumentsTab } from './DocumentsTab';
 import {
     formatMonthlyData,
-    formatRevenueData,
-    formatPaymentMethodData,
     formatStatusData,
     formatProjectTypeData,
 } from './utils';
@@ -18,35 +18,47 @@ export function AnalyticsDashboard({ analytics }) {
 
     const {
         monthly_submissions = [],
-        monthly_revenue = [],
-        payment_stats = {},
-        payment_methods = [],
-        certificate_stats = {},
+        daily_submissions = [],
+        hourly_pattern = [],
+        day_of_week_pattern = [],
         status_breakdown = [],
-        avg_processing_time = 0,
+        processing_time_by_status = [],
+        processing_time_trend = [],
+        certificate_stats = {},
         project_types = [],
+        project_natures = [],
+        barangay_distribution = [],
+        province_distribution = [],
         top_users = [],
+        user_activity_metrics = {},
+        weekly_activity = [],
+        avg_documents_per_request = 0,
+        completion_rate = 0,
+        approval_rate = 0,
     } = analytics;
 
     // Format data for charts
     const monthlyChartData = formatMonthlyData(monthly_submissions);
-    const revenueChartData = formatRevenueData(monthly_revenue);
-    const paymentMethodData = formatPaymentMethodData(payment_methods);
     const statusData = formatStatusData(status_breakdown);
     const projectTypeData = formatProjectTypeData(project_types);
 
     return (
         <div className="space-y-6">
             <StatsCards
-                payment_stats={payment_stats}
                 certificate_stats={certificate_stats}
-                avg_processing_time={avg_processing_time}
+                completion_rate={completion_rate}
+                approval_rate={approval_rate}
+                avg_documents={avg_documents_per_request}
+                user_activity_metrics={user_activity_metrics}
+                processing_time_by_status={processing_time_by_status}
             />
 
             <Tabs defaultValue="overview" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-6">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="payments">Payments</TabsTrigger>
+                    <TabsTrigger value="trends">Trends</TabsTrigger>
+                    <TabsTrigger value="geographic">Geographic</TabsTrigger>
+                    <TabsTrigger value="documents">Documents</TabsTrigger>
                     <TabsTrigger value="performance">Performance</TabsTrigger>
                     <TabsTrigger value="users">Users</TabsTrigger>
                 </TabsList>
@@ -59,25 +71,48 @@ export function AnalyticsDashboard({ analytics }) {
                     />
                 </TabsContent>
 
-                <TabsContent value="payments" className="space-y-4">
-                    <PaymentsTab
-                        revenueChartData={revenueChartData}
-                        paymentMethodData={paymentMethodData}
-                        payment_stats={payment_stats}
+                <TabsContent value="trends" className="space-y-4">
+                    <TrendsTab
+                        monthlySubmissions={monthly_submissions}
+                        dailySubmissions={daily_submissions}
+                        weeklyActivity={weekly_activity}
+                        processingTimeTrend={processing_time_trend}
+                        hourlyPattern={hourly_pattern}
+                        dayOfWeekPattern={day_of_week_pattern}
+                    />
+                </TabsContent>
+
+                <TabsContent value="geographic" className="space-y-4">
+                    <GeographicTab
+                        barangayDistribution={barangay_distribution}
+                        provinceDistribution={province_distribution}
+                    />
+                </TabsContent>
+
+                <TabsContent value="documents" className="space-y-4">
+                    <DocumentsTab
+                        statusBreakdown={status_breakdown}
+                        projectTypes={project_types}
+                        projectNatures={project_natures}
+                        avgDocumentsPerRequest={avg_documents_per_request}
+                        completionRate={completion_rate}
+                        approvalRate={approval_rate}
                     />
                 </TabsContent>
 
                 <TabsContent value="performance" className="space-y-4">
                     <PerformanceTab
-                        avg_processing_time={avg_processing_time}
+                        processing_time_by_status={processing_time_by_status}
                         certificate_stats={certificate_stats}
                         statusData={statusData}
-                        payment_stats={payment_stats}
                     />
                 </TabsContent>
 
                 <TabsContent value="users" className="space-y-4">
-                    <UsersTab top_users={top_users} />
+                    <UsersTab 
+                        top_users={top_users} 
+                        user_activity_metrics={user_activity_metrics}
+                    />
                 </TabsContent>
             </Tabs>
         </div>

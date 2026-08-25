@@ -422,6 +422,45 @@ export default function UploadRequirements({ application, requirements = [], upl
                                     const pendingUploads = uploads[requirement.id] || [];
                                     const pendingPreviews = previews[requirement.id] || [];
 
+                                    // Check if this requirement has sub-items (ID 2 or 3)
+                                    const hasSubItems = requirement.id === 2 || requirement.id === 3;
+                                    
+                                    // Define sub-items for Right Over Land Documentation (ID 2)
+                                    const rightOverLandSubItems = requirement.id === 2 ? [
+                                        { 
+                                            id: '2a', 
+                                            name: "a. Photocopy of Certificate of Title registered in applicant's name & latest Tax Declaration",
+                                            parentId: 2
+                                        },
+                                        { 
+                                            id: '2b', 
+                                            name: "b. If title is NOT in applicant's name: Certified true copy of latest Tax Declaration + Pro forma affidavit",
+                                            description: "Affidavit must state:\n• Applicant is the owner of the property\n• Reason why property is not yet titled\n• Property is within alienable and disposable land\n• Property is free from liens and encumbrances\n• Property is not tenanted (for rice/corn lands)",
+                                            parentId: 2
+                                        },
+                                        { 
+                                            id: '2c', 
+                                            name: "c. For unregistered properties: Deed of sale/donation/lease/authorization + owner's title or tax declaration + affidavit per item b",
+                                            parentId: 2
+                                        }
+                                    ] : [];
+
+                                    // Define sub-items for Vicinity Map (ID 3)
+                                    const vicinityMapSubItems = requirement.id === 3 ? [
+                                        { 
+                                            id: '3a', 
+                                            name: "a. Local significance projects: minimum 100 meters radius (may be drawn not to scale)",
+                                            parentId: 3
+                                        },
+                                        { 
+                                            id: '3b', 
+                                            name: "b. National significance projects: minimum 1 kilometer radius (must be drawn to scale)",
+                                            parentId: 3
+                                        }
+                                    ] : [];
+
+                                    const subItems = requirement.id === 2 ? rightOverLandSubItems : vicinityMapSubItems;
+
                                     return (
                                         <div
                                             key={requirement.id}
@@ -429,6 +468,201 @@ export default function UploadRequirements({ application, requirements = [], upl
                                                 uploaded ? 'bg-green-50 border-green-200' : 'bg-white'
                                             }`}
                                         >
+                                            {hasSubItems ? (
+                                                /* Render parent with collapsible sub-items */
+                                                <div className="flex-1 w-full">
+                                                    <Collapsible
+                                                        open={!!openItems[requirement.id]}
+                                                        onOpenChange={() =>
+                                                            setOpenItems((prev) => ({
+                                                                ...prev,
+                                                                [requirement.id]: !prev[requirement.id],
+                                                            }))
+                                                        }
+                                                    >
+                                                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                                                            <CollapsibleTrigger asChild>
+                                                                <button
+                                                                    type="button"
+                                                                    className="flex items-start gap-2 text-left hover:text-blue-600 transition-colors"
+                                                                >
+                                                                    {openItems[requirement.id] ? (
+                                                                        <ChevronDown className="h-4 w-4 shrink-0 mt-0.5" />
+                                                                    ) : (
+                                                                        <ChevronRight className="h-4 w-4 shrink-0 mt-0.5" />
+                                                                    )}
+                                                                    <h3 className="font-semibold text-sm sm:text-base text-gray-900">
+                                                                        {requirement.name}
+                                                                        {requirement.required && (
+                                                                            <span className="text-red-500 ml-1">*</span>
+                                                                        )}
+                                                                    </h3>
+                                                                </button>
+                                                            </CollapsibleTrigger>
+                                                            {requirement.required && (
+                                                                <Badge variant="destructive" className="text-[10px] sm:text-xs">
+                                                                    Required
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+
+                                                        <CollapsibleContent>
+                                                            <div className="ml-6 space-y-4">
+                                                                {subItems.map((subItem) => {
+                                                                    const subUploaded = isUploaded(subItem.id);
+                                                                    const subUploadedDocs = getUploadedDocs(subItem.id);
+                                                                    const subPendingUploads = uploads[subItem.id] || [];
+                                                                    const subPendingPreviews = previews[subItem.id] || [];
+
+                                                                    return (
+                                                                        <div
+                                                                            key={subItem.id}
+                                                                            className={`border rounded-lg p-3 ${
+                                                                                subUploaded ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
+                                                                            }`}
+                                                                        >
+                                                                            <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                                                                                <div className="flex-1 w-full sm:w-auto">
+                                                                                    <h4 className="font-medium text-xs sm:text-sm text-gray-800 mb-2">
+                                                                                        {subItem.name}
+                                                                                    </h4>
+                                                                                    
+                                                                                    {subItem.description && (
+                                                                                        <div className="text-xs text-gray-600 mb-3 space-y-1">
+                                                                                            {subItem.description.split('\n').map((line, idx) => {
+                                                                                                const trimmed = line.trim();
+                                                                                                if (!trimmed) return null;
+                                                                                                const leadingSpaces = line.match(/^ */)[0].length;
+                                                                                                const indentLevel = Math.floor(leadingSpaces / 2);
+                                                                                                return (
+                                                                                                    <div
+                                                                                                        key={idx}
+                                                                                                        className="leading-relaxed"
+                                                                                                        style={{ marginLeft: `${indentLevel * 12}px` }}
+                                                                                                    >
+                                                                                                        {trimmed}
+                                                                                                    </div>
+                                                                                                );
+                                                                                            })}
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {/* Uploaded Documents for Sub-item */}
+                                                                                    {subUploadedDocs.length > 0 && (
+                                                                                        <div className="mb-3 space-y-2">
+                                                                                            <div className="flex items-center gap-2 text-xs text-green-700 font-semibold">
+                                                                                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                                                                                <span>Uploaded ({subUploadedDocs.length}):</span>
+                                                                                            </div>
+                                                                                            <div className="grid grid-cols-1 gap-2">
+                                                                                                {subUploadedDocs.map((doc) => (
+                                                                                                    <div key={doc.id} className="flex items-center justify-between bg-white rounded border border-green-200 p-2">
+                                                                                                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                                                                                            <File className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                                                                                                            <span className="text-xs text-gray-700 truncate">
+                                                                                                                {doc.original_filename}
+                                                                                                            </span>
+                                                                                                        </div>
+                                                                                                        <Button
+                                                                                                            type="button"
+                                                                                                            variant="ghost"
+                                                                                                            size="sm"
+                                                                                                            className="shrink-0 ml-2 h-7 w-7 p-0 rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-200"
+                                                                                                            asChild
+                                                                                                        >
+                                                                                                            <a
+                                                                                                                href={`/requirements/${doc.id}/view`}
+                                                                                                                target="_blank"
+                                                                                                                rel="noopener noreferrer"
+                                                                                                                className="flex items-center justify-center"
+                                                                                                            >
+                                                                                                                <Eye className="h-3 w-3" />
+                                                                                                            </a>
+                                                                                                        </Button>
+                                                                                                    </div>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {/* Pending Upload Preview for Sub-item */}
+                                                                                    {subPendingUploads.length > 0 && (
+                                                                                        <div className="mt-3">
+                                                                                            <Badge variant="secondary" className="text-[10px] mb-2">
+                                                                                                Ready to upload ({subPendingUploads.length})
+                                                                                            </Badge>
+                                                                                            <div className="grid grid-cols-2 gap-2">
+                                                                                                {subPendingPreviews.map((preview, index) => (
+                                                                                                    <div key={index} className="relative group">
+                                                                                                        {preview.url ? (
+                                                                                                            <div className="relative">
+                                                                                                                <img
+                                                                                                                    src={preview.url}
+                                                                                                                    alt={`Preview ${index + 1}`}
+                                                                                                                    className="w-full h-24 object-cover rounded border"
+                                                                                                                />
+                                                                                                                <button
+                                                                                                                    type="button"
+                                                                                                                    onClick={() => handleRemoveFile(subItem.id, index)}
+                                                                                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                                                >
+                                                                                                                    <X className="h-3 w-3" />
+                                                                                                                </button>
+                                                                                                            </div>
+                                                                                                        ) : (
+                                                                                                            <div className="relative flex items-center justify-center h-24 bg-gray-100 rounded border">
+                                                                                                                <File className="h-6 w-6 text-gray-400" />
+                                                                                                                <button
+                                                                                                                    type="button"
+                                                                                                                    onClick={() => handleRemoveFile(subItem.id, index)}
+                                                                                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                                                >
+                                                                                                                    <X className="h-3 w-3" />
+                                                                                                                </button>
+                                                                                                            </div>
+                                                                                                        )}
+                                                                                                        <p className="text-[10px] text-gray-500 mt-1 truncate">{subPendingUploads[index].name}</p>
+                                                                                                    </div>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+
+                                                                                {/* Upload Button for Sub-item */}
+                                                                                <div className="flex flex-col gap-2 shrink-0">
+                                                                                    <label>
+                                                                                        <input
+                                                                                            type="file"
+                                                                                            accept="image/jpeg,image/jpg,image/png,application/pdf"
+                                                                                            onChange={(e) => handleFileSelect(subItem.id, e)}
+                                                                                            className="hidden"
+                                                                                            multiple
+                                                                                        />
+                                                                                        <Button
+                                                                                            type="button"
+                                                                                            variant="ghost"
+                                                                                            size="sm"
+                                                                                            className="cursor-pointer h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-200 text-[10px] sm:text-xs font-semibold whitespace-nowrap"
+                                                                                            asChild
+                                                                                        >
+                                                                                            <span>
+                                                                                                <Upload className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1" />
+                                                                                                Choose Files
+                                                                                            </span>
+                                                                                        </Button>
+                                                                                    </label>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </CollapsibleContent>
+                                                    </Collapsible>
+                                                </div>
+                                            ) : (
+                                                /* Original rendering for non-sub-item requirements */
                                             <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
                                                 {/* Document Info */}
                                                 <div className="flex-1 w-full sm:w-auto">
@@ -628,6 +862,7 @@ export default function UploadRequirements({ application, requirements = [], upl
                                                     </label>
                                                 </div>
                                             </div>
+                                            )}
                                         </div>
                                     );
                                 })}

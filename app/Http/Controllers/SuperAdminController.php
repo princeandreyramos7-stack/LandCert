@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use App\Services\DashboardCacheService;
 use App\Services\NotificationService;
 use App\Services\AuditLogService;
@@ -30,6 +32,143 @@ class SuperAdminController extends Controller
     /**
      * Display super admin dashboard
      */
+    /**
+     * Get admin workflow and activity metrics
+     */
+    private function getAdminWorkflowMetrics()
+    {
+        // Get all admin users
+        $admins = User::whereIn('user_type', ['admin', 'super_admin'])->get();
+
+        // Admin performance by reviews
+        $adminPerformance = Report::select(
+                'issued_by',
+                DB::raw('COUNT(*) as total_reviews'),
+                DB::raw('SUM(CASE WHEN evaluation = "approved" THEN 1 ELSE 0 END) as approved_count'),
+                DB::raw('SUM(CASE WHEN evaluation = "rejected" THEN 1 ELSE 0 END) as rejected_count'),
+                DB::raw('SUM(CASE WHEN evaluation = "pending" THEN 1 ELSE 0 END) as pending_count'),
+                DB::raw('AVG(DATEDIFF(date_reported, (SELECT created_at FROM requests WHERE requests.id = reports.request_id))) as avg_review_time')
+            )
+            ->whereNotNull('issued_by')
+            ->groupBy('issued_by')
+            ->get()
+            ->map(function($item) use ($admins) {
+                $admin = $admins->firstWhere('name', $item->issued_by);
+                return [
+                    'admin_name' => $item->issued_by,
+                    'admin_email' => $admin?->email ?? 'N/A',
+                    'total_reviews' => $item->total_reviews,
+                    'approved' => $item->approved_count,
+                    'rejected' => $item->rejected_count,
+                    'pending' => $item->pending_count,
+                    'avg_review_time' => round($item->avg_review_time ?? 0, 1),
+                    'approval_rate' => $item->total_reviews > 0 ? round(($item->approved_count / $item->total_reviews) * 100, 1) : 0,
+                ];
+            });
+
+        // Recent admin actions from audit logs
+        $recentAdminActions = AuditLog::with('user')
+            ->whereHas('user', function($query) {
+                $query->whereIn('user_type', ['admin', 'super_admin']);
+            })
+            ->latest()
+            ->take(20)
+            ->get()
+            ->map(function($log) {
+                return [
+                    'id' => $log->id,
+                    'admin_name' => $log->user?->name ?? 'Unknown',
+                    'action' => $log->action,
+                    'entity_type' => $log->entity_type,
+                    'entity_id' => $log->entity_id,
+                    'description' => $log->description,
+                    'created_at' => $log->created_at,
+                ];
+            });
+
+        // Admin activity by hour (last 7 days)
+        $adminActivityByHour = AuditLog::whereHas('user', function($query) {
+                $query->whereIn('user_type', ['admin', 'super_admin']);
+            })
+            ->where('created_at', '>=', now()->subDays(7))
+            ->select(
+                DB::raw('HOUR(created_at) as hour'),
+                DB::raw('COUNT(*) as count')
+            )
+            ->groupBy('hour')
+            ->orderBy('hour')
+            ->get();
+
+        // Admin activity by day of week
+        $adminActivityByDay = AuditLog::whereHas('user', function($query) {
+                $query->whereIn('user_type', ['admin', 'super_admin']);
+            })
+            ->where('created_at', '>=', now()->subDays(30))
+            ->select(
+                DB::raw('DAYOFWEEK(created_at) as day'),
+                DB::raw('COUNT(*) as count')
+            )
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get();
+
+        // Reviews by status over time (last 6 months)
+        $reviewTrend = Report::where('date_reported', '>=', now()->subMonths(6))
+            ->select(
+                DB::raw('DATE_FORMAT(date_reported, "%Y-%m") as month'),
+                'evaluation',
+                DB::raw('COUNT(*) as count')
+            )
+            ->groupBy('month', 'evaluation')
+            ->orderBy('month')
+            ->get()
+            ->groupBy('month')
+            ->map(function($monthData, $month) {
+                $result = ['month' => $month];
+                foreach ($monthData as $item) {
+                    $result[$item->evaluation] = $item->count;
+                }
+                return $result;
+            })
+            ->values();
+
+        // Certificate issuance by admin
+        $certificatesByAdmin = \App\Models\Certificate::select(
+                'issued_by',
+                DB::raw('COUNT(*) as total_issued'),
+                DB::raw('SUM(CASE WHEN status = "released" THEN 1 ELSE 0 END) as released_count')
+            )
+            ->whereNotNull('issued_by')
+            ->groupBy('issued_by')
+            ->get();
+
+        // Admin response time metrics
+        $adminResponseMetrics = [
+            'fastest_review' => Report::whereNotNull('date_reported')
+                ->join('requests', 'reports.request_id', '=', 'requests.id')
+                ->selectRaw('MIN(DATEDIFF(reports.date_reported, requests.created_at)) as min_days')
+                ->value('min_days') ?? 0,
+            'slowest_review' => Report::whereNotNull('date_reported')
+                ->join('requests', 'reports.request_id', '=', 'requests.id')
+                ->selectRaw('MAX(DATEDIFF(reports.date_reported, requests.created_at)) as max_days')
+                ->value('max_days') ?? 0,
+            'avg_review' => Report::whereNotNull('date_reported')
+                ->join('requests', 'reports.request_id', '=', 'requests.id')
+                ->selectRaw('AVG(DATEDIFF(reports.date_reported, requests.created_at)) as avg_days')
+                ->value('avg_days') ?? 0,
+        ];
+
+        return [
+            'admin_performance' => $adminPerformance,
+            'recent_actions' => $recentAdminActions,
+            'activity_by_hour' => $adminActivityByHour,
+            'activity_by_day' => $adminActivityByDay,
+            'review_trend' => $reviewTrend,
+            'certificates_by_admin' => $certificatesByAdmin,
+            'response_metrics' => $adminResponseMetrics,
+        ];
+    }
+
     public function dashboard(Request $request): Response
     {
         $perPage = $request->input('per_page', 25);
@@ -97,12 +236,16 @@ class SuperAdminController extends Controller
             'recent_activity' => AuditLog::with('user')->latest()->take(10)->get(),
         ];
 
+        // Get admin workflow and activity metrics
+        $adminActivity = $this->getAdminWorkflowMetrics();
+
         return Inertia::render('SuperAdmin/Dashboard', [
             'applications' => $requests,
             'stats' => $stats,
             'analytics' => $analytics,
             'evaluationDistribution' => $evaluationDistribution,
             'systemStats' => $systemStats,
+            'adminActivity' => $adminActivity,
         ]);
     }
 
@@ -930,7 +1073,7 @@ class SuperAdminController extends Controller
                     'request_id' => $request->id,
                     'control_number' => $request->control_number ?? '#' . $request->id,
                     'applicant_name' => $request->applicant->applicant_name ?? 'Unknown',
-                    'expected_amount' => 500.00, // TODO: Make dynamic
+                    'expected_amount' => $this->getExpectedAmount($request->project_type),
                     'approved_at' => $request->updated_at->format('Y-m-d'),
                     'days_waiting' => $daysWaiting,
                     'project_type' => $request->project->project_type ?? 'N/A',
@@ -1217,5 +1360,73 @@ class SuperAdminController extends Controller
         $payment->update($validated);
 
         return back()->with('success', 'Payment updated successfully!');
+    }
+
+    /**
+     * Show super admin profile page
+     */
+    public function profile()
+    {
+        return Inertia::render('SuperAdmin/Profile', [
+            'mustVerifyEmail' => false,
+            'status' => session('status'),
+        ]);
+    }
+
+    /**
+     * Update super admin profile information
+     */
+    public function updateProfile(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . Auth::id()],
+        ]);
+
+        $user = Auth::user();
+        $user->fill($validated);
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
+
+        return back()->with('status', 'profile-updated');
+    }
+
+    /**
+     * Update super admin password
+     */
+    public function updatePassword(Request $request)
+    {
+        $validated = $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = Auth::user();
+        $user->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        return back()->with('status', 'password-updated');
+    }
+
+    /**
+     * Get expected payment amount based on project type
+     */
+    private function getExpectedAmount(?string $projectType): float
+    {
+        if (!$projectType) {
+            return 500.00; // Default amount
+        }
+
+        return match (strtoupper(trim($projectType))) {
+            'SUP', 'SPECIAL USE PERMIT' => 750.00,
+            'TUP', 'TEMPORARY USE PERMIT' => 350.00,
+            'ZONING CLEARANCE', 'CERTIFICATE OF ZONING COMPLIANCE', 'LOCATIONAL CLEARANCE' => 500.00,
+            default => 500.00, // Default for any other type
+        };
     }
 }

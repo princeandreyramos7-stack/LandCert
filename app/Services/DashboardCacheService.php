@@ -65,14 +65,42 @@ class DashboardCacheService
      */
     private function calculateAnalytics()
     {
-        // Monthly submissions trend (last 6 months)
+        // Monthly submissions trend (last 12 months)
         $monthlyData = RequestModel::select(
             DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
             DB::raw('COUNT(*) as count')
         )
-        ->where('created_at', '>=', now()->subMonths(6))
+        ->where('created_at', '>=', now()->subMonths(12))
         ->groupBy('month')
         ->orderBy('month')
+        ->get();
+        
+        // Daily submissions (last 30 days)
+        $dailySubmissions = RequestModel::select(
+            DB::raw('DATE(created_at) as date'),
+            DB::raw('COUNT(*) as count')
+        )
+        ->where('created_at', '>=', now()->subDays(30))
+        ->groupBy('date')
+        ->orderBy('date')
+        ->get();
+
+        // Hourly pattern analysis (all time)
+        $hourlyPattern = RequestModel::select(
+            DB::raw('HOUR(created_at) as hour'),
+            DB::raw('COUNT(*) as count')
+        )
+        ->groupBy('hour')
+        ->orderBy('hour')
+        ->get();
+
+        // Day of week pattern
+        $dayOfWeekPattern = RequestModel::select(
+            DB::raw('DAYOFWEEK(created_at) as day'),
+            DB::raw('COUNT(*) as count')
+        )
+        ->groupBy('day')
+        ->orderBy('day')
         ->get();
         
         // Application status breakdown
@@ -80,26 +108,72 @@ class DashboardCacheService
             ->groupBy('evaluation')
             ->get();
         
-        // Average processing time (reports now link directly to requests)
-        $avgProcessingTime = Report::where('evaluation', 'approved')
-            ->whereNotNull('date_reported')
+        // Average processing time by status
+        $processingTimeByStatus = Report::whereNotNull('date_reported')
             ->join('requests', 'reports.request_id', '=', 'requests.id')
-            ->selectRaw('AVG(DATEDIFF(reports.date_reported, requests.created_at)) as avg_days')
-            ->value('avg_days');
+            ->select(
+                'reports.evaluation',
+                DB::raw('AVG(DATEDIFF(reports.date_reported, requests.created_at)) as avg_days'),
+                DB::raw('MIN(DATEDIFF(reports.date_reported, requests.created_at)) as min_days'),
+                DB::raw('MAX(DATEDIFF(reports.date_reported, requests.created_at)) as max_days')
+            )
+            ->groupBy('reports.evaluation')
+            ->get();
+
+        // Processing time trend (last 6 months)
+        $processingTimeTrend = Report::whereNotNull('date_reported')
+            ->where('date_reported', '>=', now()->subMonths(6))
+            ->join('requests', 'reports.request_id', '=', 'requests.id')
+            ->select(
+                DB::raw('DATE_FORMAT(reports.date_reported, "%Y-%m") as month'),
+                DB::raw('AVG(DATEDIFF(reports.date_reported, requests.created_at)) as avg_days')
+            )
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
         
-        // Project type distribution
+        // Project type distribution with cost analysis
         $projectTypes = RequestModel::join('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
-            ->select('normalized_projects.project_type', DB::raw('COUNT(*) as count'))
+            ->select(
+                'normalized_projects.project_type',
+                DB::raw('COUNT(*) as count'),
+                DB::raw('AVG(CAST(normalized_projects.project_cost AS DECIMAL(15,2))) as avg_cost'),
+                DB::raw('SUM(CAST(normalized_projects.project_cost AS DECIMAL(15,2))) as total_cost')
+            )
             ->whereNotNull('normalized_projects.project_type')
             ->groupBy('normalized_projects.project_type')
             ->get();
+
+        // Project nature distribution
+        $projectNatures = RequestModel::join('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
+            ->select('normalized_projects.project_nature', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('normalized_projects.project_nature')
+            ->groupBy('normalized_projects.project_nature')
+            ->get();
+
+        // Geographic distribution by barangay
+        $barangayDistribution = RequestModel::join('locations', 'requests.id', '=', 'locations.request_id')
+            ->select('locations.barangay', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('locations.barangay')
+            ->groupBy('locations.barangay')
+            ->orderByDesc('count')
+            ->take(15)
+            ->get();
+
+        // Province distribution
+        $provinceDistribution = RequestModel::join('locations', 'requests.id', '=', 'locations.request_id')
+            ->select('locations.province', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('locations.province')
+            ->groupBy('locations.province')
+            ->orderByDesc('count')
+            ->get();
         
-        // Top users by submissions (limited to 5)
+        // Top users by submissions
         $topUsers = RequestModel::select('user_id', DB::raw('COUNT(*) as count'))
             ->whereNotNull('user_id')
             ->groupBy('user_id')
             ->orderByDesc('count')
-            ->take(5)
+            ->take(10)
             ->with('user')
             ->get()
             ->map(function($item) {
@@ -109,48 +183,31 @@ class DashboardCacheService
                     'count' => $item->count,
                 ];
             });
+
+        // User activity metrics
+        $userActivityMetrics = [
+            'total_active_users' => RequestModel::distinct('user_id')->count('user_id'),
+            'new_users_this_month' => \App\Models\User::where('user_type', 'applicant')
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+            'active_users_this_month' => RequestModel::whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->distinct('user_id')
+                ->count('user_id'),
+        ];
         
-        // Weekly activity (last 4 weeks)
+        // Weekly activity (last 12 weeks)
         $weeklyActivity = RequestModel::select(
             DB::raw('YEARWEEK(created_at) as week'),
             DB::raw('COUNT(*) as count')
         )
-        ->where('created_at', '>=', now()->subWeeks(4))
+        ->where('created_at', '>=', now()->subWeeks(12))
         ->groupBy('week')
         ->orderBy('week')
         ->get();
 
-        // Monthly revenue (last 6 months)
-        $monthlyRevenue = \App\Models\Payment::select(
-            DB::raw('DATE_FORMAT(verified_at, "%Y-%m") as month'),
-            DB::raw('SUM(amount) as total')
-        )
-        ->where('payment_status', 'verified')
-        ->whereNotNull('verified_at')
-        ->where('verified_at', '>=', now()->subMonths(6))
-        ->groupBy('month')
-        ->orderBy('month')
-        ->get();
-
-        // Payment stats (real-time)
-        $paymentStats = [
-            'total_revenue'    => \App\Models\Payment::where('payment_status', 'verified')->sum('amount'),
-            'pending_payments' => \App\Models\Payment::where('payment_status', 'pending')->count(),
-            'verified_payments'=> \App\Models\Payment::where('payment_status', 'verified')->count(),
-            'rejected_payments'=> \App\Models\Payment::where('payment_status', 'rejected')->count(),
-            'this_month_revenue'=> \App\Models\Payment::where('payment_status', 'verified')
-                ->whereMonth('verified_at', now()->month)
-                ->whereYear('verified_at', now()->year)
-                ->sum('amount'),
-        ];
-
-        // Payment method breakdown
-        $paymentMethods = \App\Models\Payment::where('payment_status', 'verified')
-            ->select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(amount) as total'))
-            ->groupBy('payment_method')
-            ->get();
-
-        // Certificate stats (real-time)
+        // Certificate stats
         $certificateStats = [
             'total_issued'       => \App\Models\Certificate::count(),
             'issued_this_month'  => \App\Models\Certificate::whereMonth('issued_at', now()->month)
@@ -159,18 +216,47 @@ class DashboardCacheService
             'ready_for_pickup'   => \App\Models\Certificate::where('status', 'ready_for_pickup')->count(),
             'collected'          => \App\Models\Certificate::where('status', 'released')->count(),
         ];
+
+        // Document completion analysis
+        $documentCompletion = RequestModel::leftJoin('requirement_documents', 'requests.id', '=', 'requirement_documents.request_id')
+            ->select(
+                'requests.id',
+                DB::raw('COUNT(requirement_documents.id) as doc_count')
+            )
+            ->groupBy('requests.id')
+            ->havingRaw('doc_count > 0')
+            ->get();
+
+        $avgDocumentsPerRequest = $documentCompletion->avg('doc_count');
+        
+        // Application completion rate (requests with reports vs total)
+        $totalRequests = RequestModel::count();
+        $requestsWithReports = Report::distinct('request_id')->count('request_id');
+        $completionRate = $totalRequests > 0 ? ($requestsWithReports / $totalRequests) * 100 : 0;
+
+        // Approval rate
+        $approvedCount = Report::where('evaluation', 'approved')->count();
+        $approvalRate = $requestsWithReports > 0 ? ($approvedCount / $requestsWithReports) * 100 : 0;
         
         return [
             'monthly_submissions' => $monthlyData,
-            'monthly_revenue'     => $monthlyRevenue,
-            'status_breakdown'    => $statusBreakdown,
-            'avg_processing_time' => round($avgProcessingTime ?? 0, 1),
-            'project_types'       => $projectTypes,
-            'top_users'           => $topUsers,
-            'weekly_activity'     => $weeklyActivity,
-            'payment_stats'       => $paymentStats,
-            'payment_methods'     => $paymentMethods,
-            'certificate_stats'   => $certificateStats,
+            'daily_submissions' => $dailySubmissions,
+            'hourly_pattern' => $hourlyPattern,
+            'day_of_week_pattern' => $dayOfWeekPattern,
+            'status_breakdown' => $statusBreakdown,
+            'processing_time_by_status' => $processingTimeByStatus,
+            'processing_time_trend' => $processingTimeTrend,
+            'project_types' => $projectTypes,
+            'project_natures' => $projectNatures,
+            'barangay_distribution' => $barangayDistribution,
+            'province_distribution' => $provinceDistribution,
+            'top_users' => $topUsers,
+            'user_activity_metrics' => $userActivityMetrics,
+            'weekly_activity' => $weeklyActivity,
+            'certificate_stats' => $certificateStats,
+            'avg_documents_per_request' => round($avgDocumentsPerRequest ?? 0, 1),
+            'completion_rate' => round($completionRate, 1),
+            'approval_rate' => round($approvalRate, 1),
         ];
     }
 
