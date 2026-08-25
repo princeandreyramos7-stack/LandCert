@@ -138,35 +138,35 @@ class SmsService
      * All messages are kept under ~155 chars for single-segment SMS.
      * ───────────────────────────────────────────────────────────── */
 
-    public function sendApplicationSubmitted(string $phone, string $name, int $requestId): bool
+    public function sendApplicationSubmitted(string $phone, string $name, string $controlNumber): bool
     {
         return $this->sendTemplate('application_submitted', $phone, [
-            '{name}'       => $name,
-            '{request_id}' => $requestId,
+            '{name}'           => $name,
+            '{control_number}' => $controlNumber,
         ]);
     }
 
-    public function sendApplicationReviewed(string $phone, string $name, int $requestId): bool
+    public function sendApplicationReviewed(string $phone, string $name, string $controlNumber): bool
     {
         return $this->sendTemplate('application_reviewed', $phone, [
-            '{name}'       => $name,
-            '{request_id}' => $requestId,
+            '{name}'           => $name,
+            '{control_number}' => $controlNumber,
         ]);
     }
 
-    public function sendRequirementsSubmitted(string $phone, string $name, int $requestId): bool
+    public function sendRequirementsSubmitted(string $phone, string $name, string $controlNumber): bool
     {
         return $this->sendTemplate('requirements_submitted', $phone, [
-            '{name}'       => $name,
-            '{request_id}' => $requestId,
+            '{name}'           => $name,
+            '{control_number}' => $controlNumber,
         ]);
     }
 
-    public function sendApplicationApprovedWithNextSteps(string $phone, string $name, int $requestId, float $amount, string $appointmentDate = '', string $appointmentTime = ''): bool
+    public function sendApplicationApprovedWithNextSteps(string $phone, string $name, string $controlNumber, float $amount, string $appointmentDate = '', string $appointmentTime = ''): bool
     {
         return $this->sendTemplate('application_approved_next_steps', $phone, [
             '{name}'             => $name,
-            '{request_id}'       => $requestId,
+            '{control_number}'   => $controlNumber,
             '{amount}'           => number_format($amount, 2),
             '{appointment_date}' => $appointmentDate ?: 'TBD',
             '{appointment_time}' => $appointmentTime ?: 'TBD',
@@ -181,54 +181,54 @@ class SmsService
         ]);
     }
 
-    public function sendApplicationApproved(string $phone, string $name, int $requestId): bool
+    public function sendApplicationApproved(string $phone, string $name, string $controlNumber): bool
     {
         return $this->sendTemplate('application_approved', $phone, [
-            '{name}'       => $name,
-            '{request_id}' => $requestId,
+            '{name}'           => $name,
+            '{control_number}' => $controlNumber,
         ]);
     }
 
-    public function sendApplicationRejected(string $phone, string $name, int $requestId, string $reason = ''): bool
+    public function sendApplicationRejected(string $phone, string $name, string $controlNumber, string $reason = ''): bool
     {
         return $this->sendTemplate('application_rejected', $phone, [
-            '{name}'       => $name,
-            '{request_id}' => $requestId,
-            '{reason}'     => $reason ?: 'Please contact CPDO office',
+            '{name}'           => $name,
+            '{control_number}' => $controlNumber,
+            '{reason}'         => $reason ?: 'Please contact CPDO office',
         ]);
     }
 
-    public function sendPaymentReminder(string $phone, string $name, int $requestId, int $daysRemaining = 0): bool
+    public function sendPaymentReminder(string $phone, string $name, string $controlNumber, int $daysRemaining = 0): bool
     {
         return $this->sendTemplate('payment_reminder', $phone, [
             '{name}'           => $name,
-            '{request_id}'     => $requestId,
+            '{control_number}' => $controlNumber,
             '{days_remaining}' => $daysRemaining > 0 ? "in {$daysRemaining} day(s)" : 'now',
         ]);
     }
 
-    public function sendPaymentVerified(string $phone, string $name, int $requestId, float $amount): bool
+    public function sendPaymentVerified(string $phone, string $name, string $controlNumber, float $amount): bool
     {
         return $this->sendTemplate('payment_verified', $phone, [
-            '{name}'       => $name,
-            '{request_id}' => $requestId,
-            '{amount}'     => number_format($amount, 2),
+            '{name}'           => $name,
+            '{control_number}' => $controlNumber,
+            '{amount}'         => number_format($amount, 2),
         ]);
     }
 
-    public function sendPaymentRejected(string $phone, string $name, int $requestId, string $reason = ''): bool
+    public function sendPaymentRejected(string $phone, string $name, string $controlNumber, string $reason = ''): bool
     {
         return $this->sendTemplate('payment_rejected', $phone, [
-            '{name}'       => $name,
-            '{request_id}' => $requestId,
-            '{reason}'     => $reason ?: 'Please contact CPDO office',
+            '{name}'           => $name,
+            '{control_number}' => $controlNumber,
+            '{reason}'         => $reason ?: 'Please contact CPDO office',
         ]);
     }
 
-    public function sendDocumentReminder(string $phone, string $name, int $requestId): bool
+    public function sendDocumentReminder(string $phone, string $name, string $controlNumber): bool
     {
         // Reuse payment_reminder template or send custom
-        $msg = "Reminder: {$name}, please submit required documents for application #{$requestId} at the CPDO office. - CPDO LandCert";
+        $msg = "Reminder: {$name}, please submit required documents for application {$controlNumber} at the CPDO office. - CPDO LandCert";
         return $this->send($phone, $this->truncate($msg));
     }
 
@@ -240,18 +240,18 @@ class SmsService
         ]);
     }
 
-    public function sendCertificateReady(string $phone, string $name, int $requestId, string $certNumber): bool
+    public function sendCertificateReady(string $phone, string $name, string $controlNumber, string $certNumber): bool
     {
         return $this->sendTemplate('certificate_ready', $phone, [
-            '{name}'        => $name,
-            '{request_id}'  => $requestId,
-            '{cert_number}' => $certNumber,
+            '{name}'           => $name,
+            '{control_number}' => $controlNumber,
+            '{cert_number}'    => $certNumber,
         ]);
     }
 
-    public function sendStatusUpdate(string $phone, string $name, int $requestId, string $oldStatus, string $newStatus): bool
+    public function sendStatusUpdate(string $phone, string $name, string $controlNumber, string $oldStatus, string $newStatus): bool
     {
-        $msg = "{$name}, application #{$requestId} status updated: {$oldStatus} → {$newStatus}. Log in for details. - CPDO LandCert";
+        $msg = "{$name}, application {$controlNumber} status updated: {$oldStatus} → {$newStatus}. Log in for details. - CPDO LandCert";
         return $this->send($phone, $this->truncate($msg));
     }
 

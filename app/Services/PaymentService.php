@@ -194,7 +194,7 @@ class PaymentService
                 $smsService->sendPaymentVerified(
                     $phone,
                     $user->name ?? $applicantName,
-                    $request->id,
+                    $request->control_number ?? 'CPD-' . str_pad($request->id, 4, '0', STR_PAD_LEFT),
                     (float) $payment->amount
                 );
                 Log::info("Payment confirmation SMS sent", [

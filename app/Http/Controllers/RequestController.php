@@ -300,7 +300,7 @@ class RequestController extends Controller
                 app(\App\Services\SmsService::class)->sendApplicationSubmitted(
                     auth()->user()->contact_number,
                     auth()->user()->name,
-                    $result['request']->id
+                    $result['request']->control_number ?? 'CPD-' . str_pad($result['request']->id, 4, '0', STR_PAD_LEFT)
                 );
             }
         } catch (\Exception $e) {

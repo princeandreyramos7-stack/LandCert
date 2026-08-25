@@ -133,7 +133,7 @@ class RequirementDocumentController extends Controller
                     app(\App\Services\SmsService::class)->sendRequirementsSubmitted(
                         $phone,
                         $name,
-                        $requestModel->id
+                        $requestModel->control_number ?? 'CPD-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT)
                     );
                 }
             } catch (\Exception $e) {

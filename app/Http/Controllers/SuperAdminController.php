@@ -721,7 +721,7 @@ class SuperAdminController extends Controller
                     app(\App\Services\SmsService::class)->sendApplicationRejected(
                         $requestModel->user->contact_number,
                         $requestModel->user->name,
-                        $requestModel->id,
+                        $requestModel->control_number ?? 'CPD-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT),
                         $validated['description']
                     );
                 }
@@ -1218,7 +1218,7 @@ class SuperAdminController extends Controller
                 app(\App\Services\SmsService::class)->sendPaymentVerified(
                     $pmtReq->user->contact_number,
                     $pmtReq->user->name,
-                    $pmtReq->id,
+                    $pmtReq->control_number ?? 'CPD-' . str_pad($pmtReq->id, 4, '0', STR_PAD_LEFT),
                     (float) $payment->amount
                 );
             }
@@ -1330,7 +1330,7 @@ class SuperAdminController extends Controller
                 app(\App\Services\SmsService::class)->sendPaymentRejected(
                     $rejReq->user->contact_number,
                     $rejReq->user->name,
-                    $rejReq->id,
+                    $rejReq->control_number ?? 'CPD-' . str_pad($rejReq->id, 4, '0', STR_PAD_LEFT),
                     $validated['rejection_reason']
                 );
             }
