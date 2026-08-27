@@ -53,12 +53,12 @@ export default function GuestLayout({ children }) {
                                 Your Land Use<br/>
                                 <span className="text-transparent bg-clip-text"
                                     style={{ backgroundImage: "linear-gradient(90deg,#d4a017,#f5c842)" }}>
-                                    Zoning Clearances
+                                    Certificates
                                 </span><br/>
                                 Made Simple
                             </h2>
                             <p className="text-blue-200/80 text-base leading-relaxed">
-                                Apply for Zoning Clearance, Special Use Permit, and Temporary Use Permit.
+                                Apply for Certificate of Zoning Compliance (CZC), Special Use Permit, and Temporary Use Permit.
                                 Track your application status in real time.
                             </p>
                         </div>

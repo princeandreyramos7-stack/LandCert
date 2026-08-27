@@ -284,8 +284,8 @@ export default function PrintForm({ application: a, auth }) {
         : "";
     const costWrd = costNum ? pesoWords(costNum) : "";
 
-    const ctrlNo = v(a.control_number) || sprintf("CPD-%03d-0", a.id);
-    const appNo  = a.id ? "APP-" + String(a.id).padStart(4, "0") : nb;
+    const appNo = v(a.application_number) || sprintf("TPZ-%s-%04d", new Date().toISOString().slice(5,7) + '-' + new Date().toISOString().slice(2,4), a.id);
+    const decNo = v(a.decision_number) || "CPDO-" + new Date().toISOString().slice(5,7) + '-' + new Date().toISOString().slice(2,4) + "-0001-0001";
 
     // Determine back route based on user role
     const getBackRoute = () => {
@@ -438,7 +438,7 @@ export default function PrintForm({ application: a, auth }) {
                                 </div>
                             </td>
 
-                            {/* RIGHT — control number pinned to top-right corner of the page */}
+                            {/* RIGHT — application number pinned to top-right corner of the page */}
                             <td style={{ border: "none", padding: "2pt 0 0 0", verticalAlign: "top", textAlign: "right" }}>
                                 <div style={{ fontSize: "8pt", fontWeight: "bold" }}>
                                     {ctrlNo}
@@ -953,7 +953,7 @@ export default function PrintForm({ application: a, auth }) {
     );
 }
 
-/* tiny helper used for default control number */
+/* tiny helper used for formatting numbers */
 function sprintf(fmt, n) {
     return fmt.replace("%03d", String(n).padStart(3, "0"));
 }

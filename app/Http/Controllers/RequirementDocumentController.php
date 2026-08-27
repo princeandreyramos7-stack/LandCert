@@ -58,10 +58,14 @@ class RequirementDocumentController extends Controller
             'application_id' => 'required|exists:requests,id',
             'documents.*.*' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120', // 5MB max per file
             'requirement_ids' => 'required|array',
+            'requirement_ui_ids' => 'nullable|array',
+            'requirement_names' => 'nullable|array',
         ]);
 
         $applicationId = $request->input('application_id');
         $requirementIds = $request->input('requirement_ids');
+        $requirementUiIds = $request->input('requirement_ui_ids', []);
+        $requirementNames = $request->input('requirement_names', []);
         
         // Security check
         $requestModel = RequestModel::findOrFail($applicationId);
@@ -76,11 +80,22 @@ class RequirementDocumentController extends Controller
 
         $uploadedCount = 0;
 
-        foreach ($requirementIds as $requirementId) {
-            $fileKey = "documents.{$requirementId}";
+        // Process each UI ID (which may be compound like '2-a' or simple like 1)
+        foreach ($requirementUiIds as $index => $uiId) {
+            $fileKey = "documents.{$uiId}";
             
             if (!$request->hasFile($fileKey)) {
                 continue;
+            }
+
+            // Get the database ID (might be same as UI ID or different for compound IDs)
+            $dbId = $requirementIds[$index] ?? $uiId;
+            
+            // Get requirement name - either from mapping or from requirements list
+            $requirementName = $requirementNames[$uiId] ?? null;
+            if (!$requirementName) {
+                $requirement = $requirementsMap->get($dbId);
+                $requirementName = $requirement ? $requirement['name'] : "Requirement #{$dbId}";
             }
 
             // Get array of files for this requirement
@@ -91,17 +106,11 @@ class RequirementDocumentController extends Controller
                 $files = [$files];
             }
 
-            $requirement = $requirementsMap->get($requirementId);
-
-            if (!$requirement) {
-                continue;
-            }
-
             // Process each file
             foreach ($files as $file) {
                 // Generate unique filename with microtime for uniqueness
                 $extension = $file->getClientOriginalExtension();
-                $filename = 'requirement_' . $applicationId . '_' . $requirementId . '_' . time() . '_' . uniqid() . '.' . $extension;
+                $filename = 'requirement_' . $applicationId . '_' . $dbId . '_' . time() . '_' . uniqid() . '.' . $extension;
                 
                 // Store file on the private disk (not publicly web-accessible)
                 $path = $file->storeAs('requirement_documents', $filename, 'local');
@@ -109,8 +118,8 @@ class RequirementDocumentController extends Controller
                 // Create new document record (don't delete old ones - allow multiple documents per requirement)
                 RequirementDocument::create([
                     'request_id' => $applicationId,
-                    'requirement_id' => $requirementId,
-                    'requirement_name' => $requirement['name'],
+                    'requirement_id' => $dbId,
+                    'requirement_name' => $requirementName,
                     'file_path' => $path,
                     'original_filename' => $file->getClientOriginalName(),
                     'mime_type' => $file->getMimeType(),
@@ -133,7 +142,7 @@ class RequirementDocumentController extends Controller
                     app(\App\Services\SmsService::class)->sendRequirementsSubmitted(
                         $phone,
                         $name,
-                        $requestModel->control_number ?? 'CPD-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT)
+                        $requestModel->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT)
                     );
                 }
             } catch (\Exception $e) {

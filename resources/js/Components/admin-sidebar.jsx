@@ -47,7 +47,7 @@ const navGroups = [
         label: "Admin Panel",
         items: [
             { title: "Dashboard",  url: "/admin/dashboard",  icon: LayoutDashboard },
-            { title: "Requests",   url: "/admin/requests",   icon: FileText },
+            { title: "Applications",   url: "/admin/requests",   icon: FileText },
         ],
     },
     {
@@ -141,10 +141,10 @@ export function AdminSidebar({ ...props }) {
                     {!collapsed && (
                         <div className="min-w-0">
                             <p className="text-sidebar-primary font-black text-sm leading-tight tracking-wide truncate">
-                                CPDO Admin
+                                Zoning Officer
                             </p>
                             <p className="text-sidebar-foreground/50 text-[10px] tracking-widest leading-tight truncate">
-                                Ilagan City, Isabela
+                                City of Ilagan, Isabela
                             </p>
                         </div>
                     )}
@@ -190,7 +190,7 @@ export function AdminSidebar({ ...props }) {
                                 <div className="px-3 py-2 border-b border-gray-100">
                                     <p className="text-sm font-bold text-gray-900 truncate">{user.name}</p>
                                     <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                                    <p className="text-xs text-[#d4a017] font-semibold mt-0.5">Administrator</p>
+                                    <p className="text-xs text-[#d4a017] font-semibold mt-0.5">Zoning Officer</p>
                                 </div>
                                 <DropdownMenuItem asChild>
                                     <Link href="/admin/profile" className="flex items-center gap-2 cursor-pointer">

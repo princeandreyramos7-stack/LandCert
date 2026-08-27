@@ -18,7 +18,7 @@ import {
 import RequestForm from "@/Components/Request_form";
 import { Toaster } from "@/Components/ui/toaster";
 
-export default function RequestPage() {
+export default function RequestPage({ isEditing = false, existingApplication = null }) {
     const { auth } = usePage();
     const isAdmin = auth?.user?.roles?.some((role) => role.name === "admin");
     const Sidebar = isAdmin ? AdminSidebar : AppSidebar;
@@ -63,7 +63,7 @@ export default function RequestPage() {
                         {/* Decorative gradient border */}
                         <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-xl" />
                         
-                        <RequestForm />
+                        <RequestForm isEditing={isEditing} existingApplication={existingApplication} />
                     </div>
                 </div>
                 

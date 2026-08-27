@@ -163,7 +163,7 @@ export default function SuperAdminReviewRequest({ request }) {
 
     return (
         <SidebarProvider>
-            <Head title={`Review ${request.control_number || `CPDO-${request.id}`} - Super Admin`} />
+            <Head title={`Review ${request.application_number || `TPZ-${request.id}`} - Super Admin`} />
             <SuperAdminSidebar />
             <SidebarInset>
                 <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b bg-white">
@@ -195,7 +195,7 @@ export default function SuperAdminReviewRequest({ request }) {
                                     <span className="mx-2 text-gray-400">›</span>
                                 </BreadcrumbItem>
                                 <BreadcrumbItem>
-                                    <BreadcrumbPage>{request.control_number || `CPDO-${request.id}`}</BreadcrumbPage>
+                                    <BreadcrumbPage>{request.application_number || `TPZ-${request.id}`}</BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
                         </Breadcrumb>
@@ -230,7 +230,7 @@ export default function SuperAdminReviewRequest({ request }) {
                                         </div>
                                         <div>
                                             <CardTitle className="text-2xl text-gray-900">
-                                                {request.control_number || `CPDO-${request.id}`}
+                                                {request.application_number || `TPZ-${request.id}`}
                                             </CardTitle>
                                             <p className="text-sm text-gray-600 mt-1">
                                                 Application Type: <span className="font-semibold text-gray-900">{request.application_category || "N/A"}</span>
@@ -775,7 +775,7 @@ function Step2Content({ request }) {
                             <option value="">N/A</option>
                             <option value="TUP">TUP (Temporary Use Permit)</option>
                             <option value="SUP">SUP (Special Use Permit)</option>
-                            <option value="Zoning">Zoning (Zoning Clearance)</option>
+                            <option value="CZC">CZC (Certificate of Zoning Compliance)</option>
                         </select>
                     ) : (
                         <p className="text-sm text-gray-900 font-medium">

@@ -32,7 +32,7 @@ export function AddPaymentPickerModal({ isOpen, onClose, requests = [], onSelect
         return unpaidRequests.filter(
             (r) =>
                 r.applicant_name?.toLowerCase().includes(term) ||
-                r.control_number?.toLowerCase().includes(term) ||
+                r.application_number?.toLowerCase().includes(term) ||
                 String(r.request_id).includes(term)
         );
     }, [unpaidRequests, search]);
@@ -63,7 +63,7 @@ export function AddPaymentPickerModal({ isOpen, onClose, requests = [], onSelect
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input
                         autoFocus
-                        placeholder="Search by applicant, control number, or request ID..."
+                        placeholder="Search by applicant, application number, or request ID..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="pl-9"
@@ -96,7 +96,7 @@ export function AddPaymentPickerModal({ isOpen, onClose, requests = [], onSelect
                                         {request.applicant_name}
                                     </p>
                                     <p className="text-xs text-slate-500 font-mono">
-                                        {request.control_number || `#${request.request_id}`}
+                                        {request.application_number || `#${request.request_id}`}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-1 text-sm font-semibold text-[#0d1f5c] shrink-0">

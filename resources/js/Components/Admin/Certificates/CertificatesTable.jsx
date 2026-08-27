@@ -210,7 +210,7 @@ export function CertificatesTable({
                                     Certificate No.
                                 </th>
                                 <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
-                                    Control Number
+                                    Application Number
                                 </th>
                                 <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
                                     Applicant
@@ -260,7 +260,7 @@ export function CertificatesTable({
                                         </td>
                                         <td className="p-3">
                                             <div className="font-mono text-sm font-semibold text-[#0d1f5c]">
-                                                {certificate.request?.control_number || `#${certificate.request_id}`}
+                                                {certificate.request?.application_number || `#${certificate.request_id}`}
                                             </div>
                                         </td>
                                         <td className="p-3">

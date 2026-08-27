@@ -117,9 +117,9 @@ export function AddReceiptModal({ isOpen, onClose, payment }) {
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                                <span className="text-slate-500">Control Number:</span>
+                                <span className="text-slate-500">Application Number:</span>
                                 <span className="ml-2 font-semibold text-[#0d1f5c]">
-                                    {payment.control_number || `CPDO-${String(payment.request_id).padStart(4, '0')}`}
+                                    {payment.application_number || `TPZ-${String(payment.request_id).padStart(4, '0')}`}
                                 </span>
                             </div>
                             <div>

@@ -1,21 +1,28 @@
 import React from "react";
-import { Check, FileText, MapPin, Home } from "lucide-react";
+import { Check, FileText, MapPin, Home, Upload } from "lucide-react";
 
-export function StepIndicator({ currentStep, completedSteps, onStepClick }) {
+export function StepIndicator({ currentStep, completedSteps, onStepClick, isEditing = false }) {
     const steps = [
         { number: 1, title: "Applicant Info", icon: FileText },
         { number: 2, title: "Project Details", icon: MapPin },
         { number: 3, title: "Land Use", icon: Home },
+        { number: 4, title: "Requirements", icon: Upload },
     ];
 
     const handleStepClick = (stepNumber) => {
-        // Allow clicking on current step, completed steps, or the next step
-        if (stepNumber <= currentStep || completedSteps.includes(stepNumber - 1)) {
+        // When editing, allow all steps to be clicked
+        // When creating, only allow current step, completed steps, or the next step
+        if (isEditing) {
+            onStepClick?.(stepNumber);
+        } else if (stepNumber <= currentStep || completedSteps.includes(stepNumber - 1)) {
             onStepClick?.(stepNumber);
         }
     };
 
     const isClickable = (stepNumber) => {
+        // In edit mode, all steps are clickable
+        if (isEditing) return true;
+        // In create mode, only current and previous steps are clickable
         return stepNumber <= currentStep || completedSteps.includes(stepNumber - 1);
     };
 

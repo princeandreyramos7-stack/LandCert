@@ -28,13 +28,14 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     // Request routes
     Route::get('/request', [RequestController::class, 'index'])->name('request.index');
     Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:10,1')->name('request.store');
+    Route::get('/requests/{id}/edit', [RequestController::class, 'edit'])->name('requests.edit');
+    Route::put('/requests/{id}', [RequestController::class, 'update'])->middleware('throttle:10,1')->name('requests.update');
     Route::get('/my-applications', [RequestController::class, 'myApplications'])->name('my-applications');
+    Route::get('/my-applications/index', [RequestController::class, 'myApplications'])->name('my-applications.index');
     Route::get('/my-applications/{id}/print', [\App\Http\Controllers\AdminController::class, 'printForm'])->name('my-applications.print');
     Route::get('/requests/{id}/authorization-letter', [RequestController::class, 'authorizationLetter'])->name('requests.authorization-letter');
     
-    // Requirement document routes
-    Route::get('/requirements/upload/{requestId}', [\App\Http\Controllers\RequirementDocumentController::class, 'index'])->name('requirements.upload.page');
-    Route::post('/requirements/upload', [\App\Http\Controllers\RequirementDocumentController::class, 'upload'])->name('requirements.upload');
+    // Requirement document routes (for viewing/deleting only - upload is now in Step 4)
     Route::delete('/requirements/{id}', [\App\Http\Controllers\RequirementDocumentController::class, 'destroy'])->name('requirements.destroy');
     Route::get('/requirements/{id}/view', [\App\Http\Controllers\RequirementDocumentController::class, 'view'])->name('requirements.view');
     
@@ -69,6 +70,8 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::get('/settings', [\App\Http\Controllers\SuperAdminController::class, 'settings'])->name('settings');
     
     // Super Admin specific actions
+    Route::post('/quick-approve/{requestId}', [\App\Http\Controllers\SuperAdminController::class, 'quickApprove'])->name('quick-approve');
+    Route::post('/quick-reject/{requestId}', [\App\Http\Controllers\SuperAdminController::class, 'quickReject'])->name('quick-reject');
     Route::post('/approve-request/{reportId}', [\App\Http\Controllers\SuperAdminController::class, 'approveRequest'])->name('approve-request');
     Route::post('/reject-request/{reportId}', [\App\Http\Controllers\SuperAdminController::class, 'rejectRequest'])->name('reject-request');
     Route::post('/create-admin', [\App\Http\Controllers\SuperAdminController::class, 'createAdmin'])->name('create-admin');

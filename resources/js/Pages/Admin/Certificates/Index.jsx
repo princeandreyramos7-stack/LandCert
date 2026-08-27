@@ -8,6 +8,7 @@ import { UploadCertificateModal } from "@/Components/Admin/Certificates/UploadCe
 import { Button } from "@/Components/ui/button";
 import { useState } from "react";
 import { Award, RefreshCw, FileDown } from "lucide-react";
+import { Toaster } from "@/Components/ui/toaster";
 
 export default function CertificatesIndex({ auth, certificates = {}, filters = {}, userType = 'admin' }) {
     const [selectedCertificate, setSelectedCertificate] = useState(null);
@@ -90,6 +91,7 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
                 certificate={selectedCertificate}
                 routePrefix={routePrefix}
             />
+            <Toaster />
         </>
     );
 }

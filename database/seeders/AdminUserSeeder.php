@@ -23,11 +23,11 @@ class AdminUserSeeder extends Seeder
         $superAdmin = User::updateOrCreate(
             ['email' => 'superadmin@cpdo.com'],
             [
-                'name' => 'Super Admin',
+                'name' => 'Zoning Administrator',
                 'password' => Hash::make('superadmin123'),
                 'user_type' => 'super_admin',
                 'contact_number' => '09123456789',
-                'address' => 'CPDO Office, Ilagan City',
+                'address' => 'CPDO Office, City of Ilagan',
                 'email_verified_at' => now(),
             ]
         );
@@ -39,12 +39,51 @@ class AdminUserSeeder extends Seeder
         $admin = User::updateOrCreate(
             ['email' => 'admin@cpdo.com'],
             [
-                'name' => 'Admin User',
+                'name' => 'Zoning Officer',
                 'password' => Hash::make('admin123'),
                 'user_type' => 'admin',
                 'contact_number' => '09123456789',
-                'address' => 'CPDO Office, Ilagan City',
+                'address' => 'CPDO Office, City of Ilagan',
                 'email_verified_at' => now(),
+            ],
+               ['email' => 'jeff@cpdo.com'],
+            [
+                'name' => 'Jeffrey C. Pauig',
+                'password' => Hash::make('jeff123'),
+                'user_type' => 'admin',
+                'contact_number' => '09123456789',
+                'address' => 'CPDO Office, City of Ilagan',
+                'email_verified_at' => now(),
+            ]    ,
+            ['email' => 'kay@cpdo.com'],
+            [
+                'name' => 'Kay B. Aggarao',
+                'password' => Hash::make('kay123'),
+                'user_type' => 'admin',
+                'contact_number' => '09123456789',
+                'address' => 'CPDO Office, City of Ilagan',
+                'email_verified_at' => now(),
+            ]  ,
+              ['email' => 'april@cpdo.com'],
+            [
+                'name' => 'April V. Cuntapay',
+                'password' => Hash::make('april123'),
+                'user_type' => 'admin',
+                'contact_number' => '09123456789',
+                'address' => 'CPDO Office, City of Ilagan',
+                'email_verified_at' => now(),
+              
+            ],
+                ['email' => 'maryjane@cpdo.com'],
+            [
+                'name' => 'Mary Jane P. Bulauan',
+                'password' => Hash::make('admin123'),
+                'user_type' => 'admin',
+                'contact_number' => '09123456789',
+                'address' => 'CPDO Office, City of Ilagan',
+                'email_verified_at' => now(),
+            
+
             ]
         );
 

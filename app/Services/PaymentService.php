@@ -38,7 +38,7 @@ class PaymentService
             
             return [
                 'request_id' => $request->id,
-                'control_number' => $request->control_number ?? 'N/A',
+                'application_number' => $request->application_number ?? 'N/A',
                 'applicant_name' => $request->applicant->applicant_name ?? 'Unknown',
                 'expected_amount' => $this->getExpectedAmount($request->project_type),
                 'approved_at' => $request->updated_at->format('Y-m-d'),
@@ -194,7 +194,7 @@ class PaymentService
                 $smsService->sendPaymentVerified(
                     $phone,
                     $user->name ?? $applicantName,
-                    $request->control_number ?? 'CPD-' . str_pad($request->id, 4, '0', STR_PAD_LEFT),
+                    $request->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($request->id, 4, '0', STR_PAD_LEFT),
                     (float) $payment->amount
                 );
                 Log::info("Payment confirmation SMS sent", [
@@ -228,7 +228,7 @@ class PaymentService
         return match (strtoupper(trim($projectType))) {
             'SUP', 'SPECIAL USE PERMIT' => 750.00,
             'TUP', 'TEMPORARY USE PERMIT' => 350.00,
-            'ZONING CLEARANCE', 'CERTIFICATE OF ZONING COMPLIANCE', 'LOCATIONAL CLEARANCE' => 500.00,
+            'CZC', 'CERTIFICATE OF ZONING COMPLIANCE', 'ZONING CLEARANCE', 'LOCATIONAL CLEARANCE', 'ZONING' => 500.00,
             default => 500.00, // Default for any other type
         };
     }

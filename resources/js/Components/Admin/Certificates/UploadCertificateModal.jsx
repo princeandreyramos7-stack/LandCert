@@ -12,12 +12,14 @@ import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import { Alert, AlertDescription } from "@/Components/ui/alert";
 import { Upload, FileText, X, AlertCircle, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/Components/ui/use-toast";
 
 export function UploadCertificateModal({ isOpen, onClose, certificate, routePrefix = 'admin' }) {
     const [file, setFile] = useState(null);
     const [preview, setPreview] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const { toast } = useToast();
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
@@ -66,6 +68,10 @@ export function UploadCertificateModal({ isOpen, onClose, certificate, routePref
             forceFormData: true,
             onSuccess: () => {
                 setIsSubmitting(false);
+                toast({
+                    title: "Certificate uploaded successfully!",
+                    description: `Certificate PDF has been uploaded and is now available for download.`,
+                });
                 handleClose();
             },
             onError: (errors) => {

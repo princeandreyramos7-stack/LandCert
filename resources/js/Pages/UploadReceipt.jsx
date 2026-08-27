@@ -268,7 +268,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                 <div className="flex items-center gap-2">
                                     <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 shrink-0" />
                                     <span className="text-sm sm:text-base">
-                                        Application {application.control_number}
+                                        Application {application.application_number}
                                         <span className="hidden sm:inline"> - Payment Receipt</span>
                                     </span>
                                 </div>
@@ -278,8 +278,8 @@ export default function UploadReceipt({ application, existingPayment }) {
                         <CardContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                                 <div>
-                                    <p className="text-gray-500">Control Number</p>
-                                    <p className="font-semibold">{application.control_number}</p>
+                                    <p className="text-gray-500">Application Number</p>
+                                    <p className="font-semibold">{application.application_number}</p>
                                 </div>
                                 <div>
                                     <p className="text-gray-500">Applicant Name</p>
@@ -619,7 +619,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                 <p className="min-w-0 break-words text-xs text-gray-600">
                                     Application{' '}
                                     <span className="font-semibold text-gray-900">
-                                        {application.control_number}
+                                        {application.application_number}
                                     </span>
                                 </p>
                             </div>

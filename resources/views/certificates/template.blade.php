@@ -119,7 +119,7 @@ body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background:
             </div>
         </div>
         <div>
-            <div class="cpd-number">{{ $controlNumber }}</div>
+            <div class="cpd-number">{{ $applicationNumber }}</div>
             <img class="logo-img" src="{{ public_path('images/Ilagan.png') }}" alt="City Seal" style="display:block;margin-top:4px;">
         </div>
     </div>
@@ -177,8 +177,8 @@ body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background:
                 <div class="row"><span class="label">Amount</span> : {{ $paymentAmount }}</div>
             </div>
             <div class="footer-right">
-                <div class="row"><span class="label">Application No :</span> TPZ-{{ now()->format('m-y') }}-{{ str_pad($request->id, 4, '0', STR_PAD_LEFT) }}</div>
-                <div class="row"><span class="label">Decision No   :</span> TUP-{{ now()->format('m-y') }}-{{ $controlNumber }}</div>
+                <div class="row"><span class="label">Application No :</span> {{ $applicationNumber }}</div>
+                <div class="row"><span class="label">Decision No   :</span> {{ $decisionNumber }}</div>
                 <div class="row"><span class="label">Date Issued   :</span> {{ $issueDate }}</div>
                 <div class="row"><span class="label">Expiry Date   :</span> {{ $certificate->issued_at->addYear()->format('F d, Y') }}</div>
             </div>
@@ -205,7 +205,7 @@ body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background:
             </div>
         </div>
         <div>
-            <div class="cpd-number">{{ $controlNumber }}</div>
+            <div class="cpd-number">{{ $applicationNumber }}</div>
             <img class="logo-img" src="{{ public_path('images/Ilagan.png') }}" alt="City Seal" style="display:block;margin-top:4px;">
         </div>
     </div>
@@ -221,7 +221,7 @@ body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background:
             Date Received &nbsp;: {{ $issueDate }}
         </div>
         <div class="app-col" style="text-align:right;">
-            Decision No. : SUP-{{ now()->format('m-y') }}-{{ $controlNumber }}<br>
+            Decision No. : {{ $decisionNumber }}<br>
             Date Issued &nbsp;&nbsp;: {{ $issueDate }}
         </div>
     </div>
@@ -309,9 +309,9 @@ body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background:
 @endif
 
 {{-- ══════════════════════════════════════════════════════════════
-     Zoning Clearance  (certification letter format)
+     Certificate of Zoning Compliance (CZC) (certification letter format)
      ══════════════════════════════════════════════════════════════ --}}
-@if($projectType === 'Zoning Clearance')
+@if(in_array($projectType, ['CZC', 'Zoning Clearance', 'Zoning', 'Certificate of Zoning Compliance']))
 <div class="page">
 
     {{-- Header --}}
@@ -326,7 +326,7 @@ body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background:
             </div>
         </div>
         <div>
-            <div class="cpd-number">{{ $controlNumber }}</div>
+            <div class="cpd-number">{{ $applicationNumber }}</div>
             <img class="logo-img" src="{{ public_path('images/Ilagan.png') }}" alt="City Seal" style="display:block;margin-top:4px;">
         </div>
     </div>
@@ -370,7 +370,7 @@ body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background:
 @endif
 
 {{-- Fallback for unknown project types --}}
-@if(!in_array($projectType, ['TUP','SUP','Zoning Clearance']))
+@if(!in_array($projectType, ['TUP','SUP','CZC','Zoning Clearance','Zoning','Certificate of Zoning Compliance']))
 <div class="page">
     <div class="header-bar">
         <div class="logos">
@@ -390,7 +390,8 @@ body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background:
         <p style="margin-top:20px;">Issued to: <strong>{{ $applicantName }}</strong></p>
         <p>OR No.: {{ $orNumber }} | Amount: {{ $paymentAmount }}</p>
         <p>Date: {{ $issueDate }}</p>
-        <p>Control No.: {{ $controlNumber }}</p>
+        <p>Application No.: {{ $applicationNumber }}</p>
+        <p>Decision No.: {{ $decisionNumber }}</p>
     </div>
 </div>
 @endif

@@ -252,18 +252,67 @@ export const validateStep3 = (data) => {
     return errors;
 };
 
-export const validateAllSteps = (data) => {
+export const validateStep4 = (data, requirements = [], existingDocuments = {}) => {
+    const errors = [];
+
+    // Get main requirements
+    const mainRequirements = requirements.filter((req) => (req.section || 'main') === 'main');
+    
+    // Get Barangay Clearance from additional requirements
+    const barangayClearance = requirements.find((req) => 
+        req.section === 'additional' && req.name.toLowerCase().includes('barangay')
+    );
+
+    // Check if at least one file is uploaded for each main requirement
+    // Consider BOTH new uploads AND existing documents
+    const uploads = data.requirement_uploads || {};
+    
+    mainRequirements.forEach((req) => {
+        const reqFiles = uploads[req.id] || [];
+        const existingFiles = existingDocuments[req.id] || [];
+        
+        // Valid if either new files uploaded OR existing files present
+        if (reqFiles.length === 0 && existingFiles.length === 0) {
+            errors.push(`${req.name} is required - please upload at least one file`);
+        }
+    });
+
+    // Check for Barangay Clearance (required from additional requirements)
+    if (barangayClearance) {
+        const barangayFiles = uploads[barangayClearance.id] || [];
+        const existingBarangayFiles = existingDocuments[barangayClearance.id] || [];
+        
+        if (barangayFiles.length === 0 && existingBarangayFiles.length === 0) {
+            errors.push(`${barangayClearance.name} is required - please upload at least one file`);
+        }
+    }
+
+    // If no main requirements, at least check that some files were uploaded
+    if (mainRequirements.length === 0 && !barangayClearance) {
+        const totalNewFiles = Object.values(uploads).reduce((sum, files) => sum + files.length, 0);
+        const totalExistingFiles = Object.values(existingDocuments).reduce((sum, files) => sum + files.length, 0);
+        
+        if (totalNewFiles === 0 && totalExistingFiles === 0) {
+            errors.push("Please upload at least one requirement document");
+        }
+    }
+
+    return errors;
+};
+
+export const validateAllSteps = (data, requirements = [], existingDocuments = {}) => {
     const step1Errors = validateStep1(data);
     const step2Errors = validateStep2(data);
     const step3Errors = validateStep3(data);
+    const step4Errors = validateStep4(data, requirements, existingDocuments);
 
-    return [...step1Errors, ...step2Errors, ...step3Errors];
+    return [...step1Errors, ...step2Errors, ...step3Errors, ...step4Errors];
 };
 
 /**
  * Check if a step is completed
  */
-export const isStepCompleted = (step, data) => {
+export const isStepCompleted = (step, data, requirements = [], existingDocuments = {}) => {
     switch (step) {
         case 1:
             return validateStep1(data).length === 0;
@@ -271,6 +320,8 @@ export const isStepCompleted = (step, data) => {
             return validateStep2(data).length === 0;
         case 3:
             return validateStep3(data).length === 0;
+        case 4:
+            return validateStep4(data, requirements, existingDocuments).length === 0;
         default:
             return false;
     }

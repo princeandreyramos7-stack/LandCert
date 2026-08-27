@@ -10,7 +10,7 @@ import {
 import { Button } from "@/Components/ui/button";
 import { AlertCircle, CheckCircle2, FileText, Loader2, Send, User } from "lucide-react";
 
-export function ConfirmationDialog({ isOpen, onClose, onConfirm, processing, data = {} }) {
+export function ConfirmationDialog({ isOpen, onClose, onConfirm, processing, data = {}, isEditing = false }) {
     const applicantName = data.corporation_name || data.applicant_name || "Applicant";
     const projectType = data.project_type || "N/A";
     const projectNature = data.project_nature || "N/A";
@@ -25,10 +25,13 @@ export function ConfirmationDialog({ isOpen, onClose, onConfirm, processing, dat
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 sm:h-10 sm:w-10">
                                 <Send className="h-4 w-4 text-[#0d1f5c] sm:h-5 sm:w-5" />
                             </div>
-                            Ready to submit your application?
+                            {isEditing ? "Ready to resubmit your application?" : "Ready to submit your application?"}
                         </DialogTitle>
                         <DialogDescription className="text-gray-500 text-xs sm:text-sm sm:pl-[52px]">
-                            Please double-check your details before sending them to the CPDO office.
+                            {isEditing 
+                                ? "Please confirm your updated details before resubmitting to the CPDO office."
+                                : "Please double-check your details before sending them to the CPDO office."
+                            }
                         </DialogDescription>
                     </DialogHeader>
                 </div>
@@ -111,12 +114,12 @@ export function ConfirmationDialog({ isOpen, onClose, onConfirm, processing, dat
                             {processing ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    Submitting...
+                                    {isEditing ? "Updating..." : "Submitting..."}
                                 </>
                             ) : (
                                 <>
                                     <CheckCircle2 className="h-4 w-4" />
-                                    Yes, submit now
+                                    {isEditing ? "Yes, update now" : "Yes, submit now"}
                                 </>
                             )}
                         </Button>

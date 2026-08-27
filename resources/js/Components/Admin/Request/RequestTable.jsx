@@ -31,7 +31,7 @@ export function RequestTable({
             <table className="w-full">
                 <thead>
                     <tr className="border-b bg-gray-50">
-                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Control No.</th>
+                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Application No.</th>
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Applicant</th>
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">User</th>
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Project Type</th>
@@ -55,7 +55,7 @@ export function RequestTable({
                                 className="border-b hover:bg-gray-50 transition-colors"
                             >
                                 <td className="p-3 font-mono text-sm font-bold text-[#0d1f5c]">
-                                    {request.control_number || `#${request.id}`}
+                                    {request.application_number || `#${request.id}`}
                                 </td>
                                 <td className="p-3">
                                     <div>

@@ -22,7 +22,7 @@ export function AuditLogTable({ logs, onViewDetails }) {
                         <TableHead className="text-xs">User</TableHead>
                         <TableHead className="text-xs">Action</TableHead>
                         <TableHead className="text-xs">Description</TableHead>
-                        <TableHead className="text-xs">Control Number</TableHead>
+                        <TableHead className="text-xs">Application Number</TableHead>
                         <TableHead className="text-right text-xs">
                             Actions
                         </TableHead>
@@ -75,9 +75,9 @@ export function AuditLogTable({ logs, onViewDetails }) {
                                     {log.description}
                                 </TableCell>
                                 <TableCell className="py-2">
-                                    {log.control_number ? (
+                                    {log.application_number ? (
                                         <div className="font-mono text-xs font-semibold text-[#0d1f5c]">
-                                            {log.control_number}
+                                            {log.application_number}
                                         </div>
                                     ) : log.model_type && log.model_id ? (
                                         <Badge

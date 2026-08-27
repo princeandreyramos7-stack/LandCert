@@ -11,7 +11,8 @@ class Request extends Model
 {
     protected $fillable = [
         // Core request fields
-        'control_number',
+        'application_number',
+        'decision_number',
         'user_id',
         'applicant_id',
         
@@ -118,31 +119,118 @@ class Request extends Model
     }
 
     /**
-     * Generate a unique CPD control number in the format CPD-XXX-0.
-     * Should be called right after the request record is created.
-     *
-     * @return string  e.g. CPD-001-0
+     * Generate a unique Application Number in the format TPZ-MM-YY-NNNN.
+     * Increments per applicant, creating a unique application number for each applicant.
+     * 
+     * @param int $applicantId The ID of the applicant
+     * @return string e.g. TPZ-03-26-9627
      */
-    public static function generateControlNumber(): string
+    public static function generateApplicationNumber(int $applicantId): string
     {
+        $date = now();
+        $month = $date->format('m');
+        $year = $date->format('y');
+        $prefix = 'TPZ';
+        
+        // Find the highest sequence number for this applicant
+        $lastRequest = self::where('applicant_id', $applicantId)
+            ->whereNotNull('application_number')
+            ->orderByRaw("CAST(SUBSTRING_INDEX(application_number, '-', -1) AS UNSIGNED) DESC")
+            ->value('application_number');
+        
+        $nextSeq = 1;
+        if ($lastRequest) {
+            preg_match('/-(\d+)$/', $lastRequest, $matches);
+            $nextSeq = isset($matches[1]) ? (int) $matches[1] + 1 : 1;
+        }
+        
+        // Ensure uniqueness
         $attempt = 0;
         do {
-            // Find the highest existing sequence number among CPD-NNN-0 style numbers
-            $last = self::whereNotNull('control_number')
-                ->where('control_number', 'like', 'CPD-%-0')
-                ->orderByRaw("CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(control_number, '-', 2), '-', -1) AS UNSIGNED) DESC")
-                ->value('control_number');
-
-            $nextSeq = 1 + $attempt;
-            if ($last) {
-                preg_match('/CPD-(\d+)-/', $last, $matches);
-                $nextSeq = isset($matches[1]) ? (int) $matches[1] + 1 + $attempt : 1 + $attempt;
-            }
-
-            $candidate = sprintf('CPD-%03d-0', $nextSeq);
+            $candidate = sprintf('%s-%s-%s-%04d', $prefix, $month, $year, $nextSeq + $attempt);
             $attempt++;
-        } while (self::where('control_number', $candidate)->exists());
+        } while (self::where('application_number', $candidate)->exists());
+        
+        return $candidate;
+    }
 
+    /**
+     * Generate a unique Decision Number in the format XXX-MM-YY-NNNN-NNNN.
+     * The prefix XXX is determined by the permit type set by admin.
+     * If no permit type is set, it defaults to 'CPDO'.
+     * 
+     * @param string|null $permitType The type of permit (e.g., 'Certificate of Zoning Compliance')
+     * @return string e.g. CZC-02-26-3114-5151 or CPDO-02-26-3114-5151
+     */
+    public static function generateDecisionNumber(?string $permitType = null): string
+    {
+        $date = now();
+        $month = $date->format('m');
+        $year = $date->format('y');
+        
+        // Determine prefix based on permit type
+        $prefix = 'CPDO'; // Default prefix
+        
+        if ($permitType) {
+            // Map permit types to their prefixes
+            $permitTypePrefixes = [
+                'Certificate of Zoning Compliance' => 'CZC',
+                'Locational Clearance' => 'LC',
+                'Development Permit' => 'DP',
+                'Zoning Certificate' => 'ZC',
+                'Building Permit' => 'BP',
+                'Occupancy Permit' => 'OP',
+                // Add more permit type mappings as needed
+            ];
+            
+            $prefix = $permitTypePrefixes[$permitType] ?? 'CPDO';
+        }
+        
+        // Find the highest sequence number for decision numbers with this prefix
+        $lastDecision = self::whereNotNull('decision_number')
+            ->where('decision_number', 'like', $prefix . '-%')
+            ->orderByRaw("
+                CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(decision_number, '-', -2), '-', 1) AS UNSIGNED) DESC,
+                CAST(SUBSTRING_INDEX(decision_number, '-', -1) AS UNSIGNED) DESC
+            ")
+            ->value('decision_number');
+        
+        $seq1 = 1;
+        $seq2 = 1;
+        
+        if ($lastDecision) {
+            // Extract the last two sequence numbers
+            preg_match('/-(\d+)-(\d+)$/', $lastDecision, $matches);
+            if (isset($matches[1]) && isset($matches[2])) {
+                $seq1 = (int) $matches[1];
+                $seq2 = (int) $matches[2] + 1;
+                
+                // If seq2 exceeds 9999, increment seq1 and reset seq2
+                if ($seq2 > 9999) {
+                    $seq1++;
+                    $seq2 = 1;
+                }
+            }
+        }
+        
+        // Ensure uniqueness
+        $attempt = 0;
+        do {
+            $currentSeq2 = $seq2 + $attempt;
+            $currentSeq1 = $seq1;
+            
+            if ($currentSeq2 > 9999) {
+                $currentSeq1 = $seq1 + floor($currentSeq2 / 10000);
+                $currentSeq2 = $currentSeq2 % 10000;
+                if ($currentSeq2 === 0) {
+                    $currentSeq2 = 1;
+                }
+            }
+            
+            $candidate = sprintf('%s-%s-%s-%04d-%04d', $prefix, $month, $year, $currentSeq1, $currentSeq2);
+            $attempt++;
+        } while (self::where('decision_number', $candidate)->exists());
+        
         return $candidate;
     }
 }

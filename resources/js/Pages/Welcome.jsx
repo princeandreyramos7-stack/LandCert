@@ -132,7 +132,7 @@ export default function Welcome({ auth }) {
                             Apply for Land Use<br/>
                             <span className="text-transparent bg-clip-text"
                                 style={{ backgroundImage: "linear-gradient(90deg,#d4a017,#f5c842)" }}>
-                                Zoning Clearances
+                                Certificates of Zoning Compliance
                             </span>
                             <br/>Online
                         </h1>
@@ -179,7 +179,7 @@ export default function Welcome({ auth }) {
                                 </div>
                                 <div className="text-center mb-4">
                                     <p className="text-[11px] text-gray-500 uppercase tracking-[0.2em] font-semibold">Official Document</p>
-                                    <h3 className="text-[#0d1f5c] font-black text-lg mt-1">ZONING CLEARANCE</h3>
+                                    <h3 className="text-[#0d1f5c] font-black text-lg mt-1">CERTIFICATE OF ZONING COMPLIANCE</h3>
                                     <p className="text-[#d4a017] font-bold text-sm">No. CPDO-2026-000001</p>
                                 </div>
                                 <div className="space-y-2 text-xs text-gray-600 border-t border-gray-100 pt-4">

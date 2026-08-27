@@ -68,10 +68,10 @@ export function AppSidebar({ ...props }) {
                     {!collapsed && (
                         <div className="min-w-0">
                             <p className="text-sidebar-primary font-black text-sm leading-tight tracking-wide truncate">
-                                CPDO LandCert
+                                CPDO LC
                             </p>
                             <p className="text-sidebar-foreground/50 text-[10px] tracking-widest leading-tight truncate">
-                                Ilagan City, Isabela
+                                City of Ilagan, Isabela
                             </p>
                         </div>
                     )}

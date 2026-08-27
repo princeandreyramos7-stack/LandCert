@@ -202,8 +202,8 @@
                     <div class="info-value">{{ $projectType }}</div>
                 </div>
                 <div class="info-row">
-                    <div class="info-label">Control Number:</div>
-                    <div class="info-value">{{ $request->control_number ?? 'N/A' }}</div>
+                    <div class="info-label">Application Number:</div>
+                    <div class="info-value">{{ $request->application_number ?? 'N/A' }}</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Ready Since:</div>

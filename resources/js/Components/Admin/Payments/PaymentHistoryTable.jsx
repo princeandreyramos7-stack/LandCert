@@ -231,7 +231,7 @@ export function PaymentHistoryTable({
                                     OR Number
                                 </th>
                                 <th className="text-left p-3 font-semibold text-slate-700 text-sm">
-                                    Control Number
+                                    Application Number
                                 </th>
                                 <th className="text-left p-3 font-semibold text-slate-700 text-sm">
                                     Applicant
@@ -284,7 +284,7 @@ export function PaymentHistoryTable({
                                         </td>
                                         <td className="p-3">
                                             <div className="font-mono text-sm font-semibold text-[#0d1f5c]">
-                                                {payment.control_number || `#${payment.request_id}`}
+                                                {payment.application_number || `#${payment.request_id}`}
                                             </div>
                                             <div className="text-xs text-gray-400 mt-0.5">
                                                 Req #{payment.request_id}

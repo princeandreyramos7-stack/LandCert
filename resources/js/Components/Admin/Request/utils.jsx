@@ -90,7 +90,9 @@ export const formatProjectType = (type) => {
     const labels = {
         "TUP": "TUP (Temporary Use Permit)",
         "Locational Clearance": "Locational Clearance",
-        "Zoning Clearance": "Locational Clearance",
+        "CZC": "CZC (Certificate of Zoning Compliance)",
+        "Zoning Clearance": "CZC (Certificate of Zoning Compliance)", // Legacy support
+        "Zoning": "CZC (Certificate of Zoning Compliance)", // Legacy support
         "SUP": "SUP (Special Use Permit)",
     };
     return labels[type] || type;

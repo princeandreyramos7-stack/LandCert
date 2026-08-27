@@ -49,6 +49,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Search, Eye, CheckCircle, Package, MoreVertical } from 'lucide-react';
+import { Toaster } from '@/Components/ui/toaster';
 
 export default function Certificates({ auth, certificates, filters }) {
     const { flash } = usePage().props;
@@ -553,6 +554,7 @@ export default function Certificates({ auth, certificates, filters }) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            <Toaster />
         </SidebarProvider>
     );
 }

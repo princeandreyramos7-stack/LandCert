@@ -12,9 +12,8 @@ class RoleSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create roles
-        $adminRole = Role::create(['name' => 'admin']);
-        $userRole = Role::create(['name' => 'user']);
+        // Create roles if they don't exist
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
 
         // Create permissions
         $permissions = [
@@ -28,29 +27,10 @@ class RoleSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
         // Assign all permissions to admin
         $adminRole->givePermissionTo(Permission::all());
-
-        // Assign limited permissions to user
-        $userRole->givePermissionTo(['view applications', 'create applications']);
-
-        // Create admin user
-        $admin = User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@cpdo.com',
-            'password' => Hash::make('password'),
-        ]);
-        $admin->assignRole('admin');
-
-        // Create regular user
-        $user = User::create([
-            'name' => 'Regular User',
-            'email' => 'user@cpdo.com',
-            'password' => Hash::make('password'),
-        ]);
-        $user->assignRole('user');
     }
 }

@@ -34,10 +34,10 @@ import {
     Sparkles,
     ListChecks,
     Award,
-    Upload,
     ChevronLeft,
     ChevronRight,
     Download,
+    Pencil,
 } from "lucide-react";
 
 export function MyApplicationsList({ applications }) {
@@ -286,7 +286,7 @@ export function MyApplicationsList({ applications }) {
 
         const requirements = {
             ZONING: {
-                title: "Requirements for Zoning Clearance",
+                title: "Requirements for Certificate of Zoning Compliance (CZC)",
                 description:
                     "Based on ANNEX B of HLURB Memorandum Circular No. 03 Series of 1998. Please bring the following documents to your scheduled appointment at the CPDO office.",
                 items: [
@@ -351,7 +351,7 @@ export function MyApplicationsList({ applications }) {
                     "   - Land title, Tax Declaration, or lease contract",
                     "   - If not the owner, written authorization from the registered owner",
                     "5. Site development plan / lot plan",
-                    "6. Zoning clearance or locational clearance request",
+                    "6. Certificate of Zoning Compliance (CZC) or locational clearance request",
                     "7. Barangay Clearance / endorsement",
                     "8. Environmental or safety clearances (if needed)",
                     "   - ENVIRONMENTAL COMPLIANCE CERTIFICATE (ECC) or CERTIFICATE OF NON-COVERAGE (CNC)",
@@ -487,7 +487,7 @@ export function MyApplicationsList({ applications }) {
                                                 <div className="flex items-center gap-3 flex-wrap">
                                                     <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-600 shadow-sm">
                                                         <span className="text-xs font-bold text-white">
-                                                            {application.control_number}
+                                                            {application.application_number}
                                                         </span>
                                                     </div>
                                                     {getStatusBadge(application.status)}
@@ -514,21 +514,6 @@ export function MyApplicationsList({ applications }) {
                                             
                                             {/* Action Buttons - Responsive */}
                                             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
-                                                {/* Upload Docs Button */}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        window.location.href = route('requirements.upload.page', application.id);
-                                                    }}
-                                                    className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-200 text-[10px] sm:text-xs font-semibold"
-                                                    title="Upload Requirements"
-                                                >
-                                                    <Upload className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                                    <span className="hidden sm:inline">Upload Docs</span>
-                                                </Button>
-                                                
                                                 {/* Upload Receipt button - only show if application is approved */}
                                                 {application.status?.toLowerCase() === 'approved' && (
                                                     <Button
@@ -543,6 +528,23 @@ export function MyApplicationsList({ applications }) {
                                                     >
                                                         <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
                                                         <span className="hidden sm:inline">Receipt</span>
+                                                    </Button>
+                                                )}
+                                                
+                                                {/* Edit Button - Only for rejected or returned applications */}
+                                                {(application.status?.toLowerCase() === 'rejected' || application.status?.toLowerCase() === 'returned') && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            router.visit(route('requests.edit', application.id));
+                                                        }}
+                                                        className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-orange-600 hover:bg-orange-50 border border-orange-200 text-[10px] sm:text-xs font-semibold"
+                                                        title="Edit Application"
+                                                    >
+                                                        <Pencil className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                        <span className="hidden sm:inline">Edit</span>
                                                     </Button>
                                                 )}
                                                 

@@ -20,7 +20,7 @@ const navGroups = [
         label: "Super Admin Panel",
         items: [
             { title: "Dashboard", url: "/super-admin/dashboard",  icon: LayoutDashboard },
-            { title: "Requests",  url: "/super-admin/requests",   icon: FileText },
+            { title: "Applications",  url: "/super-admin/requests",   icon: FileText },
         ],
     },
     {
@@ -46,7 +46,7 @@ export function SuperAdminSidebar({ ...props }) {
     const collapsed = state === "collapsed";
 
     const user = {
-        name:  auth?.user?.name  || "Super Admin",
+        name:  auth?.user?.name  || "Zoning Administrator",
         email: auth?.user?.email || "superadmin@cpdo.gov.ph",
     };
 
@@ -65,10 +65,10 @@ export function SuperAdminSidebar({ ...props }) {
                     {!collapsed && (
                         <div className="min-w-0">
                             <p className="text-sidebar-primary font-black text-sm leading-tight tracking-wide truncate">
-                                CPDO Super Admin
+                                Zoning Administrator
                             </p>
                             <p className="text-sidebar-foreground/50 text-[10px] tracking-widest leading-tight truncate">
-                                Ilagan City, Isabela
+                                City of Ilagan, Isabela
                             </p>
                         </div>
                     )}
@@ -138,7 +138,7 @@ export function SuperAdminSidebar({ ...props }) {
                                 <div className="px-3 py-2 border-b border-gray-100">
                                     <p className="text-sm font-bold text-gray-900 truncate">{user.name}</p>
                                     <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                                    <p className="text-xs text-[#d4a017] font-semibold mt-0.5">Super Administrator</p>
+                                    <p className="text-xs text-[#d4a017] font-semibold mt-0.5">Zoning Administrator</p>
                                 </div>
                                 <DropdownMenuItem asChild>
                                     <Link href="/super-admin/profile" className="flex items-center gap-2 cursor-pointer">

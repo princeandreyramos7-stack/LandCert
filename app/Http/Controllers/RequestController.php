@@ -86,7 +86,8 @@ class RequestController extends Controller
                 'requests.id as application_id',
                 'requests.user_id',
                 'requests.status as request_status',
-                'requests.control_number',
+                'requests.application_number',
+                'requests.decision_number',
                 'requests.has_written_notice',
                 'requests.notice_officer_name',
                 'requests.notice_dates',
@@ -136,6 +137,108 @@ class RequestController extends Controller
 
         return Inertia::render('MyApplications', [
             'applications' => $applications
+        ]);
+    }
+
+    /**
+     * Show the form for editing a rejected/returned application.
+     * Only allows editing applications with 'rejected' or 'returned' status.
+     */
+    public function edit($id)
+    {
+        $request = RequestModel::with([
+            'applicant.corporation',
+            'applicant.primaryRepresentative',
+            'project',
+            'location',
+            'property',
+            'requirementDocuments', // Load existing documents
+        ])->findOrFail($id);
+
+        // Authorization: only the applicant who owns the request can edit it
+        if ($request->user_id !== auth()->id()) {
+            abort(403, 'You are not authorized to edit this application.');
+        }
+
+        // Only allow editing if status is rejected or returned
+        $editableStatuses = ['rejected', 'returned'];
+        if (!in_array(strtolower($request->status), $editableStatuses)) {
+            return redirect()->route('my-applications.index')
+                ->with('error', 'Only rejected or returned applications can be edited.');
+        }
+
+        // Prepare the application data for the form
+        $applicationData = [
+            'id' => $request->id,
+            'application_number' => $request->application_number,
+            'decision_number' => $request->decision_number,
+            'status' => $request->status,
+            
+            // Applicant information
+            'applicant_name' => $request->applicant->applicant_name ?? '',
+            'applicant_address' => $request->applicant->applicant_address ?? '',
+            'applicant_type' => $request->applicant->applicant_type ?? 'individual',
+            
+            // Corporation information
+            'corporation_name' => $request->applicant->corporation->corporation_name ?? '',
+            'corporation_address' => $request->applicant->corporation->corporation_address ?? '',
+            
+            // Representative information
+            'authorized_representative_name' => $request->applicant->primaryRepresentative->representative_name ?? '',
+            'authorized_representative_address' => $request->applicant->primaryRepresentative->representative_address ?? '',
+            
+            // Project details
+            'project_type' => $request->project->project_type ?? '',
+            'project_nature' => $request->project->project_nature ?? '',
+            'project_nature_duration' => $request->project->project_nature_duration ?? '',
+            'project_nature_years' => $request->project->project_nature_years ?? null,
+            'project_cost' => $request->project->project_cost ?? null,
+            
+            // Location details
+            'project_location_number' => $request->property->lot_number ?? '',
+            'project_location_street' => $request->location->street_address ?? '',
+            'project_location_barangay' => $request->location->barangay ?? '',
+            'project_location_city' => $request->location->city_municipality ?? '',
+            'project_location_municipality' => $request->location->city_municipality ?? '',
+            'project_location_province' => $request->location->province ?? '',
+            
+            // Property details
+            'project_area_sqm' => $request->property->lot_area_sqm ?? null,
+            'lot_area_sqm' => $request->property->lot_area_sqm ?? null,
+            'bldg_improvement_sqm' => $request->property->bldg_improvement_sqm ?? null,
+            'right_over_land' => $request->property->right_over_land ?? '',
+            
+            // Land use
+            'existing_land_use' => $request->property->existing_land_use ?? '',
+            
+            // Additional information
+            'has_written_notice' => $request->has_written_notice ?? 'no',
+            'notice_officer_name' => $request->notice_officer_name ?? '',
+            'notice_dates' => $request->notice_dates ?? null,
+            'has_similar_application' => $request->has_similar_application ?? 'no',
+            'similar_application_offices' => $request->similar_application_offices ?? '',
+            'similar_application_dates' => $request->similar_application_dates ?? null,
+            'preferred_release_mode' => $request->preferred_release_mode ?? 'pickup',
+            'release_address' => $request->release_address ?? '',
+            
+            // Existing requirement documents
+            'existing_documents' => $request->requirementDocuments->map(function ($doc) {
+                return [
+                    'id' => $doc->id,
+                    'requirement_id' => $doc->requirement_id,
+                    'requirement_name' => $doc->requirement_name,
+                    'original_filename' => $doc->original_filename,
+                    'file_path' => $doc->file_path,
+                    'mime_type' => $doc->mime_type,
+                    'file_size' => $doc->file_size,
+                    'uploaded_at' => $doc->created_at->format('M d, Y'),
+                ];
+            })->groupBy('requirement_id')->toArray(),
+        ];
+
+        return Inertia::render('Request/index', [
+            'isEditing' => true,
+            'existingApplication' => $applicationData,
         ]);
     }
 
@@ -191,6 +294,11 @@ class RequestController extends Controller
             'similar_application_dates' => 'nullable|date',
             'preferred_release_mode' => 'nullable|in:pickup,mail_applicant,mail_representative,mail_other',
             'release_address' => 'nullable|string',
+            
+            // Page 4: Requirements Upload
+            'requirement_uploads' => 'nullable|array',
+            'requirement_uploads.*' => 'nullable|array',
+            'requirement_uploads.*.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
         // Use a database transaction to ensure all records are created together
@@ -217,9 +325,9 @@ class RequestController extends Controller
                 'release_address' => $validated['release_address'] ?? null,
             ]);
 
-            // Assign unique CPD control number immediately after creation
+            // Assign unique application number immediately after creation
             $newRequest->update([
-                'control_number' => RequestModel::generateControlNumber(),
+                'application_number' => RequestModel::generateApplicationNumber($applicant->id),
             ]);
 
             // 3. Create Corporation record if applicable
@@ -282,6 +390,33 @@ class RequestController extends Controller
                 'evaluation' => 'pending',
             ]);
 
+            // 9. Handle requirement document uploads (Step 4)
+            if ($request->hasFile('requirement_uploads')) {
+                foreach ($request->file('requirement_uploads') as $requirementId => $files) {
+                    if (is_array($files)) {
+                        foreach ($files as $file) {
+                            // Store the file
+                            $path = $file->store('requirements', 'local');
+                            
+                            // Get original filename and extension
+                            $originalName = $file->getClientOriginalName();
+                            $extension = $file->getClientOriginalExtension();
+                            
+                            // Create document record
+                            \App\Models\RequirementDocument::create([
+                                'request_id' => $newRequest->id,
+                                'requirement_id' => $requirementId,
+                                'requirement_name' => 'Requirement #' . $requirementId, // Add requirement name
+                                'file_path' => $path,
+                                'original_filename' => $originalName,
+                                'mime_type' => $file->getMimeType(),
+                                'file_size' => $file->getSize(),
+                            ]);
+                        }
+                    }
+                }
+            }
+
             return [
                 'request' => $newRequest,
                 'applicant' => $applicant,
@@ -300,7 +435,7 @@ class RequestController extends Controller
                 app(\App\Services\SmsService::class)->sendApplicationSubmitted(
                     auth()->user()->contact_number,
                     auth()->user()->name,
-                    $result['request']->control_number ?? 'CPD-' . str_pad($result['request']->id, 4, '0', STR_PAD_LEFT)
+                    $result['request']->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($result['request']->id, 4, '0', STR_PAD_LEFT)
                 );
             }
         } catch (\Exception $e) {
@@ -308,14 +443,205 @@ class RequestController extends Controller
             \Log::error('Failed to send application email: ' . $e->getMessage());
         }
 
-        // Return with application data for the success dialog
-        return back()->with([
-            'success' => 'Request submitted successfully! Your request ID is #' . $result['request']->id,
-            'application' => [
-                'id' => $result['request']->id,
-                'control_number' => $result['request']->control_number,
-            ]
+        // Redirect to My Applications page with success message
+        return redirect()->route('my-applications')->with([
+            'success' => 'Application submitted successfully! Your application number is ' . $result['request']->application_number,
         ]);
+    }
+
+    /**
+     * Update an existing rejected/returned application - FRESH IMPLEMENTATION
+     */
+    public function update(Request $request, $id)
+    {
+        // Find the request with all relationships
+        $existingRequest = RequestModel::with([
+            'applicant.corporation',
+            'applicant.primaryRepresentative',
+            'project',
+            'location',
+            'property',
+            'report'
+        ])->findOrFail($id);
+
+        // Authorization check
+        if ($existingRequest->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized to update this application.');
+        }
+
+        // Status check - only allow editing rejected or returned applications
+        if (!in_array($existingRequest->status, ['rejected', 'returned'])) {
+            return back()->withErrors(['error' => 'Only rejected or returned applications can be edited.']);
+        }
+
+        // Validate input
+        $validated = $request->validate([
+            // Step 1
+            'applicant_name' => 'required|string|max:255',
+            'corporation_name' => 'nullable|string|max:255',
+            'applicant_address' => 'required|string',
+            'corporation_address' => 'nullable|string',
+            'authorized_representative_name' => 'nullable|string|max:255',
+            'authorized_representative_address' => 'nullable|string',
+            'authorized_representative_email' => 'nullable|email',
+            
+            // Step 2
+            'project_type' => 'nullable|string|max:255',
+            'project_nature' => 'nullable|string|max:255',
+            'project_location_number' => 'nullable|string|max:255',
+            'project_location_street' => 'nullable|string|max:255',
+            'project_location_barangay' => 'nullable|string|max:255',
+            'project_location_municipality' => 'nullable|string|max:255',
+            'project_location_province' => 'nullable|string|max:255',
+            'project_area_sqm' => 'nullable|numeric|min:0',
+            'lot_area_sqm' => 'nullable|numeric|min:0',
+            'bldg_improvement_sqm' => 'nullable|numeric|min:0',
+            'right_over_land' => 'nullable|string',
+            'project_nature_duration' => 'nullable|string',
+            'project_nature_years' => 'nullable|integer|min:1',
+            'project_cost' => 'nullable|numeric|min:0',
+            'existing_land_use' => 'nullable|string',
+            
+            // Step 3
+            'has_written_notice' => 'nullable|string',
+            'notice_officer_name' => 'nullable|string|max:255',
+            'notice_dates' => 'nullable|string',
+            'has_similar_application' => 'nullable|string',
+            'similar_application_offices' => 'nullable|string',
+            'similar_application_dates' => 'nullable|string',
+            'preferred_release_mode' => 'nullable|string',
+            'release_address' => 'nullable|string',
+            
+            // Step 4
+            'requirement_uploads' => 'nullable|array',
+            'requirement_uploads.*' => 'nullable|array',
+            'requirement_uploads.*.*' => 'file|max:5120',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Update Applicant
+            $existingRequest->applicant->update([
+                'applicant_name' => $validated['applicant_name'],
+                'applicant_address' => $validated['applicant_address'],
+                'applicant_type' => !empty($validated['corporation_name']) ? 'corporate' : 'individual',
+            ]);
+
+            // Update Corporation
+            if (!empty($validated['corporation_name'])) {
+                \App\Models\NormalizedCorporation::updateOrCreate(
+                    ['applicant_id' => $existingRequest->applicant_id],
+                    [
+                        'corporation_name' => $validated['corporation_name'],
+                        'corporation_address' => $validated['corporation_address'] ?? '',
+                    ]
+                );
+            } else {
+                \App\Models\NormalizedCorporation::where('applicant_id', $existingRequest->applicant_id)->delete();
+            }
+
+            // Update Representative
+            if (!empty($validated['authorized_representative_name'])) {
+                \App\Models\Representative::updateOrCreate(
+                    ['applicant_id' => $existingRequest->applicant_id, 'is_primary' => true],
+                    [
+                        'representative_name' => $validated['authorized_representative_name'],
+                        'representative_address' => $validated['authorized_representative_address'] ?? '',
+                        'representative_email' => $validated['authorized_representative_email'] ?? '',
+                    ]
+                );
+            } else {
+                \App\Models\Representative::where('applicant_id', $existingRequest->applicant_id)->delete();
+            }
+
+            // Update Project
+            \App\Models\NormalizedProject::updateOrCreate(
+                ['request_id' => $existingRequest->id],
+                [
+                    'project_type' => $validated['project_type'] ?? '',
+                    'project_nature' => $validated['project_nature'] ?? '',
+                    'project_nature_duration' => $validated['project_nature_duration'] ?? null,
+                    'project_nature_years' => $validated['project_nature_years'] ?? null,
+                    'project_cost' => $validated['project_cost'] ?? null,
+                ]
+            );
+
+            // Update Location
+            \App\Models\Location::updateOrCreate(
+                ['request_id' => $existingRequest->id],
+                [
+                    'street_address' => $validated['project_location_street'] ?? '',
+                    'barangay' => $validated['project_location_barangay'] ?? '',
+                    'city_municipality' => $validated['project_location_municipality'] ?? '',
+                    'province' => $validated['project_location_province'] ?? '',
+                ]
+            );
+
+            // Update Property
+            \App\Models\Property::updateOrCreate(
+                ['request_id' => $existingRequest->id],
+                [
+                    'lot_area_sqm' => $validated['lot_area_sqm'] ?? null,
+                    'bldg_improvement_sqm' => $validated['bldg_improvement_sqm'] ?? null,
+                    'lot_number' => $validated['project_location_number'] ?? null,
+                    'right_over_land' => $validated['right_over_land'] ?? null,
+                    'existing_land_use' => $validated['existing_land_use'] ?? null,
+                ]
+            );
+
+            // Update Request status and fields
+            $existingRequest->update([
+                'status' => 'in_applicant',
+                'has_written_notice' => $validated['has_written_notice'] ?? 'no',
+                'notice_officer_name' => $validated['notice_officer_name'] ?? null,
+                'notice_dates' => $validated['notice_dates'] ?? null,
+                'has_similar_application' => $validated['has_similar_application'] ?? 'no',
+                'similar_application_offices' => $validated['similar_application_offices'] ?? null,
+                'similar_application_dates' => $validated['similar_application_dates'] ?? null,
+                'preferred_release_mode' => $validated['preferred_release_mode'] ?? 'pickup',
+                'release_address' => $validated['release_address'] ?? null,
+            ]);
+
+            // Update Report if exists
+            if ($existingRequest->report) {
+                $existingRequest->report->update([
+                    'description' => $validated['project_nature'] ?? null,
+                    'amount' => $validated['project_cost'] ?? null,
+                    'evaluation' => 'pending',
+                ]);
+            }
+
+            // Handle new file uploads
+            if ($request->hasFile('requirement_uploads')) {
+                foreach ($request->file('requirement_uploads') as $requirementId => $files) {
+                    if (is_array($files)) {
+                        foreach ($files as $file) {
+                            $path = $file->store('requirements', 'local');
+                            
+                            \App\Models\RequirementDocument::create([
+                                'request_id' => $existingRequest->id,
+                                'requirement_id' => $requirementId,
+                                'requirement_name' => 'Requirement #' . $requirementId,
+                                'file_path' => $path,
+                                'original_filename' => $file->getClientOriginalName(),
+                                'mime_type' => $file->getMimeType(),
+                                'file_size' => $file->getSize(),
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->route('my-applications.index')->with('success', 'Application updated and resubmitted successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return back()->withErrors(['error' => 'Failed to update application: ' . $e->getMessage()])->withInput();
+        }
     }
 
     /**

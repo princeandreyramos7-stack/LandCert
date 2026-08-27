@@ -56,7 +56,7 @@ export function SuperAdminRequestList({ requests }) {
                     r.applicant_name?.toLowerCase().includes(term) ||
                     r.user_email?.toLowerCase().includes(term) ||
                     r.project_type?.toLowerCase().includes(term) ||
-                    r.control_number?.toLowerCase().includes(term) ||
+                    r.application_number?.toLowerCase().includes(term) ||
                     r.id?.toString().includes(term)
             );
         }
@@ -75,14 +75,6 @@ export function SuperAdminRequestList({ requests }) {
     }, [requestsData]);
 
     const handleApprove = (request) => {
-        if (!request.report_id) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "No report found for this request.",
-            });
-            return;
-        }
         setSelectedRequest(request);
         setIsApproveDialogOpen(true);
     };
@@ -91,11 +83,8 @@ export function SuperAdminRequestList({ requests }) {
         if (!selectedRequest) return;
 
         router.post(
-            route("super-admin.approve-request", selectedRequest.report_id),
-            {
-                description: "Application approved by Super Admin",
-                issued_by: "Super Admin",
-            },
+            route("super-admin.quick-approve", selectedRequest.id),
+            {},
             {
                 preserveScroll: true,
                 onSuccess: () => {
@@ -103,7 +92,7 @@ export function SuperAdminRequestList({ requests }) {
                     setSelectedRequest(null);
                     toast({
                         title: "Request Approved!",
-                        description: `Request #${selectedRequest.id} from ${selectedRequest.applicant_name} has been approved successfully.`,
+                        description: `Request #${selectedRequest.application_number || selectedRequest.id} from ${selectedRequest.applicant_name} has been approved successfully.`,
                     });
                 },
                 onError: () => {
@@ -119,14 +108,6 @@ export function SuperAdminRequestList({ requests }) {
     };
 
     const handleReject = (request) => {
-        if (!request.report_id) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "No report found for this request.",
-            });
-            return;
-        }
         setSelectedRequest(request);
         setRejectionFeedback("");
         setIsRejectDialogOpen(true);
@@ -145,7 +126,7 @@ export function SuperAdminRequestList({ requests }) {
         }
 
         router.post(
-            route("super-admin.reject-request", selectedRequest.report_id),
+            route("super-admin.quick-reject", selectedRequest.id),
             {
                 description: rejectionFeedback.trim(),
             },
@@ -157,7 +138,7 @@ export function SuperAdminRequestList({ requests }) {
                     setRejectionFeedback("");
                     toast({
                         title: "Request Rejected!",
-                        description: `Request #${selectedRequest.id} has been rejected.`,
+                        description: `Request #${selectedRequest.application_number || selectedRequest.id} has been rejected.`,
                     });
                 },
                 onError: () => {
@@ -346,7 +327,7 @@ export function SuperAdminRequestList({ requests }) {
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-gray-50">
-                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Control No.</TableHead>
+                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Application No.</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Applicant</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">User</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Project Type</TableHead>
@@ -372,7 +353,7 @@ export function SuperAdminRequestList({ requests }) {
                                             className="hover:bg-gradient-to-r hover:from-purple-50 hover:to-indigo-50 transition-all duration-300"
                                         >
                                             <TableCell className="font-mono font-bold text-[#0d1f5c] text-sm">
-                                                {request.control_number || `#${request.id}`}
+                                                {request.application_number || `#${request.id}`}
                                             </TableCell>
                                             <TableCell>
                                                 <div>

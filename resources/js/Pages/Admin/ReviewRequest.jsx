@@ -220,7 +220,7 @@ export default function ReviewRequest({ request }) {
 
     return (
         <SidebarProvider>
-            <Head title={`Review ${request.control_number || `CPDO-${request.id}`}`} />
+            <Head title={`Review ${request.application_number || `TPZ-${request.id}`}`} />
             <AdminSidebar />
             <SidebarInset>
                 <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b bg-white">
@@ -260,7 +260,7 @@ export default function ReviewRequest({ request }) {
                                 </BreadcrumbItem>
                                 <BreadcrumbItem>
                                     <BreadcrumbPage>
-                                        {request.control_number || `CPDO-${request.id}`}
+                                        {request.application_number || `TPZ-${request.id}`}
                                     </BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
@@ -290,7 +290,7 @@ export default function ReviewRequest({ request }) {
                                         </div>
                                         <div>
                                             <CardTitle className="text-2xl text-gray-900">
-                                                {request.control_number || `CPDO-${request.id}`}
+                                                {request.application_number || `TPZ-${request.id}`}
                                             </CardTitle>
                                             <p className="text-sm text-gray-600 mt-1">
                                                 Application Type: <span className="font-semibold text-gray-900">{request.application_category || "N/A"}</span>
@@ -680,96 +680,82 @@ export default function ReviewRequest({ request }) {
                 </div>
             </SidebarInset>
             
-            {/* Confirmation Dialog */}
+            {/* Confirmation Dialog - Simple White Modal */}
             {showConfirmDialog && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-in slide-in-from-bottom-4 duration-300">
-                        <div className={`px-6 py-5 rounded-t-2xl ${
-                            action === 'reviewed' 
-                                ? 'bg-gradient-to-r from-green-600 to-emerald-600' 
-                                : 'bg-gradient-to-r from-red-600 to-rose-600'
-                        }`}>
-                            <div className="flex items-center gap-3">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+                        <div className="px-6 py-4 border-b">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                Confirm Your Decision
+                            </h3>
+                        </div>
+                        
+                        <div className="px-6 py-4">
+                            <div className="mb-4">
                                 {action === 'reviewed' ? (
-                                    <CheckCircle2 className="h-8 w-8 text-white" />
+                                    <div className="flex items-start gap-3">
+                                        <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-gray-700 mb-2">
+                                                Mark this application as <span className="font-semibold text-green-600">REVIEWED</span>
+                                            </p>
+                                            <p className="text-sm text-gray-600">
+                                                This will forward the application to SuperAdmin for final approval.
+                                            </p>
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <XCircle className="h-8 w-8 text-white" />
+                                    <div className="flex items-start gap-3">
+                                        <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-gray-700 mb-2">
+                                                <span className="font-semibold text-red-600">REJECT</span> this application
+                                            </p>
+                                            <p className="text-sm text-gray-600 mb-2">Reason:</p>
+                                            <p className="text-sm text-gray-700 italic bg-gray-50 p-2 rounded border">
+                                                "{formData.rejection_reason || 'No reason provided'}"
+                                            </p>
+                                        </div>
+                                    </div>
                                 )}
-                                <div>
-                                    <h3 className="text-xl font-bold text-white">
-                                        Confirm Your Decision
-                                    </h3>
-                                    <p className="text-sm text-white/90 mt-1">
-                                        Please review before proceeding
-                                    </p>
-                                </div>
+                            </div>
+                            
+                            <div className="mt-4 p-3 bg-gray-50 rounded border-l-4 border-gray-400">
+                                <p className="text-sm text-gray-700">
+                                    This action cannot be undone. The applicant will be notified.
+                                </p>
                             </div>
                         </div>
                         
-                        <div className="px-6 py-5">
-                            <div className="mb-6">
-                                <div className="text-gray-700 mb-4">
-                                    {action === 'reviewed' ? (
-                                        <>
-                                            <p className="mb-3">You are about to <span className="font-bold text-green-600">MARK AS REVIEWED</span> this application.</p>
-                                            <div className="mt-3 p-4 bg-green-50 border-2 border-green-200 rounded-lg">
-                                                <p className="text-sm text-green-900">
-                                                    This application will be marked as reviewed and forwarded to SuperAdmin for final approval.
-                                                </p>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <p className="mb-3">You are about to <span className="font-bold text-red-600">REJECT</span> this application with the following reason:</p>
-                                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                                <p className="text-sm text-red-900 italic">
-                                                    "{formData.rejection_reason || 'No reason provided'}"
-                                                </p>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                                
-                                <div className="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
-                                    <div className="flex items-start gap-2">
-                                        <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                                        <p className="text-sm text-yellow-800">
-                                            <span className="font-semibold">Important:</span> {action === 'reviewed' ? 'The application will be sent to SuperAdmin for final approval.' : 'The applicant will be notified via email immediately.'} This action cannot be undone.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <p className="text-center font-medium text-gray-900 mb-4">
-                                Do you want to proceed?
-                            </p>
-                            
-                            <div className="flex gap-3">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setShowConfirmDialog(false)}
-                                    className="flex-1 border-2 hover:bg-gray-100"
-                                    disabled={loading}
-                                >
-                                    No, Go Back
-                                </Button>
-                                <Button
-                                    type="button"
-                                    onClick={confirmSubmit}
-                                    disabled={loading}
-                                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold"
-                                >
-                                    {loading ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Processing...
-                                        </>
-                                    ) : (
-                                        <>Yes, Continue</>
-                                    )}
-                                </Button>
-                            </div>
+                        <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex gap-3">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setShowConfirmDialog(false)}
+                                className="flex-1"
+                                disabled={loading}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={confirmSubmit}
+                                disabled={loading}
+                                className={`flex-1 ${
+                                    action === 'reviewed' 
+                                        ? 'bg-green-600 hover:bg-green-700' 
+                                        : 'bg-red-600 hover:bg-red-700'
+                                } text-white`}
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    <>Confirm</>
+                                )}
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -1001,7 +987,7 @@ function Step2Content({ request }) {
                             <option value="">N/A</option>
                             <option value="TUP">TUP (Temporary Use Permit)</option>
                             <option value="SUP">SUP (Special Use Permit)</option>
-                            <option value="Zoning">Zoning (Zoning Clearance)</option>
+                            <option value="CZC">CZC (Certificate of Zoning Compliance)</option>
                         </select>
                     ) : (
                         <p className="text-sm text-gray-900 font-medium">

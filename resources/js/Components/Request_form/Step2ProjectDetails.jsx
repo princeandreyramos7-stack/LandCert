@@ -67,7 +67,7 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
                         <SelectValue placeholder="Select project type (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="Zoning">Zoning Clearance</SelectItem>
+                        <SelectItem value="CZC">CZC (Certificate of Zoning Compliance)</SelectItem>
                         <SelectItem value="TUP">TUP (Temporary Use Permit)</SelectItem>
                         <SelectItem value="SUP">SUP (Special Use Permit)</SelectItem>
                     </SelectContent>

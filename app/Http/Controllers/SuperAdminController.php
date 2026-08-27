@@ -19,6 +19,8 @@ use App\Services\NotificationService;
 use App\Services\AuditLogService;
 use App\Models\AuditLog;
 use App\Mail\ApplicationApprovedWithDetails;
+use App\Mail\ApplicationRejected;
+use Illuminate\Support\Facades\Mail;
 
 class SuperAdminController extends Controller
 {
@@ -318,7 +320,7 @@ class SuperAdminController extends Controller
             
             return (object)[
                 'id' => $request->id,
-                'control_number' => $request->control_number,
+                'application_number' => $request->application_number,
                 'applicant_name' => $request->applicant->applicant_name ?? 'N/A',
                 'applicant_address' => $request->applicant->applicant_address ?? 'N/A',
                 'corporation_name' => $request->applicant->corporation->corporation_name ?? null,
@@ -400,7 +402,7 @@ class SuperAdminController extends Controller
             foreach ($requests as $req) {
                 fputcsv($file, [
                     $req->id,
-                    $req->control_number ?? "#" . $req->id,
+                    $req->application_number ?? "#" . $req->id,
                     $req->applicant_name,
                     $req->corporation_name ?? '',
                     $req->applicant_address,
@@ -449,7 +451,7 @@ class SuperAdminController extends Controller
         // Build the request data with normalized relationships
         $requestData = [
             'id' => $request->id,
-            'control_number' => $request->control_number,
+            'application_number' => $request->application_number,
             'status' => $report?->evaluation ?? $request->status,
             'created_at' => $request->created_at,
             'updated_at' => $request->updated_at,
@@ -536,6 +538,169 @@ class SuperAdminController extends Controller
 
     /**
      * Approve a request (Super Admin only) - UPDATED FOR NEW WORKFLOW
+     * After admin review, SuperAdmin gives final approval and applicant gets notified
+     */
+    /**
+     * Quick approve a request (creates report if doesn't exist)
+     */
+    public function quickApprove(Request $request, $requestId)
+    {
+        $requestModel = RequestModel::with(['applicant', 'project', 'user', 'reports'])->findOrFail($requestId);
+
+        // Check if report exists, create one if it doesn't
+        $report = $requestModel->reports()->first();
+        
+        if (!$report) {
+            // Create a new report for this request
+            $report = Report::create([
+                'request_id' => $requestModel->id,
+                'evaluation' => 'approved',
+                'approved_by' => auth()->user()->name,
+                'approved_at' => now(),
+                'description' => 'Quick approved by SuperAdmin ' . auth()->user()->name,
+                'issued_by' => auth()->user()->name,
+                'date_reported' => now(),
+            ]);
+        } else {
+            // Update existing report
+            $report->evaluation = 'approved';
+            $report->approved_by = auth()->user()->name;
+            $report->approved_at = now();
+            $report->description = ($report->description ? $report->description . ' | ' : '') . 'Quick approved by SuperAdmin ' . auth()->user()->name;
+            $report->save();
+        }
+
+        // Update request status
+        $requestModel->status = 'approved';
+        $requestModel->save();
+
+        // Log the action
+        AuditLogService::log(
+            'quick_approve',
+            "SuperAdmin quick approved application #{$requestModel->id} (App#: {$requestModel->application_number})",
+            'Request',
+            $requestModel->id,
+            null,
+            [
+                'admin_name' => auth()->user()->name,
+                'request_id' => $requestModel->id,
+                'application_number' => $requestModel->application_number,
+            ]
+        );
+
+        // Send notifications
+        try {
+            if ($requestModel->user && $requestModel->user->email) {
+                \Mail::to($requestModel->user->email)->send(
+                    new \App\Mail\ApplicationApproved(
+                        $requestModel,
+                        $requestModel->applicant->applicant_name ?? 'Applicant',
+                        $requestModel->id
+                    )
+                );
+            }
+
+            // Create in-app notification
+            NotificationService::applicationReviewed($requestModel, 'approved', auth()->user());
+
+            // Send SMS if available
+            if ($requestModel->user && $requestModel->user->contact_number) {
+                app(\App\Services\SmsService::class)->sendApplicationApproved(
+                    $requestModel->user->contact_number,
+                    $requestModel->user->name,
+                    $requestModel->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT)
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send quick approval notifications: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Request approved successfully! Applicant has been notified.');
+    }
+
+    /**
+     * Quick reject a request (creates report if doesn't exist)
+     */
+    public function quickReject(Request $request, $requestId)
+    {
+        $validated = $request->validate([
+            'description' => 'required|string|min:10',
+        ]);
+
+        $requestModel = RequestModel::with(['applicant', 'project', 'user', 'reports'])->findOrFail($requestId);
+
+        // Check if report exists, create one if it doesn't
+        $report = $requestModel->reports()->first();
+        
+        if (!$report) {
+            // Create a new report for this request
+            $report = Report::create([
+                'request_id' => $requestModel->id,
+                'evaluation' => 'rejected',
+                'approved_by' => auth()->user()->name,
+                'approved_at' => now(),
+                'description' => $validated['description'],
+                'issued_by' => auth()->user()->name,
+                'date_reported' => now(),
+            ]);
+        } else {
+            // Update existing report
+            $report->evaluation = 'rejected';
+            $report->approved_by = auth()->user()->name;
+            $report->approved_at = now();
+            $report->description = $validated['description'];
+            $report->save();
+        }
+
+        // Update request status
+        $requestModel->status = 'rejected';
+        $requestModel->save();
+
+        // Log the action
+        AuditLogService::log(
+            'quick_reject',
+            "SuperAdmin quick rejected application #{$requestModel->id} (App#: {$requestModel->application_number})",
+            'Request',
+            $requestModel->id,
+            null,
+            [
+                'admin_name' => auth()->user()->name,
+                'request_id' => $requestModel->id,
+                'application_number' => $requestModel->application_number,
+                'reason' => $validated['description'],
+            ]
+        );
+
+        // Send notifications
+        try {
+            if ($requestModel->user && $requestModel->user->email) {
+                Mail::to($requestModel->user->email)->send(
+                    new ApplicationRejected(
+                        $requestModel,
+                        $requestModel->applicant->applicant_name ?? 'Applicant',
+                        $requestModel->id,
+                        $validated['description']
+                    )
+                );
+
+                if ($requestModel->user->contact_number) {
+                    app(\App\Services\SmsService::class)->sendApplicationRejected(
+                        $requestModel->user->contact_number,
+                        $requestModel->user->name,
+                        $requestModel->control_number ?? 'CPD-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT),
+                        $validated['description']
+                    );
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send rejection notification: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Request rejected successfully! Applicant has been notified.');
+    }
+
+    /**
+     * Approve a request
      * After admin review, SuperAdmin gives final approval and applicant gets notified
      */
     public function approveRequest(Request $request, $reportId)
@@ -849,7 +1014,7 @@ class SuperAdminController extends Controller
                 $join->on('audit_logs.model_type', '=', \DB::raw("'Request'"))
                      ->on('audit_logs.model_id', '=', 'requests.id');
             })
-            ->select('audit_logs.*', 'requests.control_number')
+            ->select('audit_logs.*', 'requests.application_number')
             ->orderBy('audit_logs.created_at', 'desc');
 
         // Apply filters
@@ -1071,7 +1236,7 @@ class SuperAdminController extends Controller
                 
                 return [
                     'request_id' => $request->id,
-                    'control_number' => $request->control_number ?? '#' . $request->id,
+                    'application_number' => $request->application_number ?? '#' . $request->id,
                     'applicant_name' => $request->applicant->applicant_name ?? 'Unknown',
                     'expected_amount' => $this->getExpectedAmount($request->project_type),
                     'approved_at' => $request->updated_at->format('Y-m-d'),
@@ -1425,7 +1590,7 @@ class SuperAdminController extends Controller
         return match (strtoupper(trim($projectType))) {
             'SUP', 'SPECIAL USE PERMIT' => 750.00,
             'TUP', 'TEMPORARY USE PERMIT' => 350.00,
-            'ZONING CLEARANCE', 'CERTIFICATE OF ZONING COMPLIANCE', 'LOCATIONAL CLEARANCE' => 500.00,
+            'CZC', 'CERTIFICATE OF ZONING COMPLIANCE', 'ZONING CLEARANCE', 'LOCATIONAL CLEARANCE', 'ZONING' => 500.00,
             default => 500.00, // Default for any other type
         };
     }

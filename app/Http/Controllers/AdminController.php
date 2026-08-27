@@ -299,7 +299,7 @@ class AdminController extends Controller
 
         $data = [
             'id'             => $request->id,
-            'control_number' => $request->control_number ?? sprintf('CPD-%03d-0', $request->id),
+            'application_number' => $request->application_number ?? sprintf('TPZ-%s-%04d', date('m-y'), $request->id),
             'created_at'     => $request->created_at?->format('F j, Y'),
 
             // Applicant
@@ -414,7 +414,7 @@ class AdminController extends Controller
         // Build the request data with normalized relationships
         $requestData = [
             'id' => $request->id,
-            'control_number' => $request->control_number,
+            'application_number' => $request->application_number,
             'status' => $report?->evaluation ?? $request->status,
             'created_at' => $request->created_at,
             'updated_at' => $request->updated_at,
@@ -597,7 +597,7 @@ class AdminController extends Controller
                                 app(\App\Services\SmsService::class)->sendApplicationApproved(
                                     $user->contact_number,
                                     $user->name,
-                                    $requestModel->control_number ?? 'CPD-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT)
+                                    $requestModel->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT)
                                 );
                             }
                             
@@ -633,7 +633,7 @@ class AdminController extends Controller
                                 app(\App\Services\SmsService::class)->sendApplicationRejected(
                                     $user->contact_number,
                                     $user->name,
-                                    $requestModel->control_number ?? 'CPD-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT),
+                                    $requestModel->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT),
                                     $rejectionReason
                                 );
                             }
@@ -775,7 +775,7 @@ class AdminController extends Controller
                     app(\App\Services\SmsService::class)->sendApplicationRejected(
                         $requestModel->user->contact_number,
                         $requestModel->user->name,
-                        $requestModel->control_number ?? 'CPD-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT),
+                        $requestModel->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT),
                         $validated['rejection_reason']
                     );
                 }
@@ -865,7 +865,7 @@ class AdminController extends Controller
                 
                 return [
                     'request_id' => $request->id,
-                    'control_number' => $request->control_number ?? '#' . $request->id,
+                    'application_number' => $request->application_number ?? '#' . $request->id,
                     'applicant_name' => $request->applicant->applicant_name ?? 'Unknown',
                     'expected_amount' => $this->getExpectedAmount($request->project_type),
                     'approved_at' => $request->updated_at->format('Y-m-d'),
@@ -888,7 +888,7 @@ class AdminController extends Controller
                 return [
                     'id' => $payment->id,
                     'request_id' => $payment->request_id,
-                    'control_number' => $payment->request->control_number ?? null,
+                    'application_number' => $payment->request->application_number ?? null,
                     'amount' => $payment->amount,
                     'payment_method' => $payment->payment_method,
                     'receipt_number' => $payment->receipt_number,
@@ -912,7 +912,7 @@ class AdminController extends Controller
                 return [
                     'id' => $payment->id,
                     'request_id' => $payment->request_id,
-                    'control_number' => $payment->request->control_number ?? null,
+                    'application_number' => $payment->request->application_number ?? null,
                     'amount' => $payment->amount,
                     'payment_method' => $payment->payment_method,
                     'receipt_number' => $payment->receipt_number,
@@ -1012,7 +1012,7 @@ class AdminController extends Controller
                 app(\App\Services\SmsService::class)->sendPaymentVerified(
                     $pmtReq->user->contact_number,
                     $pmtReq->user->name,
-                    $pmtReq->control_number ?? 'CPD-' . str_pad($pmtReq->id, 4, '0', STR_PAD_LEFT),
+                    $pmtReq->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($pmtReq->id, 4, '0', STR_PAD_LEFT),
                     (float) $payment->amount
                 );
             }
@@ -1142,7 +1142,7 @@ class AdminController extends Controller
                     app(\App\Services\SmsService::class)->sendPaymentRejected(
                         $rejReq->user->contact_number,
                         $rejReq->user->name,
-                        $rejReq->control_number ?? 'CPD-' . str_pad($rejReq->id, 4, '0', STR_PAD_LEFT),
+                        $rejReq->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($rejReq->id, 4, '0', STR_PAD_LEFT),
                         $validated['rejection_reason']
                     );
                 }
@@ -1200,7 +1200,7 @@ class AdminController extends Controller
                     'created_at' => $certificate->created_at,
                     'request' => $certificate->request ? [
                         'id' => $certificate->request->id,
-                        'control_number' => $certificate->request->control_number,
+                        'application_number' => $certificate->request->application_number,
                         'applicant_name' => $certificate->request->applicant->applicant_name ?? 'N/A',
                         'project_type' => $certificate->request->project->project_type ?? 'N/A',
                     ] : null,
@@ -1988,7 +1988,7 @@ class AdminController extends Controller
                 $join->on('audit_logs.model_type', '=', \DB::raw("'Request'"))
                      ->on('audit_logs.model_id', '=', 'requests.id');
             })
-            ->select('audit_logs.*', 'requests.control_number')
+            ->select('audit_logs.*', 'requests.application_number')
             ->orderBy('audit_logs.created_at', 'desc');
 
         // Apply filters
@@ -2206,7 +2206,7 @@ class AdminController extends Controller
         return match (strtoupper(trim($projectType))) {
             'SUP', 'SPECIAL USE PERMIT' => 750.00,
             'TUP', 'TEMPORARY USE PERMIT' => 350.00,
-            'ZONING CLEARANCE', 'CERTIFICATE OF ZONING COMPLIANCE', 'LOCATIONAL CLEARANCE' => 500.00,
+            'CZC', 'CERTIFICATE OF ZONING COMPLIANCE', 'ZONING CLEARANCE', 'LOCATIONAL CLEARANCE', 'ZONING' => 500.00,
             default => 500.00, // Default for any other type
         };
     }

@@ -81,7 +81,7 @@ export function AdminRequestList({ requests, flash = {} }) {
                     r.applicant_name?.toLowerCase().includes(term) ||
                     r.user_email?.toLowerCase().includes(term) ||
                     r.project_type?.toLowerCase().includes(term) ||
-                    r.control_number?.toLowerCase().includes(term) ||
+                    r.application_number?.toLowerCase().includes(term) ||
                     r.id?.toString().includes(term)
             );
         }

@@ -11,13 +11,14 @@ import { StepIndicator } from "./StepIndicator";
 import { Step1ApplicantInfo } from "./Step1ApplicantInfo";
 import { Step2ProjectDetails } from "./Step2ProjectDetails";
 import { Step3LandUse } from "./Step3LandUse";
+import { Step4Requirements } from "./Step4Requirements";
 import { FormNavigation } from "./FormNavigation";
-import { ConfirmationDialog } from "./ConfirmationDialog";
-import { validateStep1, validateStep2, validateStep3 } from "./utils";
+import { ApplicationSummaryModal } from "./ApplicationSummaryModal";
+import { validateStep1, validateStep2, validateStep3, validateStep4 } from "./utils";
 
-export default function RequestForm() {
+export default function RequestForm({ isEditing = false, existingApplication = null }) {
     // Welcome/requirements board is shown first; applicants proceed to Step 1 when ready
-    const [showWelcome, setShowWelcome] = useState(true);
+    const [showWelcome, setShowWelcome] = useState(!isEditing); // Skip welcome if editing
     const [currentStep, setCurrentStep] = useState(1);
     const [completedSteps, setCompletedSteps] = useState([]);
     const [hasRepresentative, setHasRepresentative] = useState(false);
@@ -26,44 +27,72 @@ export default function RequestForm() {
     const page = usePage();
     const flash = page.props.flash || {};
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, put, processing, errors, reset } = useForm({
         // Step 1: Applicant Information
-        applicant_name: "",
-        corporation_name: "",
-        applicant_address: "",
-        corporation_address: "",
-        authorized_representative_name: "",
-        authorized_representative_address: "",
+        applicant_name: existingApplication?.applicant_name || "",
+        corporation_name: existingApplication?.corporation_name || "",
+        applicant_address: existingApplication?.applicant_address || "",
+        corporation_address: existingApplication?.corporation_address || "",
+        authorized_representative_name: existingApplication?.authorized_representative_name || "",
+        authorized_representative_address: existingApplication?.authorized_representative_address || "",
         authorized_representative_email: "",
         authorization_letter: null,
 
         // Step 2: Project Details
-        project_type: "",
-        project_nature: "",
-        project_location_number: "",
-        project_location_street: "",
-        project_location_barangay: "",
-        project_location_municipality: "City of Ilagan",
-        project_location_province: "Isabela",
-        project_area_sqm: "",
-        lot_area_sqm: "",
-        bldg_improvement_sqm: "",
-        right_over_land: "",
-        project_nature_duration: "",
-        project_nature_years: "",
-        project_cost: "",
-        existing_land_use: "",
+        project_type: existingApplication?.project_type || "",
+        project_nature: existingApplication?.project_nature || "",
+        project_location_number: existingApplication?.project_location_number || "",
+        project_location_street: existingApplication?.project_location_street || "",
+        project_location_barangay: existingApplication?.project_location_barangay || "",
+        project_location_municipality: existingApplication?.project_location_municipality || "City of Ilagan",
+        project_location_province: existingApplication?.project_location_province || "Isabela",
+        project_area_sqm: existingApplication?.project_area_sqm || "",
+        lot_area_sqm: existingApplication?.lot_area_sqm || "",
+        bldg_improvement_sqm: existingApplication?.bldg_improvement_sqm || "",
+        right_over_land: existingApplication?.right_over_land || "",
+        project_nature_duration: existingApplication?.project_nature_duration || "",
+        project_nature_years: existingApplication?.project_nature_years || "",
+        project_cost: existingApplication?.project_cost || "",
+        existing_land_use: existingApplication?.existing_land_use || "",
 
         // Step 3: Land Use
-        has_written_notice: "",
-        notice_officer_name: "",
-        notice_dates: "",
-        has_similar_application: "",
-        similar_application_offices: "",
-        similar_application_dates: "",
-        preferred_release_mode: "",
-        release_address: "",
+        has_written_notice: existingApplication?.has_written_notice || "",
+        notice_officer_name: existingApplication?.notice_officer_name || "",
+        notice_dates: existingApplication?.notice_dates || "",
+        has_similar_application: existingApplication?.has_similar_application || "",
+        similar_application_offices: existingApplication?.similar_application_offices || "",
+        similar_application_dates: existingApplication?.similar_application_dates || "",
+        preferred_release_mode: existingApplication?.preferred_release_mode || "",
+        release_address: existingApplication?.release_address || "",
+        
+        // Step 4: Requirements Upload
+        requirement_uploads: {},
     });
+
+    // Define requirements structure (ALL requirements - main + additional)
+    const requirements = [
+        // Main Requirements
+        { id: 1, name: "1. Accomplished and notarized APPLICATION FORM", required: true, section: "main" },
+        { id: 2, name: "2. Right Over Land Documentation", required: true, section: "main" },
+        { id: 3, name: "3. VICINITY MAP", required: true, section: "main" },
+        { id: 4, name: "4. SITE DEVELOPMENT PLAN", required: true, section: "main" },
+        { id: 5, name: "5. ESTIMATED PROJECT COST / BILL OF MATERIALS", required: true, section: "main" },
+        // Additional Requirements (optional except Barangay Clearance)
+        { id: 6, name: "Endorsement/recommendation from Department of Agrarian Reform", required: false, section: "additional", description: "Required only for projects situated in tenanted rice and/or corn lands." },
+        { id: 7, name: "Description of Industry (Manufacturing Projects)", required: false, section: "additional" },
+        { id: 8, name: "Sworn Special Power of Attorney", required: false, section: "additional", description: "Required if the application is filed by an authorized representative." },
+        { id: 9, name: "Affidavit of No Objection", required: false, section: "additional" },
+        { id: 10, name: "Environmental Compliance Certificate (ECC) / Certificate of Non-Coverage (CNC)", required: false, section: "additional" },
+        { id: 11, name: "Certification of road right-of-way from DPWH", required: false, section: "additional", description: "Required if the project is located within a National Road." },
+        { id: 12, name: "Barangay Clearance", required: true, section: "additional" }, // Made required
+    ];
+
+    // Set hasRepresentative based on existing data
+    useEffect(() => {
+        if (existingApplication?.authorized_representative_name) {
+            setHasRepresentative(true);
+        }
+    }, [existingApplication]);
 
     // Handle flash messages
     useEffect(() => {
@@ -91,13 +120,22 @@ export default function RequestForm() {
     // Check if current step should be marked as completed based on validation
     useEffect(() => {
         if (currentStep === 3) {
-            // For the last step, check if it's valid and mark as completed
+            // For step 3, check if it's valid and mark as completed
             const step3Errors = validateStep3(data);
             if (step3Errors.length === 0 && !completedSteps.includes(3)) {
                 setCompletedSteps([...completedSteps, 3]);
             } else if (step3Errors.length > 0 && completedSteps.includes(3)) {
                 // Remove from completed if validation fails
                 setCompletedSteps(completedSteps.filter(s => s !== 3));
+            }
+        }
+        if (currentStep === 4) {
+            // For step 4, check if at least main requirements are uploaded
+            const step4Errors = validateStep4(data, requirements, existingApplication?.existing_documents || {});
+            if (step4Errors.length === 0 && !completedSteps.includes(4)) {
+                setCompletedSteps([...completedSteps, 4]);
+            } else if (step4Errors.length > 0 && completedSteps.includes(4)) {
+                setCompletedSteps(completedSteps.filter(s => s !== 4));
             }
         }
     }, [data, currentStep]);
@@ -129,6 +167,9 @@ export default function RequestForm() {
                 break;
             case 3:
                 validationErrors = validateStep3(data);
+                break;
+            case 4:
+                validationErrors = validateStep4(data, requirements, existingApplication?.existing_documents || {});
                 break;
             default:
                 break;
@@ -191,10 +232,17 @@ export default function RequestForm() {
     
     // Handle direct step navigation
     const handleStepClick = (stepNumber) => {
-        // Only allow navigation to current step, completed steps, or next step after completing current
-        if (stepNumber <= currentStep || completedSteps.includes(stepNumber - 1)) {
+        // When editing, allow free navigation between all steps
+        // When creating new, only allow navigation to current/completed steps
+        if (isEditing) {
             setCurrentStep(stepNumber);
             window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+            // Only allow navigation to current step, completed steps, or next step after completing current
+            if (stepNumber <= currentStep || completedSteps.includes(stepNumber - 1)) {
+                setCurrentStep(stepNumber);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }
         }
     };
 
@@ -209,52 +257,85 @@ export default function RequestForm() {
             setCompletedSteps([...completedSteps, currentStep]);
         }
         
+        // Log form data before showing confirmation dialog
+        console.log('Form data before submit:', {
+            applicant_name: data.applicant_name,
+            applicant_address: data.applicant_address,
+            project_type: data.project_type,
+            project_nature: data.project_nature,
+            existing_land_use: data.existing_land_use,
+            has_written_notice: data.has_written_notice,
+            requirement_uploads: data.requirement_uploads,
+        });
+        
         setIsConfirmDialogOpen(true);
     };
 
-    // Confirm and submit
+    // Confirm and submit - FRESH CLEAN IMPLEMENTATION
     const confirmSubmit = () => {
-        post("/request", {
-            onSuccess: () => {
-                // Get the application data from flash message
-                const applicationData = flash.application;
-                
-                setIsConfirmDialogOpen(false);
-                
-                // Reset form
-                reset();
-                setCurrentStep(1);
-                setCompletedSteps([]);
-                setHasRepresentative(false);
-                
-                // Show success toast
-                toast({
-                    title: "Application Submitted! 🎉",
-                    description: "Redirecting to upload requirements...",
-                });
-                
-                // Redirect to requirements upload page immediately
-                if (applicationData?.id) {
-                    setTimeout(() => {
-                        router.visit(route('requirements.upload.page', applicationData.id));
-                    }, 500); // Small delay to show toast
-                } else {
-                    // Fallback to my applications if no ID
-                    setTimeout(() => {
-                        router.visit(route('my-applications'));
-                    }, 500);
+        setIsConfirmDialogOpen(false);
+        
+        if (isEditing && existingApplication?.id) {
+            // EDIT MODE: Update existing application
+            const formData = new FormData();
+            
+            // Add Laravel method spoofing
+            formData.append('_method', 'PUT');
+            
+            // Add all text fields
+            Object.keys(data).forEach(key => {
+                if (key !== 'requirement_uploads') {
+                    const value = data[key];
+                    if (value !== null && value !== undefined && value !== '') {
+                        formData.append(key, value);
+                    }
                 }
-            },
-            onError: (errors) => {
-                toast({
-                    variant: "destructive",
-                    title: "Submission Failed",
-                    description:
-                        "There was an error submitting your application. Please check the form and try again.",
+            });
+            
+            // Add file uploads if any
+            if (data.requirement_uploads) {
+                Object.keys(data.requirement_uploads).forEach(reqId => {
+                    const files = data.requirement_uploads[reqId];
+                    if (Array.isArray(files)) {
+                        files.forEach((file, index) => {
+                            formData.append(`requirement_uploads[${reqId}][${index}]`, file);
+                        });
+                    }
                 });
-                setIsConfirmDialogOpen(false);
-            },
-        });
+            }
+            
+            // Submit using Inertia router
+            router.post(route('requests.update', existingApplication.id), formData, {
+                forceFormData: true,
+                onSuccess: () => {
+                    toast({
+                        title: "Success!",
+                        description: "Application updated and resubmitted for review.",
+                    });
+                },
+                onError: (errors) => {
+                    toast({
+                        title: "Error",
+                        description: errors?.error || "Failed to update application.",
+                        variant: "destructive",
+                    });
+                }
+            });
+        } else {
+            // CREATE MODE: Submit new application
+            post("/request", {
+                onSuccess: () => {
+                    // Backend handles redirect to receipt page
+                },
+                onError: (errors) => {
+                    toast({
+                        variant: "destructive",
+                        title: "Submission Failed",
+                        description: "There was an error. Please check the form and try again.",
+                    });
+                },
+            });
+        }
     };
 
     if (showWelcome) {
@@ -304,7 +385,7 @@ export default function RequestForm() {
                                     </div>
                                     <div>
                                         <CardTitle className="text-2xl bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                                            Submit New Request
+                                            {isEditing ? "Edit Application" : "Submit New Request"}
                                         </CardTitle>
                                         <p className="text-sm text-gray-600 mt-2 flex items-center gap-2">
                                             <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -321,6 +402,7 @@ export default function RequestForm() {
                                     currentStep={currentStep}
                                     completedSteps={completedSteps}
                                     onStepClick={handleStepClick}
+                                    isEditing={isEditing}
                                 />
                             </div>
 
@@ -359,13 +441,25 @@ export default function RequestForm() {
                                         />
                                     )}
                                 </div>
+
+                                <div className={`transition-all duration-500 ${currentStep === 4 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8 absolute inset-0 pointer-events-none'}`}>
+                                    {currentStep === 4 && (
+                                        <Step4Requirements
+                                            data={data}
+                                            errors={errors}
+                                            onDataChange={handleDataChange}
+                                            requirements={requirements}
+                                            existingDocuments={existingApplication?.existing_documents || {}}
+                                        />
+                                    )}
+                                </div>
                             </div>
 
                             {/* Navigation with enhanced styling */}
                             <div className="animate-slideUp">
                                 <FormNavigation
                                     currentStep={currentStep}
-                                    totalSteps={3}
+                                    totalSteps={4}
                                     processing={processing}
                                     onPrevious={handlePrevious}
                                     onNext={handleNext}
@@ -378,12 +472,13 @@ export default function RequestForm() {
             </div>
 
             {/* Confirmation Dialog */}
-            <ConfirmationDialog
+            <ApplicationSummaryModal
                 isOpen={isConfirmDialogOpen}
                 onClose={() => setIsConfirmDialogOpen(false)}
                 onConfirm={confirmSubmit}
                 processing={processing}
                 data={data}
+                isEditing={isEditing}
             />
             
             {/* Add custom animations */}

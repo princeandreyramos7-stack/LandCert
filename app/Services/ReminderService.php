@@ -70,25 +70,25 @@ class ReminderService
             case 'payment_due':
                 $metadata = $reminder->metadata ?? [];
                 $daysRemaining = $metadata['days_remaining'] ?? 0;
-                // Get request to fetch control number
+                // Get request to fetch application number
                 $request = \App\Models\Request::find($reminder->related_id);
-                $controlNumber = $request ? ($request->control_number ?? 'CPD-' . str_pad($request->id, 4, '0', STR_PAD_LEFT)) : 'N/A';
+                $applicationNumber = $request ? ($request->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($request->id, 4, '0', STR_PAD_LEFT)) : 'N/A';
                 $smsService->sendPaymentReminder(
                     $user->contact_number,
                     $user->name,
-                    $controlNumber,
+                    $applicationNumber,
                     $daysRemaining
                 );
                 break;
                 
             case 'document_pending':
-                // Get request to fetch control number
+                // Get request to fetch application number
                 $request = \App\Models\Request::find($reminder->related_id);
-                $controlNumber = $request ? ($request->control_number ?? 'CPD-' . str_pad($request->id, 4, '0', STR_PAD_LEFT)) : 'N/A';
+                $applicationNumber = $request ? ($request->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($request->id, 4, '0', STR_PAD_LEFT)) : 'N/A';
                 $smsService->sendDocumentReminder(
                     $user->contact_number,
                     $user->name,
-                    $controlNumber
+                    $applicationNumber
                 );
                 break;
                 

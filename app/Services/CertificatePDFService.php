@@ -50,7 +50,8 @@ class CertificatePDFService
 
             // Certificate meta
             'certificateNumber' => $certificate->certificate_number,
-            'controlNumber'     => $req->control_number ?? 'N/A',
+            'applicationNumber' => $req->application_number ?? 'N/A',
+            'decisionNumber'    => $req->decision_number ?? 'N/A',
             'issueDate'         => $certificate->issued_at->format('F d, Y'),
             'issueDateShort'    => $certificate->issued_at->format('F j, Y'),
 

@@ -109,7 +109,7 @@ class PaymentController extends Controller
     {
         // Task 11.1: Eager load all required relationships to avoid N+1 queries
         $query = Payment::with([
-            'request:id,applicant_id,control_number',
+            'request:id,applicant_id,application_number',
             'request.applicant:id,applicant_name',
             'verifiedByUser:id,name,email',
             'certificate:id,payment_id,certificate_number,status'
@@ -154,7 +154,7 @@ class PaymentController extends Controller
                 'id' => $payment->id,
                 'receipt_number' => $payment->receipt_number,
                 'request_id' => $payment->request_id,
-                'control_number' => $payment->request->control_number ?? null,
+                'application_number' => $payment->request->application_number ?? null,
                 'applicant_name' => $payment->request->applicant->applicant_name ?? 'Unknown',
                 'amount' => $payment->amount,
                 'payment_date' => $payment->payment_date,
@@ -196,7 +196,7 @@ class PaymentController extends Controller
     {
         // Task 11.1: Eager load only needed relationships and columns
         $payment = Payment::with([
-            'request:id,applicant_id,control_number',
+            'request:id,applicant_id,application_number',
             'request.applicant:id,applicant_name,applicant_address,contact_number',
             'request.project:id,request_id,project_type,project_description',
             'verifiedByUser:id,name,email'
@@ -216,7 +216,7 @@ class PaymentController extends Controller
     {
         // Task 11.1: Eager load relationships with selective columns
         $query = Payment::with([
-            'request:id,applicant_id,control_number',
+            'request:id,applicant_id,application_number',
             'request.applicant:id,applicant_name',
             'verifiedBy:id,name'
         ]);
@@ -285,7 +285,7 @@ class PaymentController extends Controller
 
         $applicationData = [
             'id' => $request->id,
-            'control_number' => $request->control_number,
+            'application_number' => $request->application_number,
             'applicant_name' => $request->applicant?->applicant_name ?? '',
             'project_type' => $request->project?->project_type ?? '',
             'project_nature' => $request->project?->project_nature ?? '',
