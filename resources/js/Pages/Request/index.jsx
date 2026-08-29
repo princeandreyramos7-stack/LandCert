@@ -25,7 +25,7 @@ export default function RequestPage({ isEditing = false, existingApplication = n
 
     return (
         <SidebarProvider>
-            <Head title="Request" />
+            <Head title="Application Form" />
             <Sidebar />
             <Toaster />
             <SidebarInset>

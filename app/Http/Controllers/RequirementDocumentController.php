@@ -190,13 +190,19 @@ class RequirementDocumentController extends Controller
             abort(403, 'You are not authorized to view this document.');
         }
 
-        if (!Storage::disk('local')->exists($document->file_path)) {
-            abort(404, 'File not found.');
+        // Try both public and local disks
+        if (Storage::disk('public')->exists($document->file_path)) {
+            return Storage::disk('public')->response(
+                $document->file_path,
+                $document->original_filename
+            );
+        } elseif (Storage::disk('local')->exists($document->file_path)) {
+            return Storage::disk('local')->response(
+                $document->file_path,
+                $document->original_filename
+            );
         }
 
-        return Storage::disk('local')->response(
-            $document->file_path,
-            $document->original_filename
-        );
+        abort(404, 'File not found.');
     }
 }

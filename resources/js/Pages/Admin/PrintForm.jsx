@@ -1,6 +1,9 @@
 import React from "react";
 import { Head, Link } from "@inertiajs/react";
 import html2pdf from 'html2pdf.js';
+import AdminLayout from "@/Layouts/AdminLayout";
+import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
+import ApplicantLayout from "@/Layouts/ApplicantLayout";
 
 /* ─── helpers ─────────────────────────────────────── */
 const v = (x) =>
@@ -23,8 +26,8 @@ const Uline = ({ val, w = "80pt", inline = false, pl = "2pt", pr = "2pt" }) => (
             borderBottom: "1px solid #000",
             verticalAlign: "bottom",
             fontSize: "8pt",
-            lineHeight: "1.3",
-            paddingBottom: "0",
+            lineHeight: "1.4",
+            paddingBottom: "3pt",
             paddingLeft: pl,
             paddingRight: pr,
         }}
@@ -88,20 +91,24 @@ function pesoWords(n) {
 const CSS = `
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-body { background: #bbb; font-family: Arial, Helvetica, sans-serif; }
+body { 
+    background: transparent; 
+    font-family: Arial, Helvetica, sans-serif;
+}
 
 /* ── screen wrapper ── */
 .pf-page {
     width: 210mm;
     min-height: 297mm;
     background: #fff;
-    margin: 6mm auto;
-    border: 1px solid #999;
+    margin: 8px auto;
+    border: 1px solid #e5e7eb;
     padding: 7mm 8mm 7mm 8mm;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 8pt;
     color: #000;
     line-height: 1.25;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
 /* Remove border when generating PDF or printing */
@@ -123,7 +130,6 @@ body { background: #bbb; font-family: Arial, Helvetica, sans-serif; }
 /* Default: td has bottom border only — no vertical lines */
 .pf-page td {
     border: none;
-    border-bottom: 1px solid #000;
     padding: 2pt 4pt;
     vertical-align: top;
     word-break: break-word;
@@ -210,58 +216,106 @@ body { background: #bbb; font-family: Arial, Helvetica, sans-serif; }
 /* ── print controls ── */
 .ctrl {
     width: 210mm;
-    margin: 0 auto 4mm;
+    margin: 0 auto 20px;
     display: flex;
-    gap: 8px;
+    gap: 16px;
     align-items: center;
+    justify-content: flex-end;
+    padding: 16px 0;
+    border-bottom: 1px solid #e5e7eb;
 }
 .ctrl-btn {
-    padding: 6px 12px;
+    padding: 8px 20px;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    border: 1px solid #ddd;
+    border: 1px solid #d1d5db;
     border-radius: 4px;
-    background: #fff;
-    color: #333;
+    background: transparent;
+    color: #374151;
     font-family: Arial, sans-serif;
+    transition: all 0.15s ease;
+    letter-spacing: 0.3px;
 }
 .ctrl-btn:hover {
-    background: #f5f5f5;
-    border-color: #999;
+    border-color: #9ca3af;
+    color: #111827;
+    background: rgba(0, 0, 0, 0.02);
 }
-.ctrl-btn.go {
-    background: #2563eb;
-    color: #fff;
-    border-color: #2563eb;
-}
-.ctrl-btn.go:hover {
-    background: #1d4ed8;
+.ctrl-btn:active {
+    background: rgba(0, 0, 0, 0.05);
+    transform: translateY(1px);
 }
 .ctrl-hint {
-    font-size: 11px;
-    color: #666;
+    font-size: 12px;
+    color: #9ca3af;
     font-family: Arial, sans-serif;
-    margin-left: 8px;
+    margin-right: auto;
+    font-style: italic;
 }
 
 /* ── print ── */
 @media print {
-    html, body { background: #fff !important; margin: 0; padding: 0; }
-    .ctrl { display: none !important; }
-    .pf-page {
-        margin: 0;
-        border: none;
-        padding: 0;
-        width: 100%;
-        min-height: auto;
+    html, body { 
+        background: #fff !important; 
+        margin: 0 !important; 
+        padding: 0 !important; 
+        overflow: visible !important;
     }
+    
+    /* Hide sidebar, header, and controls when printing */
+    aside,
+    header,
+    .ctrl,
+    [data-sidebar],
+    [data-sidebar-provider],
+    button {
+        display: none !important;
+    }
+    
+    /* Make the main content area full width */
+    main,
+    [data-sidebar-inset] {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+    
+    /* Show form pages */
+    .pf-page {
+        display: block !important;
+        visibility: visible !important;
+        margin: 0 !important;
+        border: none !important;
+        padding: 7mm 8mm !important;
+        width: 100% !important;
+        min-height: auto !important;
+        box-shadow: none !important;
+        position: static !important;
+        background: white !important;
+        page-break-inside: avoid !important;
+    }
+    
+    .pf-page:first-child {
+        page-break-after: always !important;
+    }
+    
+    .pf-page:last-child {
+        page-break-after: avoid !important;
+    }
+    
+    /* Make sure form content is visible */
+    .pf-page * {
+        visibility: visible !important;
+    }
+    
     /* Force background colors to print - especially yellow */
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
         color-adjust: exact !important;
     }
+    
     /* Ensure yellow background stays yellow */
     [style*="background"][style*="yellow"],
     [style*="backgroundColor"][style*="FFFF00"],
@@ -270,7 +324,11 @@ body { background: #bbb; font-family: Arial, Helvetica, sans-serif; }
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
-    @page { size: A4 portrait; margin: 8mm; }
+    
+    @page { 
+        size: A4 portrait; 
+        margin: 0;
+    }
 }
 `;
 
@@ -286,16 +344,40 @@ export default function PrintForm({ application: a, auth }) {
 
     const appNo = v(a.application_number) || sprintf("TPZ-%s-%04d", new Date().toISOString().slice(5,7) + '-' + new Date().toISOString().slice(2,4), a.id);
     const decNo = v(a.decision_number) || "CPDO-" + new Date().toISOString().slice(5,7) + '-' + new Date().toISOString().slice(2,4) + "-0001-0001";
+    
+    // Fixed control number for all applications
+    const ctrlNo = 'CPD-001-0';
+
+    // This page is rendered for applicants, admins and super admins alike, so the
+    // chrome around it has to follow the viewer — an applicant must never see the
+    // zoning-officer sidebar or its admin-only nav.
+    const userRole = auth?.user ? (auth.user.user_type || auth.user.role) : null;
+    const isSuperAdmin = userRole === 'super_admin';
+    const isAdmin = userRole === 'admin';
+
+    const Layout = isSuperAdmin ? SuperAdminLayout : isAdmin ? AdminLayout : ApplicantLayout;
+
+    const layoutBreadcrumbs = isSuperAdmin
+        ? [
+            { label: "Dashboard", href: "/super-admin/dashboard" },
+            { label: "Applications", href: "/super-admin/requests" },
+            { label: "Print Form" },
+        ]
+        : isAdmin
+        ? [
+            { label: "Dashboard", href: "/admin/dashboard" },
+            { label: "Applications", href: "/admin/requests" },
+            { label: "Print Form" },
+        ]
+        : [];
 
     // Determine back route based on user role
     const getBackRoute = () => {
-        if (!auth || !auth.user) return route('login');
-        
-        const userRole = auth.user.user_type || auth.user.role;
-        
-        if (userRole === 'super_admin') {
+        if (!userRole) return route('login');
+
+        if (isSuperAdmin) {
             return route('super-admin.requests');
-        } else if (userRole === 'admin') {
+        } else if (isAdmin) {
             return route('admin.requests');
         } else {
             // applicant
@@ -307,24 +389,51 @@ export default function PrintForm({ application: a, auth }) {
     const handleSaveForm = () => {
         const filename = `CPDO_Form_${ctrlNo}_${v(a.applicant_name).replace(/\s+/g, '_')}.pdf`;
         
-        const element = document.querySelector('.pf-page');
+        // Create wrapper div for all content
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'background: white; padding: 0; margin: 0;';
         
-        // Remove border for PDF generation
-        element.classList.add('no-border');
+        // Get all form pages
+        const pages = document.querySelectorAll('.pf-page');
+        
+        // Clone and append each page
+        pages.forEach((page, index) => {
+            const clone = page.cloneNode(true);
+            clone.classList.remove('no-border');
+            clone.style.cssText = `
+                margin: 0;
+                padding: 7mm 8mm;
+                border: none;
+                background: white;
+                width: 210mm;
+                min-height: ${index === 0 ? '297mm' : 'auto'};
+                page-break-after: ${index === 0 ? 'always' : 'auto'};
+                page-break-inside: avoid;
+            `;
+            wrapper.appendChild(clone);
+        });
         
         const opt = {
             margin: 0,
             filename: filename,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            html2canvas: { 
+                scale: 2, 
+                useCORS: true,
+                logging: false,
+                windowWidth: 794, // A4 width in pixels at 96dpi
+                windowHeight: 1123 // A4 height in pixels at 96dpi
+            },
+            jsPDF: { 
+                unit: 'mm', 
+                format: 'a4', 
+                orientation: 'portrait' 
+            },
+            pagebreak: { mode: 'css', after: '.pf-page' }
         };
         
-        // Generate and download PDF
-        html2pdf().set(opt).from(element).save().then(() => {
-            // Restore border after PDF generation
-            element.classList.remove('no-border');
-        });
+        // Generate PDF
+        html2pdf().set(opt).from(wrapper).save();
     };
 
     /* land-use checks */
@@ -339,24 +448,24 @@ export default function PrintForm({ application: a, auth }) {
     const rm = v(a.preferred_release_mode).toLowerCase();
 
     return (
-        <>
+        <Layout
+            title="Print Application Form"
+            breadcrumbs={layoutBreadcrumbs}
+        >
             <Head title={`Print — ${ctrlNo}`} />
             <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
             {/* ── controls ── */}
             <div className="ctrl">
-                <Link href={getBackRoute()} className="ctrl-btn">
-                    ← Back
-                </Link>
-                <button className="ctrl-btn go" onClick={() => window.print()}>
-                    🖨 Print Form
-                </button>
-                <button className="ctrl-btn go" onClick={handleSaveForm}>
-                    💾 Download PDF
-                </button>
                 <span className="ctrl-hint">
-                    Print sends to printer. Download PDF saves the file automatically.
+                    Select an option to print or save this document
                 </span>
+                <button className="ctrl-btn" onClick={() => window.print()}>
+                    Print Form
+                </button>
+                <button className="ctrl-btn" onClick={handleSaveForm}>
+                    Download PDF
+                </button>
             </div>
 
             {/* ═══════════════════════════════════════════
@@ -949,7 +1058,120 @@ export default function PrintForm({ application: a, auth }) {
                 </div>
 
             </div>{/* end .pf-page */}
-        </>
+
+            {/* PAGE 2: REQUIREMENTS CHECKLIST */}
+            <div className="pf-page" style={{ pageBreakBefore: "always", padding: "40pt 60pt" }}>
+                <div style={{ marginBottom: "20pt" }}>
+                    <div style={{ fontSize: "9pt", marginBottom: "15pt", color: "#555", textAlign: "left" }}>
+                        ANNEX B of HLURB memorandum Circular No. 03 series of 1998
+                    </div>
+                    <div style={{ fontSize: "11pt", fontWeight: "bold", textTransform: "uppercase", textAlign: "center" }}>
+                        APPLICATION REQUIREMENTS FOR LOCATIONAL CLEARANCE/<br />
+                        CERTIFICATE OF ZONING COMPLIANCE
+                    </div>
+                </div>
+
+                <div style={{ fontSize: "9pt", lineHeight: "1.6", textAlign: "justify" }}>
+                    {/* Requirement 1 */}
+                    <div style={{ marginBottom: "12pt" }}>
+                        <strong>1.</strong> Duly accomplished and notarized <strong>APPLICATION FORM</strong>
+                    </div>
+
+                    {/* Requirement 2 */}
+                    <div style={{ marginBottom: "12pt" }}>
+                        <strong>2.</strong> Any of the following requirements relative to <strong>RIGHT OVER LAND</strong>
+                        
+                        <div style={{ marginLeft: "20pt", marginTop: "6pt" }}>
+                            <div style={{ marginBottom: "4pt" }}>
+                                <strong>a.</strong> Photocopy of the Cert. of Title in case registered in the name of the applicant & latest Tax declaration.
+                            </div>
+                            
+                            <div style={{ marginBottom: "4pt" }}>
+                                <strong>b.</strong> In the absence of any existing certification of title, in the name of the applicant, submit (1) certified true copy of the latest tax declaration and (2) pro forma affidavit (Annex C) to the effect that:
+                                
+                                <div style={{ marginLeft: "20pt", marginTop: "3pt", fontSize: "8.5pt" }}>
+                                    <div>- the applicant is the owner of the property subject of the application.</div>
+                                    <div>- The reason why the property is not yet titled</div>
+                                    <div>- That the property is situated within alienable and <em>disposable land outside land reserved for the public domain</em></div>
+                                    <div>- That the property is free for liens and encumbrance or stating the liens & encumbrances of the property.</div>
+                                    <div>- That the property is/are not tenanted (in case the property is planted to rise and corn)</div>
+                                </div>
+                            </div>
+                            
+                            <div style={{ marginBottom: "4pt" }}>
+                                <strong>c.</strong> In case the property is not registered in the name of the applicant, submit duly accomplished Deed of sale or deed of donation; or contract of lease or authorization to used land, which ever is applicable plus the photo copy of the owner's certificate of title in the absence of title, the tax declaration and pro-forma affidavit as describe in item b.
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Requirement 3 */}
+                    <div style={{ marginBottom: "12pt" }}>
+                        <strong>3.</strong> <strong>VICINITY MAP</strong> showing the existing land uses within the prescribed radius from the lot boundary of the project site.
+                        
+                        <div style={{ marginLeft: "20pt", marginTop: "6pt" }}>
+                            <div style={{ marginBottom: "4pt" }}>
+                                <strong>a.</strong> For projects of local significance, the vicinity should cover a minimum of 100 meters radius, and the map need not to be drawn to scale provided the relative distance of existing land uses to the project site lot boundaries are shown.
+                            </div>
+                            
+                            <div style={{ marginBottom: "4pt" }}>
+                                <strong>b.</strong> For project of national significant, the vicinity should cover a minimum of one (1) kilometer radius and be drawn to scale.
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Requirement 4 */}
+                    <div style={{ marginBottom: "12pt" }}>
+                        <strong>4.</strong> <strong>SITE DEVELOPMENT PLAN</strong> showing the project site, lot area boundaries & dimension of proposed improvements within the project site: the plan need not to be drawn to scale for the projects of local significance.
+                    </div>
+
+                    {/* Requirement 5 */}
+                    <div style={{ marginBottom: "12pt" }}>
+                        <strong>5.</strong> <strong>ESTIMATED PROJECT COST /BILL OF MATERIALS</strong>
+                    </div>
+
+                    {/* Additional Requirements */}
+                    <div style={{ marginTop: "18pt", marginBottom: "10pt", fontWeight: "bold", textDecoration: "underline" }}>
+                        Additional requirements:
+                    </div>
+
+                    <div style={{ marginBottom: "10pt" }}>
+                        <strong>1.</strong> For all projects to be situated in Tenanted Rice and/or Corn lands: Endorsement/recommendation from the Department of Agrarian Reform for the conversion into other uses.
+                    </div>
+
+                    <div style={{ marginBottom: "10pt" }}>
+                        <strong>2.</strong> For manufacturing projects <strong>DESCRIPTION OF INDUSTRY</strong> citing among others are as follows:
+                        
+                        <div style={{ marginLeft: "20pt", marginTop: "4pt", fontSize: "8.5pt" }}>
+                            <div>2.1 Type and volume of raw materials used</div>
+                            <div>2.2 Products manufactured or stored</div>
+                            <div>2.3 Average daily output/capacity per day/week/month</div>
+                            <div>2.4 Industrial waste & plans for pollution control</div>
+                            <div>2.5 Description of manufacturing processes</div>
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: "10pt" }}>
+                        <strong>3.</strong> Description filled by authorized representative, <strong>SWORN SPECIAL POWER OF ATTORNEY</strong> for the Representative: to file/follow-up application.
+                    </div>
+
+                    <div style={{ marginBottom: "10pt" }}>
+                        <strong>4.</strong> <strong>AFFIDAVIT OF NO OBJECTION</strong>
+                    </div>
+
+                    <div style={{ marginBottom: "10pt" }}>
+                        <strong>5.</strong> <strong>ENVIRONMENTAL COMPLIANCE CERTIFICATE (ECC)/CERTIFICATE OF NON-COVERAGE(CNC)</strong>
+                    </div>
+
+                    <div style={{ marginBottom: "10pt" }}>
+                        <strong>6.</strong> Certification of road right-of-way from DPWH (if the project is located within the National Road)
+                    </div>
+
+                    <div style={{ marginBottom: "10pt" }}>
+                        <strong>7.</strong> <strong>Barangay clearance</strong>
+                    </div>
+                </div>
+            </div>{/* end requirements page */}
+        </Layout>
     );
 }
 

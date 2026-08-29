@@ -90,7 +90,7 @@ export default function PaymentsUnified({
 
     return (
         <>
-            <Head title="Payments Management — Super Admin"/>
+            <Head title="Payments Management — Zoning Administrator"/>
             <SuperAdminLayout 
                 title="Payments Management" 
                 breadcrumbs={[{ label: "Dashboard", href: "/super-admin/dashboard" }]}

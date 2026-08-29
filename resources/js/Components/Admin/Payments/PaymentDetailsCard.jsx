@@ -31,13 +31,13 @@ export function PaymentDetailsCard({ payment }) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <InfoField
                         icon={<Receipt className="w-4 h-4 text-gray-500" />}
-                        label="Payment ID"
+                        label="Decision No."
                         value={`#${payment.id}`}
                     />
                     <InfoField
                         icon={<FileText className="w-4 h-4 text-gray-500" />}
-                        label="Request ID"
-                        value={`#${payment.request_id}`}
+                        label="Application No."
+                        value={payment.application_number || `#${payment.request_id}`}
                     />
                     <InfoField
                         icon={<User className="w-4 h-4 text-gray-500" />}

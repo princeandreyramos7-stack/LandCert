@@ -51,7 +51,7 @@ export default function Welcome({ auth }) {
 
     return (
         <>
-            <Head title="CPDO — City of Ilagan" />
+            <Head title="CPDO L.C — City of Ilagan" />
 
             {/* ═══════════════════════ NAVBAR ═════════════════════════════ */}
             <nav className="sticky top-0 z-50 bg-[#0d1f5c] border-b border-[#1a3a8f]/60 shadow-md">
@@ -59,11 +59,11 @@ export default function Welcome({ auth }) {
                     {/* Logo */}
                     <div className="flex items-center gap-3"
                         style={{ opacity: in_ ? 1 : 0, transform: in_ ? "none" : "translateX(-14px)", transition: "all .7s ease" }}>
-                        <img src="/images/Ilagan.png" alt="CPDO Logo" className="w-9 h-9 object-contain"/>
+                        <img src="/images/Ilagan.png" alt="CPDO L.C Logo" className="w-9 h-9 object-contain"/>
                         <div className="leading-tight">
                             <p className="text-white font-black text-xs tracking-[0.15em] uppercase">Republic of the Philippines</p>
-                            <p className="text-[#d4a017] font-black text-sm tracking-wide uppercase">City Planning &amp; Development Office</p>
-                            <p className="text-blue-300 text-[10px] tracking-widest">Ilagan City, Isabela</p>
+                            <p className="text-[#d4a017] font-black text-sm tracking-wide uppercase">CPDO L.C</p>
+                            <p className="text-blue-300 text-[10px] tracking-widest">City of Ilagan, Isabela</p>
                         </div>
                     </div>
 
@@ -120,11 +120,11 @@ export default function Welcome({ auth }) {
 
                         <div className="flex items-center gap-3">
                             <div className="w-14 h-14 rounded-full border-2 border-[#d4a017]/40 bg-[#d4a017]/10 flex items-center justify-center shrink-0">
-                                <img src="/images/Ilagan.png" alt="CPDO" className="w-9 h-9 object-contain"/>
+                                <img src="/images/Ilagan.png" alt="CPDO L.C" className="w-9 h-9 object-contain"/>
                             </div>
                             <div>
                                 <p className="text-blue-300 text-sm font-semibold">Welcome to</p>
-                                <p className="text-white font-black text-2xl lg:text-3xl leading-tight tracking-tight">CPDO LandCert</p>
+                                <p className="text-white font-black text-2xl lg:text-3xl leading-tight tracking-tight">CPDO L.C</p>
                             </div>
                         </div>
 
@@ -225,7 +225,7 @@ export default function Welcome({ auth }) {
                 <div className="max-w-6xl mx-auto px-6 lg:px-12">
                     <Reveal className="text-center mb-16">
                         <h2 className="text-3xl lg:text-4xl font-black text-white">
-                            Why use <span className="text-[#d4a017]">CPDO LandCert</span>?
+                            Why use <span className="text-[#d4a017]">CPDO L.C</span>?
                         </h2>
                         <p className="text-blue-200/70 mt-3 text-base max-w-xl mx-auto">
                             Your one-stop digital platform for all city planning and land use services in Ilagan City.
@@ -357,7 +357,7 @@ export default function Welcome({ auth }) {
                             <div className="flex items-center gap-3 mb-4">
                                 <img src="/images/Ilagan.png" alt="Logo" className="w-9 h-9 object-contain"/>
                                 <div>
-                                    <p className="text-white font-black text-sm tracking-widest uppercase">CPDO</p>
+                                    <p className="text-white font-black text-sm tracking-widest uppercase">CPDO L.C</p>
                                     <p className="text-[#d4a017] text-xs font-semibold">City of Ilagan, Isabela</p>
                                 </div>
                             </div>
@@ -370,7 +370,7 @@ export default function Welcome({ auth }) {
                         <div>
                             <h4 className="text-white font-bold mb-4 text-sm tracking-wide">Quick Links</h4>
                             <ul className="space-y-2 text-blue-300/70 text-sm">
-                                <li><a href="#why" className="hover:text-[#d4a017] transition-colors">About CPDO LandCert</a></li>
+                                <li><a href="#why" className="hover:text-[#d4a017] transition-colors">About CPDO L.C</a></li>
                                 <li><a href="#how" className="hover:text-[#d4a017] transition-colors">How It Works</a></li>
                                 <li>
                                     {!auth.user
@@ -388,7 +388,7 @@ export default function Welcome({ auth }) {
                             <ul className="space-y-3 text-blue-300/70 text-sm">
                                 <li className="flex items-start gap-2">
                                     <svg className="w-4 h-4 mt-0.5 text-[#d4a017] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                                    Ground Floor, City Hall Bldg,<br/>Ilagan City, Isabela
+                                    Ground Floor, City Hall Bldg,<br/>City of Ilagan, Isabela
                                 </li>
                                 <li className="flex items-center gap-2">
                                     <svg className="w-4 h-4 text-[#d4a017] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
@@ -409,7 +409,7 @@ export default function Welcome({ auth }) {
                     {/* Bottom bar */}
                     <div className="border-t border-[#1a3a8f]/50 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
                         <p className="text-blue-400/50 text-xs">
-                            &copy; {new Date().getFullYear()} City Planning and Development Office — Ilagan City, Isabela. All rights reserved.
+                            &copy; {new Date().getFullYear()} City Planning and Development Office — City of Ilagan, Isabela. All rights reserved.
                         </p>
                         <div className="flex items-center gap-5 text-blue-400/50 text-xs">
                             <a href="#" className="hover:text-[#d4a017] transition-colors">FAQs</a>

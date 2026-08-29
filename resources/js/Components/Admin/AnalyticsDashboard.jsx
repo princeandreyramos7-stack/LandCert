@@ -374,7 +374,7 @@ export function AnalyticsDashboard({ analytics }) {
                             </CardContent>
                         </Card>
 
-                    </div>                        <Card>
+                        <Card>
                             <CardHeader>
                                 <CardTitle className="text-base">Efficiency Metrics</CardTitle>
                             </CardHeader>

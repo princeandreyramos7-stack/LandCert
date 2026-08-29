@@ -67,6 +67,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         
         // Step 4: Requirements Upload
         requirement_uploads: {},
+        verified_requirements: existingApplication?.verified_requirements || {},
     });
 
     // Define requirements structure (ALL requirements - main + additional)
@@ -271,16 +272,18 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         setIsConfirmDialogOpen(true);
     };
 
-    // Confirm and submit - FRESH CLEAN IMPLEMENTATION
-    const confirmSubmit = () => {
+    // Confirm and submit - USING FETCH API TO BYPASS INERTIA
+    const confirmSubmit = async () => {
         setIsConfirmDialogOpen(false);
         
         if (isEditing && existingApplication?.id) {
-            // EDIT MODE: Update existing application
-            const formData = new FormData();
+            console.log('=== EDIT SUBMIT START (FETCH API) ===');
+            console.log('data.requirement_uploads:', data.requirement_uploads);
             
-            // Add Laravel method spoofing
+            // Create FormData
+            const formData = new FormData();
             formData.append('_method', 'PUT');
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
             
             // Add all text fields
             Object.keys(data).forEach(key => {
@@ -292,35 +295,70 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                 }
             });
             
-            // Add file uploads if any
+            // Add file uploads
+            let fileCount = 0;
             if (data.requirement_uploads) {
                 Object.keys(data.requirement_uploads).forEach(reqId => {
                     const files = data.requirement_uploads[reqId];
+                    console.log(`Requirement ${reqId}:`, files);
                     if (Array.isArray(files)) {
                         files.forEach((file, index) => {
-                            formData.append(`requirement_uploads[${reqId}][${index}]`, file);
+                            console.log(`  Adding file [${reqId}][${index}]:`, file.name, file.size, 'bytes');
+                            formData.append(`requirement_uploads[${reqId}][${index}]`, file, file.name);
+                            fileCount++;
                         });
                     }
                 });
             }
             
-            // Submit using Inertia router
-            router.post(route('requests.update', existingApplication.id), formData, {
-                forceFormData: true,
-                onSuccess: () => {
+            console.log(`Total files to upload: ${fileCount}`);
+            console.log('FormData entries:');
+            for (let pair of formData.entries()) {
+                console.log(pair[0], '=', pair[1]);
+            }
+            
+            console.log('Submitting via fetch...');
+            
+            try {
+                const response = await fetch(route('requests.update', existingApplication.id), {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (response.ok) {
                     toast({
                         title: "Success!",
                         description: "Application updated and resubmitted for review.",
                     });
-                },
-                onError: (errors) => {
+                    
+                    // Redirect after short delay
+                    setTimeout(() => {
+                        window.location.href = route('my-applications.index');
+                    }, 1000);
+                } else {
+                    const errorData = await response.json();
+                    console.error('Update failed:', errorData);
+                    
                     toast({
                         title: "Error",
-                        description: errors?.error || "Failed to update application.",
+                        description: errorData.message || "Failed to update application.",
                         variant: "destructive",
                     });
                 }
-            });
+            } catch (error) {
+                console.error('Fetch error:', error);
+                toast({
+                    title: "Error",
+                    description: "Network error. Please try again.",
+                    variant: "destructive",
+                });
+            }
+            
         } else {
             // CREATE MODE: Submit new application
             post("/request", {
@@ -450,6 +488,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                                             onDataChange={handleDataChange}
                                             requirements={requirements}
                                             existingDocuments={existingApplication?.existing_documents || {}}
+                                            verifiedRequirements={data.verified_requirements || {}}
                                         />
                                     )}
                                 </div>

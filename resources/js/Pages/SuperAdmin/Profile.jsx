@@ -43,7 +43,7 @@ export default function Profile({ mustVerifyEmail, status }) {
 
     return (
         <>
-            <Head title="Profile - Super Admin" />
+            <Head title="Profile - Zoning Administrator" />
             
             <SuperAdminLayout title="My Profile">
                 <div className="space-y-6">

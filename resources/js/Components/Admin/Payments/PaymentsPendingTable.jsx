@@ -157,7 +157,7 @@ export function PaymentsPendingTable({ pendingPayments = [], onRecordPayment }) 
                     <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
-                            placeholder="Search by Request ID or Name..."
+                            placeholder="Search by Application ID or Name..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-10 border-gray-200 focus:border-[#d4a017]"
@@ -192,7 +192,7 @@ export function PaymentsPendingTable({ pendingPayments = [], onRecordPayment }) 
                                 <TableRow>
                                     <TableHead className="w-24">
                                         <div className="flex items-center">
-                                            Request ID
+                                            Application ID
                                         </div>
                                     </TableHead>
                                     <TableHead>

@@ -38,7 +38,7 @@ export default function SuperAdminLayout({ title, breadcrumbs = [], children }) 
                     <div className="ml-auto pr-4 hidden sm:flex items-center gap-2">
                         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0d1f5c]/5 border border-[#0d1f5c]/10">
                             <div className="w-1.5 h-1.5 rounded-full bg-[#d4a017] animate-pulse"/>
-                            <span className="text-[#0d1f5c] text-xs font-black tracking-wide">CPDO Super Admin</span>
+                            <span className="text-[#0d1f5c] text-xs font-black tracking-wide">CPDO L.C Zoning Administrator</span>
                         </div>
                     </div>
                 </header>

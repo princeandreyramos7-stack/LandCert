@@ -239,6 +239,10 @@ class CertificateService
     public function getAllCertificates(array $filters = [])
     {
         $query = Certificate::with(['request.applicant', 'request.project', 'payment', 'issuedBy'])
+            // Only show certificates with verified payments
+            ->whereHas('payment', function ($q) {
+                $q->where('payment_status', 'verified');
+            })
             ->orderBy('issued_at', 'desc');
 
         // Filter by status based on certificate_file_path

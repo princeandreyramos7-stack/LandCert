@@ -40,7 +40,7 @@ export default function CreateUser() {
 
     return (
         <>
-            <Head title="Create New User — CPDO Super Admin"/>
+            <Head title="Create New User — CPDO Zoning Administrator"/>
             <SuperAdminLayout title="Create New User" breadcrumbs={[{ label: "Dashboard", href: "/super-admin/dashboard" }, { label: "Users", href: "/super-admin/users" }]}>
 
                 {/* Page header */}
@@ -99,7 +99,7 @@ export default function CreateUser() {
                                         <SelectTrigger className={inputCls}><SelectValue/></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="applicant">Applicant</SelectItem>
-                                            <SelectItem value="admin">Admin</SelectItem>
+                                            <SelectItem value="admin">Zoning Officer</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

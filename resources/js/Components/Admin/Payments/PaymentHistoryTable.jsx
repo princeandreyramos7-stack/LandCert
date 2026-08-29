@@ -37,8 +37,7 @@ export function PaymentHistoryTable({
     const [verifyingPayment, setVerifyingPayment] = useState(null);
     // State for filters
     const [searchTerm, setSearchTerm] = useState("");
-    const [dateFrom, setDateFrom] = useState("");
-    const [dateTo, setDateTo] = useState("");
+    const [filterDate, setFilterDate] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 25;
 
@@ -48,16 +47,12 @@ export function PaymentHistoryTable({
         const paymentsArray = Array.isArray(payments) ? payments : (payments?.data || []);
         let filtered = [...paymentsArray];
 
-        // Filter by date range
-        if (dateFrom) {
-            filtered = filtered.filter(
-                (p) => new Date(p.payment_date) >= new Date(dateFrom)
-            );
-        }
-        if (dateTo) {
-            filtered = filtered.filter(
-                (p) => new Date(p.payment_date) <= new Date(dateTo)
-            );
+        // Filter by specific date (exact match)
+        if (filterDate) {
+            filtered = filtered.filter((p) => {
+                const paymentDate = new Date(p.payment_date).toISOString().split('T')[0];
+                return paymentDate === filterDate;
+            });
         }
 
         // Filter by search term (OR Number, Request ID, Applicant Name)
@@ -74,8 +69,7 @@ export function PaymentHistoryTable({
         return filtered;
     }, [
         payments,
-        dateFrom,
-        dateTo,
+        filterDate,
         searchTerm,
     ]);
 
@@ -88,13 +82,12 @@ export function PaymentHistoryTable({
     // Reset to page 1 when filters change
     useMemo(() => {
         setCurrentPage(1);
-    }, [dateFrom, dateTo, searchTerm]);
+    }, [filterDate, searchTerm]);
 
     // Clear all filters
     const handleClearFilters = () => {
         setSearchTerm("");
-        setDateFrom("");
-        setDateTo("");
+        setFilterDate("");
         setCurrentPage(1);
     };
 
@@ -102,8 +95,7 @@ export function PaymentHistoryTable({
     const handleExportExcel = () => {
         const params = new URLSearchParams();
         params.set('format', 'excel');
-        if (dateFrom) params.set('date_from', dateFrom);
-        if (dateTo) params.set('date_to', dateTo);
+        if (filterDate) params.set('date', filterDate);
         if (searchTerm) params.set('search', searchTerm);
         window.open(route('admin.export.payments') + '?' + params.toString(), '_blank');
     };
@@ -112,8 +104,7 @@ export function PaymentHistoryTable({
     const handleExportPdf = () => {
         const params = new URLSearchParams();
         params.set('format', 'pdf');
-        if (dateFrom) params.set('date_from', dateFrom);
-        if (dateTo) params.set('date_to', dateTo);
+        if (filterDate) params.set('date', filterDate);
         if (searchTerm) params.set('search', searchTerm);
         window.open(route('admin.export.payments') + '?' + params.toString(), '_blank');
     };
@@ -139,29 +130,17 @@ export function PaymentHistoryTable({
 
                 </div>
 
-                {/* Date Range Row */}
+                {/* Date Filter Row */}
                 <div className="flex flex-col sm:flex-row gap-3 items-end">
                     <div className="flex-1 space-y-1">
                         <label className="text-xs font-medium text-slate-600 flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            From Date
+                            Payment Date
                         </label>
                         <Input
                             type="date"
-                            value={dateFrom}
-                            onChange={(e) => setDateFrom(e.target.value)}
-                            className="h-10 border-slate-200 bg-slate-50/50 focus:bg-white"
-                        />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                        <label className="text-xs font-medium text-slate-600 flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            To Date
-                        </label>
-                        <Input
-                            type="date"
-                            value={dateTo}
-                            onChange={(e) => setDateTo(e.target.value)}
+                            value={filterDate}
+                            onChange={(e) => setFilterDate(e.target.value)}
                             className="h-10 border-slate-200 bg-slate-50/50 focus:bg-white"
                         />
                     </div>
@@ -212,7 +191,7 @@ export function PaymentHistoryTable({
                         </span>{" "}
                         payments
                     </p>
-                    {(searchTerm || dateFrom || dateTo) && (
+                    {(searchTerm || filterDate) && (
                         <Badge variant="outline" className="text-xs">
                             <Filter className="h-3 w-3 mr-1" />
                             Filters Active
@@ -285,9 +264,6 @@ export function PaymentHistoryTable({
                                         <td className="p-3">
                                             <div className="font-mono text-sm font-semibold text-[#0d1f5c]">
                                                 {payment.application_number || `#${payment.request_id}`}
-                                            </div>
-                                            <div className="text-xs text-gray-400 mt-0.5">
-                                                Req #{payment.request_id}
                                             </div>
                                         </td>
                                         <td className="p-3">

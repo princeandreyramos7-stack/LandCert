@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Zoning Compliance - Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Times New Roman', serif;
+            background: #f3f4f6;
+            padding: 20px;
+        }
+
+        .certificate-page {
+            width: 8.5in;
+            min-height: 11in;
+            margin: 0 auto;
+            background: white;
+            padding: 0.5in 0.75in;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Header with blue gradient background */
+        .certificate-header {
+            background: linear-gradient(
+                170deg,
+                #ffffff 0%,
+                #ffffff 8%,
+                #eefcfc 18%,
+                #d8f9fa 30%,
+                #bff5f7 48%,
+                #a8eff2 70%,
+                #9cebed 100%
+            );
+            border-bottom: 3px solid #2222ff;
+            width: 100%;
+            margin: 0 0 15pt 0;
+            padding: 8pt 0 10pt 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15pt;
+            flex: 1;
+        }
+
+        .logo-container {
+            width: 80pt;
+            height: 80pt;
+            flex-shrink: 0;
+        }
+
+        .logo-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            mix-blend-mode: multiply;
+        }
+
+        .header-text {
+            text-align: left;
+            color: #0033cc;
+        }
+
+        .header-text .line1 {
+            font-size: 10pt;
+            margin-bottom: 2pt;
+            color: #000;
+        }
+
+        .header-text .line2 {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #0033cc;
+        }
+
+        .header-text .line3 {
+            font-size: 10pt;
+            color: #000;
+        }
+
+        .header-text .line4 {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-top: 3pt;
+            color: #0033cc;
+        }
+
+        .cpd-number {
+            position: absolute;
+            top: 0;
+            right: 100pt;
+            text-align: center;
+            font-size: 10pt;
+            font-weight: bold;
+        }
+
+        .title-section {
+            text-align: center;
+            margin-bottom: 15pt;
+            font-size: 11pt;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .highlight-box {
+            display: inline-block;
+            background: #FFFF00;
+            padding: 4pt 8pt;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5pt;
+            font-size: 10pt;
+        }
+
+        .info-field {
+            margin-bottom: 4pt;
+        }
+
+        .info-field strong {
+            font-weight: bold;
+        }
+
+        .underline {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-width: 150pt;
+            padding-bottom: 2pt;
+        }
+
+        .details-table {
+            width: 100%;
+            border: 2px solid #000;
+            border-collapse: collapse;
+            margin-bottom: 15pt;
+            font-size: 10pt;
+        }
+
+        .details-table td {
+            border: 1px solid #000;
+            padding: 10pt;
+            width: 50%;
+            text-align: center;
+            vertical-align: top;
+        }
+
+        .details-table td strong {
+            display: block;
+            margin-bottom: 10pt;
+        }
+
+        .details-table .value {
+            font-size: 11pt;
+        }
+
+        .conditions-section {
+            margin-bottom: 15pt;
+            font-size: 9pt;
+            line-height: 1.5;
+            text-align: justify;
+        }
+
+        .conditions-section .title {
+            font-weight: bold;
+            margin-bottom: 6pt;
+        }
+
+        .conditions-section .items {
+            margin-left: 15pt;
+        }
+
+        .signatures-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30pt;
+            margin-bottom: 40pt;
+            font-size: 10pt;
+        }
+
+        .signature-box {
+            width: 45%;
+        }
+
+        .signature-label {
+            margin-bottom: 6pt;
+        }
+
+        .signature-line {
+            margin-top: 50pt;
+            border-top: 1.5px solid #000;
+            padding-top: 3pt;
+            text-align: center;
+        }
+
+        .payment-details {
+            font-size: 10pt;
+            margin-top: 20pt;
+        }
+
+        .payment-details div {
+            margin-bottom: 3pt;
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+
+            .certificate-page {
+                width: 8.5in;
+                height: 11in;
+                margin: 0;
+                padding: 0.5in 0.75in;
+                box-shadow: none;
+                page-break-after: always;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        /* Control buttons */
+        .controls {
+            max-width: 8.5in;
+            margin: 0 auto 20px auto;
+            background: white;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            color: #374151;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        .btn:hover {
+            background: #f9fafb;
+        }
+
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+
+        .btn-primary:hover {
+            background: #4338ca;
+        }
+    </style>
+</head>
+<body>
+    <!-- Control Buttons -->
+    <div class="controls no-print">
+        <button class="btn" onclick="window.history.back()">← Back</button>
+        <button class="btn btn-primary" onclick="window.print()">🖨 Print Certificate</button>
+        <button class="btn btn-primary" onclick="window.print()">💾 Download PDF</button>
+    </div>
+
+    <!-- Certificate Page -->
+    <div class="certificate-page">
+        <!-- Header with Blue Gradient -->
+        <div class="certificate-header">
+            <!-- Left: Logo + Text -->
+            <div class="header-left">
+                <div class="logo-container">
+                    <img src="/images/ilagan1logo.jpg" alt="Ilagan Logo">
+                </div>
+                <div class="header-text">
+                    <div class="line1">Republic of the Philippines</div>
+                    <div class="line2">CITY OF ILAGAN</div>
+                    <div class="line3">Province of Isabela</div>
+                    <div class="line4">CITY PLANNING AND DEVELOPMENT OFFICE</div>
+                </div>
+            </div>
+            
+            <!-- CPD Number (Top Right) -->
+            <div class="cpd-number">CPD-001-0</div>
+            
+            <!-- Right Logo -->
+            <div class="logo-container">
+                <img src="/images/Ilagan Logo2.png" alt="CPDO Logo">
+            </div>
+        </div>
+
+        <!-- Title with Yellow Highlight -->
+        <div class="title-section">
+            <div class="highlight-box">DECISION ON ZONING</div>
+            <br>
+            <div class="highlight-box">CERTIFICATE OF ZONING COMPLIANCE</div>
+        </div>
+
+        <!-- Application and Decision Info -->
+        <div class="info-row">
+            <div>
+                <div class="info-field">
+                    <strong>Application No.: </strong>
+                    <span class="underline">CZC-2026-001</span>
+                </div>
+                <div class="info-field">
+                    <strong>Date Received: </strong>
+                    <span class="underline">August 25, 2026</span>
+                </div>
+            </div>
+            <div style="margin-right: 60px; margin-top: 10px;">
+                <div class="info-field">
+                    <strong>Decision No.: </strong>
+                    <span class="underline">DEC-2026-001</span>
+                </div>
+                <div class="info-field">
+                    <strong>Date Issued: </strong>
+                    <span class="underline">August 25, 2026</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Application Details Table -->
+        <table class="details-table">
+            <tbody>
+                <tr>
+                    <td>
+                        <strong>APPLICANT</strong>
+                        <div class="value">JUAN DELA CRUZ</div>
+                    </td>
+                    <td>
+                        <strong>NAME OF CORPORATION</strong>
+                        <div class="value">DELA CRUZ ENTERPRISES</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>ADDRESS</strong>
+                        <div class="value">123 Main Street, Ilagan City</div>
+                    </td>
+                    <td>
+                        <strong>ADDRESS</strong>
+                        <div class="value">456 Business Ave, Ilagan City</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>TYPE OF PROJECT</strong>
+                        <div class="value">CZC</div>
+                    </td>
+                    <td>
+                        <strong>AREA AND LOCATION</strong>
+                        <div class="value">Barangay Centro, CITY OF ILAGAN, ISABELA</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>DECISION GRANTED</strong>
+                        <div class="value" style="font-weight: bold;">CZC Granted with Conditions</div>
+                    </td>
+                    <td>
+                        <strong>RIGHT OVER LAND</strong>
+                        <div class="value">OWNER</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Conditions Section -->
+        <div class="conditions-section">
+            <div class="title">Conditions:</div>
+            <div class="items">
+                /x/ All conditions stipulated herein form part of this decision and are subject to monitoring<br>
+                /x/ Non-compliance therewith shall be a cause for cancellation or legal action.<br>
+                /x/ The applicable requirements of gov't. agencies and applicable provision of existing laws shall be complied with.<br>
+                /x/ No activity and/or activity applied shall be conducted within the project site.<br>
+                /x/ No major expansion, alteration and/or improvement shall be introduced without prior clearance from this office.<br>
+                /x/ This decision shall not be construed as a certification of City Gov't. of Ilagan as to the ownership or parcel of land subject of this decision.<br>
+                /x/ Any misrepresentation, False statement or allegations materials as to the issuance of this decision shall be sufficient cause of its revocation.
+            </div>
+
+            <div class="title" style="margin-top: 10pt;">Additional Conditions:</div>
+            <div class="items">
+                /x/ Provision as to setback yard requirements, bulk easement, area height and other restrictions strictly conform with the provision of the National Building Code and other related laws.<br>
+                /x/ This decision shall be considered automatically revoked if project is not commenced within one (1) year from the date of issue of this decision.<br>
+                /x/ For other conditions please see the reverse side.
+            </div>
+        </div>
+
+        <!-- Signatures Section -->
+        <div class="signatures-section">
+            <div class="signature-box">
+                <div class="signature-label">Prepared & Evaluated by:</div>
+                <div class="signature-line">
+                    <strong>MARY JANE M. BULAUAN</strong><br>
+                    Zoning Officer IV
+                </div>
+            </div>
+            
+            <div class="signature-box">
+                <div class="signature-label" style="visibility: hidden;">Placeholder</div>
+                <div class="signature-line">
+                    <strong>ENGR. CRISANTA D. CONCEPCION, EnP</strong><br>
+                    City Planning & Dev't. Coordinator/<br>
+                    Zoning Administrator
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Details -->
+        <div class="payment-details">
+            <div><strong>O.R. No.:</strong> OR-2026-001</div>
+            <div><strong>Date Issued:</strong> August 25, 2026</div>
+            <div><strong>Amount Paid:</strong> ₱1,500.00</div>
+        </div>
+    </div>
+</body>
+</html>

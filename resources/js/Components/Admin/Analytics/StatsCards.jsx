@@ -17,23 +17,23 @@ export function StatsCards({
 
     const stats = [
         {
-            title: 'Total Applications',
+            title: 'For Verification',
             value: (certificate_stats?.total_issued || 0) + ((user_activity_metrics?.total_active_users || 0) * 2),
-            description: `${completion_rate || 0}% completion rate`,
+            description: 'Pending document check',
             icon: FileText,
             color: 'text-blue-600',
             bgColor: 'bg-blue-50',
         },
         {
-            title: 'Approval Rate',
+            title: 'Verified Applications',
             value: `${approval_rate || 0}%`,
-            description: 'Of reviewed applications',
+            description: 'Documents verified',
             icon: CheckCircle,
             color: 'text-green-600',
             bgColor: 'bg-green-50',
         },
         {
-            title: 'Certificates Issued',
+            title: 'Forwarded to Review',
             value: certificate_stats?.total_issued || 0,
             description: `${certificate_stats?.issued_this_month || 0} this month`,
             icon: Award,
@@ -41,15 +41,15 @@ export function StatsCards({
             bgColor: 'bg-purple-50',
         },
         {
-            title: 'Avg Processing Time',
+            title: 'Avg Verification Time',
             value: `${avgProcessingTime} days`,
-            description: 'Submission to completion',
+            description: 'Per application',
             icon: Clock,
             color: 'text-orange-600',
             bgColor: 'bg-orange-50',
         },
         {
-            title: 'Active Users',
+            title: 'Active Applicants',
             value: user_activity_metrics?.active_users_this_month || 0,
             description: `${user_activity_metrics?.new_users_this_month || 0} new this month`,
             icon: Users,

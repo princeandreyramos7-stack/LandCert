@@ -186,26 +186,6 @@ class NotificationService
     }
 
     /**
-     * Create notification when appointment is set
-     */
-    public static function appointmentSet(RequestModel $request, string $appointmentDate, string $appointmentTime)
-    {
-        // Notify the applicant
-        Notification::createForUser(
-            $request->user_id,
-            'appointment_set',
-            'Appointment Scheduled 📅',
-            "An appointment has been scheduled for your application #{$request->id} on {$appointmentDate} at {$appointmentTime}. Please bring all required documents.",
-            "/my-applications",
-            [
-                'application_id' => $request->id,
-                'appointment_date' => $appointmentDate,
-                'appointment_time' => $appointmentTime,
-            ]
-        );
-    }
-
-    /**
      * Create notification when payment receipt is uploaded
      */
     public static function paymentReceiptUploaded(RequestModel $request, $payment)

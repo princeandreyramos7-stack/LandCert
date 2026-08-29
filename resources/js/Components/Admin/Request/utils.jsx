@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, DollarSign, FileCheck } from "lucide-react";
 
 /**
  * Get status badge color classes based on status
@@ -10,9 +10,16 @@ export const getStatusColor = (status) => {
         case "rejected":
             return "bg-rose-100 text-rose-800 hover:bg-rose-200 border-rose-300";
         case "reviewed":
+        case "for_payment":
+        case "pending_payment":
+            return "bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-300";
+        case "pending":
+        case "for_verification":
+            return "bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300";
+        case "approved_with_payment":
             return "bg-green-100 text-green-800 hover:bg-green-200 border-green-300";
         default:
-            return "bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300";
+            return "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300";
     }
 };
 
@@ -22,11 +29,41 @@ export const getStatusColor = (status) => {
 export const getStatusIcon = (status) => {
     switch (status) {
         case "approved":
+        case "approved_with_payment":
             return <CheckCircle2 className="h-4 w-4" />;
         case "rejected":
             return <XCircle className="h-4 w-4" />;
+        case "reviewed":
+        case "for_payment":
+        case "pending_payment":
+            return <DollarSign className="h-4 w-4" />;
+        case "for_verification":
+            return <FileCheck className="h-4 w-4" />;
         default:
             return <Clock className="h-4 w-4" />;
+    }
+};
+
+/**
+ * Get human-readable status label
+ */
+export const getStatusLabel = (status) => {
+    switch (status) {
+        case "pending":
+        case "for_verification":
+            return "For Verification";
+        case "reviewed":
+        case "for_payment":
+        case "pending_payment":
+            return "For Payment";
+        case "approved":
+            return "Application Approved";
+        case "approved_with_payment":
+            return "Application Approved";
+        case "rejected":
+            return "Application Rejected";
+        default:
+            return status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : "Unknown";
     }
 };
 

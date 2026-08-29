@@ -516,19 +516,34 @@ export function MyApplicationsList({ applications }) {
                                             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
                                                 {/* Upload Receipt button - only show if application is approved */}
                                                 {application.status?.toLowerCase() === 'approved' && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            window.location.href = route('receipt.upload.page', application.id);
-                                                        }}
-                                                        className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-green-600 hover:bg-green-50 border border-green-200 text-[10px] sm:text-xs font-semibold"
-                                                        title="Upload Payment Receipt"
-                                                    >
-                                                        <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                                        <span className="hidden sm:inline">Receipt</span>
-                                                    </Button>
+                                                    <>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                window.location.href = route('my-applications.order-of-payment', application.id);
+                                                            }}
+                                                            className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-purple-600 hover:bg-purple-50 border border-purple-200 text-[10px] sm:text-xs font-semibold"
+                                                            title="Order of Payment"
+                                                        >
+                                                            <FileText className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                            <span className="hidden sm:inline">Order of Payment</span>
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                window.location.href = route('receipt.upload.page', application.id);
+                                                            }}
+                                                            className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-green-600 hover:bg-green-50 border border-green-200 text-[10px] sm:text-xs font-semibold"
+                                                            title="Upload Payment Receipt"
+                                                        >
+                                                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                            <span className="hidden sm:inline">Receipt</span>
+                                                        </Button>
+                                                    </>
                                                 )}
                                                 
                                                 {/* Edit Button - Only for rejected or returned applications */}

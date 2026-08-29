@@ -63,7 +63,7 @@ export function AddPaymentPickerModal({ isOpen, onClose, requests = [], onSelect
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input
                         autoFocus
-                        placeholder="Search by applicant, application number, or request ID..."
+                        placeholder="Search by applicant, application number, or application ID..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="pl-9"

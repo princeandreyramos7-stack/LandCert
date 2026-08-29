@@ -26,6 +26,7 @@ import {
     Filter,
     MoreVertical,
     Upload,
+    Printer,
 } from "lucide-react";
 import { router } from "@inertiajs/react";
 
@@ -298,34 +299,29 @@ export function CertificatesTable({
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-56">
-                                                    {certificate.certificate_file_path && (
+                                                    {certificate.has_verified_payment ? (
                                                         <>
                                                             <DropdownMenuItem
-                                                                onClick={() => onPreview(certificate)}
-                                                                className="cursor-pointer"
+                                                                onClick={() => router.visit(route(`${routePrefix}.generate-clearance`, certificate.request_id))}
+                                                                className="text-blue-600 font-medium"
                                                             >
-                                                                <Eye className="h-4 w-4 mr-2 text-blue-600" />
-                                                                <span>Preview Certificate</span>
+                                                                <Printer className="h-4 w-4 mr-2" />
+                                                                Generate Clearance
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem
-                                                                onClick={() => onDownload(certificate)}
-                                                                className="cursor-pointer"
+                                                                onClick={() => router.visit(route(`${routePrefix}.generate-certificate`, certificate.request_id))}
+                                                                className="text-green-600 font-medium"
                                                             >
-                                                                <Download className="h-4 w-4 mr-2 text-emerald-600" />
-                                                                <span>Download PDF</span>
+                                                                <FileText className="h-4 w-4 mr-2" />
+                                                                Generate Certificate
                                                             </DropdownMenuItem>
-                                                            
-                                                            <DropdownMenuSeparator />
                                                         </>
+                                                    ) : (
+                                                        <div className="px-3 py-2 text-sm text-slate-500 text-center">
+                                                            <p className="font-medium">Payment Required</p>
+                                                            <p className="text-xs mt-1">Awaiting treasury payment verification</p>
+                                                        </div>
                                                     )}
-                                                    
-                                                    <DropdownMenuItem
-                                                        onClick={() => onUploadCertificate?.(certificate)}
-                                                        className="cursor-pointer"
-                                                    >
-                                                        <Upload className="h-4 w-4 mr-2 text-purple-600" />
-                                                        <span>{certificate.certificate_file_path ? 'Replace Softcopy' : 'Upload Softcopy'}</span>
-                                                    </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </td>

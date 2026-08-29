@@ -33,6 +33,7 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     Route::get('/my-applications', [RequestController::class, 'myApplications'])->name('my-applications');
     Route::get('/my-applications/index', [RequestController::class, 'myApplications'])->name('my-applications.index');
     Route::get('/my-applications/{id}/print', [\App\Http\Controllers\AdminController::class, 'printForm'])->name('my-applications.print');
+    Route::get('/my-applications/{id}/order-of-payment', [RequestController::class, 'generateOrderOfPayment'])->name('my-applications.order-of-payment');
     Route::get('/requests/{id}/authorization-letter', [RequestController::class, 'authorizationLetter'])->name('requests.authorization-letter');
     
     // Requirement document routes (for viewing/deleting only - upload is now in Step 4)
@@ -50,6 +51,10 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     // Certificate download/preview (applicant-facing, ownership checked in controller)
     Route::get('/certificate/{certificate}/download', [CertificateController::class, 'applicantDownload'])->name('certificate.download');
     Route::get('/certificate/{certificate}/preview', [CertificateController::class, 'applicantPreview'])->name('certificate.preview');
+    
+    // Applicant print routes (standalone pages without admin layout)
+    Route::get('/my-applications/{id}/print-certificate', [RequestController::class, 'printCertificate'])->name('print-certificate');
+    Route::get('/my-applications/{id}/print-clearance', [RequestController::class, 'printClearance'])->name('print-clearance');
 });
 
 // Super Admin routes (highest privilege)
@@ -57,7 +62,15 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::get('/dashboard', [\App\Http\Controllers\SuperAdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/requests', [\App\Http\Controllers\SuperAdminController::class, 'requests'])->name('requests');
     Route::get('/requests/{id}/review', [\App\Http\Controllers\SuperAdminController::class, 'reviewRequest'])->name('requests.review');
+    
+    // NEW: Split Review Pages
+    Route::get('/requests/{id}/view-application', [\App\Http\Controllers\SuperAdminController::class, 'viewApplication'])->name('requests.view-application');
+    Route::get('/requests/{id}/document-verification', [\App\Http\Controllers\SuperAdminController::class, 'documentVerification'])->name('requests.document-verification');
+    
     Route::get('/requests/{id}/print', [\App\Http\Controllers\AdminController::class, 'printForm'])->name('requests.print');
+    Route::get('/requests/{id}/generate-certificate', [\App\Http\Controllers\SuperAdminController::class, 'generateCertificate'])->name('generate-certificate');
+    Route::get('/requests/{id}/generate-clearance', [\App\Http\Controllers\SuperAdminController::class, 'generateClearance'])->name('generate-clearance');
+    Route::get('/requests/{id}/generate-order-of-payment', [\App\Http\Controllers\SuperAdminController::class, 'generateOrderOfPayment'])->name('generate-order-of-payment');
     Route::get('/export/requests', [\App\Http\Controllers\SuperAdminController::class, 'exportRequests'])->name('export.requests');
     
     // Management
@@ -77,6 +90,12 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::post('/create-admin', [\App\Http\Controllers\SuperAdminController::class, 'createAdmin'])->name('create-admin');
     Route::put('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'deleteUser'])->name('users.delete');
+    
+    // Requirement verification toggle
+    Route::post('/save-requirement-verification', [\App\Http\Controllers\SuperAdminController::class, 'saveRequirementVerification'])->name('save-requirement-verification');
+    
+    // Upload requirement document by super admin
+    Route::post('/upload-requirement-document', [\App\Http\Controllers\SuperAdminController::class, 'uploadRequirementDocument'])->name('upload-requirement-document');
     
     // Certificate Management Routes (NEW: Using CertificateController with PDF generation)
     Route::prefix('certificates')->name('certificates.')->group(function () {
@@ -136,6 +155,11 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::get('/requests', [AdminController::class, 'requests'])->name('requests');
     Route::get('/requests/{id}', [AdminController::class, 'viewRequest'])->name('requests.view');
     Route::get('/requests/{id}/review', [AdminController::class, 'reviewRequest'])->name('requests.review');
+    
+    // NEW: Split Review Pages
+    Route::get('/requests/{id}/view-application', [AdminController::class, 'viewApplication'])->name('requests.view-application');
+    Route::get('/requests/{id}/document-verification', [AdminController::class, 'documentVerification'])->name('requests.document-verification');
+    
     Route::get('/reports', function () {
         return Inertia::render('Admin/Reports');
     })->name('reports');
@@ -149,6 +173,12 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::post('/review-application', [AdminController::class, 'reviewApplication'])->name('review-application');
     Route::get('/get-requirements', [AdminController::class, 'getRequirements'])->name('get-requirements');
     Route::post('/update-project-type/{id}', [AdminController::class, 'updateProjectType'])->name('update-project-type');
+    
+    // Requirement verification toggle
+    Route::post('/save-requirement-verification', [AdminController::class, 'saveRequirementVerification'])->name('save-requirement-verification');
+    
+    // Upload requirement document by admin
+    Route::post('/upload-requirement-document', [AdminController::class, 'uploadRequirementDocument'])->name('upload-requirement-document');
     
     // Payment Management Routes - Unified Page
     Route::get('/payments', [AdminController::class, 'payments'])->name('payments');
@@ -189,6 +219,11 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
 
     // Print form
     Route::get('/requests/{id}/print', [AdminController::class, 'printForm'])->name('requests.print');
+    
+    // Generate documents routes
+    Route::get('/requests/{id}/generate-certificate', [AdminController::class, 'generateCertificate'])->name('generate-certificate');
+    Route::get('/requests/{id}/generate-clearance', [AdminController::class, 'generateClearance'])->name('generate-clearance');
+    Route::get('/requests/{id}/generate-order-of-payment', [AdminController::class, 'generateOrderOfPayment'])->name('generate-order-of-payment');
     
     // Bulk action routes
     Route::post('/bulk/approve', [AdminController::class, 'bulkApprove'])->name('bulk.approve');

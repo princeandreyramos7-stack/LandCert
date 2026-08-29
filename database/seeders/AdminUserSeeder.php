@@ -35,7 +35,7 @@ class AdminUserSeeder extends Seeder
         // Note: the 'super_admin' Spatie role is assigned automatically via
         // User::booted(), which keeps roles in sync with the user_type column.
 
-        // Create or update admin user
+        // Create or update admin user (default)
         $admin = User::updateOrCreate(
             ['email' => 'admin@cpdo.com'],
             [
@@ -45,8 +45,12 @@ class AdminUserSeeder extends Seeder
                 'contact_number' => '09123456789',
                 'address' => 'CPDO Office, City of Ilagan',
                 'email_verified_at' => now(),
-            ],
-               ['email' => 'jeff@cpdo.com'],
+            ]
+        );
+
+        // Create Zoning Officer - Jeffrey C. Pauig
+        $jeff = User::updateOrCreate(
+            ['email' => 'jeff@cpdo.com'],
             [
                 'name' => 'Jeffrey C. Pauig',
                 'password' => Hash::make('jeff123'),
@@ -54,7 +58,11 @@ class AdminUserSeeder extends Seeder
                 'contact_number' => '09123456789',
                 'address' => 'CPDO Office, City of Ilagan',
                 'email_verified_at' => now(),
-            ]    ,
+            ]
+        );
+
+        // Create Zoning Officer - Kay B. Aggarao
+        $kay = User::updateOrCreate(
             ['email' => 'kay@cpdo.com'],
             [
                 'name' => 'Kay B. Aggarao',
@@ -63,8 +71,12 @@ class AdminUserSeeder extends Seeder
                 'contact_number' => '09123456789',
                 'address' => 'CPDO Office, City of Ilagan',
                 'email_verified_at' => now(),
-            ]  ,
-              ['email' => 'april@cpdo.com'],
+            ]
+        );
+
+        // Create Zoning Officer - April V. Cuntapay
+        $april = User::updateOrCreate(
+            ['email' => 'april@cpdo.com'],
             [
                 'name' => 'April V. Cuntapay',
                 'password' => Hash::make('april123'),
@@ -72,9 +84,11 @@ class AdminUserSeeder extends Seeder
                 'contact_number' => '09123456789',
                 'address' => 'CPDO Office, City of Ilagan',
                 'email_verified_at' => now(),
-              
-            ],
-                ['email' => 'maryjane@cpdo.com'],
+            ]
+        );
+
+        $maryjane = User::updateOrCreate(
+            ['email' => 'maryjane@cpdo.com'],
             [
                 'name' => 'Mary Jane P. Bulauan',
                 'password' => Hash::make('admin123'),
@@ -82,23 +96,22 @@ class AdminUserSeeder extends Seeder
                 'contact_number' => '09123456789',
                 'address' => 'CPDO Office, City of Ilagan',
                 'email_verified_at' => now(),
-            
-
             ]
         );
 
-        // Note: the 'admin' Spatie role is assigned automatically via User::booted().
-
         $this->command->info('==============================================');
         $this->command->info('Super Admin user created/updated successfully!');
-        $this->command->info('Email: superadmin@cpdo.com');
-        $this->command->info('Password: superadmin123');
+        $this->command->info('Email: zoningadministrator@cpdo.com');
+        $this->command->info('Password: zoningadmin123');
         $this->command->info('User Type: ' . $superAdmin->user_type);
         $this->command->info('==============================================');
-        $this->command->info('Admin user created/updated successfully!');
-        $this->command->info('Email: admin@cpdo.com');
-        $this->command->info('Password: admin123');
-        $this->command->info('User Type: ' . $admin->user_type);
+        $this->command->info('Zoning Officers created/updated successfully!');
+        $this->command->info('');
+        $this->command->info('1. Email: admin@cpdo.com | Password: admin123');
+        $this->command->info('2. Email: jeff@cpdo.com | Password: jeff123 (Jeffrey C. Pauig)');
+        $this->command->info('3. Email: kay@cpdo.com | Password: kay123 (Kay B. Aggarao)');
+        $this->command->info('4. Email: april@cpdo.com | Password: april123 (April V. Cuntapay)');
+        $this->command->info('5. Email: maryjane@cpdo.com | Password: admin123 (Mary Jane P. Bulauan)');
         $this->command->info('==============================================');
         $this->command->warn('⚠️  Please change the passwords after first login!');
     }

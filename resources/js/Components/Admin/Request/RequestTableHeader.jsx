@@ -1,59 +1,66 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
+import { Card, CardContent } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
-import { FileText, Search, Download } from "lucide-react";
+import { FileText, Download } from "lucide-react";
 
 export function RequestTableHeader({
     filteredCount,
     searchTerm,
     onSearchChange,
     filterStatus,
+    onFilterChange,
     onClearFilter,
     onExport,
 }) {
     return (
-        <Card className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom duration-700 delay-300">
-            <CardHeader className="bg-white border-b border-gray-100 p-4">
-                <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-3 text-xl font-bold text-[#0d1f5c]">
-                        <div className="p-2 rounded-lg" style={{background:"rgba(13,31,92,0.06)"}}>
-                            <FileText className="h-5 w-5 text-[#0d1f5c]" />
-                        </div>
-                        All Requests ({filteredCount})
-                    </CardTitle>
-                    <div className="flex gap-3">
+        <Card className="bg-white border border-gray-100 shadow-sm rounded-lg overflow-hidden">
+            <CardContent className="p-5">
+                <div className="flex items-center justify-between gap-4">
+                    {/* Left: Title with icon and count */}
+                    <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-[#0d1f5c]" />
+                        <h2 className="text-lg font-semibold text-[#0d1f5c]">
+                            All Applications ({filteredCount})
+                        </h2>
+                    </div>
+
+                    {/* Right: Export, Filter, Search */}
+                    <div className="flex items-center gap-3">
                         <Button
                             variant="outline"
                             onClick={onExport}
-                            className="gap-2 border-gray-200 text-[#0d1f5c] hover:border-[#d4a017] hover:text-[#d4a017] transition-all"
+                            className="gap-2 border-gray-200 text-gray-700 hover:bg-gray-50"
                         >
                             <Download className="h-4 w-4" />
                             Export Excel
                         </Button>
-                        <div className="relative w-64">
-                            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => onFilterChange(e.target.value)}
+                            className="border border-gray-200 rounded-md px-3 py-2 pr-8 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] focus:border-[#0d1f5c] cursor-pointer min-w-[220px]"
+                        >
+                            <option value="all">All Status of Application</option>
+                            <option value="pending">For Verification</option>
+                            <option value="reviewed">For Payment</option>
+                            <option value="approved">Application Approved</option>
+                            <option value="rejected">Application Rejected</option>
+                        </select>
+
+                        <div className="relative">
+                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
                             <Input
                                 placeholder="Search requests..."
                                 value={searchTerm}
                                 onChange={(e) => onSearchChange(e.target.value)}
-                                className="pl-10 border-gray-200 focus:border-[#d4a017]"
+                                className="pl-9 pr-4 py-2 w-64 bg-white border-gray-200 focus:border-[#0d1f5c] text-sm"
                             />
                         </div>
-                        {filterStatus !== "all" && (
-                            <Button
-                                variant="outline"
-                                onClick={onClearFilter}
-                                className="border-gray-200 text-[#0d1f5c] hover:border-[#d4a017] transition-all"
-                            >
-                                Clear Filter
-                            </Button>
-                        )}
                     </div>
                 </div>
-            </CardHeader>
-            <CardContent>
-                {/* Content will be passed as children */}
             </CardContent>
         </Card>
     );

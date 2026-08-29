@@ -18,9 +18,9 @@ return new class extends Migration
             [
                 'event_key'   => 'application_approved_next_steps',
                 'event_label' => 'Application Approved — Next Steps (Payment Instructions)',
-                'message'     => 'Hi {name}! Application #{request_id} is APPROVED. Next step: Pay PHP {amount} at the City Treasury Office and bring your Official Receipt to the CPDO office. Appointment: {appointment_date} at {appointment_time}. - CPDO LandCert',
+                'message'     => 'Hi {name}! Application #{request_id} is APPROVED. Next step: Pay PHP {amount} at the City Treasury Office and bring your Official Receipt to the CPDO office. - CPDO LandCert',
                 'enabled'     => true,
-                'variables'   => json_encode(['{name}', '{request_id}', '{amount}', '{appointment_date}', '{appointment_time}']),
+                'variables'   => json_encode(['{name}', '{request_id}', '{amount}']),
             ],
             [
                 'event_key'   => 'certificate_released',
@@ -41,11 +41,11 @@ return new class extends Migration
             }
         }
 
-        // Update the existing application_approved template to include payment/appointment details
+        // Update the existing application_approved template for consistency
         DB::table('sms_templates')
             ->where('event_key', 'application_approved')
             ->update([
-                'message'   => 'Good news {name}! Application #{request_id} is APPROVED. Please visit the CPDO office for the next steps. Check your email for appointment and payment details. - CPDO LandCert',
+                'message'   => 'Good news {name}! Application #{request_id} is APPROVED. Please visit the CPDO office for the next steps. Check your email for payment details. - CPDO LandCert',
                 'updated_at'=> now(),
             ]);
     }

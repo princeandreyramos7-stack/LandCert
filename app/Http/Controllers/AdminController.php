@@ -485,16 +485,178 @@ class AdminController extends Controller
                     'file_size' => $doc->file_size,
                     'created_at' => $doc->created_at,
                 ];
-            }),
+            })->toArray(),
 
             // Full requirements list for this project type, so the frontend can
             // group uploaded documents into "Main" vs "Additional" sections.
             'requirements_reference' => \App\Constants\ApplicationRequirements::getRequirements(
                 $request->project?->project_type ?? 'ZONING CLEARANCE'
             ),
+            // Verified requirements toggle state
+            'verified_requirements' => $request->verified_requirements ?? [],
+            'rejection_reason' => $report?->description ?? null,
         ];
         
+        // Debug logging
+        \Log::info('Admin ReviewRequest Data', [
+            'request_id' => $id,
+            'uploaded_requirements_count' => count($requestData['uploaded_requirements']),
+            'requirements_reference_count' => count($requestData['requirements_reference']),
+            'project_type' => $request->project?->project_type,
+        ]);
+        
         return Inertia::render('Admin/ReviewRequest', [
+            'request' => $requestData,
+        ]);
+    }
+
+    /**
+     * Show view application page (Steps 1-3 only)
+     */
+    public function viewApplication($id): Response
+    {
+        $request = RequestModel::with([
+            'user', 
+            'reports',
+            'applicant.corporation',
+            'applicant.primaryRepresentative',
+            'project',
+            'location',
+            'property',
+        ])->findOrFail($id);
+        
+        // Get the latest report for this request
+        $report = $request->reports->first();
+        
+        // Build the request data - same as reviewRequest but for ViewApplication page
+        $requestData = [
+            'id' => $request->id,
+            'application_number' => $request->application_number,
+            'status' => $report?->evaluation ?? $request->status,
+            'created_at' => $request->created_at,
+            'updated_at' => $request->updated_at,
+            
+            // User info
+            'user_id' => $request->user_id,
+            'user_name' => $request->user?->name,
+            'user_email' => $request->user?->email,
+            
+            // Applicant info
+            'applicant_name' => $request->applicant?->applicant_name,
+            'applicant_address' => $request->applicant?->applicant_address,
+            'applicant_contact' => $request->applicant?->applicant_contact,
+            
+            // Corporation info
+            'corporation_name' => $request->applicant?->corporation?->corporation_name,
+            'corporation_address' => $request->applicant?->corporation?->corporation_address,
+            
+            // Representative info
+            'authorized_representative_name' => $request->applicant?->primaryRepresentative?->representative_name,
+            'authorized_representative_address' => $request->applicant?->primaryRepresentative?->representative_address,
+            'authorization_letter_path' => $request->applicant?->primaryRepresentative?->authorization_letter_path,
+            
+            // Project info
+            'application_category' => $request->project?->project_type,
+            'project_type' => $request->project?->project_type,
+            'project_nature' => $request->project?->project_nature,
+            'project_nature_duration' => $request->project?->project_nature_duration,
+            'project_nature_years' => $request->project?->project_nature_years,
+            'project_cost' => $request->project?->project_cost,
+            
+            // Location info
+            'project_location_number' => null,
+            'project_location_street' => $request->location?->street_address,
+            'project_location_barangay' => $request->location?->barangay,
+            'project_location_municipality' => $request->location?->city_municipality,
+            'project_location_province' => $request->location?->province,
+            
+            // Property info
+            'project_area_sqm' => ($request->property?->lot_area_sqm + $request->property?->bldg_improvement_sqm),
+            'lot_area_sqm' => $request->property?->lot_area_sqm,
+            'bldg_improvement_sqm' => $request->property?->bldg_improvement_sqm,
+            'right_over_land' => $request->property?->right_over_land,
+            
+            // Land use info
+            'existing_land_use' => $request->property?->existing_land_use,
+            'has_written_notice' => $request->has_written_notice,
+            'notice_officer_name' => $request->notice_officer_name,
+            'notice_dates' => $request->notice_dates,
+            'has_similar_application' => $request->has_similar_application,
+            'similar_application_offices' => $request->similar_application_offices,
+            'similar_application_dates' => $request->similar_application_dates,
+            
+            // Report info
+            'application_id' => $request->id,
+        ];
+        
+        return Inertia::render('Admin/ViewApplication', [
+            'request' => $requestData,
+        ]);
+    }
+
+    /**
+     * Show document verification page (Step 4 + Review form)
+     */
+    public function documentVerification($id): Response
+    {
+        $request = RequestModel::with([
+            'user', 
+            'reports',
+            'applicant.corporation',
+            'applicant.primaryRepresentative',
+            'project',
+            'location',
+            'property',
+            'requirementDocuments'
+        ])->findOrFail($id);
+        
+        // Get the latest report for this request
+        $report = $request->reports->first();
+        
+        // Build the request data with requirements focus
+        $requestData = [
+            'id' => $request->id,
+            'application_number' => $request->application_number,
+            'status' => $report?->evaluation ?? $request->status,
+            'created_at' => $request->created_at,
+            'updated_at' => $request->updated_at,
+            
+            // Project info (minimal - needed for requirements)
+            'application_category' => $request->project?->project_type,
+            'project_type' => $request->project?->project_type,
+            
+            // Requirement documents
+            'uploaded_requirements' => $request->requirementDocuments->map(function($doc) {
+                return [
+                    'id' => $doc->id,
+                    'requirement_id' => $doc->requirement_id,
+                    'requirement_name' => $doc->requirement_name,
+                    'original_filename' => $doc->original_filename,
+                    'file_path' => $doc->file_path,
+                    'mime_type' => $doc->mime_type,
+                    'file_size' => $doc->file_size,
+                    'created_at' => $doc->created_at,
+                ];
+            })->toArray(),
+
+            // Full requirements list
+            'requirements_reference' => \App\Constants\ApplicationRequirements::getRequirements(
+                $request->project?->project_type ?? 'ZONING CLEARANCE'
+            ),
+            
+            // Verified requirements toggle state
+            'verified_requirements' => $request->verified_requirements ?? [],
+            
+            // Review/rejection info
+            'rejection_reason' => $report?->description ?? null,
+            'admin_notes' => $report?->admin_notes ?? null,
+            
+            // Report info
+            'report_id' => $report?->report_id,
+            'application_id' => $request->id,
+        ];
+        
+        return Inertia::render('Admin/DocumentVerification', [
             'request' => $requestData,
         ]);
     }
@@ -667,8 +829,6 @@ class AdminController extends Controller
             'action' => 'required|in:reviewed,rejected',
             
             // For "reviewed" action
-            'appointment_date' => 'required_if:action,reviewed|nullable|date|after_or_equal:today',
-            'appointment_time' => 'nullable|date_format:H:i',
             'payment_amount' => 'required_if:action,reviewed|nullable|numeric|min:0',
             'admin_notes' => 'nullable|string|max:1000',
             
@@ -690,8 +850,6 @@ class AdminController extends Controller
                     'issued_by' => auth()->user()->name,
                     'date_reported' => now(),
                     'description' => 'Application reviewed by ' . auth()->user()->name . '. Pending SuperAdmin approval.',
-                    'appointment_date' => $validated['appointment_date'] ?? null,
-                    'appointment_time' => $validated['appointment_time'] ?? null,
                     'payment_amount' => $validated['payment_amount'] ?? null,
                     'admin_notes' => $validated['admin_notes'] ?? null,
                 ]
@@ -723,7 +881,6 @@ class AdminController extends Controller
                         'applicant_name' => $requestModel->applicant->applicant_name ?? 'N/A',
                         'project_type' => $requestModel->project->project_type ?? 'N/A',
                         'payment_amount' => $validated['payment_amount'] ?? null,
-                        'appointment_date' => $validated['appointment_date'] ?? null,
                     ]
                 );
             }
@@ -1166,60 +1323,66 @@ class AdminController extends Controller
      */
     public function certificates(Request $request): Response
     {
-        $search = $request->input('search', '');
-        $statusFilter = $request->input('status', '');
-        
-        $query = \App\Models\Certificate::with(['request.user', 'request.applicant', 'request.project', 'release']);
-        
-        // Apply filters
-        if ($search) {
+        // Build query for certificates
+        $query = \App\Models\Certificate::with([
+            'request.applicant',
+            'request.project',
+            'request.payments' => function($q) {
+                $q->where('payment_status', 'verified')->latest();
+            }
+        ])
+        ->orderBy('issued_at', 'desc');
+
+        // Apply search filter
+        if ($request->filled('search')) {
+            $search = $request->get('search');
             $query->where(function($q) use ($search) {
-                $q->where('certificate_number', 'like', '%' . $search . '%')
-                  ->orWhereHas('request.applicant', function($rq) use ($search) {
-                      $rq->where('applicant_name', 'like', '%' . $search . '%');
+                $q->where('certificate_number', 'like', "%{$search}%")
+                  ->orWhereHas('request.applicant', function($q) use ($search) {
+                      $q->where('applicant_name', 'like', "%{$search}%");
                   });
             });
         }
-        
-        if ($statusFilter) {
-            $query->where('status', $statusFilter);
+
+        // Apply status filter
+        if ($request->filled('status') && $request->get('status') !== 'all') {
+            $status = $request->get('status');
+            if ($status === 'preparing') {
+                $query->whereNull('certificate_file_path');
+            } elseif ($status === 'released') {
+                $query->whereNotNull('certificate_file_path');
+            }
         }
-        
-        // Get ALL certificates
-        $certificates = $query->orderBy('issued_at', 'desc')
-            ->get()
-            ->map(function($certificate) {
-                return [
-                    'id' => $certificate->id,
-                    'request_id' => $certificate->request_id,
-                    'certificate_number' => $certificate->certificate_number,
-                    'certificate_file_path' => $certificate->certificate_file_path,
-                    'status' => $certificate->status,
-                    'issued_at' => $certificate->issued_at,
-                    'valid_until' => $certificate->valid_until,
-                    'created_at' => $certificate->created_at,
-                    'request' => $certificate->request ? [
-                        'id' => $certificate->request->id,
-                        'application_number' => $certificate->request->application_number,
+
+        // Paginate results
+        $certificates = $query->paginate(15)->through(function($certificate) {
+            // Check if there's a verified payment for this request
+            $verifiedPayment = $certificate->request->payments->first();
+            
+            return [
+                'id' => $certificate->id,
+                'request_id' => $certificate->request_id,
+                'certificate_number' => $certificate->certificate_number,
+                'request' => [
+                    'id' => $certificate->request->id,
+                    'application_number' => $certificate->request->application_number,
+                    'applicant' => [
                         'applicant_name' => $certificate->request->applicant->applicant_name ?? 'N/A',
-                        'project_type' => $certificate->request->project->project_type ?? 'N/A',
-                    ] : null,
-                    'release' => $certificate->release ? [
-                        'collected_by_name' => $certificate->release->collected_by_name,
-                        'relationship_to_applicant' => $certificate->release->relationship_to_applicant,
-                        'valid_id_type' => $certificate->release->valid_id_type,
-                        'valid_id_number' => $certificate->release->valid_id_number,
-                        'release_date' => $certificate->release->release_date,
-                        'release_time' => $certificate->release->release_time,
-                    ] : null,
-                ];
-            });
+                    ],
+                    'project_type' => $certificate->request->project->project_type ?? 'N/A',
+                ],
+                'issued_at' => $certificate->issued_at,
+                'certificate_file_path' => $certificate->certificate_file_path,
+                'has_verified_payment' => $verifiedPayment !== null,
+                'payment_reference' => $verifiedPayment?->reference_number ?? null,
+            ];
+        });
 
         return Inertia::render('Admin/Certificates', [
             'certificates' => $certificates,
             'filters' => [
-                'search' => $search,
-                'status' => $statusFilter,
+                'search' => $request->get('search'),
+                'status' => $request->get('status', 'all'),
             ],
         ]);
     }
@@ -2210,4 +2373,278 @@ class AdminController extends Controller
             default => 500.00, // Default for any other type
         };
     }
+
+    /**
+     * Save requirement verification toggle state to database
+     */
+    public function saveRequirementVerification(Request $request)
+    {
+        $validated = $request->validate([
+            'request_id' => 'required|exists:requests,id',
+            'verified_requirements' => 'required|array',
+        ]);
+
+        $requestModel = RequestModel::findOrFail($validated['request_id']);
+        $requestModel->verified_requirements = $validated['verified_requirements'];
+        $requestModel->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Requirement verification saved successfully',
+            'verified_requirements' => $requestModel->verified_requirements,
+        ]);
+    }
+
+    /**
+     * Upload requirement document by admin
+     */
+    public function uploadRequirementDocument(Request $request)
+    {
+        $validated = $request->validate([
+            'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240', // 10MB max
+            'request_id' => 'required|exists:requests,id',
+            'requirement_id' => 'required',
+            'requirement_name' => 'required|string',
+        ]);
+
+        try {
+            $requestModel = RequestModel::findOrFail($validated['request_id']);
+            $file = $request->file('file');
+            
+            // Store the file
+            $path = $file->store('requirements', 'public');
+            
+            // Create requirement document record
+            $requirementDoc = \App\Models\RequirementDocument::create([
+                'request_id' => $validated['request_id'],
+                'requirement_id' => $validated['requirement_id'],
+                'requirement_name' => $validated['requirement_name'],
+                'original_filename' => $file->getClientOriginalName(),
+                'stored_filename' => basename($path),
+                'file_path' => $path,
+                'file_size' => $file->getSize(),
+                'mime_type' => $file->getMimeType(),
+                'uploaded_by_admin' => true,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document uploaded successfully',
+                'document' => $requirementDoc,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Admin upload requirement document failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload document: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate certificate for approved application
+     */
+    public function generateCertificate($id)
+    {
+        $request = \App\Models\Request::with([
+            'user',
+            'applicant.corporation',
+            'project',
+            'location',
+            'property',
+            'payments' => function($query) {
+                $query->where('payment_status', 'verified')->latest();
+            }
+        ])->findOrFail($id);
+
+        // Allow generating certificate for approved applications
+        if (strtolower($request->status) !== 'approved') {
+            return redirect()->back()->with('error', 'Certificate can only be generated for approved applications');
+        }
+
+        $payment = $request->payments->first();
+        
+        // Get the reviewer (admin who reviewed the application)
+        $report = \App\Models\Report::where('request_id', $id)
+            ->whereIn('evaluation', ['approved', 'reviewed'])
+            ->latest()
+            ->first();
+            
+        $reviewer = null;
+        if ($report) {
+            // Try to get reviewer from issued_by (user ID) or reviewed_by (user ID)
+            $reviewerId = $report->reviewed_by ?? $report->issued_by;
+            if ($reviewerId) {
+                $reviewer = \App\Models\User::find($reviewerId);
+            }
+            // If no ID found, try issued_by as name (legacy support)
+            if (!$reviewer && $report->issued_by && !is_numeric($report->issued_by)) {
+                $reviewer = (object)['name' => $report->issued_by];
+            }
+        }
+
+        $applicationData = [
+            'id' => $request->id,
+            'application_number' => $request->application_number,
+            'decision_number' => $request->decision_number,
+            'status' => $request->status,
+            'created_at' => $request->created_at,
+            'updated_at' => $request->updated_at,
+            'applicant_name' => $request->applicant?->applicant_name,
+            'applicant_address' => $request->applicant?->applicant_address,
+            'corporation_name' => $request->applicant?->corporation?->corporation_name,
+            'corporation_address' => $request->applicant?->corporation?->corporation_address,
+            'project_type' => $request->project?->project_type,
+            'project_nature' => $request->project?->project_nature,
+            'project_cost' => $request->project?->project_cost,
+            'project_location_street' => $request->location?->street_address,
+            'project_location_barangay' => $request->location?->barangay,
+            'project_location_municipality' => $request->location?->city_municipality,
+            'right_over_land' => $request->property?->right_over_land,
+        ];
+
+        return \Inertia\Inertia::render('Admin/GenerateCertificate', [
+            'application' => $applicationData,
+            'payment' => $payment,
+            'reviewer' => $reviewer,
+        ]);
+    }
+
+    /**
+     * Generate clearance for approved application
+     */
+    public function generateClearance($id)
+    {
+        $request = \App\Models\Request::with([
+            'user',
+            'applicant.corporation',
+            'project',
+            'location',
+            'property',
+            'payments' => function($query) {
+                $query->where('payment_status', 'verified')->latest();
+            }
+        ])->findOrFail($id);
+
+        // Allow generating clearance for approved applications
+        if (strtolower($request->status) !== 'approved') {
+            return redirect()->back()->with('error', 'Clearance can only be generated for approved applications');
+        }
+
+        $payment = $request->payments->first();
+        
+        // Get the reviewer (admin who reviewed the application)
+        $report = \App\Models\Report::where('request_id', $id)
+            ->whereIn('evaluation', ['approved', 'reviewed'])
+            ->latest()
+            ->first();
+            
+        $reviewer = null;
+        if ($report) {
+            // Try to get reviewer from issued_by (user ID) or reviewed_by (user ID)
+            $reviewerId = $report->reviewed_by ?? $report->issued_by;
+            if ($reviewerId) {
+                $reviewer = \App\Models\User::find($reviewerId);
+            }
+            // If no ID found, try issued_by as name (legacy support)
+            if (!$reviewer && $report->issued_by && !is_numeric($report->issued_by)) {
+                $reviewer = (object)['name' => $report->issued_by];
+            }
+        }
+
+        $applicationData = [
+            'id' => $request->id,
+            'application_number' => $request->application_number,
+            'decision_number' => $request->decision_number,
+            'status' => $request->status,
+            'created_at' => $request->created_at,
+            'updated_at' => $request->updated_at,
+            'applicant_name' => $request->applicant?->applicant_name,
+            'applicant_address' => $request->applicant?->applicant_address,
+            'corporation_name' => $request->applicant?->corporation?->corporation_name,
+            'corporation_address' => $request->applicant?->corporation?->corporation_address,
+            'project_type' => $request->project?->project_type,
+            'project_nature' => $request->project?->project_nature,
+            'project_cost' => $request->project?->project_cost,
+            'project_location_street' => $request->location?->street_address,
+            'project_location_barangay' => $request->location?->barangay,
+            'project_location_municipality' => $request->location?->city_municipality,
+            'right_over_land' => $request->property?->right_over_land,
+        ];
+
+        return \Inertia\Inertia::render('Admin/GenerateClearance', [
+            'application' => $applicationData,
+            'payment' => $payment,
+            'reviewer' => $reviewer,
+        ]);
+    }
+
+    /**
+     * Generate order of payment for application
+     */
+    public function generateOrderOfPayment($id)
+    {
+        $request = \App\Models\Request::with([
+            'user',
+            'applicant.corporation',
+            'project',
+            'location',
+            'property',
+            'payments' => function($query) {
+                $query->where('payment_status', 'verified')->latest();
+            }
+        ])->findOrFail($id);
+
+        // Order of payment can be generated for approved applications
+        if (!in_array(strtolower($request->status), ['approved'])) {
+            return redirect()->back()->with('error', 'Order of payment can only be generated for approved applications');
+        }
+
+        $payment = $request->payments->first();
+        
+        // Get the reviewer (admin who reviewed the application)
+        $report = \App\Models\Report::where('request_id', $id)
+            ->latest()
+            ->first();
+            
+        $reviewer = null;
+        if ($report) {
+            // Try to get reviewer from issued_by (user ID) or reviewed_by (user ID)
+            $reviewerId = $report->reviewed_by ?? $report->issued_by;
+            if ($reviewerId) {
+                $reviewer = \App\Models\User::find($reviewerId);
+            }
+            // If no ID found, try issued_by as name (legacy support)
+            if (!$reviewer && $report->issued_by && !is_numeric($report->issued_by)) {
+                $reviewer = (object)['name' => $report->issued_by];
+            }
+        }
+
+        $applicationData = [
+            'id' => $request->id,
+            'application_number' => $request->application_number,
+            'decision_number' => $request->decision_number,
+            'status' => $request->status,
+            'created_at' => $request->created_at,
+            'updated_at' => $request->updated_at,
+            'applicant_name' => $request->applicant?->applicant_name,
+            'applicant_address' => $request->applicant?->applicant_address,
+            'corporation_name' => $request->applicant?->corporation?->corporation_name,
+            'corporation_address' => $request->applicant?->corporation?->corporation_address,
+            'project_type' => $request->project?->project_type,
+            'project_nature' => $request->project?->project_nature,
+            'project_cost' => $request->project?->project_cost,
+            'project_location_street' => $request->location?->street_address,
+            'project_location_barangay' => $request->location?->barangay,
+            'project_location_municipality' => $request->location?->city_municipality,
+            'right_over_land' => $request->property?->right_over_land,
+        ];
+
+        return \Inertia\Inertia::render('Admin/GenerateOrderOfPayment', [
+            'application' => $applicationData,
+            'payment' => $payment,
+            'reviewer' => $reviewer,
+        ]);
+    }
+
 }

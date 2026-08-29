@@ -15,6 +15,7 @@ import {
 import { Button } from "@/Components/ui/button";
 import { Badge } from "@/Components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
+import { Switch } from "@/Components/ui/switch";
 import {
     User,
     Building2,
@@ -45,14 +46,54 @@ import axios from "axios";
 
 export default function SuperAdminReviewRequest({ request }) {
     const [currentStep, setCurrentStep] = useState(1);
-    const [action, setAction] = useState('');
+    
+    // Pre-select action based on current request status
+    const getInitialAction = () => {
+        if (request.status === 'approved') {
+            return 'approved';
+        } else if (request.status === 'rejected' || request.status === 'denied') {
+            return 'rejected';
+        }
+        return '';
+    };
+    
+    const [action, setAction] = useState(getInitialAction());
     const [formData, setFormData] = useState({
-        rejection_reason: '',
+        rejection_reason: request.rejection_reason || 'Lacking of Requirements', // Use existing or default
         assign_to_admin: false
     });
     const [loading, setLoading] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    
+    // Track which requirements are verified/correct - Load from database
+    const [requirementChecks, setRequirementChecks] = useState(request.verified_requirements || {});
+    
     const { toast} = useToast();
+    
+    // Save requirement checks to database whenever they change
+    const handleToggleRequirement = async (key, name, checked) => {
+        const updated = {
+            ...requirementChecks,
+            [key]: checked
+        };
+        
+        setRequirementChecks(updated);
+        
+        // Save to database
+        try {
+            await axios.post(route('super-admin.save-requirement-verification'), {
+                request_id: request.id,
+                verified_requirements: updated
+            });
+        } catch (error) {
+            console.error('Error saving requirement verification:', error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to save requirement verification status"
+            });
+        }
+    };
 
     // Group uploaded documents by requirement so a requirement with multiple
     // files (e.g. "1. Application Form" uploaded as 3 separate pages) shows
@@ -60,31 +101,80 @@ export default function SuperAdminReviewRequest({ request }) {
     // Also split into "Main" vs "Additional" sections using requirements_reference
     // (the full requirement list for this project type) so this matches what the
     // applicant saw when uploading.
+    // UPDATED: Now shows ALL requirements, not just uploaded ones
     const groupedRequirements = useMemo(() => {
         const docs = request.uploaded_requirements || [];
         const reference = request.requirements_reference || [];
-        const sectionById = new Map(reference.map((r) => [r.id, r.section || 'main']));
-
+        
+        console.log('=== SuperAdmin ReviewRequest Debug ===');
+        console.log('Uploaded requirements:', docs);
+        console.log('Requirements reference:', reference);
+        
+        // Create groups for ALL requirements from reference
         const groups = new Map();
-
+        
+        // First, add all requirements from reference (even if not uploaded)
+        reference.forEach((req) => {
+            groups.set(req.id, {
+                key: req.id,
+                requirement_name: req.name,
+                section: req.section || 'main',
+                files: [],
+                required: req.required || false,
+            });
+        });
+        
+        // Then, populate files for requirements that were uploaded
         docs.forEach((doc) => {
-            const key = doc.requirement_id ?? doc.requirement_name;
-            if (!groups.has(key)) {
-                groups.set(key, {
-                    key,
+            const key = doc.requirement_id;
+            if (groups.has(key)) {
+                groups.get(key).files.push(doc);
+            } else {
+                // Fallback for documents without proper requirement_id
+                groups.set(doc.requirement_name, {
+                    key: doc.requirement_name,
                     requirement_name: doc.requirement_name,
-                    section: sectionById.get(doc.requirement_id) || 'main',
-                    files: [],
+                    section: 'main',
+                    files: [doc],
+                    required: false,
                 });
             }
-            groups.get(key).files.push(doc);
         });
 
-        return Array.from(groups.values());
+        const result = Array.from(groups.values());
+        console.log('Grouped requirements (ALL):', result);
+        
+        return result;
     }, [request.uploaded_requirements, request.requirements_reference]);
 
     const mainUploadedGroups = groupedRequirements.filter((g) => g.section !== 'additional');
     const additionalUploadedGroups = groupedRequirements.filter((g) => g.section === 'additional');
+
+    // Generate missing requirements message for rejection
+    const getMissingRequirements = () => {
+        const allGroups = [...mainUploadedGroups, ...additionalUploadedGroups];
+        const missing = allGroups.filter(group => !requirementChecks[group.key]);
+        
+        if (missing.length === 0) return '';
+        
+        return 'Missing or Incomplete Requirements:\n' + 
+               missing.map(group => `- ${group.requirement_name}`).join('\n');
+    };
+
+    // Update rejection reason when action changes to rejected
+    const handleActionChange = (newAction) => {
+        setAction(newAction);
+        
+        if (newAction === 'rejected') {
+            const missingReqs = getMissingRequirements();
+            if (missingReqs) {
+                setFormData(prev => ({
+                    ...prev,
+                    rejection_reason: missingReqs
+                }));
+            }
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -159,11 +249,12 @@ export default function SuperAdminReviewRequest({ request }) {
         { number: 1, title: "Applicant Info", icon: User },
         { number: 2, title: "Project Details", icon: Building2 },
         { number: 3, title: "Land Use", icon: Home },
+        { number: 4, title: "Requirements", icon: FileText },
     ];
 
     return (
         <SidebarProvider>
-            <Head title={`Review ${request.application_number || `TPZ-${request.id}`} - Super Admin`} />
+            <Head title={`Review ${request.application_number || `TPZ-${request.id}`} - Zoning Administrator`} />
             <SuperAdminSidebar />
             <SidebarInset>
                 <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b bg-white">
@@ -254,6 +345,15 @@ export default function SuperAdminReviewRequest({ request }) {
                                     {currentStep === 1 && <Step1Content request={request} />}
                                     {currentStep === 2 && <Step2Content request={request} />}
                                     {currentStep === 3 && <Step3Content request={request} />}
+                                    {currentStep === 4 && (
+                                        <Step4Content 
+                                            request={request}
+                                            mainUploadedGroups={mainUploadedGroups}
+                                            additionalUploadedGroups={additionalUploadedGroups}
+                                            requirementChecks={requirementChecks}
+                                            onToggleRequirement={handleToggleRequirement}
+                                        />
+                                    )}
                                 </div>
 
                                 <div className="flex justify-between pt-6 border-t">
@@ -290,49 +390,6 @@ export default function SuperAdminReviewRequest({ request }) {
                                 </div>
                             </CardHeader>
                             <CardContent className="pt-6">
-                                {/* Uploaded Requirements Section - split into Main and Additional */}
-                                {request.uploaded_requirements && request.uploaded_requirements.length > 0 && (
-                                    <div className="mb-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-5 border-2 border-indigo-200">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <div className="p-2 bg-indigo-600 rounded-lg">
-                                                <FileText className="h-5 w-5 text-white" />
-                                            </div>
-                                            <h3 className="text-lg font-bold text-gray-900">Uploaded Requirements</h3>
-                                            <span className="ml-auto bg-indigo-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">
-                                                {request.uploaded_requirements.length} {request.uploaded_requirements.length === 1 ? 'file' : 'files'}
-                                            </span>
-                                        </div>
-
-                                        {mainUploadedGroups.length > 0 && (
-                                            <div className="mb-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold shrink-0">1</span>
-                                                    <h4 className="text-sm font-bold text-gray-700">Main Requirements</h4>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    {mainUploadedGroups.map((group) => (
-                                                        <UploadedRequirementGroup key={group.key} group={group} />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {additionalUploadedGroups.length > 0 && (
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-amber-500 text-white text-[10px] font-bold shrink-0">2</span>
-                                                    <h4 className="text-sm font-bold text-gray-700">Additional Requirements</h4>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    {additionalUploadedGroups.map((group) => (
-                                                        <UploadedRequirementGroup key={group.key} group={group} />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
                                 {/* No Requirements Message */}
                                 {(!request.uploaded_requirements || request.uploaded_requirements.length === 0) && (
                                     <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-xl p-4 flex items-start gap-3">
@@ -340,6 +397,26 @@ export default function SuperAdminReviewRequest({ request }) {
                                         <div className="text-sm text-amber-800">
                                             <p className="font-semibold">No Requirements Uploaded</p>
                                             <p className="text-xs mt-1">The applicant has not uploaded any requirement documents yet.</p>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {/* Previous Decision Banner */}
+                                {getInitialAction() && (
+                                    <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                                        <div className="flex items-start gap-3">
+                                            <History className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                            <div>
+                                                <h4 className="text-sm font-semibold text-blue-900">Previous Decision</h4>
+                                                <p className="text-sm text-blue-700 mt-1">
+                                                    This application was previously <span className="font-bold">
+                                                        {request.status === 'approved' ? 'APPROVED' : 'DENIED'}
+                                                    </span>. 
+                                                    {request.rejection_reason && ` Reason: "${request.rejection_reason}"`}
+                                                    <br />
+                                                    <span className="text-xs">You can modify the decision below. Changes will be logged in audit trail.</span>
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -361,16 +438,15 @@ export default function SuperAdminReviewRequest({ request }) {
                                                     name="action"
                                                     value="approved"
                                                     checked={action === 'approved'}
-                                                    onChange={(e) => setAction(e.target.value)}
+                                                    onChange={(e) => handleActionChange(e.target.value)}
                                                     className="w-5 h-5 text-green-600"
                                                     required
                                                 />
                                                 <div className="ml-3">
-                                                    <div className="flex items-center gap-2 font-semibold text-green-700 text-base mb-1">
+                                                    <div className="flex items-center gap-2 font-semibold text-green-700 text-base">
                                                         <CheckCircle2 className="h-5 w-5" />
                                                         APPROVE
                                                     </div>
-                                                    <div className="text-sm text-gray-600">Final approval - Application will proceed</div>
                                                 </div>
                                             </label>
 
@@ -384,16 +460,15 @@ export default function SuperAdminReviewRequest({ request }) {
                                                     name="action"
                                                     value="rejected"
                                                     checked={action === 'rejected'}
-                                                    onChange={(e) => setAction(e.target.value)}
+                                                    onChange={(e) => handleActionChange(e.target.value)}
                                                     className="w-5 h-5 text-red-600"
                                                     required
                                                 />
                                                 <div className="ml-3">
-                                                    <div className="flex items-center gap-2 font-semibold text-red-700 text-base mb-1">
+                                                    <div className="flex items-center gap-2 font-semibold text-red-700 text-base">
                                                         <XCircle className="h-5 w-5" />
-                                                        REJECT
+                                                        DENIED
                                                     </div>
-                                                    <div className="text-sm text-gray-600">Decline application with reason</div>
                                                 </div>
                                             </label>
                                         </div>
@@ -857,6 +932,118 @@ function Step3Content({ request }) {
     );
 }
 
+// Step 4: Requirements Upload
+function Step4Content({ request, mainUploadedGroups, additionalUploadedGroups, requirementChecks, onToggleRequirement }) {
+    // Get all requirements from reference (what SHOULD be uploaded)
+    const allMainRequirements = (request.requirements_reference || []).filter(r => r.section === 'main');
+    const allAdditionalRequirements = (request.requirements_reference || []).filter(r => r.section === 'additional');
+    
+    // Map uploaded requirement IDs for quick lookup
+    const uploadedMainIds = new Set(mainUploadedGroups.map(g => g.key));
+    const uploadedAdditionalIds = new Set(additionalUploadedGroups.map(g => g.key));
+    
+    return (
+        <div className="space-y-6">
+            <SectionTitle icon={FileText} title="Requirements Checklist" />
+            
+            {/* Main Requirements Section */}
+            <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">REQUIRED</span>
+                    Main Requirements ({mainUploadedGroups.length}/{allMainRequirements.length} uploaded)
+                </h4>
+                <div className="space-y-3">
+                    {allMainRequirements.map((reqRef) => {
+                        // Find if this requirement was uploaded
+                        const uploadedGroup = mainUploadedGroups.find(g => g.key === reqRef.id);
+                        
+                        if (uploadedGroup) {
+                            // Show uploaded requirement with files
+                            return (
+                                <UploadedRequirementGroup 
+                                    key={reqRef.id} 
+                                    group={uploadedGroup} 
+                                    isChecked={requirementChecks[uploadedGroup.key] || false}
+                                    onToggle={(checked) => onToggleRequirement(uploadedGroup.key, uploadedGroup.requirement_name, checked)}
+                                />
+                            );
+                        } else {
+                            // Show missing requirement placeholder
+                            return (
+                                <MissingRequirementCard 
+                                    key={reqRef.id}
+                                    requirement={reqRef}
+                                    isChecked={requirementChecks[reqRef.id] || false}
+                                    onToggle={(checked) => onToggleRequirement(reqRef.id, reqRef.name, checked)}
+                                />
+                            );
+                        }
+                    })}
+                </div>
+            </div>
+
+            {/* Additional Requirements Section */}
+            <div className="space-y-4 pt-4 border-t">
+                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">OPTIONAL</span>
+                    Additional Requirements ({additionalUploadedGroups.length}/{allAdditionalRequirements.length} uploaded)
+                </h4>
+                <div className="space-y-3">
+                    {allAdditionalRequirements.map((reqRef) => {
+                        // Find if this requirement was uploaded
+                        const uploadedGroup = additionalUploadedGroups.find(g => g.key === reqRef.id);
+                        
+                        if (uploadedGroup) {
+                            // Show uploaded requirement with files
+                            return (
+                                <UploadedRequirementGroup 
+                                    key={reqRef.id} 
+                                    group={uploadedGroup}
+                                    isChecked={requirementChecks[uploadedGroup.key] || false}
+                                    onToggle={(checked) => onToggleRequirement(uploadedGroup.key, uploadedGroup.requirement_name, checked)}
+                                />
+                            );
+                        } else {
+                            // Show missing requirement placeholder
+                            return (
+                                <MissingRequirementCard 
+                                    key={reqRef.id}
+                                    requirement={reqRef}
+                                    isChecked={requirementChecks[reqRef.id] || false}
+                                    onToggle={(checked) => onToggleRequirement(reqRef.id, reqRef.name, checked)}
+                                />
+                            );
+                        }
+                    })}
+                </div>
+            </div>
+
+            {/* Summary */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+                <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                        </div>
+                    </div>
+                    <div>
+                        <h5 className="text-sm font-semibold text-blue-900 mb-1">Requirements Summary</h5>
+                        <p className="text-sm text-blue-700">
+                            Total Uploaded: <span className="font-bold">{mainUploadedGroups.length + additionalUploadedGroups.length}</span>
+                            {' / '}
+                            <span className="font-bold">{allMainRequirements.length + allAdditionalRequirements.length}</span>
+                            {' • '}
+                            Main: <span className="font-bold">{mainUploadedGroups.length}/{allMainRequirements.length}</span>
+                            {' • '}
+                            Additional: <span className="font-bold">{additionalUploadedGroups.length}/{allAdditionalRequirements.length}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function SectionTitle({ icon: Icon, title }) {
     return (
         <div className="flex items-center gap-2 mb-4">
@@ -881,60 +1068,109 @@ function InfoField({ label, value }) {
     );
 }
 
-function UploadedRequirementGroup({ group }) {
+function UploadedRequirementGroup({ group, isChecked, onToggle }) {
+    const hasFiles = group.files && group.files.length > 0;
+    
     return (
-        <div className="bg-white border-2 border-indigo-100 rounded-lg p-3 hover:border-indigo-300 hover:shadow-md transition-all duration-200">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-all">
             <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-indigo-600" />
+                <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-gray-600" />
                 </div>
+                
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
+                    <p className="text-sm font-semibold text-gray-900">
                         {group.requirement_name}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 mt-0.5">
                         {group.files.length} {group.files.length === 1 ? 'file' : 'files'} uploaded
                     </p>
                 </div>
-                {group.files.length > 1 && (
-                    <span className="flex-shrink-0 bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                        {group.files.length}
+                
+                {/* Toggle Switch */}
+                <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+                    <Switch
+                        checked={isChecked}
+                        onCheckedChange={onToggle}
+                        className="data-[state=checked]:bg-green-600"
+                    />
+                    <span className="text-[9px] font-medium text-gray-500">
+                        {isChecked ? 'On' : 'Off'}
                     </span>
-                )}
+                </div>
             </div>
 
-            {/* Every file for this requirement, always visible */}
-            <div className="mt-2.5 space-y-1.5 pl-0 sm:pl-[52px]">
-                {group.files.map((doc) => (
-                    <div
-                        key={doc.id}
-                        className="flex items-center justify-between gap-2 bg-indigo-50/60 rounded-lg px-3 py-2"
-                    >
-                        <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-gray-800 truncate">
-                                {doc.original_filename}
-                            </p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className="text-[11px] text-gray-400">
-                                    {(doc.file_size / 1024).toFixed(0)} KB
-                                </span>
-                                <span className="text-[11px] text-gray-300">•</span>
-                                <span className="text-[11px] text-gray-400">
-                                    {new Date(doc.created_at).toLocaleDateString()}
-                                </span>
-                            </div>
-                        </div>
-                        <a
-                            href={`/requirements/${doc.id}/view`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-shrink-0 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
+            {/* Show files only if uploaded */}
+            {hasFiles && (
+                <div className="mt-3 space-y-2 pl-0 sm:pl-[52px]">
+                    {group.files.map((doc) => (
+                        <div
+                            key={doc.id}
+                            className="flex items-center justify-between gap-2 bg-gray-50 rounded-lg px-3 py-2"
                         >
-                            <FileText className="h-3.5 w-3.5" />
-                            View
-                        </a>
-                    </div>
-                ))}
+                            <div className="min-w-0 flex-1">
+                                <p className="text-xs font-medium text-gray-800 truncate">
+                                    {doc.original_filename}
+                                </p>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-[11px] text-gray-400">
+                                        {(doc.file_size / 1024).toFixed(0)} KB
+                                    </span>
+                                    <span className="text-[11px] text-gray-300">•</span>
+                                    <span className="text-[11px] text-gray-400">
+                                        {new Date(doc.created_at).toLocaleDateString()}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {/* View Button */}
+                            <a
+                                href={`/requirements/${doc.id}/view`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-800 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+                            >
+                                <FileText className="h-3.5 w-3.5" />
+                                View
+                            </a>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Component to show requirements that were NOT uploaded
+function MissingRequirementCard({ requirement, isChecked, onToggle }) {
+    return (
+        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-all">
+            <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                    <XCircle className="h-5 w-5 text-gray-400" />
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">
+                        {requirement.name}
+                    </p>
+                    <p className="text-xs text-red-600 mt-0.5">
+                        Not uploaded
+                    </p>
+                </div>
+                
+                {/* Toggle Switch */}
+                <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+                    <Switch
+                        checked={isChecked || false}
+                        onCheckedChange={onToggle}
+                        className="data-[state=checked]:bg-green-600"
+                        disabled
+                    />
+                    <span className="text-[9px] font-medium text-gray-400">
+                        Off
+                    </span>
+                </div>
             </div>
         </div>
     );

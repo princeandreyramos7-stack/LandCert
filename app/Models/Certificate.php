@@ -10,7 +10,6 @@ class Certificate extends Model
 {
     protected $fillable = [
         'request_id',
-        'application_id',
         'payment_id',
         'user_id',
         'certificate_number',
@@ -35,6 +34,21 @@ class Certificate extends Model
         'ready_at' => 'datetime',
         'released_at' => 'datetime',
     ];
+
+    protected $appends = [
+        'has_verified_payment',
+    ];
+
+    /**
+     * Check if the certificate has a verified payment.
+     */
+    public function getHasVerifiedPaymentAttribute(): bool
+    {
+        if (!$this->relationLoaded('payment')) {
+            $this->load('payment');
+        }
+        return $this->payment && $this->payment->payment_status === 'verified';
+    }
 
     /**
      * Get the user who owns this certificate (applicant).

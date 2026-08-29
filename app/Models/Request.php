@@ -35,6 +35,7 @@ class Request extends Model
     protected $casts = [
         'notice_dates' => 'date',
         'similar_application_dates' => 'date',
+        'verified_requirements' => 'array',
     ];
 
     /**
@@ -111,6 +112,14 @@ class Request extends Model
     }
 
     /**
+     * Get the primary report for this request (one-to-one).
+     */
+    public function report(): HasOne
+    {
+        return $this->hasOne(Report::class);
+    }
+
+    /**
      * Get the requirement documents for this request.
      */
     public function requirementDocuments(): HasMany
@@ -172,15 +181,26 @@ class Request extends Model
         $prefix = 'CPDO'; // Default prefix
         
         if ($permitType) {
-            // Map permit types to their prefixes
+            // Map permit types to their prefixes (supports both full names and abbreviations)
             $permitTypePrefixes = [
+                // Full names
                 'Certificate of Zoning Compliance' => 'CZC',
+                'Special Use Permit' => 'SUP',
+                'Temporary Use Permit' => 'TUP',
                 'Locational Clearance' => 'LC',
                 'Development Permit' => 'DP',
                 'Zoning Certificate' => 'ZC',
                 'Building Permit' => 'BP',
                 'Occupancy Permit' => 'OP',
-                // Add more permit type mappings as needed
+                // Abbreviations (direct mapping)
+                'CZC' => 'CZC',
+                'SUP' => 'SUP',
+                'TUP' => 'TUP',
+                'LC' => 'LC',
+                'DP' => 'DP',
+                'ZC' => 'ZC',
+                'BP' => 'BP',
+                'OP' => 'OP',
             ];
             
             $prefix = $permitTypePrefixes[$permitType] ?? 'CPDO';

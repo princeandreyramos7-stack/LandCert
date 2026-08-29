@@ -401,6 +401,7 @@ export function AdminRequestList({ requests, flash = {} }) {
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
                 filterStatus={filterStatus}
+                onFilterChange={setFilterStatus}
                 onClearFilter={() => setFilterStatus("all")}
                 onExport={handleExport}
             />

@@ -15,6 +15,7 @@ import {
 import { Button } from "@/Components/ui/button";
 import { Badge } from "@/Components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
+import { Switch } from "@/Components/ui/switch";
 import {
     User,
     Building2,
@@ -31,6 +32,7 @@ import {
     Loader2,
     Edit2,
     Save,
+    History,
 } from "lucide-react";
 import { formatDate } from "@/Components/Admin/Request/utils";
 import { useState, useMemo } from "react";
@@ -80,17 +82,55 @@ const parseAmountInput = (displayValue) => {
 
 export default function ReviewRequest({ request }) {
     const [currentStep, setCurrentStep] = useState(1);
-    const [action, setAction] = useState('');
+    
+    // Pre-select action based on current request status
+    const getInitialAction = () => {
+        if (request.status === 'reviewed' || request.status === 'approved') {
+            return 'reviewed';
+        } else if (request.status === 'rejected' || request.status === 'denied') {
+            return 'rejected';
+        }
+        return '';
+    };
+    
+    const [action, setAction] = useState(getInitialAction());
     const [formData, setFormData] = useState({
-        rejection_reason: '', // Only needed for rejection
-        appointment_date: '',
-        appointment_time: '',
+        rejection_reason: request.rejection_reason || 'Lacking of Requirements', // Use existing or default
         payment_amount: '',
-        admin_notes: '',
+        admin_notes: request.admin_notes || '',
     });
     const [loading, setLoading] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    
+    // Track which requirements are verified/correct - Load from database
+    const [requirementChecks, setRequirementChecks] = useState(request.verified_requirements || {});
+    
     const { toast } = useToast();
+    
+    // Save requirement checks to database whenever they change
+    const handleToggleRequirement = async (key, name, checked) => {
+        const updated = {
+            ...requirementChecks,
+            [key]: checked
+        };
+        
+        setRequirementChecks(updated);
+        
+        // Save to database
+        try {
+            await axios.post(route('admin.save-requirement-verification'), {
+                request_id: request.id,
+                verified_requirements: updated
+            });
+        } catch (error) {
+            console.error('Error saving requirement verification:', error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to save requirement verification status"
+            });
+        }
+    };
 
     // Group uploaded documents by requirement so a requirement with multiple
     // files (e.g. "1. Application Form" uploaded as 3 separate pages) shows
@@ -101,6 +141,11 @@ export default function ReviewRequest({ request }) {
     const groupedRequirements = useMemo(() => {
         const docs = request.uploaded_requirements || [];
         const reference = request.requirements_reference || [];
+        
+        console.log('=== Admin ReviewRequest Debug ===');
+        console.log('Uploaded requirements:', docs);
+        console.log('Requirements reference:', reference);
+        
         const sectionById = new Map(reference.map((r) => [r.id, r.section || 'main']));
 
         const groups = new Map();
@@ -118,11 +163,40 @@ export default function ReviewRequest({ request }) {
             groups.get(key).files.push(doc);
         });
 
-        return Array.from(groups.values());
+        const result = Array.from(groups.values());
+        console.log('Grouped requirements:', result);
+        
+        return result;
     }, [request.uploaded_requirements, request.requirements_reference]);
 
     const mainUploadedGroups = groupedRequirements.filter((g) => g.section !== 'additional');
     const additionalUploadedGroups = groupedRequirements.filter((g) => g.section === 'additional');
+
+    // Generate missing requirements message for rejection
+    const getMissingRequirements = () => {
+        const allGroups = [...mainUploadedGroups, ...additionalUploadedGroups];
+        const missing = allGroups.filter(group => !requirementChecks[group.key]);
+        
+        if (missing.length === 0) return '';
+        
+        return 'Missing or Incomplete Requirements:\n' + 
+               missing.map(group => `- ${group.requirement_name}`).join('\n');
+    };
+
+    // Update rejection reason when action changes to rejected
+    const handleActionChange = (newAction) => {
+        setAction(newAction);
+        
+        if (newAction === 'rejected') {
+            const missingReqs = getMissingRequirements();
+            if (missingReqs) {
+                setFormData(prev => ({
+                    ...prev,
+                    rejection_reason: missingReqs
+                }));
+            }
+        }
+    };
 
     // Remove the useEffect for fetching requirements - no longer needed
 
@@ -216,6 +290,7 @@ export default function ReviewRequest({ request }) {
         { number: 1, title: "Applicant Info", icon: User },
         { number: 2, title: "Project Details", icon: Building2 },
         { number: 3, title: "Land Use", icon: Home },
+        { number: 4, title: "Requirements", icon: FileText },
     ];
 
     return (
@@ -322,6 +397,15 @@ export default function ReviewRequest({ request }) {
                                     {currentStep === 3 && (
                                         <Step3Content request={request} />
                                     )}
+                                    {currentStep === 4 && (
+                                        <Step4Content 
+                                            request={request}
+                                            mainUploadedGroups={mainUploadedGroups}
+                                            additionalUploadedGroups={additionalUploadedGroups}
+                                            requirementChecks={requirementChecks}
+                                            onToggleRequirement={handleToggleRequirement}
+                                        />
+                                    )}
                                 </div>
 
                                 {/* Navigation Buttons */}
@@ -359,62 +443,28 @@ export default function ReviewRequest({ request }) {
                                 </div>
                             </CardHeader>
                             <CardContent className="pt-6">
-                                {/* Uploaded Requirements Section - split into Main and Additional */}
-                                {request.uploaded_requirements && request.uploaded_requirements.length > 0 && (
-                                    <div className="mb-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-5 border-2 border-indigo-200">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <div className="p-2 bg-indigo-600 rounded-lg">
-                                                <FileText className="h-5 w-5 text-white" />
-                                            </div>
-                                            <h3 className="text-lg font-bold text-gray-900">Uploaded Requirements</h3>
-                                            <span className="ml-auto bg-indigo-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">
-                                                {request.uploaded_requirements.length} {request.uploaded_requirements.length === 1 ? 'file' : 'files'}
-                                            </span>
-                                        </div>
-
-                                        {mainUploadedGroups.length > 0 && (
-                                            <div className="mb-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold shrink-0">1</span>
-                                                    <h4 className="text-sm font-bold text-gray-700">Main Requirements</h4>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    {mainUploadedGroups.map((group) => (
-                                                        <UploadedRequirementGroup key={group.key} group={group} />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {additionalUploadedGroups.length > 0 && (
+                                {/* Previous Decision Banner */}
+                                {getInitialAction() && (
+                                    <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                                        <div className="flex items-start gap-3">
+                                            <History className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                                             <div>
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-amber-500 text-white text-[10px] font-bold shrink-0">2</span>
-                                                    <h4 className="text-sm font-bold text-gray-700">Additional Requirements</h4>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    {additionalUploadedGroups.map((group) => (
-                                                        <UploadedRequirementGroup key={group.key} group={group} />
-                                                    ))}
-                                                </div>
+                                                <h4 className="text-sm font-semibold text-blue-900">Previous Decision</h4>
+                                                <p className="text-sm text-blue-700 mt-1">
+                                                    This application was previously <span className="font-bold">
+                                                        {request.status === 'reviewed' || request.status === 'approved' ? 'APPROVED' : 'DENIED'}
+                                                    </span>. 
+                                                    {request.rejection_reason && ` Reason: "${request.rejection_reason}"`}
+                                                    <br />
+                                                    <span className="text-xs">You can modify the decision below. Changes will be logged in audit trail.</span>
+                                                </p>
                                             </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* No Requirements Message */}
-                                {(!request.uploaded_requirements || request.uploaded_requirements.length === 0) && (
-                                    <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-xl p-4 flex items-start gap-3">
-                                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                                        <div className="text-sm text-amber-800">
-                                            <p className="font-semibold">No Requirements Uploaded</p>
-                                            <p className="text-xs mt-1">The applicant has not uploaded any requirement documents yet.</p>
                                         </div>
                                     </div>
                                 )}
                                 
                                 <form onSubmit={handleSubmit} className="space-y-6">
-                                    {/* Action Selection */}
+                                    {/* Action Selection - SIMPLIFIED */}
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-800 mb-3">
                                             Select Action <span className="text-red-500">*</span>
@@ -422,63 +472,51 @@ export default function ReviewRequest({ request }) {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <label className={`relative flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
                                                 action === 'reviewed' 
-                                                    ? 'border-green-500 bg-green-50 shadow-md scale-[1.02]' 
-                                                    : 'border-gray-200 hover:border-green-300 hover:bg-green-50/50'
+                                                    ? 'border-green-500 bg-green-50 shadow-md' 
+                                                    : 'border-gray-200 hover:border-green-300'
                                             }`}>
                                                 <input
                                                     type="radio"
                                                     name="action"
                                                     value="reviewed"
                                                     checked={action === 'reviewed'}
-                                                    onChange={(e) => setAction(e.target.value)}
+                                                    onChange={(e) => handleActionChange(e.target.value)}
                                                     className="w-5 h-5 text-green-600"
                                                     required
                                                 />
                                                 <div className="ml-3">
-                                                    <div className="flex items-center gap-2 font-semibold text-green-700 mb-1">
+                                                    <div className="flex items-center gap-2 font-semibold text-green-700">
                                                         <CheckCircle2 className="h-5 w-5" />
                                                         MARK AS REVIEWED
                                                     </div>
-                                                    <div className="text-xs text-gray-600">Mark this application as reviewed</div>
                                                 </div>
-                                                {action === 'reviewed' && (
-                                                    <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
-                                                        <CheckCircle2 className="h-4 w-4" />
-                                                    </div>
-                                                )}
                                             </label>
 
                                             <label className={`relative flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
                                                 action === 'rejected' 
-                                                    ? 'border-red-500 bg-red-50 shadow-md scale-[1.02]' 
-                                                    : 'border-gray-200 hover:border-red-300 hover:bg-red-50/50'
+                                                    ? 'border-red-500 bg-red-50 shadow-md' 
+                                                    : 'border-gray-200 hover:border-red-300'
                                             }`}>
                                                 <input
                                                     type="radio"
                                                     name="action"
                                                     value="rejected"
                                                     checked={action === 'rejected'}
-                                                    onChange={(e) => setAction(e.target.value)}
+                                                    onChange={(e) => handleActionChange(e.target.value)}
                                                     className="w-5 h-5 text-red-600"
                                                     required
                                                 />
                                                 <div className="ml-3">
-                                                    <div className="flex items-center gap-2 font-semibold text-red-700 mb-1">
+                                                    <div className="flex items-center gap-2 font-semibold text-red-700">
                                                         <XCircle className="h-5 w-5" />
-                                                        REJECT
+                                                        DENIED
                                                     </div>
-                                                    <div className="text-xs text-gray-600">Decline with reason</div>
                                                 </div>
-                                                {action === 'rejected' && (
-                                                    <div className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1">
-                                                        <XCircle className="h-4 w-4" />
-                                                    </div>
-                                                )}
                                             </label>
                                         </div>
                                     </div>
 
-                                    {/* Reviewed Form - Simplified */}
+                                    {/* Reviewed Form - Applicant can pay automatically */}
                                     {action === 'reviewed' && (
                                         <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
                                             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border-2 border-green-200">
@@ -487,9 +525,9 @@ export default function ReviewRequest({ request }) {
                                                         <CheckCircle2 className="h-6 w-6 text-white" />
                                                     </div>
                                                     <div>
-                                                        <h3 className="text-lg font-bold text-gray-900">Payment & Schedule Information</h3>
+                                                        <h3 className="text-lg font-bold text-gray-900">Mark as Reviewed</h3>
                                                         <p className="text-sm text-gray-600 mt-1">
-                                                            Set the payment details and schedule for the applicant. This information will be sent via SMS.
+                                                            Applicant will be notified and can proceed with payment automatically.
                                                         </p>
                                                     </div>
                                                 </div>
@@ -497,73 +535,31 @@ export default function ReviewRequest({ request }) {
                                                 {/* Payment Amount */}
                                                 <div className="mb-4">
                                                     <label className="block text-sm font-semibold text-gray-800 mb-2">
-                                                        Payment Amount (₱) <span className="text-red-500">*</span>
+                                                        Payment Amount <span className="text-red-500">*</span>
                                                     </label>
                                                     <div className="relative">
-                                                        {/* Visual-only peso indicator - not part of the submitted value */}
-                                                        <span
-                                                            aria-hidden="true"
-                                                            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 select-none text-base font-semibold text-gray-500"
-                                                        >
-                                                            ₱
-                                                        </span>
+                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">₱</span>
                                                         <input
                                                             type="text"
-                                                            inputMode="decimal"
-                                                            autoComplete="off"
-                                                            // Commas are display-only; state keeps the plain number
                                                             value={formatAmountForDisplay(formData.payment_amount)}
-                                                            onChange={(e) =>
-                                                                setFormData({
-                                                                    ...formData,
-                                                                    payment_amount: parseAmountInput(e.target.value),
-                                                                })
-                                                            }
-                                                            className="w-full pl-8 pr-16 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200"
-                                                            placeholder="e.g., 5,000.00"
+                                                            onChange={(e) => {
+                                                                const raw = parseAmountInput(e.target.value);
+                                                                setFormData({ ...formData, payment_amount: raw });
+                                                            }}
                                                             required
+                                                            className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 text-lg font-semibold"
+                                                            placeholder="0.00"
                                                         />
-                                                        <span
-                                                            aria-hidden="true"
-                                                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-500"
-                                                        >
-                                                            PHP
-                                                        </span>
                                                     </div>
-                                                </div>
-
-                                                {/* Appointment Date */}
-                                                <div className="mb-4">
-                                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
-                                                        Scheduled Payment Date <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        value={formData.appointment_date}
-                                                        onChange={(e) => setFormData({ ...formData, appointment_date: e.target.value })}
-                                                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200"
-                                                        min={new Date().toISOString().split('T')[0]}
-                                                        required
-                                                    />
-                                                </div>
-
-                                                {/* Appointment Time */}
-                                                <div className="mb-4">
-                                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
-                                                        Scheduled Payment Time
-                                                    </label>
-                                                    <input
-                                                        type="time"
-                                                        value={formData.appointment_time}
-                                                        onChange={(e) => setFormData({ ...formData, appointment_time: e.target.value })}
-                                                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200"
-                                                    />
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        Enter the amount the applicant needs to pay at the Treasury Office.
+                                                    </p>
                                                 </div>
 
                                                 {/* Admin Notes */}
                                                 <div>
                                                     <label className="block text-sm font-semibold text-gray-800 mb-2">
-                                                        Notes for Applicant
+                                                        Notes for Applicant (Optional)
                                                     </label>
                                                     <textarea
                                                         value={formData.admin_notes}
@@ -573,7 +569,7 @@ export default function ReviewRequest({ request }) {
                                                         placeholder="Additional instructions or information for the applicant (optional)"
                                                     />
                                                     <p className="text-xs text-gray-500 mt-1">
-                                                        This message will be included in the SMS notification to the applicant.
+                                                        This message will be included in the notification to the applicant.
                                                     </p>
                                                 </div>
                                             </div>
@@ -615,6 +611,19 @@ export default function ReviewRequest({ request }) {
                                                 <div className="mt-4">
                                                     <p className="text-sm font-medium text-gray-700 mb-2">Quick Select:</p>
                                                     <div className="flex flex-wrap gap-2">
+                                                        {/* Missing Requirements Button - Auto-populated from unchecked requirements */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const missing = getMissingRequirements();
+                                                                setFormData({ ...formData, rejection_reason: missing || 'Lacking of Requirements' });
+                                                            }}
+                                                            className="px-3 py-1.5 text-sm font-medium bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 rounded-lg transition-all duration-200 shadow-sm flex items-center gap-1.5"
+                                                        >
+                                                            <XCircle className="h-3.5 w-3.5" />
+                                                            Missing Requirements
+                                                        </button>
+                                                        
                                                         {[
                                                             'Incomplete Documents',
                                                             'Invalid Location',
@@ -631,6 +640,14 @@ export default function ReviewRequest({ request }) {
                                                             </button>
                                                         ))}
                                                     </div>
+                                                    
+                                                    {/* Info about Missing Requirements button */}
+                                                    <p className="text-xs text-gray-500 mt-2 flex items-start gap-1.5">
+                                                        <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                                                        <span>
+                                                            <span className="font-semibold">Missing Requirements</span> button will list all requirements that are not marked as verified (toggle not turned on).
+                                                        </span>
+                                                    </p>
                                                 </div>
 
                                                 {/* Warning */}
@@ -1161,6 +1178,118 @@ function Step3Content({ request }) {
     );
 }
 
+// Step 4: Requirements Upload
+function Step4Content({ request, mainUploadedGroups, additionalUploadedGroups, requirementChecks, onToggleRequirement }) {
+    // Get all requirements from reference (what SHOULD be uploaded)
+    const allMainRequirements = (request.requirements_reference || []).filter(r => r.section === 'main');
+    const allAdditionalRequirements = (request.requirements_reference || []).filter(r => r.section === 'additional');
+    
+    // Map uploaded requirement IDs for quick lookup
+    const uploadedMainIds = new Set(mainUploadedGroups.map(g => g.key));
+    const uploadedAdditionalIds = new Set(additionalUploadedGroups.map(g => g.key));
+    
+    return (
+        <div className="space-y-6">
+            <SectionTitle icon={FileText} title="Requirements Checklist" />
+            
+            {/* Main Requirements Section */}
+            <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">REQUIRED</span>
+                    Main Requirements ({mainUploadedGroups.length}/{allMainRequirements.length} uploaded)
+                </h4>
+                <div className="space-y-3">
+                    {allMainRequirements.map((reqRef) => {
+                        // Find if this requirement was uploaded
+                        const uploadedGroup = mainUploadedGroups.find(g => g.key === reqRef.id);
+                        
+                        if (uploadedGroup) {
+                            // Show uploaded requirement with files
+                            return (
+                                <UploadedRequirementGroup 
+                                    key={reqRef.id} 
+                                    group={uploadedGroup} 
+                                    isChecked={requirementChecks[uploadedGroup.key] || false}
+                                    onToggle={(checked) => onToggleRequirement(uploadedGroup.key, uploadedGroup.requirement_name, checked)}
+                                />
+                            );
+                        } else {
+                            // Show missing requirement placeholder
+                            return (
+                                <MissingRequirementCard 
+                                    key={reqRef.id}
+                                    requirement={reqRef}
+                                    isChecked={requirementChecks[reqRef.id] || false}
+                                    onToggle={(checked) => onToggleRequirement(reqRef.id, reqRef.name, checked)}
+                                />
+                            );
+                        }
+                    })}
+                </div>
+            </div>
+
+            {/* Additional Requirements Section */}
+            <div className="space-y-4 pt-4 border-t">
+                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">OPTIONAL</span>
+                    Additional Requirements ({additionalUploadedGroups.length}/{allAdditionalRequirements.length} uploaded)
+                </h4>
+                <div className="space-y-3">
+                    {allAdditionalRequirements.map((reqRef) => {
+                        // Find if this requirement was uploaded
+                        const uploadedGroup = additionalUploadedGroups.find(g => g.key === reqRef.id);
+                        
+                        if (uploadedGroup) {
+                            // Show uploaded requirement with files
+                            return (
+                                <UploadedRequirementGroup 
+                                    key={reqRef.id} 
+                                    group={uploadedGroup}
+                                    isChecked={requirementChecks[uploadedGroup.key] || false}
+                                    onToggle={(checked) => onToggleRequirement(uploadedGroup.key, uploadedGroup.requirement_name, checked)}
+                                />
+                            );
+                        } else {
+                            // Show missing requirement placeholder
+                            return (
+                                <MissingRequirementCard 
+                                    key={reqRef.id}
+                                    requirement={reqRef}
+                                    isChecked={requirementChecks[reqRef.id] || false}
+                                    onToggle={(checked) => onToggleRequirement(reqRef.id, reqRef.name, checked)}
+                                />
+                            );
+                        }
+                    })}
+                </div>
+            </div>
+
+            {/* Summary */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+                <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                        </div>
+                    </div>
+                    <div>
+                        <h5 className="text-sm font-semibold text-blue-900 mb-1">Requirements Summary</h5>
+                        <p className="text-sm text-blue-700">
+                            Total Uploaded: <span className="font-bold">{mainUploadedGroups.length + additionalUploadedGroups.length}</span>
+                            {' / '}
+                            <span className="font-bold">{allMainRequirements.length + allAdditionalRequirements.length}</span>
+                            {' • '}
+                            Main: <span className="font-bold">{mainUploadedGroups.length}/{allMainRequirements.length}</span>
+                            {' • '}
+                            Additional: <span className="font-bold">{additionalUploadedGroups.length}/{allAdditionalRequirements.length}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // Helper Components
 function SectionTitle({ icon: Icon, title }) {
     return (
@@ -1186,34 +1315,42 @@ function InfoField({ label, value }) {
     );
 }
 
-function UploadedRequirementGroup({ group }) {
+function UploadedRequirementGroup({ group, isChecked, onToggle }) {
     return (
-        <div className="bg-white border-2 border-indigo-100 rounded-lg p-3 hover:border-indigo-300 hover:shadow-md transition-all duration-200">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-all">
             <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-indigo-600" />
+                <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-gray-600" />
                 </div>
+                
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
+                    <p className="text-sm font-semibold text-gray-900">
                         {group.requirement_name}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 mt-0.5">
                         {group.files.length} {group.files.length === 1 ? 'file' : 'files'} uploaded
                     </p>
                 </div>
-                {group.files.length > 1 && (
-                    <span className="flex-shrink-0 bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                        {group.files.length}
+
+                {/* Toggle Switch */}
+                <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+                    <Switch
+                        checked={isChecked}
+                        onCheckedChange={onToggle}
+                        className="data-[state=checked]:bg-green-600"
+                    />
+                    <span className="text-[9px] font-medium text-gray-500">
+                        {isChecked ? 'On' : 'Off'}
                     </span>
-                )}
+                </div>
             </div>
 
-            {/* Every file for this requirement, always visible */}
-            <div className="mt-2.5 space-y-1.5 pl-0 sm:pl-[52px]">
+            {/* Files list - collapsed by default, shows on hover or when expanded */}
+            <div className="mt-3 space-y-2 pl-0 sm:pl-[52px]">
                 {group.files.map((doc) => (
                     <div
                         key={doc.id}
-                        className="flex items-center justify-between gap-2 bg-indigo-50/60 rounded-lg px-3 py-2"
+                        className="flex items-center justify-between gap-2 bg-gray-50 rounded-lg px-3 py-2"
                     >
                         <div className="min-w-0 flex-1">
                             <p className="text-xs font-medium text-gray-800 truncate">
@@ -1229,17 +1366,54 @@ function UploadedRequirementGroup({ group }) {
                                 </span>
                             </div>
                         </div>
+                        
+                        {/* View Button */}
                         <a
                             href={`/requirements/${doc.id}/view`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-shrink-0 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
+                            className="px-3 py-1.5 bg-gray-700 hover:bg-gray-800 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
                         >
                             <FileText className="h-3.5 w-3.5" />
                             View
                         </a>
                     </div>
                 ))}
+            </div>
+        </div>
+    );
+}
+
+// Component to show requirements that were NOT uploaded
+function MissingRequirementCard({ requirement, isChecked, onToggle }) {
+    return (
+        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-all">
+            <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                    <XCircle className="h-5 w-5 text-gray-400" />
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">
+                        {requirement.name}
+                    </p>
+                    <p className="text-xs text-red-600 mt-0.5">
+                        Not uploaded
+                    </p>
+                </div>
+                
+                {/* Toggle Switch */}
+                <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+                    <Switch
+                        checked={isChecked || false}
+                        onCheckedChange={onToggle}
+                        className="data-[state=checked]:bg-green-600"
+                        disabled
+                    />
+                    <span className="text-[9px] font-medium text-gray-400">
+                        Off
+                    </span>
+                </div>
             </div>
         </div>
     );

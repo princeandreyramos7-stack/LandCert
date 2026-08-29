@@ -134,22 +134,6 @@
         <p>Congratulations! Your land certification application <strong>#{{ $request->id }}</strong> has been <span class="highlight">APPROVED</span> by the City Planning and Development Office.</p>
         
         <div class="info-box">
-            <h3>📅 Appointment Details</h3>
-            <div class="info-row">
-                <div class="info-label">Date:</div>
-                <div class="info-value">{{ \Carbon\Carbon::parse($appointmentDate)->format('l, F j, Y') }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Time:</div>
-                <div class="info-value">{{ \Carbon\Carbon::parse($appointmentTime)->format('g:i A') }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Location:</div>
-                <div class="info-value">City Planning and Development Office<br>Tacurong City Hall, Tacurong City</div>
-            </div>
-        </div>
-        
-        <div class="info-box">
             <h3>💰 Payment Information</h3>
             <div class="info-row">
                 <div class="info-label">Amount to Pay:</div>
@@ -157,15 +141,15 @@
             </div>
             <p style="margin-top: 15px; font-size: 14px;">
                 <strong>Next Step - Where to Pay:</strong><br>
-                Please proceed to the <strong>Municipal/City Treasury Office</strong> to pay the amount above
-                on or before your scheduled date. After payment, bring your <strong>Official Receipt (OR)</strong>
+                Please proceed to the <strong>Municipal/City Treasury Office</strong> to pay the amount above.
+                After payment, bring your <strong>Official Receipt (OR)</strong>
                 together with your requirements to the CPDO office to continue processing your application.
             </p>
         </div>
         
         <div class="info-box">
             <h3>📋 Requirements to Bring</h3>
-            <p>Please bring the following documents on your appointment date:</p>
+            <p>Please bring the following documents when you visit the CPDO office:</p>
             <ul class="requirements-list">
                 @foreach($requirements as $req)
                     @if($req['checked'])
@@ -185,11 +169,10 @@
         <div class="warning-box">
             <strong>⚠️ Important Reminders:</strong>
             <ul style="margin: 10px 0; padding-left: 20px;">
-                <li>Pay at the <strong>Treasury Office</strong> on or before your scheduled date</li>
+                <li>Pay at the <strong>Treasury Office</strong> and secure your Official Receipt</li>
                 <li>Bring your <strong>Official Receipt (OR)</strong> and all required documents (original and photocopy) to CPDO</li>
-                <li>Please arrive <strong>15 minutes before</strong> your scheduled appointment</li>
                 <li>Bring a <strong>valid government-issued ID</strong> for verification</li>
-                <li>If you cannot attend, please inform us at least 24 hours in advance</li>
+                <li>Visit during office hours: Monday-Friday, 8:00 AM - 5:00 PM</li>
             </ul>
         </div>
         
@@ -197,7 +180,7 @@
             <a href="{{ url('/my-applications') }}" class="button">View Application Details</a>
         </center>
         
-        <p style="margin-top: 30px;">If you have any questions or need to reschedule, please contact us:</p>
+        <p style="margin-top: 30px;">If you have any questions, please contact us:</p>
         <p>
             📞 Phone: (064) 200-1234<br>
             📧 Email: cpdo@tacurongcity.gov.ph<br>

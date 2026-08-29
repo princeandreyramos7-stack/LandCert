@@ -234,6 +234,9 @@ class RequestController extends Controller
                     'uploaded_at' => $doc->created_at->format('M d, Y'),
                 ];
             })->groupBy('requirement_id')->toArray(),
+            
+            // Verified requirements (toggle states)
+            'verified_requirements' => $request->verified_requirements ?? [],
         ];
 
         return Inertia::render('Request/index', [
@@ -299,6 +302,7 @@ class RequestController extends Controller
             'requirement_uploads' => 'nullable|array',
             'requirement_uploads.*' => 'nullable|array',
             'requirement_uploads.*.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'verified_requirements' => 'nullable|array',
         ]);
 
         // Use a database transaction to ensure all records are created together
@@ -323,6 +327,7 @@ class RequestController extends Controller
                 'similar_application_dates' => $validated['similar_application_dates'] ?? null,
                 'preferred_release_mode' => $validated['preferred_release_mode'] ?? 'pickup',
                 'release_address' => $validated['release_address'] ?? null,
+                'verified_requirements' => json_encode($validated['verified_requirements'] ?? []),
             ]);
 
             // Assign unique application number immediately after creation
@@ -454,6 +459,18 @@ class RequestController extends Controller
      */
     public function update(Request $request, $id)
     {
+        // AGGRESSIVE LOGGING - Check if method is even called
+        error_log("====== UPDATE METHOD HIT ======");
+        error_log("Request ID: " . $id);
+        error_log("User ID: " . auth()->id());
+        error_log("Method: " . $request->method());
+        
+        \Log::error('UPDATE METHOD CALLED', [
+            'request_id' => $id,
+            'user_id' => auth()->id(),
+            'method' => $request->method(),
+        ]);
+        
         // Find the request with all relationships
         $existingRequest = RequestModel::with([
             'applicant.corporation',
@@ -516,10 +533,19 @@ class RequestController extends Controller
             'requirement_uploads' => 'nullable|array',
             'requirement_uploads.*' => 'nullable|array',
             'requirement_uploads.*.*' => 'file|max:5120',
+            'verified_requirements' => 'nullable|array',
         ]);
 
         try {
             DB::beginTransaction();
+            
+            // Log file upload status
+            \Log::info('Update request - file check', [
+                'request_id' => $id,
+                'hasFile' => $request->hasFile('requirement_uploads'),
+                'all_files' => $request->allFiles(),
+                'input_keys' => array_keys($request->all()),
+            ]);
 
             // Update Applicant
             $existingRequest->applicant->update([
@@ -601,6 +627,7 @@ class RequestController extends Controller
                 'similar_application_dates' => $validated['similar_application_dates'] ?? null,
                 'preferred_release_mode' => $validated['preferred_release_mode'] ?? 'pickup',
                 'release_address' => $validated['release_address'] ?? null,
+                'verified_requirements' => json_encode($validated['verified_requirements'] ?? []),
             ]);
 
             // Update Report if exists
@@ -612,9 +639,18 @@ class RequestController extends Controller
                 ]);
             }
 
-            // Handle new file uploads
-            if ($request->hasFile('requirement_uploads')) {
-                foreach ($request->file('requirement_uploads') as $requirementId => $files) {
+            // Handle new file uploads - FIXED TO DETECT FILES PROPERLY
+            $allFiles = $request->allFiles();
+            \Log::info('Checking for file uploads', [
+                'hasFile' => $request->hasFile('requirement_uploads'),
+                'all_files' => $allFiles,
+                'requirement_uploads_exists' => isset($allFiles['requirement_uploads']),
+            ]);
+            
+            if (isset($allFiles['requirement_uploads']) && is_array($allFiles['requirement_uploads'])) {
+                \Log::info('Processing file uploads from allFiles()');
+                
+                foreach ($allFiles['requirement_uploads'] as $requirementId => $files) {
                     if (is_array($files)) {
                         foreach ($files as $file) {
                             $path = $file->store('requirements', 'local');
@@ -628,9 +664,16 @@ class RequestController extends Controller
                                 'mime_type' => $file->getMimeType(),
                                 'file_size' => $file->getSize(),
                             ]);
+                            
+                            \Log::info('File saved', [
+                                'requirement_id' => $requirementId,
+                                'filename' => $file->getClientOriginalName(),
+                            ]);
                         }
                     }
                 }
+            } else {
+                \Log::info('No files in allFiles()');
             }
 
             DB::commit();
@@ -664,5 +707,168 @@ class RequestController extends Controller
         }
 
         return \Storage::disk('local')->response($path);
+    }
+
+    /**
+     * Generate order of payment for applicant's approved application
+     */
+    public function generateOrderOfPayment($id)
+    {
+        $request = \App\Models\Request::with([
+            'user',
+            'applicant.corporation',
+            'project',
+            'location',
+            'property',
+            'payments' => function($query) {
+                $query->where('payment_status', 'verified')->latest();
+            }
+        ])->findOrFail($id);
+
+        // Check if this request belongs to the logged-in user
+        if ($request->user_id !== auth()->id()) {
+            return redirect()->back()->with('error', 'Unauthorized access');
+        }
+
+        // Order of payment can be generated for approved applications
+        if (strtolower($request->status) !== 'approved') {
+            return redirect()->back()->with('error', 'Order of payment can only be generated for approved applications');
+        }
+
+        $payment = $request->payments->first();
+        
+        // Get the reviewer (admin who reviewed the application)
+        $report = \App\Models\Report::where('request_id', $id)
+            ->latest()
+            ->first();
+            
+        $reviewer = null;
+        if ($report) {
+            // Try to get reviewer from issued_by (user ID) or reviewed_by (user ID)
+            $reviewerId = $report->reviewed_by ?? $report->issued_by;
+            if ($reviewerId) {
+                $reviewer = \App\Models\User::find($reviewerId);
+            }
+            // If no ID found, try issued_by as name (legacy support)
+            if (!$reviewer && $report->issued_by && !is_numeric($report->issued_by)) {
+                $reviewer = (object)['name' => $report->issued_by];
+            }
+        }
+
+        $applicationData = [
+            'id' => $request->id,
+            'application_number' => $request->application_number,
+            'decision_number' => $request->decision_number,
+            'status' => $request->status,
+            'created_at' => $request->created_at,
+            'updated_at' => $request->updated_at,
+            'applicant_name' => $request->applicant?->applicant_name,
+            'applicant_address' => $request->applicant?->applicant_address,
+            'corporation_name' => $request->applicant?->corporation?->corporation_name,
+            'corporation_address' => $request->applicant?->corporation?->corporation_address,
+            'project_type' => $request->project?->project_type,
+            'project_nature' => $request->project?->project_nature,
+            'project_cost' => $request->project?->project_cost,
+            'project_location_street' => $request->location?->street_address,
+            'project_location_barangay' => $request->location?->barangay,
+            'project_location_municipality' => $request->location?->city_municipality,
+            'right_over_land' => $request->property?->right_over_land,
+        ];
+
+        return \Inertia\Inertia::render('Admin/GenerateOrderOfPayment', [
+            'application' => $applicationData,
+            'payment' => $payment,
+            'reviewer' => $reviewer,
+        ]);
+    }
+
+    /**
+     * Print certificate for applicant (standalone page)
+     */
+    public function printCertificate($id)
+    {
+        $request = \App\Models\Request::with([
+            'applicant',
+            'project',
+            'property',
+            'location',
+            'payments' => function ($query) {
+                $query->where('payment_status', 'verified')->latest();
+            }
+        ])->findOrFail($id);
+
+        // Check ownership
+        if ($request->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized access to this certificate');
+        }
+
+        // Get the latest verified payment
+        $payment = $request->payments->first();
+
+        // Get reviewer (admin who processed this)
+        $reviewer = \App\Models\User::whereIn('user_type', ['admin', 'super_admin'])->first();
+
+        return inertia('Applicant/PrintCertificate', [
+            'application' => $this->formatApplicationData($request),
+            'payment' => $payment,
+            'reviewer' => $reviewer,
+        ]);
+    }
+
+    /**
+     * Print clearance for applicant (standalone page)
+     */
+    public function printClearance($id)
+    {
+        $request = \App\Models\Request::with([
+            'applicant',
+            'project',
+            'property',
+            'location',
+            'payments' => function ($query) {
+                $query->where('payment_status', 'verified')->latest();
+            }
+        ])->findOrFail($id);
+
+        // Check ownership
+        if ($request->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized access to this clearance');
+        }
+
+        // Get the latest verified payment
+        $payment = $request->payments->first();
+
+        // Get reviewer (admin who processed this)
+        $reviewer = \App\Models\User::whereIn('user_type', ['admin', 'super_admin'])->first();
+
+        return inertia('Applicant/PrintClearance', [
+            'application' => $this->formatApplicationData($request),
+            'payment' => $payment,
+            'reviewer' => $reviewer,
+        ]);
+    }
+
+    /**
+     * Format application data for certificate/clearance generation
+     */
+    private function formatApplicationData($request)
+    {
+        return [
+            'id' => $request->id,
+            'application_number' => $request->application_number,
+            'decision_number' => $request->decision_number,
+            'applicant_name' => $request->applicant->applicant_name ?? 'N/A',
+            'applicant_address' => $request->applicant->applicant_address ?? 'N/A',
+            'corporation_name' => $request->applicant->normalizedCorporation->corporation_name ?? null,
+            'corporation_address' => $request->applicant->normalizedCorporation->corporation_address ?? null,
+            'project_type' => $request->project->project_type ?? 'N/A',
+            'project_nature' => $request->project->project_nature ?? null,
+            'project_location_barangay' => $request->location->barangay ?? 'N/A',
+            'project_location_municipality' => $request->location->municipality ?? 'City of Ilagan, Isabela',
+            'right_over_land' => $request->property->right_over_land ?? 'OWNER',
+            'status' => $request->status,
+            'created_at' => $request->created_at,
+            'updated_at' => $request->updated_at,
+        ];
     }
 }

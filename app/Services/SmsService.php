@@ -162,14 +162,12 @@ class SmsService
         ]);
     }
 
-    public function sendApplicationApprovedWithNextSteps(string $phone, string $name, string $applicationNumber, float $amount, string $appointmentDate = '', string $appointmentTime = ''): bool
+    public function sendApplicationApprovedWithNextSteps(string $phone, string $name, string $applicationNumber, float $amount): bool
     {
         return $this->sendTemplate('application_approved_next_steps', $phone, [
             '{name}'               => $name,
             '{application_number}' => $applicationNumber,
             '{amount}'             => number_format($amount, 2),
-            '{appointment_date}'   => $appointmentDate ?: 'TBD',
-            '{appointment_time}' => $appointmentTime ?: 'TBD',
         ]);
     }
 

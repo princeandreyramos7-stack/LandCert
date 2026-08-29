@@ -15,8 +15,6 @@ class ApplicationApprovedWithDetails extends Mailable implements ShouldQueue
 
     public $request;
     public $applicantName;
-    public $appointmentDate;
-    public $appointmentTime;
     public $paymentAmount;
     public $requirements;
     public $adminNotes;
@@ -27,16 +25,14 @@ class ApplicationApprovedWithDetails extends Mailable implements ShouldQueue
     public function __construct(
         $request, 
         $applicantName, 
-        $appointmentDate, 
-        $appointmentTime, 
+        $appointmentDate, // Keep parameter for backward compatibility but don't use
+        $appointmentTime, // Keep parameter for backward compatibility but don't use
         $paymentAmount, 
         $requirements, 
         $adminNotes = null
     ) {
         $this->request = $request;
         $this->applicantName = $applicantName;
-        $this->appointmentDate = $appointmentDate;
-        $this->appointmentTime = $appointmentTime;
         $this->paymentAmount = $paymentAmount;
         $this->requirements = $requirements;
         $this->adminNotes = $adminNotes;
@@ -48,7 +44,7 @@ class ApplicationApprovedWithDetails extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Application Approved - Appointment Scheduled',
+            subject: 'Application Approved - Payment Instructions',
         );
     }
 

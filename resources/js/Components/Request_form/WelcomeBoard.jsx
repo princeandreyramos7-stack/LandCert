@@ -19,7 +19,7 @@ import { FileText, Clock, Shield, Building2, ListChecks, ArrowRight, Sparkles } 
 const CATEGORIES = [
     {
         id: "Zoning",
-        title: "Locational Clearance",
+        title: "CZC (Certificate of Zoning Compliance)",
         description: "Certificate of Zoning Compliance for land use, construction, or business establishment projects.",
         icon: Building2,
         color: "blue",

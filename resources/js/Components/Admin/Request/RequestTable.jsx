@@ -6,16 +6,14 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
 import {
     MoreVertical,
-    CheckCircle,
-    Trash2,
-    Printer,
+    Eye,
+    FileCheck,
 } from "lucide-react";
-import { getStatusColor, getStatusIcon, formatDate, formatLocation, formatProjectType } from "./utils";
+import { getStatusColor, getStatusIcon, getStatusLabel, formatDate, formatLocation, formatProjectType } from "./utils";
 
 export function RequestTable({
     requests,
@@ -33,18 +31,17 @@ export function RequestTable({
                     <tr className="border-b bg-gray-50">
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Application No.</th>
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Applicant</th>
-                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">User</th>
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Project Type</th>
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Location</th>
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Date</th>
-                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Status</th>
+                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Status of Application</th>
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {requests.length === 0 ? (
                         <tr>
-                            <td colSpan="8" className="p-8 text-center text-gray-500">
+                            <td colSpan="7" className="p-8 text-center text-gray-500">
                                 No requests found
                             </td>
                         </tr>
@@ -69,16 +66,6 @@ export function RequestTable({
                                         )}
                                     </div>
                                 </td>
-                                <td className="p-3">
-                                    <div>
-                                        <p className="text-sm font-medium">
-                                            {request.user_name}
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                            {request.user_email}
-                                        </p>
-                                    </div>
-                                </td>
                                 <td className="p-3 text-sm">
                                     {formatProjectType(request.project_type) ?? (
                                         <span className="text-slate-400 italic text-xs">Not specified</span>
@@ -101,12 +88,7 @@ export function RequestTable({
                                     >
                                         <span className="flex items-center gap-1">
                                             {getStatusIcon(request.status)}
-                                            {(request.status || "pending")
-                                                .charAt(0)
-                                                .toUpperCase() +
-                                                (
-                                                    request.status || "pending"
-                                                ).slice(1)}
+                                            {getStatusLabel(request.status)}
                                         </span>
                                     </Badge>
                                 </td>
@@ -119,26 +101,18 @@ export function RequestTable({
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem
-                                                onClick={() => handleReviewClick(request)}
+                                                onClick={() => router.visit(route('admin.requests.view-application', request.id))}
                                                 className="text-blue-600 font-medium"
                                             >
-                                                <CheckCircle className="h-4 w-4 mr-2" />
-                                                Review Application
+                                                <Eye className="h-4 w-4 mr-2" />
+                                                View Application
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
-                                                onClick={() => window.open(route('admin.requests.print', request.id), '_blank')}
-                                                className="text-[#0d1f5c] font-medium"
+                                                onClick={() => router.visit(route('admin.requests.document-verification', request.id))}
+                                                className="text-purple-600 font-medium"
                                             >
-                                                <Printer className="h-4 w-4 mr-2" />
-                                                Print Form
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem
-                                                onClick={() => onDelete(request)}
-                                                className="text-red-600"
-                                            >
-                                                <Trash2 className="h-4 w-4 mr-2" />
-                                                Delete
+                                                <FileCheck className="h-4 w-4 mr-2" />
+                                                Document Verification
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>

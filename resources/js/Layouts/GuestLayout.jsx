@@ -29,16 +29,16 @@ export default function GuestLayout({ children }) {
                     {/* Logo */}
                     <Link href="/" className="inline-flex items-center gap-4 group">
                         <div className="w-14 h-14 rounded-full border-2 border-[#d4a017]/40 bg-[#d4a017]/10 flex items-center justify-center shrink-0">
-                            <img src="/images/Ilagan.png" alt="CPDO Logo" className="w-9 h-9 object-contain"/>
+                            <img src="/images/Ilagan.png" alt="CPDO L.C Logo" className="w-9 h-9 object-contain"/>
                         </div>
                         <div>
                             <p className="text-white font-black text-sm tracking-[0.15em] uppercase leading-tight">
                                 Republic of the Philippines
                             </p>
                             <p className="text-[#d4a017] font-black text-base tracking-wide leading-tight">
-                                CPDO LandCert
+                                CPDO L.C
                             </p>
-                            <p className="text-blue-300 text-[11px] tracking-widest">Ilagan City, Isabela</p>
+                            <p className="text-blue-300 text-[11px] tracking-widest">City of Ilagan, Isabela</p>
                         </div>
                     </Link>
 
@@ -83,7 +83,7 @@ export default function GuestLayout({ children }) {
 
                     {/* Footer */}
                     <p className="text-blue-400/50 text-xs">
-                        &copy; {new Date().getFullYear()} City Planning and Development Office — Ilagan City, Isabela
+                        &copy; {new Date().getFullYear()} City Planning and Development Office — City of Ilagan, Isabela
                     </p>
                 </div>
             </div>
@@ -94,10 +94,10 @@ export default function GuestLayout({ children }) {
                 {/* Mobile logo */}
                 <div className="lg:hidden w-full max-w-md mb-8">
                     <Link href="/" className="flex items-center gap-3">
-                        <img src="/images/Ilagan.png" alt="CPDO" className="w-10 h-10 object-contain"/>
+                        <img src="/images/Ilagan.png" alt="CPDO L.C" className="w-10 h-10 object-contain"/>
                         <div>
-                            <p className="text-[#0d1f5c] font-black text-sm tracking-wide">CPDO LandCert</p>
-                            <p className="text-[#d4a017] text-xs font-semibold">Ilagan City, Isabela</p>
+                            <p className="text-[#0d1f5c] font-black text-sm tracking-wide">CPDO L.C</p>
+                            <p className="text-[#d4a017] text-xs font-semibold">City of Ilagan, Isabela</p>
                         </div>
                     </Link>
                 </div>

@@ -16,10 +16,10 @@ export function SuperAdminDashboard({ analytics = null, systemStats = {}, adminA
     };
 
     const statCards = [
-        { label: "Total Users",      sub: `${systemStats.total_applicants||0} applicants · ${systemStats.total_admins||0} admins`, value: systemStats.total_users||0,     icon: Users,    border: "border-l-[#0d1f5c]", iconBg: "bg-[#0d1f5c]/10", iconColor: "text-[#0d1f5c]" },
-        { label: "Admin Users",      sub: "System administrators",                                                                    value: systemStats.total_admins||0,    icon: Shield,   border: "border-l-[#d4a017]",  iconBg: "bg-[#d4a017]/10",  iconColor: "text-[#d4a017]" },
-        { label: "Total Requests",   sub: "All time submissions",                                                                     value: systemStats.total_requests||0,  icon: FileText, border: "border-l-blue-500",   iconBg: "bg-blue-50",       iconColor: "text-blue-600"  },
-        { label: "Pending Requests", sub: "Awaiting action",                                                                          value: systemStats.pending_requests||0, icon: Clock,   border: "border-l-yellow-500", iconBg: "bg-yellow-50",     iconColor: "text-yellow-600" },
+        { label: "Total Users",        sub: `${systemStats.total_applicants||0} applicants · ${systemStats.total_admins||0} admins`, value: systemStats.total_users||0,     icon: Users,    border: "border-l-[#0d1f5c]", iconBg: "bg-[#0d1f5c]/10", iconColor: "text-[#0d1f5c]" },
+        { label: "Admin Users",        sub: "System administrators",                                                                    value: systemStats.total_admins||0,    icon: Shield,   border: "border-l-[#d4a017]",  iconBg: "bg-[#d4a017]/10",  iconColor: "text-[#d4a017]" },
+        { label: "Total Applications", sub: "All time submissions",                                                                     value: systemStats.total_requests||0,  icon: FileText, border: "border-l-blue-500",   iconBg: "bg-blue-50",       iconColor: "text-blue-600"  },
+        { label: "Pending Applications", sub: "Awaiting action",                                                                        value: systemStats.pending_requests||0, icon: Clock,   border: "border-l-yellow-500", iconBg: "bg-yellow-50",     iconColor: "text-yellow-600" },
     ];
 
     return (
@@ -43,7 +43,7 @@ export function SuperAdminDashboard({ analytics = null, systemStats = {}, adminA
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <div className="w-1 h-4 rounded-full bg-[#d4a017]"/>
-                                <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">CPDO Super Admin</p>
+                                <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">CPDO Zoning Administrator</p>
                             </div>
                             <h2 className="text-2xl font-black text-white">Dashboard Overview</h2>
                             <p className="text-blue-200/70 text-sm mt-0.5">Advanced analytics, system monitoring & admin workflow</p>
@@ -112,7 +112,7 @@ export function SuperAdminDashboard({ analytics = null, systemStats = {}, adminA
                                 </div>
                                 <div className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#d4a017]/30 bg-[#0d1f5c]/5">
                                     <Shield className="w-4 h-4 text-[#0d1f5c]"/>
-                                    <span className="text-[#0d1f5c] font-bold text-sm">Super Administrator — CPDO Ilagan City</span>
+                                    <span className="text-[#0d1f5c] font-bold text-sm">Zoning Administrator — CPDO Ilagan City</span>
                                 </div>
                             </div>
                         </CardContent>

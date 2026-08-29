@@ -26,8 +26,9 @@ import {
     FileText,
     FileCheck,
     Download,
+    Eye,
 } from "lucide-react";
-import { getStatusColor, getStatusIcon, formatDate, formatLocation } from "@/Components/Admin/Request/utils";
+import { getStatusColor, getStatusIcon, getStatusLabel, formatDate, formatLocation } from "@/Components/Admin/Request/utils";
 import { ApproveDialog } from "./ApproveDialog";
 import { RejectDialog } from "./RejectDialog";
 
@@ -67,10 +68,10 @@ export function SuperAdminRequestList({ requests }) {
     const stats = useMemo(() => {
         return {
             total: requestsData.length,
-            pending: requestsData.filter((r) => r.status === "pending").length,
+            pending: requestsData.filter((r) => r.status === "pending" || r.status === "for_verification").length,
             approved: requestsData.filter((r) => r.status === "approved").length,
             rejected: requestsData.filter((r) => r.status === "rejected").length,
-            reviewed: requestsData.filter((r) => r.status === "reviewed").length,
+            reviewed: requestsData.filter((r) => r.status === "reviewed" || r.status === "for_payment" || r.status === "pending_payment").length,
         };
     }, [requestsData]);
 
@@ -166,181 +167,126 @@ export function SuperAdminRequestList({ requests }) {
     };
 
     return (
-        <div
-            className="space-y-6 min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 p-6"
-            style={{
-                backgroundImage: `
-                    radial-gradient(circle at 20% 80%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
-                    radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
-                    radial-gradient(circle at 40% 40%, rgba(139, 92, 246, 0.05) 0%, transparent 50%)
-                `,
-            }}
-        >
-            {/* Enhanced Header with White Background */}
-            <div className="bg-white rounded-2xl p-6 shadow-2xl border-2 border-gray-100">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-blue-100 rounded-xl">
-                            <FileText className="h-8 w-8 text-blue-600" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Request Management</h1>
-                            <p className="text-gray-600">Approve or reject applications with full authority</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Advanced Statistics Cards with Animated Progress Bars */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                <Card className="border-l-4 border-l-purple-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Total Requests</p>
-                                <p className="text-3xl font-bold text-purple-700">{stats.total}</p>
-                            </div>
-                            <FileText className="h-8 w-8 text-purple-500" />
-                        </div>
-                        <div className="mt-2 h-1 bg-purple-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full" style={{ width: '100%' }}></div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-yellow-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                                <p className="text-3xl font-bold text-yellow-700">{stats.pending}</p>
-                            </div>
-                            <svg className="h-8 w-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <div className="mt-2 h-1 bg-yellow-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full" style={{ width: `${stats.total > 0 ? (stats.pending / stats.total) * 100 : 0}%` }}></div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-blue-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Reviewed</p>
-                                <p className="text-3xl font-bold text-blue-700">{stats.reviewed}</p>
-                            </div>
-                            <FileCheck className="h-8 w-8 text-blue-500" />
-                        </div>
-                        <div className="mt-2 h-1 bg-blue-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" style={{ width: `${stats.total > 0 ? (stats.reviewed / stats.total) * 100 : 0}%` }}></div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-green-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Approved</p>
-                                <p className="text-3xl font-bold text-green-700">{stats.approved}</p>
-                            </div>
-                            <CheckCircle className="h-8 w-8 text-green-500" />
-                        </div>
-                        <div className="mt-2 h-1 bg-green-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full" style={{ width: `${stats.total > 0 ? (stats.approved / stats.total) * 100 : 0}%` }}></div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-red-500 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Rejected</p>
-                                <p className="text-3xl font-bold text-red-700">{stats.rejected}</p>
-                            </div>
-                            <XCircle className="h-8 w-8 text-red-500" />
-                        </div>
-                        <div className="mt-2 h-1 bg-red-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-red-500 to-rose-500 rounded-full" style={{ width: `${stats.total > 0 ? (stats.rejected / stats.total) * 100 : 0}%` }}></div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Search and Filter Section - Cleaner Design */}
-            <Card className="bg-white/80 backdrop-blur-sm shadow-lg">
-                <CardHeader className="border-b">
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                            <svg className="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                            </svg>
-                            Filter & Search
-                        </CardTitle>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                            onClick={handleExport}
-                        >
-                            <Download className="h-4 w-4" />
-                            Export Excel
-                        </Button>
-                    </div>
-                </CardHeader>
+        <div className="space-y-6 p-6">
+            {/* Single unified card containing everything */}
+            <Card className="bg-white shadow-lg border border-gray-100">
                 <CardContent className="p-6">
-                    <div className="flex gap-4">
-                        <div className="relative flex-1">
-                            <svg className="absolute left-3 top-3 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <Input
-                                placeholder="Search by name, email, contact..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 bg-white"
-                            />
+                    {/* Statistics Cards at the top */}
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                        <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-medium text-blue-600 uppercase mb-1">Total Requests</p>
+                                    <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+                                    <p className="text-xs text-blue-600 mt-1">All submissions</p>
+                                </div>
+                                <FileText className="h-8 w-8 text-blue-500" />
+                            </div>
                         </div>
-                        <select
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                            className="border border-gray-300 rounded-md px-4 py-2 pr-10 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent cursor-pointer min-w-[200px]"
-                        >
-                            <option value="all">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="reviewed">Reviewed</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
-                        </select>
-                    </div>
-                </CardContent>
-            </Card>
 
-            {/* Requests Table */}
-            <Card className="bg-white/80 backdrop-blur-sm shadow-lg">
-                <CardContent className="p-6">
-                    <div className="rounded-xl border overflow-hidden">
+                        <div className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-500">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-medium text-yellow-600 uppercase mb-1">For Verification</p>
+                                    <p className="text-2xl font-bold text-yellow-900">{stats.pending}</p>
+                                    <p className="text-xs text-yellow-600 mt-1">Awaiting document check</p>
+                                </div>
+                                <svg className="h-8 w-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-medium text-green-600 uppercase mb-1">Application Approved</p>
+                                    <p className="text-2xl font-bold text-green-900">{stats.approved}</p>
+                                    <p className="text-xs text-green-600 mt-1">Successfully processed</p>
+                                </div>
+                                <CheckCircle className="h-8 w-8 text-green-500" />
+                            </div>
+                        </div>
+
+                        <div className="bg-red-50 rounded-lg p-4 border-l-4 border-red-500">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-medium text-red-600 uppercase mb-1">Application Rejected</p>
+                                    <p className="text-2xl font-bold text-red-900">{stats.rejected}</p>
+                                    <p className="text-xs text-red-600 mt-1">Needs attention</p>
+                                </div>
+                                <XCircle className="h-8 w-8 text-red-500" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-gray-200 my-6"></div>
+
+                    {/* Header with Title, Export, Filter, Search */}
+                    <div className="flex items-center justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-[#0d1f5c]" />
+                            <h2 className="text-lg font-semibold text-[#0d1f5c]">
+                                All Applications ({filteredRequests.length})
+                            </h2>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2 border-gray-200 text-gray-700 hover:bg-gray-50"
+                                onClick={handleExport}
+                            >
+                                <Download className="h-4 w-4" />
+                                Export Excel
+                            </Button>
+                            
+                            <select
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                                className="border border-gray-200 rounded-md px-3 py-2 pr-8 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] focus:border-[#0d1f5c] cursor-pointer min-w-[220px]"
+                            >
+                                <option value="all">All Status of Application</option>
+                                <option value="pending">For Verification</option>
+                                <option value="reviewed">For Payment</option>
+                                <option value="approved">Application Approved</option>
+                                <option value="rejected">Application Rejected</option>
+                            </select>
+
+                            <div className="relative">
+                                <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <Input
+                                    placeholder="Search requests..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-9 pr-4 py-2 w-64 bg-white border-gray-200 focus:border-[#0d1f5c] text-sm"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="rounded-lg border border-gray-200 overflow-hidden">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-gray-50">
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Application No.</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Applicant</TableHead>
-                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">User</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Project Type</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Location</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Date</TableHead>
-                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Status</TableHead>
+                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Status of Application</TableHead>
                                     <TableHead className="text-right font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredRequests.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan="8" className="text-center text-muted-foreground py-8">
+                                        <TableCell colSpan="7" className="text-center text-muted-foreground py-8">
                                             {searchTerm || filterStatus !== "all"
                                                 ? "No requests match your filters"
                                                 : "No requests found"}
@@ -350,7 +296,7 @@ export function SuperAdminRequestList({ requests }) {
                                     filteredRequests.map((request) => (
                                         <TableRow
                                             key={request.id}
-                                            className="hover:bg-gradient-to-r hover:from-purple-50 hover:to-indigo-50 transition-all duration-300"
+                                            className="hover:bg-gray-50 transition-colors"
                                         >
                                             <TableCell className="font-mono font-bold text-[#0d1f5c] text-sm">
                                                 {request.application_number || `#${request.id}`}
@@ -361,12 +307,6 @@ export function SuperAdminRequestList({ requests }) {
                                                     {request.corporation_name && (
                                                         <p className="text-xs text-gray-500">{request.corporation_name}</p>
                                                     )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div>
-                                                    <p className="text-sm font-medium text-gray-900">{request.user_name}</p>
-                                                    <p className="text-xs text-gray-500">{request.user_email}</p>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-sm text-gray-700">
@@ -383,8 +323,7 @@ export function SuperAdminRequestList({ requests }) {
                                                 <Badge className={getStatusColor(request.status)}>
                                                     <span className="flex items-center gap-1">
                                                         {getStatusIcon(request.status)}
-                                                        {(request.status || "pending").charAt(0).toUpperCase() +
-                                                            (request.status || "pending").slice(1)}
+                                                        {getStatusLabel(request.status)}
                                                     </span>
                                                 </Badge>
                                             </TableCell>
@@ -397,19 +336,20 @@ export function SuperAdminRequestList({ requests }) {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem
-                                                            onClick={() => router.visit(route('super-admin.requests.review', request.id))}
+                                                            onClick={() => router.visit(route('super-admin.requests.view-application', request.id))}
                                                             className="text-blue-600 font-medium"
                                                         >
-                                                            <FileCheck className="h-4 w-4 mr-2" />
-                                                            Review Application
+                                                            <Eye className="h-4 w-4 mr-2" />
+                                                            View Application
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
-                                                            onClick={() => window.open(route('super-admin.requests.print', request.id), '_blank')}
-                                                            className="text-[#0d1f5c] font-medium"
+                                                            onClick={() => router.visit(route('super-admin.requests.document-verification', request.id))}
+                                                            className="text-purple-600 font-medium"
                                                         >
-                                                            <FileText className="h-4 w-4 mr-2" />
-                                                            Print Form
+                                                            <FileCheck className="h-4 w-4 mr-2" />
+                                                            Document Verification
                                                         </DropdownMenuItem>
+                                                     
                                                         <DropdownMenuItem
                                                             onClick={() => handleApprove(request)}
                                                             disabled={request.status === "approved"}

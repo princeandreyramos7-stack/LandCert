@@ -6,6 +6,7 @@ use App\Models\Payment;
 use App\Models\Request as ApplicationRequest;
 use App\Http\Requests\RecordPaymentRequest;
 use App\Services\PaymentService;
+use App\Services\CertificateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -458,6 +459,23 @@ class PaymentController extends Controller
         if ($applicationRequest) {
             // Create notification for payment verification
             NotificationService::paymentVerified($applicationRequest, $payment, auth()->user());
+        }
+
+        // Auto-generate certificate after payment verification
+        try {
+            $certificateService = app(CertificateService::class);
+            $certificate = $certificateService->autoCreateFromPayment($payment);
+            \Log::info("Certificate auto-created after payment verification", [
+                'certificate_id' => $certificate->id,
+                'certificate_number' => $certificate->certificate_number,
+                'payment_id' => $payment->id,
+            ]);
+        } catch (\Exception $e) {
+            // Log error but don't fail the payment verification
+            \Log::error("Failed to auto-create certificate after payment verification", [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         return redirect()->back()->with('success', 'Payment verified successfully.');

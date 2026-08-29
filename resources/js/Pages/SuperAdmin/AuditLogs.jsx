@@ -6,7 +6,7 @@ import { Activity } from "lucide-react";
 export default function AuditLogs({ logs, users, actions, modelTypes, filters }) {
     return (
         <>
-            <Head title="Audit Logs — Super Admin"/>
+            <Head title="Audit Logs — Zoning Administrator"/>
             <SuperAdminLayout title="Audit Logs" breadcrumbs={[{ label: "Dashboard", href: "/super-admin/dashboard" }]}>
                 {/* Page header card */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-5">

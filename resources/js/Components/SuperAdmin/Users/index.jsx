@@ -109,6 +109,15 @@ export function SuperAdminUserManagement({ users }) {
         return badges[userType] || badges.applicant;
     };
 
+    const getUserTypeLabel = (userType) => {
+        const labels = {
+            super_admin: "ZONING ADMINISTRATOR",
+            admin: "ZONING OFFICER",
+            applicant: "APPLICANT",
+        };
+        return labels[userType] || userType.toUpperCase();
+    };
+
     const handleEdit = (user) => {
         router.visit(route("super-admin.users.edit", user.id));
     };
@@ -263,7 +272,7 @@ export function SuperAdminUserManagement({ users }) {
                                             <TableCell>
                                                 <Badge className={getUserTypeBadge(user.user_type)}>
                                                     {user.user_type === "super_admin" && <Shield className="h-3 w-3 mr-1" />}
-                                                    {user.user_type.replace("_", " ").toUpperCase()}
+                                                    {getUserTypeLabel(user.user_type)}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>{formatDate(user.created_at)}</TableCell>

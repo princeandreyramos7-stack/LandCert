@@ -5,7 +5,7 @@ import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 export default function Page({ applications = [], stats = {}, analytics = null, evaluationDistribution = [], systemStats = {} }) {
     return (
         <>
-            <Head title="Super Admin Dashboard — CPDO"/>
+            <Head title="Zoning Administrator Dashboard — CPDO"/>
             <SuperAdminLayout title="Dashboard">
                 <SuperAdminDashboard applications={applications} stats={stats} analytics={analytics} systemStats={systemStats}/>
             </SuperAdminLayout>

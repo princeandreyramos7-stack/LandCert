@@ -80,7 +80,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
 
     return (
         <>
-            <Head title="All Payments — Super Admin" />
+            <Head title="All Payments — Zoning Administrator" />
             <SuperAdminLayout title="All Payments" breadcrumbs={[{ label: "Dashboard", href: "/super-admin/dashboard" }]}>
 
                 {/* Page header card */}
@@ -212,7 +212,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="font-medium text-slate-800">{payment.applicant_name || "—"}</div>
-                                                    <div className="text-xs text-slate-400">Req #{payment.request_id}</div>
+                                                    <div className="text-xs text-slate-400">{payment.application_number || `#${payment.request_id}`}</div>
                                                 </td>
                                                 <td className="px-4 py-3 text-slate-600 text-sm">
                                                     {payment.project_type || <span className="text-slate-300 italic">—</span>}
@@ -304,8 +304,8 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                                 <span className="font-medium">{selected.applicant_name || "—"}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-slate-500">Request</span>
-                                <span className="font-medium">#{selected.request_id}</span>
+                                <span className="text-slate-500">Application No.</span>
+                                <span className="font-medium">{selected.application_number || `#${selected.request_id}`}</span>
                             </div>
                         </div>
                     )}

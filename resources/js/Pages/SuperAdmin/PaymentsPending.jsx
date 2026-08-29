@@ -28,7 +28,7 @@ export default function PaymentsPending({ pendingPayments = [] }) {
 
     return (
         <>
-            <Head title="Payments Pending — Super Admin"/>
+            <Head title="Payments Pending — Zoning Administrator"/>
             <SuperAdminLayout title="Payments Pending" breadcrumbs={[{ label: "Dashboard", href: "/super-admin/dashboard" }]}>
                 {/* Page header card */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-5">
