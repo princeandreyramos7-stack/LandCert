@@ -135,6 +135,7 @@ export function AdminSidebar({ ...props }) {
     const user = {
         name: auth?.user?.name || "Admin",
         email: auth?.user?.email || "admin@example.com",
+        avatar_url: auth?.user?.avatar_url,
     };
 
     const initials = user.name
@@ -144,8 +145,15 @@ export function AdminSidebar({ ...props }) {
         .join("")
         .toUpperCase();
 
-    const currentPath =
+    const rawPath =
         typeof window !== "undefined" ? window.location.pathname : "";
+
+    // The document-generation pages live under /requests/{id}/... but belong to
+    // the Certificates section, so highlight "Certificates" there, not "Applications".
+    const currentPath =
+        /\/(generate-certificate|generate-clearance|generate-order-of-payment)$/.test(rawPath)
+            ? "/admin/certificates"
+            : rawPath;
 
     return (
         <Sidebar collapsible="icon" {...props}>
@@ -197,8 +205,10 @@ export function AdminSidebar({ ...props }) {
                                     size="lg"
                                     className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
                                 >
-                                    <div className="w-8 h-8 rounded-full bg-sidebar-primary/80 flex items-center justify-center text-sidebar-primary-foreground font-black text-xs shrink-0">
-                                        {initials}
+                                    <div className="w-8 h-8 rounded-full overflow-hidden bg-sidebar-primary/80 flex items-center justify-center text-sidebar-primary-foreground font-black text-xs shrink-0">
+                                        {user.avatar_url
+                                            ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                                            : initials}
                                     </div>
                                     {!collapsed && (
                                         <>

@@ -2,6 +2,7 @@ import { AdminSidebar } from "@/Components/admin-sidebar";
 import { Head } from "@inertiajs/react";
 import { AdminDashboard } from "@/Components/Admin/Dashboard";
 import AdminLayout from "@/Layouts/AdminLayout";
+import { LiveRefresh } from "@/Components/LiveRefresh";
 
 export default function Page({
     applications = [],
@@ -14,6 +15,7 @@ export default function Page({
         <>
             <Head title="Dashboard — CPDO Admin"/>
             <AdminLayout title="Dashboard">
+                <LiveRefresh only={["applications", "stats", "analytics", "pendingPaymentsCount", "recentPayments"]} items={applications} label="applications" className="justify-end mb-4" />
                 <AdminDashboard
                     applications={applications}
                     stats={stats}

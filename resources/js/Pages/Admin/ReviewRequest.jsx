@@ -38,6 +38,7 @@ import { formatDate } from "@/Components/Admin/Request/utils";
 import { useState, useMemo } from "react";
 import { useToast } from "@/Components/ui/use-toast";
 import { Toaster } from "@/Components/ui/toaster";
+import { ToastAction } from "@/Components/ui/toast";
 import axios from "axios";
 
 /**
@@ -87,13 +88,19 @@ export default function ReviewRequest({ request }) {
     const getInitialAction = () => {
         if (request.status === 'reviewed' || request.status === 'approved') {
             return 'reviewed';
-        } else if (request.status === 'rejected' || request.status === 'denied') {
+        } else if (request.status === 'rejected') {
             return 'rejected';
         }
         return '';
     };
     
     const [action, setAction] = useState(getInitialAction());
+
+    // Once the SuperAdmin has approved (or the certificate flow has started), the
+    // Zoning Officer's decision is final and can no longer be changed.
+    const decisionLocked = ['approved', 'certificate_preparing', 'certificate_ready', 'released']
+        .includes(String(request.status || '').toLowerCase());
+
     const [formData, setFormData] = useState({
         rejection_reason: request.rejection_reason || 'Lacking of Requirements', // Use existing or default
         payment_amount: '',
@@ -106,7 +113,18 @@ export default function ReviewRequest({ request }) {
     const [requirementChecks, setRequirementChecks] = useState(request.verified_requirements || {});
     
     const { toast } = useToast();
-    
+
+    // Reusable toast button that jumps to this request's View Application page,
+    // where the Locational Clearance is set.
+    const viewApplicationToastAction = (
+        <ToastAction
+            altText="Go to View Application"
+            onClick={() => router.visit(route('admin.requests.view-application', request.application_id || request.id))}
+        >
+            View Application
+        </ToastAction>
+    );
+
     // Save requirement checks to database whenever they change
     const handleToggleRequirement = async (key, name, checked) => {
         const updated = {
@@ -172,7 +190,7 @@ export default function ReviewRequest({ request }) {
     const mainUploadedGroups = groupedRequirements.filter((g) => g.section !== 'additional');
     const additionalUploadedGroups = groupedRequirements.filter((g) => g.section === 'additional');
 
-    // Generate missing requirements message for rejection
+    // Generate missing requirements message for denial
     const getMissingRequirements = () => {
         const allGroups = [...mainUploadedGroups, ...additionalUploadedGroups];
         const missing = allGroups.filter(group => !requirementChecks[group.key]);
@@ -183,7 +201,7 @@ export default function ReviewRequest({ request }) {
                missing.map(group => `- ${group.requirement_name}`).join('\n');
     };
 
-    // Update rejection reason when action changes to rejected
+    // Update denial reason when action changes to denied
     const handleActionChange = (newAction) => {
         setAction(newAction);
         
@@ -202,6 +220,31 @@ export default function ReviewRequest({ request }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (decisionLocked) {
+            toast({
+                variant: "destructive",
+                title: "Decision Locked",
+                description: "This application has already been approved. The decision can no longer be changed.",
+            });
+            return;
+        }
+
+        // The Locational Clearance must be set before an application can be marked as
+        // reviewed — it drives the fee and the certificate wording.
+        if (action === 'reviewed') {
+            const locationalClearance = String(request.project_type || '').trim().toUpperCase();
+            if (locationalClearance === '' || locationalClearance === 'N/A' || locationalClearance === 'NA') {
+                toast({
+                    variant: "destructive",
+                    title: "Locational Clearance Required",
+                    description: "Set the Locational Clearance before marking this application as reviewed.",
+                    action: viewApplicationToastAction,
+                });
+                return;
+            }
+        }
+
         setShowConfirmDialog(true); // Show confirmation dialog instead of submitting directly
     };
 
@@ -236,6 +279,7 @@ export default function ReviewRequest({ request }) {
                     variant: "destructive",
                     title: "Validation Error",
                     description: errorMessages,
+                    action: (errors.project_type || errors.property) ? viewApplicationToastAction : undefined,
                 });
             } else if (error.response?.data?.message) {
                 toast({
@@ -271,7 +315,7 @@ export default function ReviewRequest({ request }) {
             rejected: {
                 icon: XCircle,
                 color: "bg-red-100 text-red-800 border-red-200",
-                label: "Rejected",
+                label: "Denied",
             },
             reviewed: {
                 icon: AlertCircle,
@@ -456,7 +500,11 @@ export default function ReviewRequest({ request }) {
                                                     </span>. 
                                                     {request.rejection_reason && ` Reason: "${request.rejection_reason}"`}
                                                     <br />
-                                                    <span className="text-xs">You can modify the decision below. Changes will be logged in audit trail.</span>
+                                                    <span className="text-xs">
+                                                        {decisionLocked
+                                                            ? 'This decision is final and can no longer be changed.'
+                                                            : 'You can modify the decision below. Changes will be logged in audit trail.'}
+                                                    </span>
                                                 </p>
                                             </div>
                                         </div>
@@ -469,10 +517,10 @@ export default function ReviewRequest({ request }) {
                                         <label className="block text-sm font-semibold text-gray-800 mb-3">
                                             Select Action <span className="text-red-500">*</span>
                                         </label>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${decisionLocked ? 'opacity-60 pointer-events-none' : ''}`}>
                                             <label className={`relative flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                                                action === 'reviewed' 
-                                                    ? 'border-green-500 bg-green-50 shadow-md' 
+                                                action === 'reviewed'
+                                                    ? 'border-green-500 bg-green-50 shadow-md'
                                                     : 'border-gray-200 hover:border-green-300'
                                             }`}>
                                                 <input
@@ -481,6 +529,7 @@ export default function ReviewRequest({ request }) {
                                                     value="reviewed"
                                                     checked={action === 'reviewed'}
                                                     onChange={(e) => handleActionChange(e.target.value)}
+                                                    disabled={decisionLocked}
                                                     className="w-5 h-5 text-green-600"
                                                     required
                                                 />
@@ -493,8 +542,8 @@ export default function ReviewRequest({ request }) {
                                             </label>
 
                                             <label className={`relative flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                                                action === 'rejected' 
-                                                    ? 'border-red-500 bg-red-50 shadow-md' 
+                                                action === 'rejected'
+                                                    ? 'border-red-500 bg-red-50 shadow-md'
                                                     : 'border-gray-200 hover:border-red-300'
                                             }`}>
                                                 <input
@@ -503,6 +552,7 @@ export default function ReviewRequest({ request }) {
                                                     value="rejected"
                                                     checked={action === 'rejected'}
                                                     onChange={(e) => handleActionChange(e.target.value)}
+                                                    disabled={decisionLocked}
                                                     className="w-5 h-5 text-red-600"
                                                     required
                                                 />
@@ -527,7 +577,7 @@ export default function ReviewRequest({ request }) {
                                                     <div>
                                                         <h3 className="text-lg font-bold text-gray-900">Mark as Reviewed</h3>
                                                         <p className="text-sm text-gray-600 mt-1">
-                                                            Applicant will be notified and can proceed with payment automatically.
+                                                            Forwarded to the Zoning Administrator for approval. The applicant can pay only after it is approved.
                                                         </p>
                                                     </div>
                                                 </div>
@@ -576,7 +626,7 @@ export default function ReviewRequest({ request }) {
                                         </div>
                                     )}
 
-                                    {/* Reject Form */}
+                                    {/* Deny Form */}
                                     {action === 'rejected' && (
                                         <div className="animate-in slide-in-from-top-2 duration-300">
                                             <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl p-5 border-2 border-red-200">
@@ -584,7 +634,7 @@ export default function ReviewRequest({ request }) {
                                                     <div className="p-2 bg-red-600 rounded-lg">
                                                         <XCircle className="h-5 w-5 text-white" />
                                                     </div>
-                                                    <h3 className="text-lg font-bold text-gray-800">Rejection Reason</h3>
+                                                    <h3 className="text-lg font-bold text-gray-800">Denial Reason</h3>
                                                 </div>
                                                 
                                                 <div>
@@ -597,7 +647,7 @@ export default function ReviewRequest({ request }) {
                                                         rows="4"
                                                         required
                                                         maxLength="1000"
-                                                        placeholder="Please provide a clear and detailed reason for rejection..."
+                                                        placeholder="Please provide a clear and detailed reason for denial..."
                                                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all resize-none"
                                                     />
                                                     <div className="flex justify-between items-center mt-2">
@@ -654,7 +704,7 @@ export default function ReviewRequest({ request }) {
                                                 <div className="mt-4 flex items-start gap-3 bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3">
                                                     <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                                                     <p className="text-sm text-yellow-800">
-                                                        <span className="font-semibold">Note:</span> The applicant will receive an email with your rejection reason. Please ensure it's clear and professional.
+                                                        <span className="font-semibold">Note:</span> The applicant will receive an email with your denial reason. Please ensure it's clear and professional.
                                                     </p>
                                                 </div>
                                             </div>
@@ -674,13 +724,18 @@ export default function ReviewRequest({ request }) {
                                         </Link>
                                         <Button
                                             type="submit"
-                                            disabled={loading || !action}
+                                            disabled={loading || !action || decisionLocked}
                                             className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                                         >
                                             {loading ? (
                                                 <>
                                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                                     Submitting...
+                                                </>
+                                            ) : decisionLocked ? (
+                                                <>
+                                                    <Check className="h-4 w-4 mr-2" />
+                                                    Decision Final
                                                 </>
                                             ) : (
                                                 <>
@@ -726,7 +781,7 @@ export default function ReviewRequest({ request }) {
                                         <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                                         <div>
                                             <p className="text-gray-700 mb-2">
-                                                <span className="font-semibold text-red-600">REJECT</span> this application
+                                                <span className="font-semibold text-red-600">DENY</span> this application
                                             </p>
                                             <p className="text-sm text-gray-600 mb-2">Reason:</p>
                                             <p className="text-sm text-gray-700 italic bg-gray-50 p-2 rounded border">
@@ -918,7 +973,7 @@ function Step1Content({ request }) {
     );
 }
 
-// Step 2: Project Details - WITH EDITABLE PROJECT TYPE
+// Step 2: Project Details - WITH EDITABLE LOCATIONAL CLEARANCE
 function Step2Content({ request }) {
     const [editingProjectType, setEditingProjectType] = useState(false);
     const [projectType, setProjectType] = useState(request.project_type || '');
@@ -933,7 +988,7 @@ function Step2Content({ request }) {
             });
             toast({
                 title: "Success!",
-                description: "Project type updated successfully.",
+                description: "Locational Clearance updated successfully.",
             });
             setEditingProjectType(false);
             // Update the request object
@@ -954,11 +1009,11 @@ function Step2Content({ request }) {
             <SectionTitle icon={Building2} title="Project Details" />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* EDITABLE PROJECT TYPE */}
+                {/* EDITABLE LOCATIONAL CLEARANCE */}
                 <div className="group">
                     <div className="flex items-center justify-between mb-1.5">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            Project Type
+                            Locational Clearance
                         </p>
                         {!editingProjectType ? (
                             <button

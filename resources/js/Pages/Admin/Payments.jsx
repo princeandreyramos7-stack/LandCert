@@ -126,7 +126,7 @@ export default function Payments({ auth, payments, filters }) {
         const statusMap = {
             pending: { variant: 'secondary', label: 'Pending Verification' },
             verified: { variant: 'success', label: 'Verified' },
-            rejected: { variant: 'destructive', label: 'Rejected' },
+            rejected: { variant: 'destructive', label: 'Denied' },
         };
         const config = statusMap[status] || { variant: 'secondary', label: status };
         return <Badge variant={config.variant}>{config.label}</Badge>;
@@ -206,7 +206,7 @@ export default function Payments({ auth, payments, filters }) {
                                             <SelectItem value="all">All Statuses</SelectItem>
                                             <SelectItem value="pending">Pending</SelectItem>
                                             <SelectItem value="verified">Verified</SelectItem>
-                                            <SelectItem value="rejected">Rejected</SelectItem>
+                                            <SelectItem value="rejected">Denied</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <Select value={methodFilter} onValueChange={(value) => {
@@ -305,7 +305,7 @@ export default function Payments({ auth, payments, filters }) {
                                                                     onClick={() => handleReject(payment)}
                                                                 >
                                                                     <XCircle className="h-4 w-4 mr-1" />
-                                                                    Reject
+                                                                    Deny
                                                                 </Button>
                                                             </>
                                                         )}
@@ -366,7 +366,7 @@ export default function Payments({ auth, payments, filters }) {
                                     <p>{selectedPayment.request?.applicant_name || 'N/A'}</p>
                                 </div>
                                 <div>
-                                    <Label className="font-semibold">Project Type</Label>
+                                    <Label className="font-semibold">Locational Clearance</Label>
                                     <p>{selectedPayment.request?.project_type || 'N/A'}</p>
                                 </div>
                                 <div>
@@ -405,7 +405,7 @@ export default function Payments({ auth, payments, filters }) {
                             )}
                             {selectedPayment.rejection_reason && (
                                 <div className="border-t pt-4">
-                                    <Label className="font-semibold">Rejection Reason</Label>
+                                    <Label className="font-semibold">Denial Reason</Label>
                                     <p className="text-red-600 mt-1">{selectedPayment.rejection_reason}</p>
                                 </div>
                             )}
@@ -490,23 +490,23 @@ export default function Payments({ auth, payments, filters }) {
                 </DialogContent>
             </Dialog>
 
-            {/* Reject Modal */}
+            {/* Deny Modal */}
             <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Reject Payment</DialogTitle>
+                        <DialogTitle>Deny Payment</DialogTitle>
                         <DialogDescription>
-                            Provide a reason for rejecting this payment.
+                            Provide a reason for denying this payment.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         <div>
-                            <Label htmlFor="rejection_reason">Rejection Reason *</Label>
+                            <Label htmlFor="rejection_reason">Denial Reason *</Label>
                             <Textarea
                                 id="rejection_reason"
                                 value={rejectForm.rejection_reason}
                                 onChange={(e) => setRejectForm({ ...rejectForm, rejection_reason: e.target.value })}
-                                placeholder="Explain why this payment is being rejected..."
+                                placeholder="Explain why this payment is being denied..."
                                 rows={4}
                             />
                         </div>
@@ -520,7 +520,7 @@ export default function Payments({ auth, payments, filters }) {
                             onClick={submitReject}
                             disabled={processing || !rejectForm.rejection_reason}
                         >
-                            {processing ? 'Processing...' : 'Reject Payment'}
+                            {processing ? 'Processing...' : 'Deny Payment'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

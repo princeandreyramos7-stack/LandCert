@@ -52,13 +52,19 @@ export default function DocumentVerification({ request }) {
     const getInitialAction = () => {
         if (request.status === 'reviewed' || request.status === 'approved') {
             return 'reviewed';
-        } else if (request.status === 'rejected' || request.status === 'denied') {
+        } else if (request.status === 'rejected') {
             return 'rejected';
         }
         return '';
     };
     
     const [action, setAction] = useState(getInitialAction());
+
+    // Once the SuperAdmin has approved (or the certificate flow has started), the
+    // decision is final — Mark as Reviewed / Denied are locked.
+    const decisionLocked = ['approved', 'certificate_preparing', 'certificate_ready', 'released']
+        .includes(String(request.status || '').toLowerCase());
+
     const [formData, setFormData] = useState({
         rejection_reason: request.rejection_reason || 'Lacking of Requirements',
         payment_amount: '',
@@ -115,7 +121,7 @@ export default function DocumentVerification({ request }) {
     const mainUploadedGroups = groupedRequirements.filter((g) => g.section !== 'additional');
     const additionalUploadedGroups = groupedRequirements.filter((g) => g.section === 'additional');
 
-    // Generate missing requirements message for rejection
+    // Generate missing requirements message for denial
     const getMissingRequirements = () => {
         const allRequirements = [...(request.requirements_reference || [])];
         const uploadedIds = new Set(groupedRequirements.map(g => g.key));
@@ -125,7 +131,7 @@ export default function DocumentVerification({ request }) {
         return 'Missing or Incomplete Requirements:\n' + missing.map(req => `- ${req.name}`).join('\n');
     };
 
-    // Update rejection reason when action changes to rejected
+    // Update denial reason when action changes to denied
     const handleActionChange = (newAction) => {
         setAction(newAction);
         if (newAction === 'rejected') {
@@ -138,6 +144,16 @@ export default function DocumentVerification({ request }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (decisionLocked) {
+            toast({
+                variant: "destructive",
+                title: "Decision Locked",
+                description: "This application has already been approved. The decision can no longer be changed.",
+            });
+            return;
+        }
+
         setShowConfirmDialog(true);
     };
 
@@ -194,7 +210,7 @@ export default function DocumentVerification({ request }) {
         const configs = {
             pending: { icon: Clock, color: "bg-yellow-100 text-yellow-800 border-yellow-200", label: "Pending Review" },
             approved: { icon: CheckCircle2, color: "bg-green-100 text-green-800 border-green-200", label: "Approved" },
-            rejected: { icon: XCircle, color: "bg-red-100 text-red-800 border-red-200", label: "Rejected" },
+            rejected: { icon: XCircle, color: "bg-red-100 text-red-800 border-red-200", label: "Denied" },
             reviewed: { icon: AlertCircle, color: "bg-blue-100 text-blue-800 border-blue-200", label: "Under Review" },
         };
         return configs[status] || configs.pending;
@@ -394,7 +410,11 @@ export default function DocumentVerification({ request }) {
                                             </span>. 
                                             {request.rejection_reason && ` Reason: "${request.rejection_reason}"`}
                                             <br />
-                                            <span className="text-xs">You can modify the decision below. Changes will be logged in audit trail.</span>
+                                            <span className="text-xs">
+                                                {decisionLocked
+                                                    ? 'This decision is final and can no longer be changed.'
+                                                    : 'You can modify the decision below. Changes will be logged in audit trail.'}
+                                            </span>
                                         </p>
                                     </div>
                                 </div>
@@ -407,10 +427,10 @@ export default function DocumentVerification({ request }) {
                                 <label className="block text-sm font-medium text-gray-700 mb-3">
                                     Select Action <span className="text-red-500">*</span>
                                 </label>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <label className={`relative flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                                        action === 'reviewed' 
-                                            ? 'border-gray-400 bg-white' 
+                                <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${decisionLocked ? 'opacity-60 pointer-events-none' : ''}`}>
+                                    <label className={`relative flex items-center p-3 border rounded-lg transition-all ${decisionLocked ? 'cursor-not-allowed' : 'cursor-pointer'} ${
+                                        action === 'reviewed'
+                                            ? 'border-gray-400 bg-white'
                                             : 'border-gray-200 bg-white hover:border-gray-300'
                                     }`}>
                                         <input
@@ -419,6 +439,7 @@ export default function DocumentVerification({ request }) {
                                             value="reviewed"
                                             checked={action === 'reviewed'}
                                             onChange={(e) => handleActionChange(e.target.value)}
+                                            disabled={decisionLocked}
                                             className="w-4 h-4"
                                             required
                                         />
@@ -429,9 +450,9 @@ export default function DocumentVerification({ request }) {
                                         </div>
                                     </label>
 
-                                    <label className={`relative flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                                        action === 'rejected' 
-                                            ? 'border-gray-400 bg-white' 
+                                    <label className={`relative flex items-center p-3 border rounded-lg transition-all ${decisionLocked ? 'cursor-not-allowed' : 'cursor-pointer'} ${
+                                        action === 'rejected'
+                                            ? 'border-gray-400 bg-white'
                                             : 'border-gray-200 bg-white hover:border-gray-300'
                                     }`}>
                                         <input
@@ -440,6 +461,7 @@ export default function DocumentVerification({ request }) {
                                             value="rejected"
                                             checked={action === 'rejected'}
                                             onChange={(e) => handleActionChange(e.target.value)}
+                                            disabled={decisionLocked}
                                             className="w-4 h-4"
                                             required
                                         />
@@ -459,7 +481,7 @@ export default function DocumentVerification({ request }) {
                                         <div className="mb-4">
                                             <h3 className="text-base font-semibold text-gray-900">Mark as Reviewed</h3>
                                             <p className="text-sm text-gray-600 mt-1">
-                                                Applicant will be notified and can proceed with payment automatically.
+                                                Forwarded to the Zoning Administrator for approval. The applicant can pay only after it is approved.
                                             </p>
                                         </div>
 
@@ -507,12 +529,12 @@ export default function DocumentVerification({ request }) {
                                 </div>
                             )}
 
-                            {/* Reject Form */}
+                            {/* Deny Form */}
                             {action === 'rejected' && (
                                 <div>
                                     <div className="bg-white rounded-lg p-5 border border-gray-200">
                                         <div className="mb-4">
-                                            <h3 className="text-base font-semibold text-gray-900">Rejection Reason</h3>
+                                            <h3 className="text-base font-semibold text-gray-900">Denial Reason</h3>
                                         </div>
                                         
                                         <div>
@@ -525,7 +547,7 @@ export default function DocumentVerification({ request }) {
                                                 rows="4"
                                                 required
                                                 maxLength="1000"
-                                                placeholder="Please provide a clear and detailed reason for rejection..."
+                                                placeholder="Please provide a clear and detailed reason for denial..."
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-gray-400 focus:ring-1 focus:ring-gray-400 resize-none"
                                             />
                                             <div className="flex justify-between items-center mt-2">
@@ -580,7 +602,7 @@ export default function DocumentVerification({ request }) {
                                         <div className="mt-4 flex items-start gap-3 bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3">
                                             <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                                             <p className="text-sm text-yellow-800">
-                                                <span className="font-semibold">Note:</span> The applicant will receive an email with your rejection reason. Please ensure it's clear and professional.
+                                                <span className="font-semibold">Note:</span> The applicant will receive an email with your denial reason. Please ensure it's clear and professional.
                                             </p>
                                         </div>
                                     </div>
@@ -600,13 +622,18 @@ export default function DocumentVerification({ request }) {
                                 </Link>
                                 <Button
                                     type="submit"
-                                    disabled={loading || !action}
+                                    disabled={loading || !action || decisionLocked}
                                     className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                                 >
                                     {loading ? (
                                         <>
                                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                             Submitting...
+                                        </>
+                                    ) : decisionLocked ? (
+                                        <>
+                                            <Check className="h-4 w-4 mr-2" />
+                                            Decision Final
                                         </>
                                     ) : (
                                         <>
@@ -650,7 +677,7 @@ export default function DocumentVerification({ request }) {
                                         <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                                         <div>
                                             <p className="text-gray-700 mb-2">
-                                                <span className="font-semibold text-red-600">REJECT</span> this application
+                                                <span className="font-semibold text-red-600">DENY</span> this application
                                             </p>
                                             <p className="text-sm text-gray-600 mb-2">Reason:</p>
                                             <p className="text-sm text-gray-700 italic bg-gray-50 p-2 rounded border">

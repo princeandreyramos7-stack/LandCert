@@ -270,11 +270,11 @@ class PaymentSecurityAndAuditTest extends TestCase
     }
 
     /** @test */
-    public function test_payment_rejection_creates_audit_log()
+    public function test_payment_denial_creates_audit_log()
     {
         $payment = Payment::factory()->create([
             'request_id' => $this->testRequest->id,
-            'receipt_number' => 'OR-2026-REJECT',
+            'receipt_number' => 'OR-2026-DENY',
             'amount' => 500.00,
             'payment_status' => 'pending'
         ]);

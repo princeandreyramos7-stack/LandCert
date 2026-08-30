@@ -34,15 +34,22 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // Redirect based on user type
+        // Redirect based on user type.
+        //
+        // Staff always land on their dashboard. `intended()` is deliberately not
+        // used for them: it replays whatever page bounced them to the login screen
+        // (typically the requests list), which is not where a fresh session should
+        // start.
         $user = $request->user();
-        
+
         if ($user->user_type === 'super_admin') {
-            return redirect()->intended(route('super-admin.dashboard', absolute: false));
+            $request->session()->forget('url.intended');
+            return redirect()->route('super-admin.dashboard');
         }
-        
+
         if ($user->user_type === 'admin') {
-            return redirect()->intended(route('admin.dashboard', absolute: false));
+            $request->session()->forget('url.intended');
+            return redirect()->route('admin.dashboard');
         }
 
         return redirect()->intended(route('dashboard', absolute: false));

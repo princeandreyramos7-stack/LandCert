@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, Clock, DollarSign, FileCheck } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, DollarSign, FileCheck, Hourglass } from "lucide-react";
 
 /**
  * Get status badge color classes based on status
@@ -17,6 +17,12 @@ export const getStatusColor = (status) => {
         case "for_verification":
             return "bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300";
         case "approved_with_payment":
+        // Once payment is verified the application is simply "Application Approved" —
+        // the certificate lifecycle is tracked on the Certificates page, not here.
+        case "payment_confirmed":
+        case "certificate_preparing":
+        case "certificate_ready":
+        case "released":
             return "bg-green-100 text-green-800 hover:bg-green-200 border-green-300";
         default:
             return "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300";
@@ -30,10 +36,16 @@ export const getStatusIcon = (status) => {
     switch (status) {
         case "approved":
         case "approved_with_payment":
+        case "payment_confirmed":
+        case "certificate_preparing":
+        case "certificate_ready":
+        case "released":
             return <CheckCircle2 className="h-4 w-4" />;
         case "rejected":
             return <XCircle className="h-4 w-4" />;
         case "reviewed":
+            // "For Approval" — waiting on the Zoning Administrator, not a payment step.
+            return <Hourglass className="h-4 w-4" />;
         case "for_payment":
         case "pending_payment":
             return <DollarSign className="h-4 w-4" />;
@@ -53,15 +65,22 @@ export const getStatusLabel = (status) => {
         case "for_verification":
             return "For Verification";
         case "reviewed":
+            // Officer has reviewed and set the fee; the Zoning Administrator must
+            // approve before the applicant can pay.
+            return "For Approval";
         case "for_payment":
         case "pending_payment":
             return "For Payment";
         case "approved":
-            return "Application Approved";
+            return "Approved — For Payment";
         case "approved_with_payment":
+        case "payment_confirmed":
+        case "certificate_preparing":
+        case "certificate_ready":
+        case "released":
             return "Application Approved";
         case "rejected":
-            return "Application Rejected";
+            return "Application Denied";
         default:
             return status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : "Unknown";
     }
@@ -101,7 +120,7 @@ export const generateCSV = (requests) => {
         "ID",
         "Applicant Name",
         "User Email",
-        "Project Type",
+        "Locational Clearance",
         "Status",
         "Created Date",
     ];

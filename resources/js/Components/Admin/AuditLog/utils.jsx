@@ -46,7 +46,7 @@ export const formatActionLabel = (action) => {
         bulk_deleted:  "Bulk Delete",
         sms_broadcast: "SMS Broadcast",
         approved:      "Approved",
-        rejected:      "Rejected",
+        rejected:      "Denied",
     };
     return labels[action] || action.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 };

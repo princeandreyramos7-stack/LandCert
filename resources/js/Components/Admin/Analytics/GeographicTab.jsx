@@ -8,7 +8,7 @@ import { TreeMap } from './Charts';
  * GeographicTab Component
  * Displays geographic distribution analytics
  */
-export function GeographicTab({ barangayDistribution = [], provinceDistribution = [] }) {
+export function GeographicTab({ barangayDistribution = [] }) {
     const COLORS = ['#0d1f5c', '#1a3a8f', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#dbeafe'];
 
     // Prepare data for TreeMap
@@ -18,11 +18,15 @@ export function GeographicTab({ barangayDistribution = [], provinceDistribution 
         value: `${item.count} requests`,
     }));
 
-    // Prepare data for province pie chart
-    const provinceData = provinceDistribution.map(item => ({
-        name: item.province || 'Unknown',
+    // Barangay share pie: top 6 barangays, everything else rolled into "Others".
+    const topBarangays = barangayDistribution.slice(0, 6).map(item => ({
+        name: item.barangay || 'Unknown',
         value: item.count,
     }));
+    const othersTotal = barangayDistribution.slice(6).reduce((sum, item) => sum + (item.count || 0), 0);
+    const barangayShareData = othersTotal > 0
+        ? [...topBarangays, { name: 'Others', value: othersTotal }]
+        : topBarangays;
 
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
         const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
@@ -109,20 +113,20 @@ export function GeographicTab({ barangayDistribution = [], provinceDistribution 
                 </CardContent>
             </Card>
 
-            {/* Province Distribution - Pie Chart */}
+            {/* Barangay Share - Pie Chart */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <MapPin className="h-5 w-5 text-blue-600" />
-                        Distribution by Province
+                        Distribution by Barangay
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {provinceData.length > 0 ? (
+                    {barangayShareData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={350}>
                             <PieChart>
                                 <Pie
-                                    data={provinceData}
+                                    data={barangayShareData}
                                     cx="50%"
                                     cy="50%"
                                     labelLine={false}
@@ -131,7 +135,7 @@ export function GeographicTab({ barangayDistribution = [], provinceDistribution 
                                     fill="#8884d8"
                                     dataKey="value"
                                 >
-                                    {provinceData.map((entry, index) => (
+                                    {barangayShareData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
@@ -141,7 +145,7 @@ export function GeographicTab({ barangayDistribution = [], provinceDistribution 
                         </ResponsiveContainer>
                     ) : (
                         <div className="flex items-center justify-center h-64 text-gray-500">
-                            No province data available
+                            No barangay data available
                         </div>
                     )}
                 </CardContent>

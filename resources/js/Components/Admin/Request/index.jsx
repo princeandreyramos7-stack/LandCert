@@ -15,6 +15,12 @@ import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { ApproveConfirmDialog } from "./ApproveConfirmDialog";
 import { RejectDialog } from "./RejectDialog";
 import { generateCSV, downloadCSV } from "./utils";
+import { useLiveData, useNewItemCount } from "@/hooks/useLiveData";
+import { LiveIndicator } from "@/Components/LiveIndicator";
+
+// Props refreshed by the live poller. Declared outside the component so the
+// array identity is stable and the polling effect is not re-created each render.
+const LIVE_PROPS = ["requests"];
 
 export function AdminRequestList({ requests, flash = {} }) {
     // State Management
@@ -67,11 +73,21 @@ export function AdminRequestList({ requests, flash = {} }) {
     // Data Processing
     const requestsData = requests?.data || requests || [];
 
+    // Keep the list current without a manual browser refresh.
+    const { lastUpdated, isRefreshing, refreshNow } = useLiveData({ only: LIVE_PROPS });
+    const { newCount, acknowledge } = useNewItemCount(requestsData);
+
     const filteredRequests = useMemo(() => {
         let filtered = requestsData;
 
         if (filterStatus !== "all") {
-            filtered = filtered.filter((r) => r.status === filterStatus);
+            // "application_approved" groups every post-payment lifecycle status.
+            const paidStatuses = ["payment_confirmed", "certificate_preparing", "certificate_ready", "released", "approved_with_payment"];
+            filtered = filtered.filter((r) =>
+                filterStatus === "application_approved"
+                    ? paidStatuses.includes(r.status)
+                    : r.status === filterStatus
+            );
         }
 
         if (searchTerm) {
@@ -213,7 +229,7 @@ export function AdminRequestList({ requests, flash = {} }) {
             toast({
                 variant: "destructive",
                 title: "Feedback Required",
-                description: "Please provide feedback for rejection.",
+                description: "Please provide feedback for denial.",
             });
             return;
         }
@@ -343,7 +359,7 @@ export function AdminRequestList({ requests, flash = {} }) {
                         preserveScroll: true,
                         onSuccess: () => resolve(),
                         onError: (errors) =>
-                            reject(new Error("Failed to reject requests")),
+                            reject(new Error("Failed to deny requests")),
                     }
                 );
             });
@@ -392,8 +408,20 @@ export function AdminRequestList({ requests, flash = {} }) {
 
     return (
         <div className="space-y-6 min-h-screen bg-white p-6">
-            {/* Statistics Cards */}
-            <RequestStats stats={stats} onFilterChange={setFilterStatus} />
+            {/* Statistics Cards, with the live-refresh status sitting right above them */}
+            <div>
+                <div className="flex justify-end mb-3">
+                    <LiveIndicator
+                        isRefreshing={isRefreshing}
+                        lastUpdated={lastUpdated}
+                        newCount={newCount}
+                        onAcknowledge={acknowledge}
+                        onRefreshNow={refreshNow}
+                        label="applications"
+                    />
+                </div>
+                <RequestStats stats={stats} onFilterChange={setFilterStatus} />
+            </div>
 
             {/* Requests Table */}
             <RequestTableHeader

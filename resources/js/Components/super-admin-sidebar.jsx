@@ -92,6 +92,7 @@ export function SuperAdminSidebar({ ...props }) {
     const user = {
         name: auth?.user?.name || "Zoning Administrator",
         email: auth?.user?.email || "superadmin@cpdo.gov.ph",
+        avatar_url: auth?.user?.avatar_url,
     };
 
     const initials = user.name
@@ -100,8 +101,15 @@ export function SuperAdminSidebar({ ...props }) {
         .slice(0, 2)
         .join("")
         .toUpperCase();
-    const currentPath =
+    const rawPath =
         typeof window !== "undefined" ? window.location.pathname : "";
+
+    // The document-generation pages live under /requests/{id}/... but belong to
+    // the Certificates section, so highlight "Certificates" there, not "Applications".
+    const currentPath =
+        /\/(generate-certificate|generate-clearance|generate-order-of-payment)$/.test(rawPath)
+            ? "/super-admin/certificates"
+            : rawPath;
 
     return (
         <Sidebar collapsible="icon" {...props}>
@@ -192,8 +200,10 @@ export function SuperAdminSidebar({ ...props }) {
                                     size="lg"
                                     className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
                                 >
-                                    <div className="w-8 h-8 rounded-full bg-sidebar-primary/80 flex items-center justify-center text-sidebar-primary-foreground font-black text-xs shrink-0">
-                                        {initials}
+                                    <div className="w-8 h-8 rounded-full overflow-hidden bg-sidebar-primary/80 flex items-center justify-center text-sidebar-primary-foreground font-black text-xs shrink-0">
+                                        {user.avatar_url
+                                            ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                                            : initials}
                                     </div>
                                     {!collapsed && (
                                         <>

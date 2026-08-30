@@ -40,7 +40,7 @@ export default function ViewApplication({ request }) {
             });
             toast({
                 title: "Success!",
-                description: "Project type updated successfully.",
+                description: "Locational Clearance updated successfully.",
             });
             setEditingProjectType(false);
             request.project_type = projectType;
@@ -71,7 +71,7 @@ export default function ViewApplication({ request }) {
             rejected: {
                 icon: XCircle,
                 color: "bg-red-100 text-red-800 border-red-200",
-                label: "Rejected",
+                label: "Denied",
             },
             reviewed: {
                 icon: AlertCircle,
@@ -96,9 +96,8 @@ export default function ViewApplication({ request }) {
         <SuperAdminLayout 
             title="View Application" 
             breadcrumbs={[
-                { label: "Dashboard", href: "/super-admin/dashboard" }, 
+                { label: "Dashboard", href: "/super-admin/dashboard" },
                 { label: "Applications", href: "/super-admin/requests" },
-                { label: "View Application" }
             ]}
         >
             <Head title={`View Application ${request.application_number || `TPZ-${request.id}`}`} />
@@ -281,6 +280,14 @@ function Step1Content({ request }) {
                     label="Address of Applicant"
                     value={request.applicant_address}
                 />
+                <InfoField
+                    label="Contact Number"
+                    value={request.applicant_contact}
+                />
+                <InfoField
+                    label="Email Address"
+                    value={request.user_email}
+                />
             </div>
 
             {request.corporation_name && (
@@ -314,6 +321,10 @@ function Step1Content({ request }) {
                                 label="Address of Authorized Representative"
                                 value={request.authorized_representative_address}
                             />
+                            <InfoField
+                                label="Email of Authorized Representative"
+                                value={request.authorized_representative_email}
+                            />
                         </div>
                         {request.authorization_letter_path && (
                             <div className="mt-4">
@@ -345,11 +356,11 @@ function Step2Content({ request, editingProjectType, setEditingProjectType, proj
             <SectionTitle icon={Building2} title="Project Details" />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* EDITABLE PROJECT TYPE */}
+                {/* EDITABLE LOCATIONAL CLEARANCE */}
                 <div className="group">
                     <div className="flex items-center justify-between mb-1.5">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            Project Type
+                            Locational Clearance
                         </p>
                         {!editingProjectType ? (
                             <button
@@ -473,20 +484,21 @@ function Step2Content({ request, editingProjectType, setEditingProjectType, proj
                 </div>
             </div>
 
+            <PropertyDetailsEditor request={request} routePrefix="super-admin" />
+
             <div className="pt-4 border-t">
                 <h4 className="text-sm font-semibold text-gray-700 mb-4">Project Nature & Cost</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InfoField
-                        label="Project Nature"
+                        label="Project Duration"
                         value={request.project_nature_duration}
                     />
-                    {request.project_nature_duration === "Temporary" &&
-                        request.project_nature_years && (
-                            <InfoField
-                                label="Specify Years"
-                                value={`${request.project_nature_years} years`}
-                            />
-                        )}
+                    {request.project_nature_years && (
+                        <InfoField
+                            label="Specify Years"
+                            value={`${request.project_nature_years} ${Number(request.project_nature_years) === 1 ? "year" : "years"}`}
+                        />
+                    )}
                     <InfoField
                         label="Project Cost/Capitalization (in Pesos)"
                         value={
@@ -495,6 +507,12 @@ function Step2Content({ request, editingProjectType, setEditingProjectType, proj
                                 : "N/A"
                         }
                     />
+                    {request.project_description && (
+                        <InfoField
+                            label="Project Description"
+                            value={request.project_description}
+                        />
+                    )}
                 </div>
             </div>
         </div>
@@ -565,9 +583,30 @@ function Step3Content({ request }) {
                     )}
                 </div>
             </div>
+
+            <div className="pt-4 border-t">
+                <h4 className="text-sm font-semibold text-gray-700 mb-4">Release of Certificate</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InfoField
+                        label="Preferred Release Mode"
+                        value={RELEASE_MODE_LABELS[request.preferred_release_mode] || request.preferred_release_mode}
+                    />
+                    <InfoField
+                        label="Release / Delivery Address"
+                        value={request.release_address}
+                    />
+                </div>
+            </div>
         </div>
     );
 }
+
+const RELEASE_MODE_LABELS = {
+    pickup: "Pick up at CPDO office",
+    mail_applicant: "Mail to applicant's address",
+    mail_representative: "Mail to representative's address",
+    mail_other: "Mail to another address",
+};
 
 // Helper Components
 function SectionTitle({ icon: Icon, title }) {
@@ -590,6 +629,134 @@ function InfoField({ label, value }) {
             <p className="text-sm text-gray-900 font-medium">
                 {value || <span className="text-gray-400 italic">Not provided</span>}
             </p>
+        </div>
+    );
+}
+
+function EditField({ label, value, onChange, placeholder }) {
+    return (
+        <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                {label}
+            </p>
+            <input
+                type="text"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                className="w-full px-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+        </div>
+    );
+}
+
+// Lot Number and Tax Declaration No. are entered by staff here and saved to the
+// property record; both are required before an application can be marked as
+// reviewed. Project Nature is set by the applicant and shown read-only.
+function PropertyDetailsEditor({ request, routePrefix }) {
+    const { toast } = useToast();
+    const [editing, setEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [values, setValues] = useState({
+        lot_number: request.lot_number || "",
+        tax_declaration_no: request.tax_declaration_no || "",
+    });
+
+    const reset = () =>
+        setValues({
+            lot_number: request.lot_number || "",
+            tax_declaration_no: request.tax_declaration_no || "",
+        });
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await axios.post(`/${routePrefix}/requests/${request.id}/certificate-details`, values);
+            request.lot_number = values.lot_number;
+            request.tax_declaration_no = values.tax_declaration_no;
+            toast({ title: "Saved", description: "Property details updated." });
+            setEditing(false);
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to save property details.",
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const missingRequired = !request.lot_number || !request.tax_declaration_no;
+
+    return (
+        <div className="pt-4 border-t">
+            <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-semibold text-gray-700">Property Details</h4>
+                {!editing ? (
+                    <button
+                        onClick={() => setEditing(true)}
+                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                        <Edit2 className="h-3 w-3" />
+                        Edit
+                    </button>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
+                        >
+                            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                            Save
+                        </button>
+                        <button
+                            onClick={() => { reset(); setEditing(false); }}
+                            disabled={saving}
+                            className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {editing ? (
+                    <>
+                        <EditField
+                            label="Lot Number"
+                            value={values.lot_number}
+                            onChange={(v) => setValues({ ...values, lot_number: v })}
+                            placeholder="e.g. 1234-B"
+                        />
+                        <EditField
+                            label="Tax Declaration No."
+                            value={values.tax_declaration_no}
+                            onChange={(v) => setValues({ ...values, tax_declaration_no: v })}
+                            placeholder="e.g. 2024-12-0001"
+                        />
+                        <InfoField label="Project Nature" value={request.zone_classification} />
+                    </>
+                ) : (
+                    <>
+                        <InfoField label="Lot Number" value={request.lot_number} />
+                        <InfoField label="Tax Declaration No." value={request.tax_declaration_no} />
+                        <InfoField label="Project Nature" value={request.zone_classification} />
+                    </>
+                )}
+            </div>
+
+            {missingRequired && !editing && (
+                <div className="mt-3 flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    <span>
+                        Lot Number and Tax Declaration No. must be set before this application
+                        can be marked as reviewed.
+                    </span>
+                </div>
+            )}
         </div>
     );
 }

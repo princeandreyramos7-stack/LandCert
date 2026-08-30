@@ -51,16 +51,27 @@ export default function SuperAdminReviewRequest({ request }) {
     const getInitialAction = () => {
         if (request.status === 'approved') {
             return 'approved';
-        } else if (request.status === 'rejected' || request.status === 'denied') {
+        } else if (request.status === 'rejected') {
             return 'rejected';
         }
         return '';
     };
     
     const [action, setAction] = useState(getInitialAction());
+
+    // Once approved (or the certificate flow has started), the decision is final and
+    // can no longer be flipped to denied.
+    const decisionLocked = ['approved', 'certificate_preparing', 'certificate_ready', 'released']
+        .includes(String(request.status || '').toLowerCase());
+
+    // Whether the Zoning Officer has already marked the application reviewed.
+    // If not, the Zoning Administrator reviews AND decides in one step.
+    const officerReviewed = String(request.status || '').toLowerCase() === 'reviewed';
+
     const [formData, setFormData] = useState({
         rejection_reason: request.rejection_reason || 'Lacking of Requirements', // Use existing or default
-        assign_to_admin: false
+        assign_to_admin: false,
+        payment_amount: request.payment_amount ? String(request.payment_amount) : '',
     });
     const [loading, setLoading] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -150,7 +161,7 @@ export default function SuperAdminReviewRequest({ request }) {
     const mainUploadedGroups = groupedRequirements.filter((g) => g.section !== 'additional');
     const additionalUploadedGroups = groupedRequirements.filter((g) => g.section === 'additional');
 
-    // Generate missing requirements message for rejection
+    // Generate missing requirements message for denial
     const getMissingRequirements = () => {
         const allGroups = [...mainUploadedGroups, ...additionalUploadedGroups];
         const missing = allGroups.filter(group => !requirementChecks[group.key]);
@@ -161,7 +172,7 @@ export default function SuperAdminReviewRequest({ request }) {
                missing.map(group => `- ${group.requirement_name}`).join('\n');
     };
 
-    // Update rejection reason when action changes to rejected
+    // Update denial reason when action changes to denied
     const handleActionChange = (newAction) => {
         setAction(newAction);
         
@@ -178,6 +189,28 @@ export default function SuperAdminReviewRequest({ request }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (decisionLocked) {
+            toast({
+                variant: "destructive",
+                title: "Decision Locked",
+                description: "This application has already been approved. The decision can no longer be changed.",
+            });
+            return;
+        }
+
+        if (action === 'approved' && !officerReviewed) {
+            const amount = parseFloat(formData.payment_amount);
+            if (!formData.payment_amount || Number.isNaN(amount) || amount < 0) {
+                toast({
+                    variant: "destructive",
+                    title: "Treasury fee required",
+                    description: "Enter the amount the applicant must pay at the Treasury before approving.",
+                });
+                return;
+            }
+        }
+
         setShowConfirmDialog(true);
     };
 
@@ -186,15 +219,26 @@ export default function SuperAdminReviewRequest({ request }) {
         setLoading(true);
 
         try {
-            const endpoint = action === 'approved' 
-                ? route('super-admin.approve-request', request.report_id)
-                : route('super-admin.reject-request', request.report_id);
+            let endpoint;
+            let payload;
+            if (officerReviewed) {
+                endpoint = action === 'approved'
+                    ? route('super-admin.approve-request', request.report_id)
+                    : route('super-admin.reject-request', request.report_id);
+                payload = {
+                    description: action === 'rejected' ? formData.rejection_reason : 'Application approved by Super Admin',
+                    issued_by: 'Super Admin',
+                    assign_to_admin: formData.assign_to_admin,
+                };
+            } else {
+                // The officer has not reviewed — review AND decide in one step.
+                endpoint = route('super-admin.review-and-decide', request.id);
+                payload = action === 'approved'
+                    ? { action: 'approved', payment_amount: formData.payment_amount }
+                    : { action: 'rejected', rejection_reason: formData.rejection_reason };
+            }
 
-            await axios.post(endpoint, {
-                description: action === 'rejected' ? formData.rejection_reason : 'Application approved by Super Admin',
-                issued_by: 'Super Admin',
-                assign_to_admin: formData.assign_to_admin
-            });
+            await axios.post(endpoint, payload);
 
             toast({
                 title: "Success!",
@@ -231,7 +275,7 @@ export default function SuperAdminReviewRequest({ request }) {
             rejected: {
                 icon: XCircle,
                 color: "bg-red-100 text-red-800 border-red-200",
-                label: "Rejected",
+                label: "Denied",
             },
             reviewed: {
                 icon: AlertCircle,
@@ -411,26 +455,44 @@ export default function SuperAdminReviewRequest({ request }) {
                                                 <p className="text-sm text-blue-700 mt-1">
                                                     This application was previously <span className="font-bold">
                                                         {request.status === 'approved' ? 'APPROVED' : 'DENIED'}
-                                                    </span>. 
+                                                    </span>.
                                                     {request.rejection_reason && ` Reason: "${request.rejection_reason}"`}
                                                     <br />
-                                                    <span className="text-xs">You can modify the decision below. Changes will be logged in audit trail.</span>
+                                                    <span className="text-xs">
+                                                        {decisionLocked
+                                                            ? 'This decision is final and can no longer be changed.'
+                                                            : 'You can modify the decision below. Changes will be logged in audit trail.'}
+                                                    </span>
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
                                 )}
-                                
+
+                                {/* The officer has not reviewed yet — the Administrator does both steps here. */}
+                                {!officerReviewed && !decisionLocked && (
+                                    <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-lg p-4 flex items-start gap-3">
+                                        <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-blue-900">Review &amp; decide in one step</h4>
+                                            <p className="text-sm text-blue-700 mt-1">
+                                                The Zoning Officer has not reviewed this application yet. You can review it
+                                                and approve or deny it now — set the Treasury fee below when approving.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <form onSubmit={handleSubmit} className="space-y-6">
                                     {/* Action Selection */}
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-800 mb-3">
                                             Final Decision <span className="text-red-500">*</span>
                                         </label>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${decisionLocked ? 'opacity-60 pointer-events-none' : ''}`}>
                                             <label className={`relative flex items-center p-5 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                                                action === 'approved' 
-                                                    ? 'border-green-500 bg-green-50 shadow-md' 
+                                                action === 'approved'
+                                                    ? 'border-green-500 bg-green-50 shadow-md'
                                                     : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
                                             }`}>
                                                 <input
@@ -439,6 +501,7 @@ export default function SuperAdminReviewRequest({ request }) {
                                                     value="approved"
                                                     checked={action === 'approved'}
                                                     onChange={(e) => handleActionChange(e.target.value)}
+                                                    disabled={decisionLocked}
                                                     className="w-5 h-5 text-green-600"
                                                     required
                                                 />
@@ -461,6 +524,7 @@ export default function SuperAdminReviewRequest({ request }) {
                                                     value="rejected"
                                                     checked={action === 'rejected'}
                                                     onChange={(e) => handleActionChange(e.target.value)}
+                                                    disabled={decisionLocked}
                                                     className="w-5 h-5 text-red-600"
                                                     required
                                                 />
@@ -477,6 +541,30 @@ export default function SuperAdminReviewRequest({ request }) {
                                     {/* Approved Form */}
                                     {action === 'approved' && (
                                         <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
+                                            {/* Treasury fee — required when the officer has not set one */}
+                                            {!officerReviewed && (
+                                                <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
+                                                        Amount to Pay at the Treasury <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <div className="relative max-w-xs">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={formData.payment_amount}
+                                                            onChange={(e) => setFormData({ ...formData, payment_amount: e.target.value })}
+                                                            placeholder="0.00"
+                                                            className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                                                        />
+                                                    </div>
+                                                    <p className="text-xs text-gray-600 mt-1">
+                                                        The applicant will be asked to pay this amount at the Treasury Office.
+                                                    </p>
+                                                </div>
+                                            )}
+
                                             {/* Assign to Admin */}
                                             <div className="flex items-center gap-3 p-4 bg-gray-50 border-2 border-gray-200 rounded-lg">
                                                 <input
@@ -496,12 +584,12 @@ export default function SuperAdminReviewRequest({ request }) {
                                         </div>
                                     )}
 
-                                    {/* Reject Form */}
+                                    {/* Deny Form */}
                                     {action === 'rejected' && (
                                         <div className="animate-in slide-in-from-top-2 duration-300">
                                             <div className="bg-white rounded-lg p-5 border-2 border-gray-200">
                                                 <label className="block text-sm font-semibold text-gray-800 mb-3">
-                                                    Rejection Reason <span className="text-red-500">*</span>
+                                                    Denial Reason <span className="text-red-500">*</span>
                                                 </label>
                                                 
                                                 <textarea
@@ -510,7 +598,7 @@ export default function SuperAdminReviewRequest({ request }) {
                                                     rows="5"
                                                     required
                                                     maxLength="1000"
-                                                    placeholder="Provide a comprehensive reason for rejection..."
+                                                    placeholder="Provide a comprehensive reason for denial..."
                                                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all resize-none"
                                                 />
                                                 <p className="text-xs text-gray-500 mt-2">
@@ -556,13 +644,17 @@ export default function SuperAdminReviewRequest({ request }) {
                                         </Link>
                                         <Button
                                             type="submit"
-                                            disabled={loading || !action}
+                                            disabled={loading || !action || decisionLocked}
                                             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
                                         >
                                             {loading ? (
                                                 <>
                                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                                     Processing...
+                                                </>
+                                            ) : decisionLocked ? (
+                                                <>
+                                                    Decision Final
                                                 </>
                                             ) : (
                                                 <>
@@ -600,7 +692,7 @@ export default function SuperAdminReviewRequest({ request }) {
                                         </>
                                     ) : (
                                         <>
-                                            You are about to <span className="font-bold text-red-600">REJECT</span> this application:
+                                            You are about to <span className="font-bold text-red-600">DENY</span> this application:
                                             <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
                                                 <p className="text-sm text-gray-700 italic">
                                                     "{formData.rejection_reason || 'No reason provided'}"
@@ -780,7 +872,7 @@ function Step2Content({ request }) {
             });
             toast({
                 title: "Success!",
-                description: "Project type updated successfully.",
+                description: "Locational Clearance updated successfully.",
             });
             setEditingProjectType(false);
             request.project_type = projectType;
@@ -800,11 +892,11 @@ function Step2Content({ request }) {
             <SectionTitle icon={Building2} title="Project Details" />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* EDITABLE PROJECT TYPE */}
+                {/* EDITABLE LOCATIONAL CLEARANCE */}
                 <div className="group">
                     <div className="flex items-center justify-between mb-1.5">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            Project Type
+                            Locational Clearance
                         </p>
                         {!editingProjectType ? (
                             <button

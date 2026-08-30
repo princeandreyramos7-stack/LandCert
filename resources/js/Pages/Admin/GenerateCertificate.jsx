@@ -1,85 +1,279 @@
 import React, { useRef } from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head, usePage } from "@inertiajs/react";
 import { Button } from "@/Components/ui/button";
-import { ArrowLeft, Download, Printer, FileText } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import html2pdf from 'html2pdf.js';
 
-export default function GenerateClearance({ application, payment, reviewer }) {
+/* ── Zoning Ordinance constants ────────────────────────────────────────────
+   Fixed references printed on every Zoning Certification. */
+const ORDINANCE_ARTICLE = '5';
+const ORDINANCE_SECTION = '12.6';
+const SP_RESOLUTION_NO = '160';
+const SP_RESOLUTION_DATE = 'March 05, 2019';
+
+/** A blank to be filled by hand, or the value when we have one. */
+function Fill({ value, width = '150pt', bold = false }) {
+    return (
+        <span
+            style={{
+                display: 'inline-flex',
+                justifyContent: 'center',
+                alignItems: 'flex-end',
+                minWidth: width,
+                borderBottom: '1px solid #000',
+                textAlign: 'center',
+                fontWeight: bold ? 'bold' : 'normal',
+                padding: '0 4pt',
+                lineHeight: '1.2',
+                verticalAlign: 'bottom',
+            }}
+        >
+            {value || ' '}
+        </span>
+    );
+}
+
+/**
+ * One signature slot: the e-signature image sits ON the ruled line, with the
+ * printed name and title underneath. Falls back to an empty gap (same height,
+ * so the layout never shifts) when the signer has no signature on file.
+ */
+function SignatureBlock({ signatureUrl, name, title }) {
+    return (
+        <div style={{ textAlign: 'center', width: '260pt' }}>
+            <div style={{ height: '36pt', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                {signatureUrl && (
+                    <img
+                        src={signatureUrl}
+                        alt=""
+                        crossOrigin="anonymous"
+                        style={{ maxHeight: '36pt', maxWidth: '85%', objectFit: 'contain', marginBottom: '-2pt' }}
+                    />
+                )}
+            </div>
+            <div style={{ fontWeight: 'bold', fontSize: '10pt' }}>{name}</div>
+            <div style={{ fontSize: '10pt' }}>{title}</div>
+        </div>
+    );
+}
+
+/** Official letterhead shared by both certification templates. */
+function Letterhead() {
+    return (
+        <div className="certificate-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14pt', flex: 1 }}>
+                <div style={{ width: '74pt', height: '74pt', flexShrink: 0 }}>
+                    <img
+                        src="/images/ilagan1logo.jpg"
+                        alt="City of Ilagan"
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }}
+                    />
+                </div>
+                <div style={{ textAlign: 'left', color: '#000080' }}>
+                    <div style={{ fontSize: '10pt' }}>Republic of the Philippines</div>
+                    <div style={{ fontSize: '12pt', fontWeight: 'bold' }}>CITY OF ILAGAN</div>
+                    <div style={{ fontSize: '10pt' }}>Province of Isabela</div>
+                    <div style={{ fontSize: '11pt', fontWeight: 'bold', marginTop: '2pt' }}>
+                        CITY PLANNING &amp; DEVELOPMENT OFFICE
+                    </div>
+                </div>
+            </div>
+            <div style={{ width: '74pt', height: '74pt', flexShrink: 0 }}>
+                <img
+                    src="/images/Ilagan Logo2.png"
+                    alt="City of Ilagan 2030"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+            </div>
+        </div>
+    );
+}
+
+/** Payment footer. `order` differs between the two official templates. */
+function PaymentFooter({ payment, order }) {
+    const amount = payment?.amount
+        ? `₱${Number(payment.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+        : '';
+    const date = payment?.payment_date
+        ? new Date(payment.payment_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        : '';
+
+    const rows = {
+        amountFirst: [
+            ['Amount Paid  :', amount],
+            ['O.R. No.       :', payment?.receipt_number || ''],
+            ['Date            :', date],
+        ],
+        orFirst: [
+            ['O.R. No.  :', payment?.receipt_number || ''],
+            ['Date       :', date],
+            ['Amount  :', amount],
+        ],
+    }[order];
+
+    return (
+        <div style={{ marginTop: '40pt', fontSize: '10pt' }}>
+            {rows.map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '6pt' }}>
+                    <span style={{ width: '90pt' }}>{label}</span>
+                    <Fill value={value} width="160pt" />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+/* ── Template A — CZC ──────────────────────────────────────────────────────
+   "ZONING CERTIFICATION" */
+function ZoningCertification({ application, payment, zoningAdministrator, issuedOn }) {
+    const area = application.lot_area_sqm
+        ? Number(application.lot_area_sqm).toLocaleString('en-PH')
+        : '';
+
+    return (
+        <>
+            <div style={{ textAlign: 'center', margin: '26pt 0 20pt' }}>
+                <span style={{ background: '#FFFF00', padding: '3pt 10pt', fontWeight: 'bold', fontSize: '12pt' }}>
+                    ZONING CERTIFICATION
+                </span>
+            </div>
+
+            <p style={{ textAlign: 'justify', textIndent: '40pt', lineHeight: '2', margin: 0 }}>
+                This is to certify that parcel of land, lot <Fill value={application.lot_number} width="190pt" />,
+                under Tax Dec. No. <Fill value={application.tax_declaration_no} width="190pt" />, registered under
+                name of <Fill value={application.applicant_name} width="230pt" /> with an area
+                of <Fill value={area} width="80pt" /> sq.m. located at brgy. <Fill value={application.project_location_barangay} width="170pt" />,
+                City of Ilagan, Isabela, was verified to fall within
+                the <Fill value={application.zone_classification} width="150pt" /> <strong>ZONE</strong> as
+                per article {ORDINANCE_ARTICLE}, section <Fill value={ORDINANCE_SECTION} width="70pt" /> of the
+                Comprehensive Land Use Plan and the Zoning Ordinance of City of Ilagan, Isabela approved by the
+                Sangguniang Panlalawigan of Isabela through SP Resolution No. <Fill value={SP_RESOLUTION_NO} width="60pt" /> dated <Fill value={SP_RESOLUTION_DATE} width="150pt" />.
+            </p>
+
+            <p style={{ textAlign: 'justify', textIndent: '40pt', lineHeight: '2', marginTop: '18pt' }}>
+                This certification is issued to <Fill value={application.applicant_name} width="250pt" />, for
+                whatever purpose it may serve.
+            </p>
+
+            <p style={{ lineHeight: '2', marginTop: '18pt' }}>
+                City of Ilagan, Isabela <Fill value={issuedOn} width="220pt" />.
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '46pt' }}>
+                <SignatureBlock
+                    signatureUrl={zoningAdministrator?.signature_url}
+                    name={zoningAdministrator?.name || 'Engr. CRISANTA D. CONCEPCION, EnP'}
+                    title={<>City Planning &amp; Development Coordinator/<br />Zoning Administrator</>}
+                />
+            </div>
+
+            <PaymentFooter payment={payment} order="orFirst" />
+        </>
+    );
+}
+
+/* ── Template B — SUP / TUP ────────────────────────────────────────────────
+   "CERTIFICATION" (existing road abutting the lot) */
+function RoadCertification({ application, payment, zoningAdministrator, issuedOn }) {
+    return (
+        <>
+            <div style={{ textAlign: 'center', margin: '30pt 0 22pt' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '13pt', letterSpacing: '3pt' }}>
+                    CERTIFICATION
+                </span>
+            </div>
+
+            <p style={{ fontWeight: 'bold', margin: '0 0 14pt' }}>TO WHOM IT MAY CONCERN:</p>
+
+            <p style={{ textAlign: 'justify', textIndent: '40pt', lineHeight: '2', margin: 0 }}>
+                This is to certify that as per certification issued by the City Assessor’s Office, there is
+                an <strong>existing road</strong> abutting lot no. <Fill value={application.lot_number} width="140pt" />,
+                under Tax Dec. No. <Fill value={application.tax_declaration_no} width="180pt" /> registered under the
+                name of <Fill value={application.applicant_name} width="220pt" /> located at
+                brgy. <Fill value={application.project_location_barangay} width="180pt" />, City of Ilagan, Isabela.
+            </p>
+
+            <p style={{ textAlign: 'justify', textIndent: '40pt', lineHeight: '2', marginTop: '18pt' }}>
+                This certification is issued upon the request of interested party for whatever purpose it may serve.
+            </p>
+
+            <p style={{ lineHeight: '2', marginTop: '18pt', textIndent: '40pt' }}>
+                Given this <Fill value={issuedOn} width="200pt" /> at the City of Ilagan, Isabela.
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '52pt' }}>
+                <SignatureBlock
+                    signatureUrl={zoningAdministrator?.signature_url}
+                    name={zoningAdministrator?.name || 'Engr. CRISANTA D. CONCEPCION, EnP'}
+                    title={<>City Planning &amp; Development Coordinator/<br />Zoning Administrator</>}
+                />
+            </div>
+
+            <PaymentFooter payment={payment} order="amountFirst" />
+        </>
+    );
+}
+
+export default function GenerateCertificate({ application, payment, reviewer, zoningAdministrator }) {
     const certificateRef = useRef(null);
 
-    const handlePrint = () => {
-        window.print();
-    };
+    // This page is rendered for both admins and super admins — follow the viewer.
+    const { auth } = usePage().props;
+    const isSuperAdmin = auth?.user?.user_type === 'super_admin';
+    const Layout = isSuperAdmin ? SuperAdminLayout : AdminLayout;
+    const routePrefix = isSuperAdmin ? 'super-admin' : 'admin';
+
+    // CZC gets the Zoning Certification; SUP and TUP get the road Certification.
+    const projectType = String(application.project_type || '').trim().toUpperCase();
+    const isCZC = projectType === 'CZC';
+
+    // The certificate carries the date it was issued.
+    const issuedOn = new Date().toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric',
+    });
+
+    const handlePrint = () => window.print();
 
     const handleDownload = () => {
         const element = certificateRef.current;
-        const filename = `Certificate_${application.application_number || 'Certificate'}.pdf`;
-        
-        const opt = {
+        const filename = `${isCZC ? 'ZoningCertification' : 'Certification'}_${application.application_number || 'document'}.pdf`;
+
+        html2pdf().set({
             margin: 0,
-            filename: filename,
+            filename,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { 
-                scale: 2, 
-                useCORS: true,
-                letterRendering: true,
-                logging: false
-            },
-            jsPDF: { 
-                unit: 'mm', 
-                format: 'a4', 
-                orientation: 'portrait'
-            },
-            pagebreak: { mode: 'avoid-all' }
-        };
-        
-        html2pdf().set(opt).from(element).save();
+            html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: 'avoid-all' },
+        }).from(element).save();
     };
 
+    const TemplateBody = isCZC ? ZoningCertification : RoadCertification;
+
     return (
-        <AdminLayout 
-            title="Generate Certificate" 
+        <Layout
+            title="Generate Certificate"
             breadcrumbs={[
-                { label: "Dashboard", href: "/admin/dashboard" }, 
-                { label: "Certificates", href: "/admin/certificates" }
+                { label: "Dashboard", href: `/${routePrefix}/dashboard` },
+                { label: "Certificates", href: `/${routePrefix}/certificates` },
             ]}
         >
-            <Head title={`Certificate - ${application.application_number}`} />
-            
+            <Head title={`Certificate — ${application.application_number}`} />
+
             <style dangerouslySetInnerHTML={{ __html: `
                 @media print {
-                    body * {
-                        visibility: hidden;
-                    }
-                    .certificate-print-area, .certificate-print-area * {
-                        visibility: visible;
-                    }
-                    .certificate-print-area {
-                        position: absolute;
-                        left: 0;
-                        top: 0;
-                        width: 100%;
-                    }
-                    .no-print {
-                        display: none !important;
-                    }
+                    body * { visibility: hidden; }
+                    .certificate-print-area, .certificate-print-area * { visibility: visible; }
+                    .certificate-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+                    .no-print { display: none !important; }
                     .certificate-header {
-                        background: linear-gradient(
-                            180deg,
-                            #ffffff 0%,
-                            #eefdfd 8%,
-                            #d9f9fa 25%,
-                            #bff5f6 55%,
-                            #a8eff1 100%
-                        ) !important;
+                        background: linear-gradient(180deg,#ffffff 0%,#eefdfd 8%,#d9f9fa 25%,#bff5f6 55%,#a8eff1 100%) !important;
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                     }
-                    @page {
-                        size: A4;
-                        margin: 10mm;
-                    }
+                    @page { size: A4; margin: 10mm; }
                 }
 
                 .certificate-page {
@@ -88,195 +282,56 @@ export default function GenerateClearance({ application, payment, reviewer }) {
                     margin: 0 auto;
                     background: white;
                     font-family: 'Times New Roman', serif;
+                    font-size: 11pt;
+                    color: #000;
                     padding: 10mm 15mm;
                     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
                 }
 
                 .certificate-header {
                     width: 100%;
-                    background: linear-gradient(
-                        180deg,
-                        #ffffff 0%,
-                        #eefdfd 8%,
-                        #d9f9fa 25%,
-                        #bff5f6 55%,
-                        #a8eff1 100%
-                    );
+                    background: linear-gradient(180deg,#ffffff 0%,#eefdfd 8%,#d9f9fa 25%,#bff5f6 55%,#a8eff1 100%);
                     border-bottom: 3px solid #2222ff;
-                    padding: 10pt 0;
+                    padding: 8pt 0;
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    -webkit-print-color-adjust: exact;
-                    print-color-adjust: exact;
-                    color-adjust: exact;
                 }
             `}} />
 
-            {/* Page header with action buttons */}
-            <div className="relative overflow-hidden rounded-2xl text-white mb-6 no-print"
-                style={{ background: "linear-gradient(135deg,#0d1f5c 0%,#1a3a8f 60%,#112068 100%)" }}>
-                <div className="relative z-10 flex items-center justify-between p-6">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-[#d4a017]/20 border border-[#d4a017]/30 rounded-xl">
-                            <FileText className="h-7 w-7 text-[#d4a017]"/>
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <div className="w-1 h-4 rounded-full bg-[#d4a017]"/>
-                                <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">Certificate</p>
-                            </div>
-                            <h1 className="text-xl font-black text-white">Zoning Certificate</h1>
-                            <p className="text-blue-200/70 text-sm">Application No: {application.application_number}</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-3">
-                        <Button 
-                            onClick={handlePrint}
-                            className="bg-[#d4a017] hover:bg-[#b8910f] text-white"
-                        >
-                            <Printer className="mr-2 h-4 w-4" />
-                            Print Certificate
+            {/* ── Actions (never printed). Lot No. / Tax Declaration No. / Zone
+                 Classification are set on the View Application page, Step 2. ── */}
+            <div className="no-print max-w-4xl mx-auto mb-6 space-y-4">
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-gray-500">
+                        {isCZC
+                            ? 'Zoning Certification (CZC)'
+                            : `Certification — existing road${projectType ? ` (${projectType})` : ''}`}
+                    </p>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={handlePrint} className="gap-2">
+                            <Printer className="h-4 w-4" /> Print
                         </Button>
-                        <Button 
-                            onClick={handleDownload}
-                            className="bg-white hover:bg-gray-100 text-[#0d1f5c] border-white"
-                        >
-                            <Download className="mr-2 h-4 w-4" />
-                            Download PDF
+                        <Button onClick={handleDownload} className="gap-2 bg-[#0d1f5c] hover:bg-[#0d1f5c]/90">
+                            <Download className="h-4 w-4" /> Download PDF
                         </Button>
                     </div>
                 </div>
             </div>
 
-            {/* Certificate Print Area */}
+            {/* ── The document itself ── */}
             <div className="certificate-print-area">
-                <div ref={certificateRef} className="certificate-page" style={{ fontSize: '10pt', lineHeight: '1.4' }}>
-                <div className="certificate-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15pt', flex: 1 }}>
-                        <div style={{ width: '80pt', height: '80pt', flexShrink: 0 }}>
-                            <img src="/images/ilagan1logo.jpg" alt="Ilagan Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
-                        </div>
-                        <div style={{ textAlign: 'left' }}>
-                            <div style={{ fontSize: '10pt', marginBottom: '2pt', color: '#000080' }}>Republic of the Philippines</div>
-                            <div style={{ fontSize: '12pt', fontWeight: 'bold', color: '#000080' }}>CITY OF ILAGAN</div>
-                            <div style={{ fontSize: '10pt', color: '#000080' }}>Province of Isabela</div>
-                            <div style={{ fontSize: '11pt', fontWeight: 'bold', marginTop: '3pt', color: '#000080' }}>CITY PLANNING & DEVELOPMENT OFFICE</div>
-                        </div>
-                    </div>
-                    <div style={{ position: 'absolute', top: '0', right: '100pt', textAlign: 'center' }}>
-                        <div style={{ fontSize: '10pt', fontWeight: 'bold' }}>CPD-001-0</div>
-                    </div>
-                    <div style={{ width: '80pt', height: '80pt', flexShrink: 0 }}>
-                        <img src="/images/Ilagan Logo2.png" alt="CPDO Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    </div>
-                </div>
-
-                {/* Title with Yellow Highlight */}
-                <div style={{ 
-                    textAlign: 'center',
-                    marginBottom: '15pt',
-                    fontSize: '11pt',
-                    fontWeight: 'bold'
-                }}>
-                    <div style={{ display: 'inline-block', background: '#FFFF00', padding: '4pt 8pt' }}>
-                        LOCATIONAL CLEARANCE / CERTIFICATE OF ZONING COMPLIANCE
-                    </div>
-                </div>
-
-                {/* Application Details Section */}
-                <div style={{ marginBottom: '15pt', fontSize: '9pt' }}>
-                    <div style={{ marginBottom: '8pt' }}>
-                        <strong>Application No.:</strong> {application.application_number || 'N/A'}
-                    </div>
-                    <div style={{ marginBottom: '8pt' }}>
-                        <strong>Date Receipt:</strong> {application.created_at ? new Date(application.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}
-                    </div>
-                    <div style={{ marginBottom: '8pt' }}>
-                        <strong>O.R. No.:</strong> {payment?.reference_number || 'N/A'}
-                    </div>
-                    <div style={{ marginBottom: '8pt' }}>
-                        <strong>Date Issued:</strong> {application.updated_at ? new Date(application.updated_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}
-                    </div>
-                    <div style={{ marginBottom: '8pt' }}>
-                        <strong>Amount Paid:</strong> ₱{payment?.amount ? Number(payment.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00'}
-                    </div>
-                </div>
-
-                {/* Clearance Body */}
-                <div style={{ fontSize: '10pt', lineHeight: '1.8', textAlign: 'justify', marginBottom: '20pt' }}>
-                    <p style={{ textIndent: '40pt', marginBottom: '12pt' }}>
-                        This is to certify that the application for <strong>Locational Clearance / Certificate of Zoning Compliance</strong> filed by <strong>{application.applicant_name || 'N/A'}</strong>
-                        {application.corporation_name && ` representing ${application.corporation_name}`}, with address at <strong>{application.applicant_address || 'N/A'}</strong>,
-                        for the proposed <strong>{application.project_type || 'project'}</strong> to be located at <strong>{application.project_location_barangay}, {application.project_location_municipality || 'City of Ilagan, Isabela'}</strong>,
-                        has been evaluated and found to be in conformity with the Comprehensive Zoning Ordinance and the Comprehensive Land Use Plan of the City of Ilagan.
-                    </p>
-
-                    <p style={{ textIndent: '40pt', marginBottom: '12pt' }}>
-                        <strong>THIS CLEARANCE IS HEREBY GRANTED</strong> subject to the following conditions:
-                    </p>
-
-                    <div style={{ marginLeft: '30pt', marginBottom: '12pt' }}>
-                        <div style={{ marginBottom: '6pt' }}>1. Compliance with all applicable national and local building codes, laws, and regulations;</div>
-                        <div style={{ marginBottom: '6pt' }}>2. Securing necessary permits from concerned government agencies;</div>
-                        <div style={{ marginBottom: '6pt' }}>3. Implementation of proper environmental protection and safety measures;</div>
-                        <div style={{ marginBottom: '6pt' }}>4. No deviation from the approved plans without prior clearance from this office;</div>
-                        <div style={{ marginBottom: '6pt' }}>5. This clearance shall be valid for one (1) year from date of issuance;</div>
-                        <div style={{ marginBottom: '6pt' }}>6. This clearance does not constitute certification of land ownership or title.</div>
-                    </div>
-
-                    <p style={{ textIndent: '40pt', marginBottom: '12pt' }}>
-                        Non-compliance with any of the above conditions shall be sufficient ground for the revocation of this clearance.
-                    </p>
-
-                    {application.project_nature && (
-                        <p style={{ textIndent: '40pt', marginBottom: '12pt' }}>
-                            <strong>Project Nature/Description:</strong> {application.project_nature}
-                        </p>
-                    )}
-
-                    <p style={{ textIndent: '40pt', marginTop: '20pt' }}>
-                        Issued this <strong>{application.updated_at ? new Date(application.updated_at).toLocaleDateString('en-US', { day: 'numeric' }) : '__'}</strong> day of <strong>{application.updated_at ? new Date(application.updated_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '__________, 20__'}</strong> at the City Planning and Development Office, City of Ilagan, Province of Isabela.
-                    </p>
-                </div>
-
-                {/* Signatures Section */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40pt', fontSize: '9pt' }}>
-                    <div style={{ width: '45%' }}>
-                        <div style={{ marginBottom: '6pt' }}>Prepared and Evaluated by:</div>
-                        <div style={{ marginTop: '35pt', borderTop: '1.5px solid #000', paddingTop: '3pt', textAlign: 'center' }}>
-                            <strong>{reviewer?.name || 'N/A'}</strong><br />
-                            Zoning Officer IV
-                        </div>
-                    </div>
-                    
-                    <div style={{ width: '45%' }}>
-                        <div style={{ marginBottom: '6pt' }}>Approved by:</div>
-                        <div style={{ marginTop: '35pt', borderTop: '1.5px solid #000', paddingTop: '3pt', textAlign: 'center' }}>
-                            <strong>ENGR. CRISANTA D. CONCEPCION, EnP</strong><br />
-                            OIC- City Planning & Dev't. Coordinator/<br />
-                            Zoning Administrator
-                        </div>
-                    </div>
-                </div>
-
-                {/* Footer Note */}
-                <div style={{ 
-                    position: 'absolute', 
-                    bottom: '0.5in', 
-                    left: '0.75in', 
-                    right: '0.75in',
-                    fontSize: '8pt',
-                    fontStyle: 'italic',
-                    textAlign: 'center',
-                    color: '#666',
-                    paddingTop: '15pt',
-                    borderTop: '1px solid #ccc'
-                }}>
-                    <strong>NOTE:</strong> This clearance is issued for zoning purposes only and does not authorize construction or operation without proper building permits and other required licenses.
-                </div>
+                <div ref={certificateRef} className="certificate-page">
+                    <Letterhead />
+                    <TemplateBody
+                        application={application}
+                        payment={payment}
+                        reviewer={reviewer}
+                        zoningAdministrator={zoningAdministrator}
+                        issuedOn={issuedOn}
+                    />
                 </div>
             </div>
-        </AdminLayout>
+        </Layout>
     );
 }

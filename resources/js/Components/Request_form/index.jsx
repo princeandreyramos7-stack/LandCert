@@ -23,6 +23,10 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     const [completedSteps, setCompletedSteps] = useState([]);
     const [hasRepresentative, setHasRepresentative] = useState(false);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+    const [submitErrors, setSubmitErrors] = useState([]);
+    // 'form'   -> the messages are validation problems the applicant can fix
+    // 'system' -> the message is a server/system failure, nothing to fix in the form
+    const [submitErrorKind, setSubmitErrorKind] = useState(null);
     const { toast } = useToast();
     const page = usePage();
     const flash = page.props.flash || {};
@@ -70,10 +74,18 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         verified_requirements: existingApplication?.verified_requirements || {},
     });
 
+    // Requirement files are held OUTSIDE Inertia's useForm on purpose.
+    // useForm.setData runs lodash cloneDeep over the whole form on every call,
+    // and cloneDeep destroys File objects — so any File parked in form state is
+    // silently shredded by the next setData and never reaches the server.
+    const [requirementFiles, setRequirementFiles] = useState({});
+
     // Define requirements structure (ALL requirements - main + additional)
     const requirements = [
         // Main Requirements
-        { id: 1, name: "1. Accomplished and notarized APPLICATION FORM", required: true, section: "main" },
+        // Not required at submission time: the applicant has to print this form,
+        // get it notarized, then upload it afterwards from My Applications.
+        { id: 1, name: "1. Accomplished and notarized APPLICATION FORM", required: false, section: "main", description: "You can submit without this. After submitting, print your application form, have it notarized, then upload it from My Applications." },
         { id: 2, name: "2. Right Over Land Documentation", required: true, section: "main" },
         { id: 3, name: "3. VICINITY MAP", required: true, section: "main" },
         { id: 4, name: "4. SITE DEVELOPMENT PLAN", required: true, section: "main" },
@@ -132,14 +144,14 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         }
         if (currentStep === 4) {
             // For step 4, check if at least main requirements are uploaded
-            const step4Errors = validateStep4(data, requirements, existingApplication?.existing_documents || {});
+            const step4Errors = validateStep4(data, requirements, existingApplication?.existing_documents || {}, requirementFiles);
             if (step4Errors.length === 0 && !completedSteps.includes(4)) {
                 setCompletedSteps([...completedSteps, 4]);
             } else if (step4Errors.length > 0 && completedSteps.includes(4)) {
                 setCompletedSteps(completedSteps.filter(s => s !== 4));
             }
         }
-    }, [data, currentStep]);
+    }, [data, currentStep, requirementFiles]);
 
     // Handle representative toggle
     const handleRepresentativeToggle = (checked) => {
@@ -170,7 +182,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                 validationErrors = validateStep3(data);
                 break;
             case 4:
-                validationErrors = validateStep4(data, requirements, existingApplication?.existing_documents || {});
+                validationErrors = validateStep4(data, requirements, existingApplication?.existing_documents || {}, requirementFiles);
                 break;
             default:
                 break;
@@ -275,7 +287,9 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     // Confirm and submit - USING FETCH API TO BYPASS INERTIA
     const confirmSubmit = async () => {
         setIsConfirmDialogOpen(false);
-        
+        setSubmitErrors([]);
+        setSubmitErrorKind(null);
+
         if (isEditing && existingApplication?.id) {
             console.log('=== EDIT SUBMIT START (FETCH API) ===');
             console.log('data.requirement_uploads:', data.requirement_uploads);
@@ -295,21 +309,20 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                 }
             });
             
-            // Add file uploads
+            // Add file uploads. Read from the parent-owned file state, not the
+            // Inertia form — useForm's cloneDeep would have destroyed the Files.
             let fileCount = 0;
-            if (data.requirement_uploads) {
-                Object.keys(data.requirement_uploads).forEach(reqId => {
-                    const files = data.requirement_uploads[reqId];
-                    console.log(`Requirement ${reqId}:`, files);
-                    if (Array.isArray(files)) {
-                        files.forEach((file, index) => {
-                            console.log(`  Adding file [${reqId}][${index}]:`, file.name, file.size, 'bytes');
-                            formData.append(`requirement_uploads[${reqId}][${index}]`, file, file.name);
-                            fileCount++;
-                        });
-                    }
+            Object.entries(requirementFiles).forEach(([reqId, files]) => {
+                if (!Array.isArray(files)) return;
+                const requirement = requirements.find((r) => String(r.id) === String(reqId));
+                files.forEach((file, index) => {
+                    formData.append(`requirement_uploads[${reqId}][${index}]`, file, file.name);
+                    fileCount++;
                 });
-            }
+                if (requirement) {
+                    formData.append(`requirement_names[${reqId}]`, requirement.name);
+                }
+            });
             
             console.log(`Total files to upload: ${fileCount}`);
             console.log('FormData entries:');
@@ -360,19 +373,112 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             }
             
         } else {
-            // CREATE MODE: Submit new application
-            post("/request", {
-                onSuccess: () => {
-                    // Backend handles redirect to receipt page
-                },
-                onError: (errors) => {
+            // CREATE MODE: Submit new application.
+            // Build FormData by hand so the File objects reach the server intact —
+            // they are held outside useForm precisely because setData's cloneDeep
+            // would destroy them.
+            const formData = new FormData();
+
+            Object.keys(data).forEach((key) => {
+                if (key === 'requirement_uploads') return;
+                const value = data[key];
+                if (value === null || value === undefined || value === '') return;
+                if (value instanceof File) {
+                    formData.append(key, value, value.name);
+                } else if (typeof value === 'object') {
+                    // Send plain objects as real array fields so Laravel's
+                    // `array` validation rules still see them as arrays.
+                    Object.entries(value).forEach(([k, v]) => {
+                        formData.append(`${key}[${k}]`, v ? '1' : '0');
+                    });
+                } else {
+                    formData.append(key, value);
+                }
+            });
+
+            Object.entries(requirementFiles).forEach(([reqId, files]) => {
+                if (!Array.isArray(files)) return;
+                const requirement = requirements.find((r) => String(r.id) === String(reqId));
+                files.forEach((file, index) => {
+                    formData.append(`requirement_uploads[${reqId}][${index}]`, file, file.name);
+                });
+                if (requirement) {
+                    formData.append(`requirement_names[${reqId}]`, requirement.name);
+                }
+            });
+
+            // Submit via fetch (not router.post) so the real HTTP status and
+            // error body are visible - the caller needs to know whether a failure
+            // is a form/validation problem (422) or a server problem (500).
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (!csrfToken) {
+                    throw new Error('Your session has expired. Please refresh the page and try again.');
+                }
+
+                const response = await fetch("/request", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                });
+
+                if (response.ok || response.redirected) {
+                    toast({
+                        title: "Application Submitted",
+                        description: "Your application has been received.",
+                    });
+                    setTimeout(() => {
+                        window.location.href = route('my-applications');
+                    }, 800);
+                    return;
+                }
+
+                // Try to read a structured error body.
+                let payload = null;
+                try { payload = await response.json(); } catch (_) { /* not JSON */ }
+
+                if (response.status === 422) {
+                    // Validation failure - a FORM problem. Show every field message.
+                    const fieldErrors = payload?.errors || {};
+                    const messages = Object.values(fieldErrors).flat().filter(Boolean);
+                    console.warn('Application validation failed:', fieldErrors);
+                    setSubmitErrors(messages.length ? messages : [payload?.message || 'Some fields need attention.']);
+                    setSubmitErrorKind('form');
                     toast({
                         variant: "destructive",
-                        title: "Submission Failed",
-                        description: "There was an error. Please check the form and try again.",
+                        title: "Please fix the form",
+                        description: messages.length
+                            ? (messages.length > 1
+                                ? messages[0] + ' (+' + (messages.length - 1) + ' more below)'
+                                : messages[0])
+                            : (payload?.message || 'Some fields need attention.'),
                     });
-                },
-            });
+                } else {
+                    // 500 / 419 / anything else - a SYSTEM problem, not the form.
+                    const serverMessage = payload?.message || response.statusText || 'Unknown server error';
+                    console.error('Application submission server error:', response.status, payload);
+                    setSubmitErrors(['HTTP ' + response.status + ' — ' + serverMessage]);
+                    setSubmitErrorKind('system');
+                    toast({
+                        variant: "destructive",
+                        title: 'System error (HTTP ' + response.status + ')',
+                        description: serverMessage,
+                    });
+                }
+            } catch (error) {
+                console.error('Application submission request failed:', error);
+                setSubmitErrors([error.message || 'Check your connection and try again.']);
+                setSubmitErrorKind('system');
+                toast({
+                    variant: "destructive",
+                    title: "Could not reach the server",
+                    description: error.message || 'Check your connection and try again.',
+                });
+            }
         }
     };
 
@@ -489,10 +595,43 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                                             requirements={requirements}
                                             existingDocuments={existingApplication?.existing_documents || {}}
                                             verifiedRequirements={data.verified_requirements || {}}
+                                            files={requirementFiles}
+                                            onFilesChange={setRequirementFiles}
                                         />
                                     )}
                                 </div>
                             </div>
+
+                            {/* Real submission error - tells the applicant whether the
+                                problem is their form (fixable) or the system (not their fault). */}
+                            {submitErrors.length > 0 && (
+                                <div
+                                    className={`mb-4 rounded-lg border-2 p-4 ${
+                                        submitErrorKind === 'system'
+                                            ? 'border-red-300 bg-red-50'
+                                            : 'border-amber-300 bg-amber-50'
+                                    }`}
+                                >
+                                    <p
+                                        className={`text-sm font-semibold mb-2 ${
+                                            submitErrorKind === 'system' ? 'text-red-800' : 'text-amber-800'
+                                        }`}
+                                    >
+                                        {submitErrorKind === 'system'
+                                            ? 'System error — this is not a problem with your form. Please try again later or contact the CPDO office with the message below.'
+                                            : 'Please fix the following before submitting:'}
+                                    </p>
+                                    <ul
+                                        className={`list-disc list-inside space-y-1 text-sm ${
+                                            submitErrorKind === 'system' ? 'text-red-700' : 'text-amber-700'
+                                        }`}
+                                    >
+                                        {submitErrors.map((err, i) => (
+                                            <li key={i}>{err}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
 
                             {/* Navigation with enhanced styling */}
                             <div className="animate-slideUp">
@@ -518,6 +657,8 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                 processing={processing}
                 data={data}
                 isEditing={isEditing}
+                requirementFiles={requirementFiles}
+                requirements={requirements}
             />
             
             {/* Add custom animations */}

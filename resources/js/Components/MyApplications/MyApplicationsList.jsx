@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { router } from "@inertiajs/react";
+import { useToast } from "@/Components/ui/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Badge } from "@/Components/ui/badge";
 import { Button } from "@/Components/ui/button";
@@ -38,6 +39,8 @@ import {
     ChevronRight,
     Download,
     Pencil,
+    Printer,
+    AlertTriangle,
 } from "lucide-react";
 
 export function MyApplicationsList({ applications }) {
@@ -47,6 +50,7 @@ export function MyApplicationsList({ applications }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isUploadReceiptModalOpen, setIsUploadReceiptModalOpen] = useState(false);
     const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState(false);
+    const { toast } = useToast();
     const [receiptFile, setReceiptFile] = useState(null);
     const [receiptPreview, setReceiptPreview] = useState(null);
     const [uploadingReceipt, setUploadingReceipt] = useState(false);
@@ -112,8 +116,8 @@ export function MyApplicationsList({ applications }) {
                 className: "bg-amber-50 text-amber-700 border-amber-300",
             },
             reviewed: {
-                icon: AlertCircle,
-                label: "Under Review",
+                icon: Clock,
+                label: "Waiting for Approval",
                 className: "bg-sky-50 text-sky-700 border-sky-300",
             },
             "under review": { 
@@ -121,40 +125,42 @@ export function MyApplicationsList({ applications }) {
                 label: "Under Review",
                 className: "bg-sky-50 text-sky-700 border-sky-300",
             },
-            approved: { 
-                icon: CheckCircle, 
-                label: "Approved",
+            approved: {
+                icon: DollarSign,
+                label: "Approved — For Payment",
                 className: "bg-emerald-50 text-emerald-700 border-emerald-300",
             },
             rejected: { 
                 icon: XCircle, 
-                label: "Rejected",
+                label: "Denied",
                 className: "bg-red-50 text-red-700 border-red-300",
             },
+            // Once payment is verified the applicant just sees "Application Approved" —
+            // they can generate the certificate/clearance from here.
             payment_confirmed: {
-                icon: DollarSign,
-                label: "Payment Confirmed",
-                className: "bg-blue-50 text-blue-700 border-blue-300",
+                icon: CheckCircle,
+                label: "Application Approved",
+                className: "bg-green-50 text-green-700 border-green-300",
             },
             certificate_preparing: {
-                icon: FileText,
-                label: "Certificate Preparing",
-                className: "bg-purple-50 text-purple-700 border-purple-300",
+                icon: CheckCircle,
+                label: "Application Approved",
+                className: "bg-green-50 text-green-700 border-green-300",
             },
             certificate_ready: {
-                icon: Award,
-                label: "Ready for Pickup",
-                className: "bg-emerald-50 text-emerald-800 border-emerald-400",
+                icon: CheckCircle,
+                label: "Application Approved",
+                className: "bg-green-50 text-green-700 border-green-300",
             },
             completed: {
                 icon: CheckCircle,
-                label: "Completed",
+                label: "Application Approved",
                 className: "bg-green-50 text-green-700 border-green-300",
             },
             released: {
-                icon: Award,
-                label: "Released",
-                className: "bg-green-100 text-green-800 border-green-400",
+                icon: CheckCircle,
+                label: "Application Approved",
+                className: "bg-green-50 text-green-700 border-green-300",
             },
         };
 
@@ -192,10 +198,9 @@ export function MyApplicationsList({ applications }) {
         }).format(amount);
     };
 
-    // Handle view details
+    // Handle view details — opens the dedicated details page (application + requirements)
     const handleViewDetails = (application) => {
-        setSelectedApplication(application);
-        setIsModalOpen(true);
+        router.visit(route('my-applications.show', application.id));
     };
 
     const handleAttachReceipt = () => {
@@ -498,7 +503,7 @@ export function MyApplicationsList({ applications }) {
                                                     {application.applicant_name || "N/A"}
                                                 </h3>
                                                 
-                                                {/* Project Type Badge - Enhanced */}
+                                                {/* Locational Clearance Badge - Enhanced */}
                                                 {application.project_type && (
                                                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-xl border-2 border-blue-200 shadow-sm">
                                                         <Award className="h-4 w-4 text-blue-600" />
@@ -514,39 +519,100 @@ export function MyApplicationsList({ applications }) {
                                             
                                             {/* Action Buttons - Responsive */}
                                             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
-                                                {/* Upload Receipt button - only show if application is approved */}
+                                              {['payment_confirmed', 'certificate_preparing', 'certificate_ready', 'released'].includes(String(application.request_status || application.status || '').toLowerCase()) ? (
+                                                <>
+                                                    {/* Approved — applicant can generate both the clearance and the
+                                                        certificate; all other actions removed */}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            window.open(route('print-clearance', application.id), '_blank');
+                                                        }}
+                                                        className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-200 text-[10px] sm:text-xs font-semibold"
+                                                        title="Generate Clearance"
+                                                    >
+                                                        <FileText className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                        <span className="hidden sm:inline">Generate Clearance</span>
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            window.open(route('print-certificate', application.id), '_blank');
+                                                        }}
+                                                        className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-emerald-600 hover:bg-emerald-50 border border-emerald-200 text-[10px] sm:text-xs font-semibold"
+                                                        title="Generate Certificate"
+                                                    >
+                                                        <Award className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                        <span className="hidden sm:inline">Generate Certificate</span>
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleViewDetails(application);
+                                                        }}
+                                                        className="h-8 w-8 sm:h-10 sm:w-10 p-0 rounded-xl text-blue-600 hover:bg-blue-100 transition-all duration-300 hover:scale-110 hover:rotate-3"
+                                                        title="View Details"
+                                                    >
+                                                        <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
+                                                    </Button>
+                                                </>
+                                              ) : (
+                                                <>
+                                                {/* Notarized application form and any other requirement documents are
+                                                    uploaded from the View Application Details page, not from here. */}
+
+                                                {/* Order of Payment — issued only after the Zoning Administrator approves. */}
                                                 {application.status?.toLowerCase() === 'approved' && (
-                                                    <>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                window.location.href = route('my-applications.order-of-payment', application.id);
-                                                            }}
-                                                            className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-purple-600 hover:bg-purple-50 border border-purple-200 text-[10px] sm:text-xs font-semibold"
-                                                            title="Order of Payment"
-                                                        >
-                                                            <FileText className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                                            <span className="hidden sm:inline">Order of Payment</span>
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                window.location.href = route('receipt.upload.page', application.id);
-                                                            }}
-                                                            className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-green-600 hover:bg-green-50 border border-green-200 text-[10px] sm:text-xs font-semibold"
-                                                            title="Upload Payment Receipt"
-                                                        >
-                                                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                                            <span className="hidden sm:inline">Receipt</span>
-                                                        </Button>
-                                                    </>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            window.location.href = route('my-applications.order-of-payment', application.id);
+                                                        }}
+                                                        className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-purple-600 hover:bg-purple-50 border border-purple-200 text-[10px] sm:text-xs font-semibold"
+                                                        title="View the Order of Payment"
+                                                    >
+                                                        <FileText className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                        <span className="hidden sm:inline">Order of Payment</span>
+                                                    </Button>
+                                                )}
+
+                                                {/* Record Payment — pay at the Treasury, then record the OR number and
+                                                    upload the receipt. Only once approved. */}
+                                                {application.status?.toLowerCase() === 'approved' && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            window.location.href = route('receipt.upload.page', application.id);
+                                                        }}
+                                                        className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-green-600 hover:bg-green-50 border border-green-200 text-[10px] sm:text-xs font-semibold"
+                                                        title="Record your payment and upload the official receipt"
+                                                    >
+                                                        <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                        <span className="hidden sm:inline">Record Payment</span>
+                                                    </Button>
                                                 )}
                                                 
-                                                {/* Edit Button - Only for rejected or returned applications */}
+                                                {/* Reviewed by the officer but not yet approved — nothing to pay yet. */}
+                                                {application.status?.toLowerCase() === 'reviewed' && (
+                                                    <span
+                                                        className="inline-flex items-center gap-1.5 h-8 sm:h-9 px-2 sm:px-3 rounded-lg bg-sky-50 text-sky-700 border border-sky-200 text-[10px] sm:text-xs font-semibold"
+                                                        title="Your application is with the Zoning Administrator for approval. You will be able to pay once it is approved."
+                                                    >
+                                                        <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                                                        <span className="hidden sm:inline">Awaiting Approval</span>
+                                                    </span>
+                                                )}
+                                                {/* Edit Button - Only for denied or returned applications */}
                                                 {(application.status?.toLowerCase() === 'rejected' || application.status?.toLowerCase() === 'returned') && (
                                                     <Button
                                                         variant="ghost"
@@ -574,9 +640,7 @@ export function MyApplicationsList({ applications }) {
                                                     className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-[#0d1f5c] hover:bg-[#0d1f5c]/5 border border-[#0d1f5c]/20 text-[10px] sm:text-xs font-semibold"
                                                     title="Print Application Form"
                                                 >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a1 1 0 00-1-1H9a1 1 0 00-1 1v4h8z" />
-                                                    </svg>
+                                                    <Printer className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
                                                     <span className="hidden sm:inline">Print</span>
                                                 </Button>
                                                 
@@ -593,6 +657,8 @@ export function MyApplicationsList({ applications }) {
                                                 >
                                                     <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
                                                 </Button>
+                                                </>
+                                              )}
                                             </div>
                                         </div>
                                     </div>
@@ -1117,9 +1183,7 @@ export function MyApplicationsList({ applications }) {
                                                     onClick={() => window.open(route('my-applications.print', selectedApplication.id), '_blank')}
                                                     className="w-full sm:w-auto px-4 sm:px-6 border-[#0d1f5c]/30 text-[#0d1f5c] hover:bg-[#0d1f5c]/5 font-semibold"
                                                 >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a1 1 0 00-1-1H9a1 1 0 00-1 1v4h8z" />
-                                                    </svg>
+                                                    <Printer className="h-4 w-4 mr-2 shrink-0" />
                                                     Print Form
                                                 </Button>
                                                 <Button
@@ -1183,9 +1247,7 @@ export function MyApplicationsList({ applications }) {
                             <div className="flex items-start gap-3">
                                 <div className="flex-shrink-0">
                                     <div className="p-2 bg-yellow-100 rounded-full">
-                                        <svg className="h-5 w-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                        </svg>
+                                        <AlertTriangle className="h-5 w-5 text-yellow-600" />
                                     </div>
                                 </div>
                                 <div className="flex-1">

@@ -154,6 +154,100 @@ class RequirementDocumentController extends Controller
     }
 
     /**
+     * Upload the notarized application form (requirement #1) after submission.
+     *
+     * This requirement is deliberately not collected during the application wizard:
+     * the applicant can only produce it by printing the submitted form and having
+     * it notarized, so it is uploaded afterwards from My Applications.
+     */
+    public function uploadNotarizedForm(Request $request, $id)
+    {
+        return $this->storeApplicantRequirement(
+            $request,
+            $id,
+            self::NOTARIZED_APPLICATION_FORM_ID,
+            '1. Accomplished and notarized APPLICATION FORM',
+            'Notarized application form uploaded successfully.'
+        );
+    }
+
+    /**
+     * Applicant uploads a document against any single requirement of their own
+     * application, from the Application Details page. Same storage rules as the
+     * notarized-form upload — just parameterised by requirement.
+     */
+    public function uploadApplicantRequirement(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'requirement_id' => 'required',
+            'requirement_name' => 'nullable|string|max:255',
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ]);
+
+        return $this->storeApplicantRequirement(
+            $request,
+            $id,
+            $validated['requirement_id'],
+            $validated['requirement_name'] ?? ('Requirement #' . $validated['requirement_id']),
+            'Document uploaded successfully.'
+        );
+    }
+
+    /**
+     * Shared implementation: ownership check, private-disk storage, and marking
+     * the requirement as supplied on the request's verified_requirements map.
+     */
+    private function storeApplicantRequirement(Request $request, $id, $requirementId, string $requirementName, string $successMessage)
+    {
+        $request->validate([
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ]);
+
+        $requestModel = RequestModel::findOrFail($id);
+
+        // Applicants may only upload against their own application.
+        $currentUser = auth()->user();
+        if (!in_array($currentUser->user_type, ['admin', 'super_admin'])
+            && $requestModel->user_id !== $currentUser->id) {
+            abort(403, 'You are not authorized to upload documents for this application.');
+        }
+
+        $file = $request->file('document');
+        $filename = 'requirement_' . $requestModel->id . '_' . $requirementId . '_' . time() . '_' . uniqid()
+            . '.' . $file->getClientOriginalExtension();
+
+        $path = $file->storeAs('requirement_documents', $filename, 'local');
+
+        RequirementDocument::create([
+            'request_id' => $requestModel->id,
+            'requirement_id' => $requirementId,
+            'requirement_name' => $requirementName,
+            'file_path' => $path,
+            'original_filename' => $file->getClientOriginalName(),
+            'mime_type' => $file->getMimeType(),
+            'file_size' => $file->getSize(),
+        ]);
+
+        // NOTE: uploading a document does NOT verify the requirement. The Zoning
+        // Officer reviews the file and turns on "Mark as Verified" themselves.
+
+        \App\Services\AuditLogService::log(
+            'requirement_uploaded',
+            "{$requirementName} uploaded for request #{$requestModel->id}",
+            'Request',
+            $requestModel->id
+        );
+
+        return redirect()->back()->with('success', $successMessage);
+    }
+
+    /**
+     * Requirement id of the notarized application form, as defined in the
+     * application wizard's requirement list.
+     */
+    private const NOTARIZED_APPLICATION_FORM_ID = 1;
+
+    /**
      * Delete a requirement document
      */
     public function destroy($id)

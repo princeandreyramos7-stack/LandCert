@@ -70,7 +70,7 @@ export function AnalyticsDashboard({ analytics }) {
         value: item.count
     }));
 
-    // Project types for pie chart
+    // Locational Clearance breakdown for pie chart
     const projectTypeData = project_types.map(item => ({
         name: item.project_type || 'Other',
         value: item.count
@@ -240,10 +240,10 @@ export function AnalyticsDashboard({ analytics }) {
                             </CardContent>
                         </Card>
 
-                        {/* Project Types Distribution */}
+                        {/* Locational Clearance Distribution */}
                         <Card className="md:col-span-2">
                             <CardHeader>
-                                <CardTitle>Project Types Distribution</CardTitle>
+                                <CardTitle>Locational Clearance Distribution</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <ResponsiveContainer width="100%" height={300}>
@@ -346,7 +346,7 @@ export function AnalyticsDashboard({ analytics }) {
                                     </Badge>
                                 </div>
                                 <div className="flex justify-between items-center p-3 bg-rose-50 rounded-lg">
-                                    <span className="text-sm font-medium">Rejected</span>
+                                    <span className="text-sm font-medium">Denied</span>
                                     <Badge variant="outline" className="text-rose-700 border-rose-300">
                                         {payment_stats.rejected_payments}
                                     </Badge>

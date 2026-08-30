@@ -15,6 +15,8 @@ class Property extends Model
         'lot_area_sqm',
         'bldg_improvement_sqm',
         'lot_number',
+        'tax_declaration_no',
+        'zone_classification',
         'title_number',
         'right_over_land',
         'existing_land_use',

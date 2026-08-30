@@ -3,12 +3,14 @@ import AdminLayout from "@/Layouts/AdminLayout";
 import { AdminUserManagement } from "@/Components/Admin/Users";
 import { Toaster } from "@/Components/ui/toaster";
 import { Users } from "lucide-react";
+import { LiveRefresh } from "@/Components/LiveRefresh";
 
 export default function AdminUsers({ users }) {
     return (
         <>
             <Head title="Users — CPDO Admin"/>
             <AdminLayout title="User Management" breadcrumbs={[{ label: "Dashboard", href: "/admin/dashboard" }]}>
+                <LiveRefresh only={["users"]} items={users} label="users" className="justify-end mb-4" />
                 {/* Page header card */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-5">
                     <div className="flex items-center gap-3">

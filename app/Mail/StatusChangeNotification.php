@@ -130,7 +130,7 @@ class StatusChangeNotification extends Mailable
         $labels = [
             'pending' => 'Pending Review',
             'verified' => 'Verified',
-            'rejected' => 'Rejected',
+            'rejected' => 'Denied',
             'approved' => 'Approved',
             'generated' => 'Generated',
             'sent' => 'Sent',

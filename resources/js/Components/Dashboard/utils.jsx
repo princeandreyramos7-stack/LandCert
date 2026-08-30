@@ -1,9 +1,15 @@
 import { CheckCircle2, XCircle, Clock } from "lucide-react";
 
+// Everything after the payment is verified reads simply as "Application Approved".
+const PAID_STATUSES = ["payment_confirmed", "certificate_preparing", "certificate_ready", "released", "approved_with_payment"];
+
 /**
  * Get status badge color classes
  */
 export const getStatusColor = (status) => {
+    if (PAID_STATUSES.includes(status)) {
+        return "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-300";
+    }
     switch (status) {
         case "approved":
             return "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-300";
@@ -18,6 +24,7 @@ export const getStatusColor = (status) => {
  * Get status icon component
  */
 export const getStatusIcon = (status) => {
+    if (PAID_STATUSES.includes(status)) return <CheckCircle2 className="h-4 w-4" />;
     switch (status) {
         case "approved":
             return <CheckCircle2 className="h-4 w-4" />;
@@ -25,6 +32,27 @@ export const getStatusIcon = (status) => {
             return <XCircle className="h-4 w-4" />;
         default:
             return <Clock className="h-4 w-4" />;
+    }
+};
+
+/**
+ * Human-readable status label for the applicant dashboard.
+ */
+export const getStatusLabel = (status) => {
+    if (PAID_STATUSES.includes(status)) return "Application Approved";
+    switch (status) {
+        case "pending":
+            return "Pending Review";
+        case "reviewed":
+            return "Waiting for Approval";
+        case "approved":
+            return "Approved — For Payment";
+        case "rejected":
+            return "Denied";
+        default:
+            return status
+                ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ")
+                : "Pending";
     }
 };
 
@@ -61,7 +89,7 @@ export const calculateStats = (requests) => {
     const total = requests.length;
     const pending = requests.filter((r) => r.status === "pending").length;
     const approved = requests.filter((r) => r.status === "approved").length;
-    const rejected = requests.filter((r) => r.status === "rejected").length;
+    const denied = requests.filter((r) => r.status === "rejected").length;
     const withCertificates = requests.filter(
         (r) => r.payment_verified && r.certificate_number
     ).length;
@@ -77,7 +105,7 @@ export const calculateStats = (requests) => {
         total,
         pending,
         approved,
-        rejected,
+        denied,
         withCertificates,
         recentRequests,
     };

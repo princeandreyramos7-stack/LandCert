@@ -27,7 +27,7 @@ class TestEmail extends Command
                     $dummyApplication,
                     'Test Applicant',
                     '12345',
-                    'This is a test rejection email'
+                    'This is a test denial email'
                 )
             );
             

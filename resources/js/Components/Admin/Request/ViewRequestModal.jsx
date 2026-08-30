@@ -101,7 +101,7 @@ export function ViewRequestModal({ isOpen, onClose, request }) {
                         {/* Project Details */}
                         <InfoSection icon={Building2} title="Project Details">
                             <InfoField
-                                label="Project Type"
+                                label="Locational Clearance"
                                 value={request.project_type}
                             />
                             <InfoField

@@ -198,7 +198,7 @@
                     <div class="info-value">#{{ $request->id }}</div>
                 </div>
                 <div class="info-row">
-                    <div class="info-label">Project Type:</div>
+                    <div class="info-label">Locational Clearance:</div>
                     <div class="info-value">{{ $projectType }}</div>
                 </div>
                 <div class="info-row">

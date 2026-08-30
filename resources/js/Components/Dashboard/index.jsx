@@ -19,12 +19,17 @@ function formatDate(ds) {
     return new Date(ds).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" });
 }
 
+const APPROVED_CFG = { label: "Application Approved", icon: CheckCircle, bg: "bg-green-50", text: "text-green-700", border: "border-green-200", dot: "bg-green-500" };
 const STATUS_MAP = {
     pending:      { label: "Pending",      icon: Clock,        bg: "bg-yellow-50",  text: "text-yellow-700",  border: "border-yellow-200", dot: "bg-yellow-500" },
     approved:     { label: "Approved",     icon: CheckCircle,  bg: "bg-green-50",   text: "text-green-700",   border: "border-green-200",  dot: "bg-green-500"  },
-    rejected:     { label: "Rejected",     icon: XCircle,      bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200",    dot: "bg-red-500"    },
+    rejected:     { label: "Denied",     icon: XCircle,      bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200",    dot: "bg-red-500"    },
     "under review":{ label: "Under Review", icon: AlertCircle, bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200",   dot: "bg-blue-500"   },
-    released:     { label: "Released",     icon: CheckCircle,  bg: "bg-purple-50",  text: "text-purple-700",  border: "border-purple-200", dot: "bg-purple-500" },
+    // Everything after the payment is verified is just "Application Approved".
+    payment_confirmed:     APPROVED_CFG,
+    certificate_preparing: APPROVED_CFG,
+    certificate_ready:     APPROVED_CFG,
+    released:              APPROVED_CFG,
 };
 
 function statusCfg(s) {
@@ -124,7 +129,7 @@ export function Dashboard({ requests }) {
             accent: { border: "border-green-50", left: "border-l-green-500", iconBg: "bg-green-50", iconColor: "text-green-600" },
         },
         {
-            label: "Rejected",
+            label: "Denied",
             value: stats.rejected,
             icon: XCircle,
             desc: "Not approved",
@@ -152,7 +157,7 @@ export function Dashboard({ requests }) {
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <div className="w-1 h-5 rounded-full bg-[#d4a017]"/>
-                            <p className="text-[#d4a017] text-xs font-black tracking-[0.2em] uppercase">CPDO LandCert</p>
+                            <p className="text-[#d4a017] text-xs font-black tracking-[0.2em] uppercase">CPDO L.C</p>
                         </div>
                         <h1 className="text-2xl lg:text-3xl font-black leading-tight">
                             Good day, {firstName}!

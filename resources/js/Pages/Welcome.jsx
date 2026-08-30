@@ -1,4 +1,5 @@
 import { Head, Link } from "@inertiajs/react";
+import { LayoutDashboard, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, MapPin, Phone, Mail, Clock, MonitorSmartphone, ClipboardList, Landmark } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 /* ── Scroll-reveal wrapper ────────────────────────────────────────────────── */
@@ -59,7 +60,9 @@ export default function Welcome({ auth }) {
                     {/* Logo */}
                     <div className="flex items-center gap-3"
                         style={{ opacity: in_ ? 1 : 0, transform: in_ ? "none" : "translateX(-14px)", transition: "all .7s ease" }}>
-                        <img src="/images/Ilagan.png" alt="CPDO L.C Logo" className="w-9 h-9 object-contain"/>
+                        <div className="w-10 h-10 rounded-full border-2 border-[#d4a017]/40 overflow-hidden shrink-0">
+                            <img src="/images/ilagan1.png" alt="City of Ilagan" className="w-full h-full object-cover"/>
+                        </div>
                         <div className="leading-tight">
                             <p className="text-white font-black text-xs tracking-[0.15em] uppercase">Republic of the Philippines</p>
                             <p className="text-[#d4a017] font-black text-sm tracking-wide uppercase">CPDO L.C</p>
@@ -119,8 +122,8 @@ export default function Welcome({ auth }) {
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <div className="w-14 h-14 rounded-full border-2 border-[#d4a017]/40 bg-[#d4a017]/10 flex items-center justify-center shrink-0">
-                                <img src="/images/Ilagan.png" alt="CPDO L.C" className="w-9 h-9 object-contain"/>
+                            <div className="w-14 h-14 rounded-full border-2 border-[#d4a017]/40 overflow-hidden shrink-0">
+                                <img src="/images/ilagan1.png" alt="City of Ilagan" className="w-full h-full object-cover"/>
                             </div>
                             <div>
                                 <p className="text-blue-300 text-sm font-semibold">Welcome to</p>
@@ -170,7 +173,9 @@ export default function Welcome({ auth }) {
                             {/* Front card */}
                             <div className="relative rounded-2xl bg-white/95 shadow-2xl p-6 border border-gray-100">
                                 <div className="flex items-center gap-3 pb-4 border-b border-gray-200 mb-4">
-                                    <img src="/images/Ilagan.png" alt="Logo" className="w-10 h-10 object-contain"/>
+                                    <div className="w-10 h-10 rounded-full border border-[#0d1f5c]/20 overflow-hidden shrink-0">
+                                        <img src="/images/ilagan1.png" alt="City of Ilagan" className="w-full h-full object-cover"/>
+                                    </div>
                                     <div>
                                         <p className="text-[#0d1f5c] font-black text-xs uppercase tracking-widest">Republic of the Philippines</p>
                                         <p className="text-[#0d1f5c] font-black text-sm">City of Ilagan, Isabela</p>
@@ -195,7 +200,7 @@ export default function Welcome({ auth }) {
                                 </div>
                                 <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
                                     <div className="w-16 h-16 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-gray-400">
-                                        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
+                                        <LayoutDashboard className="w-8 h-8" strokeWidth={1} />
                                     </div>
                                     <div className="text-right">
                                         <p className="text-[10px] text-gray-400 uppercase tracking-widest">Authorized by</p>
@@ -206,7 +211,7 @@ export default function Welcome({ auth }) {
                             </div>
                             {/* Floating badge */}
                             <div className="absolute -bottom-4 -left-4 px-4 py-2 rounded-xl bg-[#d4a017] text-white text-xs font-bold shadow-lg flex items-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <CheckCircle2 className="w-4 h-4" strokeWidth={2.5} />
                                 Digitally Verified
                             </div>
                         </div>
@@ -216,7 +221,7 @@ export default function Welcome({ auth }) {
                 {/* Scroll cue */}
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1" style={{ animation: "cpdo-bounce 2s ease-in-out infinite" }}>
                     <span className="text-blue-400/60 text-[10px] tracking-[0.3em] uppercase">Scroll</span>
-                    <svg className="w-4 h-4 text-blue-400/60" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+                    <ChevronDown className="w-4 h-4 text-blue-400/60" />
                 </div>
             </section>
 
@@ -235,24 +240,26 @@ export default function Welcome({ auth }) {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {[
                             {
-                                emoji: "🖥️",
+                                icon: MonitorSmartphone,
                                 title: "Apply Online, Anytime",
                                 desc: "Submit your land use permit applications from anywhere — no need to visit the office. Available 24/7.",
                             },
                             {
-                                emoji: "📋",
+                                icon: ClipboardList,
                                 title: "Track Your Application",
                                 desc: "Monitor the real-time status of your application from submission to approval, right on your dashboard.",
                             },
                             {
-                                emoji: "🏛️",
+                                icon: Landmark,
                                 title: "Official Government Certificates",
                                 desc: "Receive 100% official and verifiable certificates issued directly by Ilagan City's CPDO.",
                             },
                         ].map((item, i) => (
                             <Reveal key={i} delay={i * 100}>
                                 <div className="flex flex-col items-center text-center p-8 rounded-2xl bg-[#0d1f5c]/60 border border-[#1a3a8f]/60 hover:border-[#d4a017]/50 hover:bg-[#0d1f5c]/80 transition-all duration-300 h-full">
-                                    <div className="text-6xl mb-5 leading-none">{item.emoji}</div>
+                                    <div className="mb-5 w-16 h-16 rounded-2xl bg-[#d4a017]/15 border border-[#d4a017]/30 flex items-center justify-center">
+                                        <item.icon className="w-8 h-8 text-[#d4a017]" strokeWidth={1.75} />
+                                    </div>
                                     <h3 className="text-white font-bold text-lg mb-3">{item.title}</h3>
                                     <p className="text-blue-200/70 text-sm leading-relaxed">{item.desc}</p>
                                 </div>
@@ -281,18 +288,18 @@ export default function Welcome({ auth }) {
                         <div className="bg-white rounded-2xl shadow-2xl p-8 lg:p-10">
                             {/* Steps row */}
                             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                                <Step n="1" label={"Create an\naccount"}/>
+                                <Step n="1" label={"Create & verify\nyour account"}/>
                                 {/* Arrow */}
                                 <div className="hidden sm:block text-gray-300 text-2xl font-thin shrink-0">›</div>
-                                <Step n="2" label={"Login your\naccount"}/>
+                                <Step n="2" label={"Fill out the\napplication form"}/>
                                 <div className="hidden sm:block text-gray-300 text-2xl font-thin shrink-0">›</div>
-                                <Step n="3" label={"Select permit\ntype & fill form"}/>
+                                <Step n="3" label={"Submit your\nrequirements"}/>
                                 <div className="hidden sm:block text-gray-300 text-2xl font-thin shrink-0">›</div>
-                                <Step n="4" label={"Submit\nDocuments"}/>
+                                <Step n="4" label={"Officer review &\nAdministrator approval"}/>
                                 <div className="hidden sm:block text-gray-300 text-2xl font-thin shrink-0">›</div>
-                                <Step n="5" label={"Pay the\nFee"}/>
+                                <Step n="5" label={"Pay the fee &\nupload your receipt"}/>
                                 <div className="hidden sm:block text-gray-300 text-2xl font-thin shrink-0">›</div>
-                                <Step n="6" label={"Receive your\nCertificate"}/>
+                                <Step n="6" label={"Download your\nCertificate"}/>
                             </div>
                         </div>
                     </Reveal>
@@ -325,7 +332,7 @@ export default function Welcome({ auth }) {
                         {/* Prev */}
                         <button onClick={prevReview}
                             className="shrink-0 w-10 h-10 rounded-full border-2 border-[#1a3a8f]/30 text-[#1a3a8f] hover:bg-[#0d1f5c] hover:text-white hover:border-[#0d1f5c] transition-all flex items-center justify-center shadow">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+                            <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
                         </button>
 
                         {/* Cards */}
@@ -342,7 +349,7 @@ export default function Welcome({ auth }) {
                         {/* Next */}
                         <button onClick={nextReview}
                             className="shrink-0 w-10 h-10 rounded-full border-2 border-[#1a3a8f]/30 text-[#1a3a8f] hover:bg-[#0d1f5c] hover:text-white hover:border-[#0d1f5c] transition-all flex items-center justify-center shadow">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+                            <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
                         </button>
                     </div>
                 </div>
@@ -355,7 +362,9 @@ export default function Welcome({ auth }) {
                         {/* Brand */}
                         <div>
                             <div className="flex items-center gap-3 mb-4">
-                                <img src="/images/Ilagan.png" alt="Logo" className="w-9 h-9 object-contain"/>
+                                <div className="w-10 h-10 rounded-full border border-white/20 overflow-hidden shrink-0">
+                                    <img src="/images/ilagan1.png" alt="City of Ilagan" className="w-full h-full object-cover"/>
+                                </div>
                                 <div>
                                     <p className="text-white font-black text-sm tracking-widest uppercase">CPDO L.C</p>
                                     <p className="text-[#d4a017] text-xs font-semibold">City of Ilagan, Isabela</p>
@@ -387,19 +396,19 @@ export default function Welcome({ auth }) {
                             <h4 className="text-white font-bold mb-4 text-sm tracking-wide">Contact Us</h4>
                             <ul className="space-y-3 text-blue-300/70 text-sm">
                                 <li className="flex items-start gap-2">
-                                    <svg className="w-4 h-4 mt-0.5 text-[#d4a017] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                                    <MapPin className="w-4 h-4 mt-0.5 text-[#d4a017] shrink-0" />
                                     Ground Floor, City Hall Bldg,<br/>City of Ilagan, Isabela
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <svg className="w-4 h-4 text-[#d4a017] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
+                                    <Phone className="w-4 h-4 text-[#d4a017] shrink-0" />
                                     624-0009
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <svg className="w-4 h-4 text-[#d4a017] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                                    <Mail className="w-4 h-4 text-[#d4a017] shrink-0" />
                                     cpdo@cityofilagan.gov.ph
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <svg className="w-4 h-4 text-[#d4a017] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>
+                                    <Clock className="w-4 h-4 text-[#d4a017] shrink-0" />
                                     Mon – Fri: 8:00 AM – 5:00 PM
                                 </li>
                             </ul>

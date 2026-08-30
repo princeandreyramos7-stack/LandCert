@@ -27,8 +27,9 @@ class UpdateDecisionNumbers extends Command
         foreach ($requests as $request) {
             $projectType = $request->project->project_type ?? 'CZC';
             
-            // Generate new decision number
-            $newDecisionNumber = $request->generateDecisionNumber($projectType);
+            // Generate new decision number, dated from when the application was
+            // created so MM-YY matches its application number.
+            $newDecisionNumber = $request->generateDecisionNumber($projectType, $request->created_at);
             
             $oldNumber = $request->decision_number ?? 'NULL';
             $request->decision_number = $newDecisionNumber;

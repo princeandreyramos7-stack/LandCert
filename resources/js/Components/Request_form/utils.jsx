@@ -140,7 +140,7 @@ export const validateStep1 = (data) => {
 export const validateStep2 = (data) => {
     const errors = [];
 
-    // Project Type is now optional - admin can update later
+    // Locational Clearance is now optional - admin can update later
     // No validation needed for project_type
 
     // Project Nature (Required)
@@ -252,7 +252,7 @@ export const validateStep3 = (data) => {
     return errors;
 };
 
-export const validateStep4 = (data, requirements = [], existingDocuments = {}) => {
+export const validateStep4 = (data, requirements = [], existingDocuments = {}, requirementFiles = null) => {
     const errors = [];
 
     // Get main requirements
@@ -264,13 +264,23 @@ export const validateStep4 = (data, requirements = [], existingDocuments = {}) =
     );
 
     // Check if at least one file is uploaded for each main requirement
-    // Consider BOTH new uploads AND existing documents
-    const uploads = data.requirement_uploads || {};
+    // Consider BOTH new uploads AND existing documents.
+    // Files live outside the Inertia form (cloneDeep would destroy them), so they
+    // are passed in explicitly; fall back to form data for older call sites.
+    const uploads = requirementFiles || data.requirement_uploads || {};
     
     mainRequirements.forEach((req) => {
+        // Respect the requirement's own `required` flag. The notarized application
+        // form is deliberately optional here — it can only be produced after the
+        // form is submitted, printed and notarized, so it is uploaded later from
+        // My Applications.
+        if (req.required === false) {
+            return;
+        }
+
         const reqFiles = uploads[req.id] || [];
         const existingFiles = existingDocuments[req.id] || [];
-        
+
         // Valid if either new files uploaded OR existing files present
         if (reqFiles.length === 0 && existingFiles.length === 0) {
             errors.push(`${req.name} is required - please upload at least one file`);

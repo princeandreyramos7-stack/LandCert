@@ -81,6 +81,13 @@ const parseAmountInput = (displayValue) => {
     return cleaned;
 };
 
+/** Human-readable labels for a payment record's verification status. */
+const PAYMENT_STATUS_LABELS = {
+    pending: 'Pending Verification',
+    verified: 'Verified',
+    rejected: 'Denied',
+};
+
 export default function UploadReceipt({ application, existingPayment }) {
     const [receiptFile, setReceiptFile] = useState(null);
     const [receiptPreview, setReceiptPreview] = useState(null);
@@ -96,6 +103,8 @@ export default function UploadReceipt({ application, existingPayment }) {
         hasAdminSetAmount ? String(application.report_amount) : ''
     );
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+    // Official Receipt number from the Treasury — entered by the applicant.
+    const [orNumber, setOrNumber] = useState('');
 
     // Handle file selection
     const handleFileSelect = (event) => {
@@ -159,6 +168,15 @@ export default function UploadReceipt({ application, existingPayment }) {
             return;
         }
 
+        if (!orNumber.trim()) {
+            toast({
+                variant: 'destructive',
+                title: 'OR Number required',
+                description: 'Enter the Official Receipt (OR) number printed on your Treasury receipt.',
+            });
+            return;
+        }
+
         setConfirmOpen(true);
     };
 
@@ -170,6 +188,7 @@ export default function UploadReceipt({ application, existingPayment }) {
         const formData = new FormData();
         formData.append('receipt', receiptFile);
         formData.append('request_id', application.id);
+        formData.append('or_number', orNumber.trim());
         formData.append('amount', paymentAmount);
         formData.append('payment_method', 'cash');
         formData.append('payment_date', paymentDate);
@@ -226,9 +245,9 @@ export default function UploadReceipt({ application, existingPayment }) {
     // Get payment status badge
     const getPaymentStatusBadge = (status) => {
         const statusConfig = {
-            pending: { label: 'Pending Verification', className: 'bg-amber-50 text-amber-700 border-amber-300' },
-            verified: { label: 'Verified', className: 'bg-green-50 text-green-700 border-green-300' },
-            rejected: { label: 'Rejected', className: 'bg-red-50 text-red-700 border-red-300' },
+            pending: { label: PAYMENT_STATUS_LABELS.pending, className: 'bg-amber-50 text-amber-700 border-amber-300' },
+            verified: { label: PAYMENT_STATUS_LABELS.verified, className: 'bg-green-50 text-green-700 border-green-300' },
+            rejected: { label: PAYMENT_STATUS_LABELS.rejected, className: 'bg-red-50 text-red-700 border-red-300' },
         };
 
         const config = statusConfig[status] || statusConfig.pending;
@@ -286,7 +305,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                     <p className="font-semibold">{application.applicant_name}</p>
                                 </div>
                                 <div>
-                                    <p className="text-gray-500">Project Type</p>
+                                    <p className="text-gray-500">Locational Clearance</p>
                                     <p className="font-semibold">{application.project_type}</p>
                                 </div>
                                 <div>
@@ -302,13 +321,14 @@ export default function UploadReceipt({ application, existingPayment }) {
                         <Alert className="border-amber-200 bg-amber-50">
                             <AlertCircle className="h-4 w-4 text-amber-600" />
                             <AlertDescription className="text-amber-800">
-                                <strong>Payment Receipt Upload Not Available</strong>
+                                <strong>Recording Payment Not Available Yet</strong>
                                 <p className="mt-2 text-sm">
-                                    You can only upload payment receipts after your application has been approved by the admin.
+                                    {application.status?.toLowerCase() === 'reviewed'
+                                        ? 'The Zoning Officer has reviewed your application. It is now with the Zoning Administrator for approval — you will be able to pay once it is approved.'
+                                        : 'You can record your payment once your application has been approved by the Zoning Administrator.'}
+                                    </p>
+                                    <p className="mt-2 text-sm">
                                     Current status: <strong>{application.status}</strong>
-                                </p>
-                                <p className="mt-2 text-sm">
-                                    Please wait for your application to be reviewed and approved before uploading your payment receipt.
                                 </p>
                             </AlertDescription>
                         </Alert>
@@ -323,10 +343,10 @@ export default function UploadReceipt({ application, existingPayment }) {
                                 <div className="mt-2 space-y-1 text-sm">
                                     <p>• Receipt Number: <strong>{existingPayment.receipt_number}</strong></p>
                                     <p>• Amount: <strong>{formatCurrency(existingPayment.amount)}</strong></p>
-                                    <p>• Status: <strong>{existingPayment.payment_status}</strong></p>
+                                    <p>• Status: <strong>{PAYMENT_STATUS_LABELS[existingPayment.payment_status] || existingPayment.payment_status}</strong></p>
                                     <p>• Submitted: <strong>{new Date(existingPayment.created_at).toLocaleDateString()}</strong></p>
                                     {existingPayment.payment_status === 'rejected' && existingPayment.rejection_reason && (
-                                        <p className="text-red-700">• Rejection Reason: <strong>{existingPayment.rejection_reason}</strong></p>
+                                        <p className="text-red-700">• Denial Reason: <strong>{existingPayment.rejection_reason}</strong></p>
                                     )}
                                 </div>
                                 {existingPayment.payment_status === 'pending' && (
@@ -336,7 +356,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                     <p className="mt-2 text-xs">Your payment has been verified! Your certificate will be prepared soon.</p>
                                 )}
                                 {existingPayment.payment_status === 'rejected' && (
-                                    <p className="mt-2 text-xs">Your payment was rejected. You can upload a new receipt below.</p>
+                                    <p className="mt-2 text-xs">Your payment was denied. You can upload a new receipt below.</p>
                                 )}
                             </AlertDescription>
                         </Alert>
@@ -447,6 +467,26 @@ export default function UploadReceipt({ application, existingPayment }) {
                                             className="w-full"
                                         />
                                     </div>
+                                </div>
+
+                                {/* OR Number */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="or_number" className="flex items-center gap-2">
+                                        <Receipt className="h-4 w-4 text-blue-600 shrink-0" />
+                                        Official Receipt (OR) Number <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input
+                                        id="or_number"
+                                        type="text"
+                                        autoComplete="off"
+                                        value={orNumber}
+                                        onChange={(e) => setOrNumber(e.target.value)}
+                                        placeholder="e.g., 1234567"
+                                        className="w-full"
+                                    />
+                                    <p className="text-xs text-gray-500">
+                                        Enter the OR number exactly as printed on the receipt the Treasury issued for this payment.
+                                    </p>
                                 </div>
 
                                 {/* File Upload */}
@@ -621,6 +661,15 @@ export default function UploadReceipt({ application, existingPayment }) {
                                     <span className="font-semibold text-gray-900">
                                         {application.application_number}
                                     </span>
+                                </p>
+                            </div>
+
+                            {/* OR number */}
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-gray-50 px-3 py-2">
+                                <Receipt className="h-4 w-4 shrink-0 text-gray-400" />
+                                <p className="min-w-0 break-words text-xs text-gray-600">
+                                    OR Number{' '}
+                                    <span className="font-semibold text-gray-900">{orNumber}</span>
                                 </p>
                             </div>
 

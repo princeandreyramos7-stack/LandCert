@@ -113,7 +113,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                             { label: "Total Revenue", value: `₱${fmt(stats.total_revenue)}`, sub: `${stats.verified || 0} verified`, icon: DollarSign },
                             { label: "This Month",    value: `₱${fmt(stats.this_month)}`,    sub: `₱${fmt(stats.last_month)} last month`, icon: TrendingUp },
                             { label: "Pending",       value: stats.pending || 0,             sub: `₱${fmt(stats.pending_amount)} held`, icon: Clock },
-                            { label: "Rejected",      value: stats.rejected || 0,            sub: `${stats.total > 0 ? ((stats.rejected / stats.total) * 100).toFixed(1) : 0}% rate`, icon: AlertCircle },
+                            { label: "Denied",      value: stats.rejected || 0,            sub: `${stats.total > 0 ? ((stats.rejected / stats.total) * 100).toFixed(1) : 0}% rate`, icon: AlertCircle },
                         ].map(({ label, value, sub, icon: Icon }) => (
                             <Card key={label} className="border border-slate-200 shadow-sm">
                                 <CardContent className="p-4">
@@ -138,7 +138,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                             { key: "all",      label: `All (${stats.total || 0})` },
                             { key: "pending",  label: `Pending (${stats.pending || 0})` },
                             { key: "verified", label: `Verified (${stats.verified || 0})` },
-                            { key: "rejected", label: `Rejected (${stats.rejected || 0})` },
+                            { key: "rejected", label: `Denied (${stats.rejected || 0})` },
                         ].map(({ key, label }) => (
                             <button key={key}
                                 onClick={() => { setStatusFilter(key); applyFilters({ payment_status: key === "all" ? "" : key }); }}
@@ -190,7 +190,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                                 <table className="w-full text-sm">
                                     <thead className="bg-slate-50 border-b border-slate-200">
                                         <tr>
-                                            {["OR #", "Applicant", "Project Type", "Amount", "Date", "Verified By", "Status", "Actions"].map(h => (
+                                            {["OR #", "Applicant", "Locational Clearance", "Amount", "Date", "Verified By", "Status", "Actions"].map(h => (
                                                 <th key={h} className={`px-4 py-3 font-semibold text-slate-600 ${h === "Amount" ? "text-right" : h === "Actions" ? "text-center" : "text-left"}`}>{h}</th>
                                             ))}
                                         </tr>
@@ -244,7 +244,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                                                                 </Button>
                                                                 <Button variant="destructive" size="sm" onClick={() => openReject(payment)}
                                                                     className="h-7 px-2 text-xs">
-                                                                    <XCircle className="h-3 w-3 mr-1" />Reject
+                                                                    <XCircle className="h-3 w-3 mr-1" />Deny
                                                                 </Button>
                                                             </>
                                                         )}
@@ -346,27 +346,27 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                 </DialogContent>
             </Dialog>
 
-            {/* Reject Modal */}
+            {/* Deny Modal */}
             <Dialog open={showReject} onOpenChange={setShowReject}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-red-700">
-                            <XCircle className="h-5 w-5" />Reject Payment
+                            <XCircle className="h-5 w-5" />Deny Payment
                         </DialogTitle>
-                        <DialogDescription>Provide a reason for rejecting this payment.</DialogDescription>
+                        <DialogDescription>Provide a reason for denying this payment.</DialogDescription>
                     </DialogHeader>
                     <div>
-                        <Label htmlFor="r-reason">Rejection Reason <span className="text-red-500">*</span></Label>
+                        <Label htmlFor="r-reason">Denial Reason <span className="text-red-500">*</span></Label>
                         <Textarea id="r-reason" value={rejectForm.rejection_reason}
                             onChange={(e) => setRejectForm({ rejection_reason: e.target.value })}
-                            placeholder="Explain why this payment is being rejected..."
+                            placeholder="Explain why this payment is being denied..."
                             rows={4} className="mt-1 resize-none" />
                     </div>
                     <DialogFooter className="mt-4">
                         <Button variant="outline" onClick={() => setShowReject(false)} disabled={processing}>Cancel</Button>
                         <Button variant="destructive" onClick={submitReject}
                             disabled={processing || !rejectForm.rejection_reason.trim()}>
-                            {processing ? "Processing..." : "Reject Payment"}
+                            {processing ? "Processing..." : "Deny Payment"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

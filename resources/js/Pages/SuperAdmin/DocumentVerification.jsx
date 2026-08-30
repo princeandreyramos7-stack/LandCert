@@ -33,36 +33,32 @@ const formatAmountForDisplay = (rawValue) => {
     return hasDecimalPoint ? `${groupedInteger}.${decimalParts.join("")}` : groupedInteger;
 };
 
-/**
- * Strips the display formatting back down to a plain number string.
- */
-const parseAmountInput = (displayValue) => {
-    let cleaned = String(displayValue).replace(/[^\d.]/g, "");
-    const firstDot = cleaned.indexOf(".");
-    if (firstDot !== -1) {
-        const integerPart = cleaned.slice(0, firstDot);
-        const decimalPart = cleaned.slice(firstDot + 1).replace(/\./g, "").slice(0, 2);
-        cleaned = `${integerPart}.${decimalPart}`;
-    }
-    return cleaned;
-};
-
 export default function DocumentVerification({ request }) {
     // Pre-select action based on current request status
     const getInitialAction = () => {
         if (request.status === 'reviewed' || request.status === 'approved') {
-            return 'reviewed';
-        } else if (request.status === 'rejected' || request.status === 'denied') {
+            return 'approved';
+        } else if (request.status === 'rejected') {
             return 'rejected';
         }
         return '';
     };
     
     const [action, setAction] = useState(getInitialAction());
+
+    // Once approved (or the certificate flow has started), the decision is final —
+    // Mark as Reviewed / Denied are locked.
+    const decisionLocked = ['approved', 'certificate_preparing', 'certificate_ready', 'released']
+        .includes(String(request.status || '').toLowerCase());
+
+    // Whether the Zoning Officer has already marked the application reviewed.
+    // If not, the Zoning Administrator reviews AND decides in one step.
+    const officerReviewed = String(request.status || '').toLowerCase() === 'reviewed';
+
     const [formData, setFormData] = useState({
         rejection_reason: request.rejection_reason || 'Lacking of Requirements',
-        payment_amount: '',
         admin_notes: request.admin_notes || '',
+        payment_amount: request.payment_amount ? String(request.payment_amount) : '',
     });
     const [loading, setLoading] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -115,7 +111,7 @@ export default function DocumentVerification({ request }) {
     const mainUploadedGroups = groupedRequirements.filter((g) => g.section !== 'additional');
     const additionalUploadedGroups = groupedRequirements.filter((g) => g.section === 'additional');
 
-    // Generate missing requirements message for rejection
+    // Generate missing requirements message for denial
     const getMissingRequirements = () => {
         const allRequirements = [...(request.requirements_reference || [])];
         const uploadedIds = new Set(groupedRequirements.map(g => g.key));
@@ -125,7 +121,7 @@ export default function DocumentVerification({ request }) {
         return 'Missing or Incomplete Requirements:\n' + missing.map(req => `- ${req.name}`).join('\n');
     };
 
-    // Update rejection reason when action changes to rejected
+    // Update denial reason when action changes to denied
     const handleActionChange = (newAction) => {
         setAction(newAction);
         if (newAction === 'rejected') {
@@ -138,6 +134,28 @@ export default function DocumentVerification({ request }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (decisionLocked) {
+            toast({
+                variant: "destructive",
+                title: "Decision Locked",
+                description: "This application has already been approved. The decision can no longer be changed.",
+            });
+            return;
+        }
+
+        if (action === 'approved') {
+            const amount = parseFloat(formData.payment_amount);
+            if (!formData.payment_amount || Number.isNaN(amount) || amount < 0) {
+                toast({
+                    variant: "destructive",
+                    title: "Treasury fee required",
+                    description: "Enter the amount the applicant must pay at the Treasury before approving.",
+                });
+                return;
+            }
+        }
+
         setShowConfirmDialog(true);
     };
 
@@ -145,48 +163,46 @@ export default function DocumentVerification({ request }) {
         setShowConfirmDialog(false);
         setLoading(true);
 
-        try {
-            await axios.post('/super-admin/review-application', {
-                request_id: request.id,
-                action: action,
-                ...formData
-            });
-
-            toast({
-                title: "Success!",
-                description: "Application review submitted successfully!",
-            });
-            
-            setTimeout(() => {
-                router.visit(route('super-admin.requests'));
-            }, 1500);
-        } catch (error) {
-            console.error('Review failed:', error);
-            
-            if (error.response?.data?.errors) {
-                const errors = error.response.data.errors;
-                const errorMessages = Object.values(errors).flat().join('\n');
-                toast({
-                    variant: "destructive",
-                    title: "Validation Error",
-                    description: errorMessages,
-                });
-            } else if (error.response?.data?.message) {
-                toast({
-                    variant: "destructive",
-                    title: "Error",
-                    description: error.response.data.message,
-                });
-            } else {
-                toast({
-                    variant: "destructive",
-                    title: "Error",
-                    description: "Failed to submit review. Please try again.",
-                });
-            }
-        } finally {
-            setLoading(false);
+        // If the Zoning Officer already reviewed, use the plain approve/deny
+        // endpoints. Otherwise the Zoning Administrator reviews AND decides in
+        // one step via review-and-decide (creates the report on the fly).
+        let endpoint;
+        let payload;
+        if (officerReviewed) {
+            endpoint = action === 'approved'
+                ? route('super-admin.approve-request', request.report_id)
+                : route('super-admin.reject-request', request.report_id);
+            payload = action === 'rejected'
+                ? { description: formData.rejection_reason }
+                : {};
+        } else {
+            endpoint = route('super-admin.review-and-decide', request.id);
+            payload = action === 'approved'
+                ? { action: 'approved', payment_amount: formData.payment_amount, admin_notes: formData.admin_notes }
+                : { action: 'rejected', rejection_reason: formData.rejection_reason };
         }
+
+        router.post(endpoint, payload, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast({
+                    title: "Success!",
+                    description: action === 'approved'
+                        ? "Application approved. The applicant has been notified."
+                        : "Application denied. The applicant has been notified.",
+                });
+                setTimeout(() => router.visit(route('super-admin.requests')), 1200);
+            },
+            onError: (errors) => {
+                toast({
+                    variant: "destructive",
+                    title: "Could not submit decision",
+                    description: Object.values(errors || {}).flat().join(' ')
+                        || "Please try again.",
+                });
+            },
+            onFinish: () => setLoading(false),
+        });
     };
 
     // Status badge configuration
@@ -194,7 +210,7 @@ export default function DocumentVerification({ request }) {
         const configs = {
             pending: { icon: Clock, color: "bg-yellow-100 text-yellow-800 border-yellow-200", label: "Pending Review" },
             approved: { icon: CheckCircle2, color: "bg-green-100 text-green-800 border-green-200", label: "Approved" },
-            rejected: { icon: XCircle, color: "bg-red-100 text-red-800 border-red-200", label: "Rejected" },
+            rejected: { icon: XCircle, color: "bg-red-100 text-red-800 border-red-200", label: "Denied" },
             reviewed: { icon: AlertCircle, color: "bg-blue-100 text-blue-800 border-blue-200", label: "Under Review" },
         };
         return configs[status] || configs.pending;
@@ -380,8 +396,8 @@ export default function DocumentVerification({ request }) {
                         </div>
                     </CardHeader>
                     <CardContent className="pt-6">
-                        {/* Previous Decision Banner */}
-                        {getInitialAction() && (
+                        {/* Previous Decision Banner — only once an actual decision exists */}
+                        {(decisionLocked || ['rejected'].includes(String(request.status || '').toLowerCase())) && (
                             <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
                                 <div className="flex items-start gap-3">
                                     <History className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -389,48 +405,68 @@ export default function DocumentVerification({ request }) {
                                         <h4 className="text-sm font-semibold text-blue-900">Previous Decision</h4>
                                         <p className="text-sm text-blue-700 mt-1">
                                             This application was previously <span className="font-bold">
-                                                {request.status === 'reviewed' || request.status === 'approved' ? 'APPROVED' : 'DENIED'}
-                                            </span>. 
+                                                {decisionLocked ? 'APPROVED' : 'DENIED'}
+                                            </span>.
                                             {request.rejection_reason && ` Reason: "${request.rejection_reason}"`}
                                             <br />
-                                            <span className="text-xs">You can modify the decision below. Changes will be logged in audit trail.</span>
+                                            <span className="text-xs">
+                                                This decision is final and can no longer be changed.
+                                            </span>
                                         </p>
                                     </div>
                                 </div>
                             </div>
                         )}
-                        
+
+                        {/* The officer has not reviewed yet — the Administrator does both steps here. */}
+                        {!officerReviewed && !decisionLocked && (
+                            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                                <div className="flex items-start gap-3">
+                                    <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-blue-900">Review &amp; decide in one step</h4>
+                                        <p className="text-sm text-blue-700 mt-1">
+                                            The Zoning Officer has not reviewed this application yet. As the Zoning
+                                            Administrator you can review it and approve or deny it now — set the
+                                            Treasury fee below when approving.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <form onSubmit={handleSubmit} className="space-y-6">
                             {/* Action Selection */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-3">
                                     Select Action <span className="text-red-500">*</span>
                                 </label>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <label className={`relative flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                                        action === 'reviewed' 
-                                            ? 'border-gray-400 bg-white' 
+                                <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${decisionLocked ? 'opacity-60 pointer-events-none' : ''}`}>
+                                    <label className={`relative flex items-center p-3 border rounded-lg transition-all ${decisionLocked ? 'cursor-not-allowed' : 'cursor-pointer'} ${
+                                        action === 'approved'
+                                            ? 'border-green-400 bg-green-50'
                                             : 'border-gray-200 bg-white hover:border-gray-300'
                                     }`}>
                                         <input
                                             type="radio"
                                             name="action"
-                                            value="reviewed"
-                                            checked={action === 'reviewed'}
+                                            value="approved"
+                                            checked={action === 'approved'}
                                             onChange={(e) => handleActionChange(e.target.value)}
+                                            disabled={decisionLocked}
                                             className="w-4 h-4"
                                             required
                                         />
                                         <div className="ml-3">
                                             <div className="font-medium text-gray-900 text-sm">
-                                                MARK AS REVIEWED
+                                                APPROVE
                                             </div>
                                         </div>
                                     </label>
 
-                                    <label className={`relative flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                                        action === 'rejected' 
-                                            ? 'border-gray-400 bg-white' 
+                                    <label className={`relative flex items-center p-3 border rounded-lg transition-all ${decisionLocked ? 'cursor-not-allowed' : 'cursor-pointer'} ${
+                                        action === 'rejected'
+                                            ? 'border-red-400 bg-red-50'
                                             : 'border-gray-200 bg-white hover:border-gray-300'
                                     }`}>
                                         <input
@@ -439,79 +475,79 @@ export default function DocumentVerification({ request }) {
                                             value="rejected"
                                             checked={action === 'rejected'}
                                             onChange={(e) => handleActionChange(e.target.value)}
+                                            disabled={decisionLocked}
                                             className="w-4 h-4"
                                             required
                                         />
                                         <div className="ml-3">
                                             <div className="font-medium text-gray-900 text-sm">
-                                                DENIED
+                                                DENY
                                             </div>
                                         </div>
                                     </label>
                                 </div>
                             </div>
 
-                            {/* Reviewed Form */}
-                            {action === 'reviewed' && (
-                                <div className="space-y-4">
-                                    <div className="bg-white rounded-lg p-5 border border-gray-200">
-                                        <div className="mb-4">
-                                            <h3 className="text-base font-semibold text-gray-900">Mark as Reviewed</h3>
-                                            <p className="text-sm text-gray-600 mt-1">
-                                                Applicant will be notified and can proceed with payment automatically.
-                                            </p>
-                                        </div>
-
-                                        {/* Payment Amount */}
-                                        <div className="mb-4">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Payment Amount <span className="text-red-500">*</span>
-                                            </label>
-                                            <div className="relative">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
-                                                <input
-                                                    type="text"
-                                                    value={formatAmountForDisplay(formData.payment_amount)}
-                                                    onChange={(e) => {
-                                                        const raw = parseAmountInput(e.target.value);
-                                                        setFormData({ ...formData, payment_amount: raw });
-                                                    }}
-                                                    required
-                                                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
-                                                    placeholder="0.00"
-                                                />
-                                            </div>
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                Enter the amount the applicant needs to pay at the Treasury Office.
-                                            </p>
-                                        </div>
-
-                                        {/* Admin Notes */}
+                            {/* Approve */}
+                            {action === 'approved' && (
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-5 space-y-4">
+                                    <div className="flex items-start gap-3">
+                                        <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Notes for Applicant (Optional)
-                                            </label>
-                                            <textarea
-                                                value={formData.admin_notes}
-                                                onChange={(e) => setFormData({ ...formData, admin_notes: e.target.value })}
-                                                rows={4}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-gray-400 focus:ring-1 focus:ring-gray-400 resize-none"
-                                                placeholder="Additional instructions or information for the applicant (optional)"
-                                            />
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                This message will be included in the notification to the applicant.
+                                            <h3 className="text-base font-semibold text-gray-900">Approve Application</h3>
+                                            <p className="text-sm text-gray-600 mt-1">
+                                                A decision number is issued and the applicant is notified so they can pay
+                                                the fee set by the Zoning Officer at the Treasury Office.
                                             </p>
                                         </div>
+                                    </div>
+
+                                    {/* Treasury fee. Read-only when the officer already set it during
+                                        review; editable when the Administrator is reviewing here. */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Amount to Pay at the Treasury <span className="text-red-500">*</span>
+                                        </label>
+                                        {officerReviewed ? (
+                                            <>
+                                                <p className="text-lg font-semibold text-gray-900">
+                                                    {request.payment_amount
+                                                        ? `₱${formatAmountForDisplay(request.payment_amount)}`
+                                                        : <span className="text-sm font-normal text-gray-500 italic">Not set by the officer</span>}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Set by the Zoning Officer when the application was reviewed.
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="relative max-w-xs">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={formData.payment_amount}
+                                                        onChange={(e) => setFormData({ ...formData, payment_amount: e.target.value })}
+                                                        placeholder="0.00"
+                                                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    The applicant will be asked to pay this amount at the Treasury Office.
+                                                </p>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Reject Form */}
+                            {/* Deny Form */}
                             {action === 'rejected' && (
                                 <div>
                                     <div className="bg-white rounded-lg p-5 border border-gray-200">
                                         <div className="mb-4">
-                                            <h3 className="text-base font-semibold text-gray-900">Rejection Reason</h3>
+                                            <h3 className="text-base font-semibold text-gray-900">Denial Reason</h3>
                                         </div>
                                         
                                         <div>
@@ -524,7 +560,7 @@ export default function DocumentVerification({ request }) {
                                                 rows="4"
                                                 required
                                                 maxLength="1000"
-                                                placeholder="Please provide a clear and detailed reason for rejection..."
+                                                placeholder="Please provide a clear and detailed reason for denial..."
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-gray-400 focus:ring-1 focus:ring-gray-400 resize-none"
                                             />
                                             <div className="flex justify-between items-center mt-2">
@@ -579,7 +615,7 @@ export default function DocumentVerification({ request }) {
                                         <div className="mt-4 flex items-start gap-3 bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3">
                                             <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                                             <p className="text-sm text-yellow-800">
-                                                <span className="font-semibold">Note:</span> The applicant will receive an email with your rejection reason. Please ensure it's clear and professional.
+                                                <span className="font-semibold">Note:</span> The applicant will receive an email with your denial reason. Please ensure it's clear and professional.
                                             </p>
                                         </div>
                                     </div>
@@ -599,7 +635,7 @@ export default function DocumentVerification({ request }) {
                                 </Link>
                                 <Button
                                     type="submit"
-                                    disabled={loading || !action}
+                                    disabled={loading || !action || decisionLocked}
                                     className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                                 >
                                     {loading ? (
@@ -607,10 +643,15 @@ export default function DocumentVerification({ request }) {
                                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                             Submitting...
                                         </>
+                                    ) : decisionLocked ? (
+                                        <>
+                                            <Check className="h-4 w-4 mr-2" />
+                                            Decision Final
+                                        </>
                                     ) : (
                                         <>
                                             <Check className="h-4 w-4 mr-2" />
-                                            Submit Review
+                                            Submit Decision
                                         </>
                                     )}
                                 </Button>
@@ -632,15 +673,19 @@ export default function DocumentVerification({ request }) {
                         
                         <div className="px-6 py-4">
                             <div className="mb-4">
-                                {action === 'reviewed' ? (
+                                {action === 'approved' ? (
                                     <div className="flex items-start gap-3">
                                         <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                                         <div>
                                             <p className="text-gray-700 mb-2">
-                                                Mark this application as <span className="font-semibold text-green-600">REVIEWED</span>
+                                                <span className="font-semibold text-green-600">APPROVE</span> this application
                                             </p>
                                             <p className="text-sm text-gray-600">
-                                                This will forward the application to SuperAdmin for final approval.
+                                                The applicant will be asked to pay{' '}
+                                                <span className="font-semibold text-gray-900">
+                                                    ₱{formatAmountForDisplay(officerReviewed ? request.payment_amount : formData.payment_amount) || '0.00'}
+                                                </span>{' '}
+                                                at the Treasury Office, and is notified immediately.
                                             </p>
                                         </div>
                                     </div>
@@ -649,7 +694,7 @@ export default function DocumentVerification({ request }) {
                                         <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                                         <div>
                                             <p className="text-gray-700 mb-2">
-                                                <span className="font-semibold text-red-600">REJECT</span> this application
+                                                <span className="font-semibold text-red-600">DENY</span> this application
                                             </p>
                                             <p className="text-sm text-gray-600 mb-2">Reason:</p>
                                             <p className="text-sm text-gray-700 italic bg-gray-50 p-2 rounded border">
@@ -682,8 +727,8 @@ export default function DocumentVerification({ request }) {
                                 onClick={confirmSubmit}
                                 disabled={loading}
                                 className={`flex-1 ${
-                                    action === 'reviewed' 
-                                        ? 'bg-green-600 hover:bg-green-700' 
+                                    action === 'approved'
+                                        ? 'bg-green-600 hover:bg-green-700'
                                         : 'bg-red-600 hover:bg-red-700'
                                 } text-white`}
                             >

@@ -74,7 +74,7 @@ export default function Register() {
             <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
                     <div className="w-1 h-6 rounded-full bg-[#d4a017]"/>
-                    <p className="text-[#d4a017] text-xs font-black tracking-[0.2em] uppercase">CPDO LandCert</p>
+                    <p className="text-[#d4a017] text-xs font-black tracking-[0.2em] uppercase">CPDO L.C</p>
                 </div>
                 <h2 className="text-2xl font-black text-[#0d1f5c]">Create Account</h2>
                 <p className="mt-1 text-sm text-gray-500">

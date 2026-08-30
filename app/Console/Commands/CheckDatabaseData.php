@@ -44,7 +44,7 @@ class CheckDatabaseData extends Command
                 ['Total Requests', $totalRequests],
                 ['Pending', $pendingCount],
                 ['Approved', $approvedCount],
-                ['Rejected', $rejectedCount],
+                ['Denied', $rejectedCount],
             ]
         );
         

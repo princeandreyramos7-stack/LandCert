@@ -34,7 +34,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                     </DialogDescription>
                 </DialogHeader>
 
-                {/* Rejection Reason Alert - Only show for rejected requests */}
+                {/* Denial Reason Alert - Only show for denied requests */}
                 {request?.status === "rejected" && request?.report_description && (
                     <div className="mx-6 mt-4 mb-2 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg shadow-sm">
                         <div className="flex items-start gap-3">
@@ -43,7 +43,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                             </div>
                             <div className="flex-1">
                                 <h3 className="text-base font-bold text-red-800 mb-2">
-                                    Application Rejected
+                                    Application Denied
                                 </h3>
                                 <p className="text-sm text-red-700 mb-3 font-medium">
                                     Reason for rejection:
@@ -149,7 +149,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                     {request?.project_type && (
                                         <div>
                                             <p className="text-xs font-medium text-gray-500">
-                                                Project Type
+                                                Locational Clearance
                                             </p>
                                             <p className="font-semibold">
                                                 {request.project_type}

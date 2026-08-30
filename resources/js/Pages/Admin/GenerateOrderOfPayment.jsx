@@ -1,12 +1,88 @@
 import React, { useRef } from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, usePage } from "@inertiajs/react";
 import { Button } from "@/Components/ui/button";
 import { Printer, Download, FileText } from "lucide-react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
+import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import html2pdf from 'html2pdf.js';
 
-export default function GenerateOrderOfPayment({ application, payment, reviewer }) {
+/** Whole-peso amount to English words, e.g. 7200 -> "Seven Thousand Two Hundred Pesos". */
+function pesoInWords(value) {
+    const amount = Math.round(Number(value) || 0);
+    if (amount <= 0) return "";
+
+    const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+        "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+    const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+    const under1000 = (n) => {
+        let s = "";
+        if (n >= 100) { s += ones[Math.floor(n / 100)] + " Hundred"; n %= 100; if (n) s += " "; }
+        if (n >= 20) { s += tens[Math.floor(n / 10)]; n %= 10; if (n) s += "-" + ones[n]; }
+        else if (n > 0) { s += ones[n]; }
+        return s;
+    };
+
+    const scales = ["", " Thousand", " Million", " Billion"];
+    let words = "";
+    let group = 0;
+    let n = amount;
+    while (n > 0) {
+        const chunk = n % 1000;
+        if (chunk) words = under1000(chunk) + scales[group] + (words ? " " + words : "");
+        n = Math.floor(n / 1000);
+        group++;
+    }
+    return `${words} Pesos`;
+}
+
+/**
+ * Signature slot for the Order of Payment: the e-signature image sits just above
+ * the printed name. Keeps a fixed-height gap when there is no signature on file,
+ * so the layout never shifts.
+ */
+function SigLine({ label, signatureUrl, name, title }) {
+    return (
+        <div>
+            <div style={{ height: '26pt', display: 'flex', alignItems: 'flex-end' }}>
+                {signatureUrl && (
+                    <img
+                        src={signatureUrl}
+                        alt=""
+                        crossOrigin="anonymous"
+                        style={{ maxHeight: '26pt', maxWidth: '150pt', objectFit: 'contain', marginBottom: '-3pt' }}
+                    />
+                )}
+            </div>
+            <div style={{ fontWeight: 'bold' }}>
+                {label}: {name}
+            </div>
+            <div style={{ marginTop: '3pt' }}>{title}</div>
+        </div>
+    );
+}
+
+export default function GenerateOrderOfPayment({ application, payment, reviewer, zoningAdministrator, paymentAmount = null }) {
     const paymentRef = useRef(null);
+
+    // This page is opened by admins, super admins and applicants — follow the viewer.
+    const userType = usePage().props.auth?.user?.user_type;
+    const Layout = userType === 'super_admin' ? SuperAdminLayout
+        : userType === 'admin' ? AdminLayout
+        : ApplicantLayout;
+    const breadcrumbs = userType === 'super_admin'
+        ? [{ label: "Dashboard", href: "/super-admin/dashboard" }, { label: "Applications", href: "/super-admin/requests" }, { label: "Order of Payment" }]
+        : userType === 'admin'
+        ? [{ label: "Dashboard", href: "/admin/dashboard" }, { label: "Applications", href: "/admin/requests" }, { label: "Order of Payment" }]
+        : [{ label: "My Applications", href: "/my-applications" }, { label: "Order of Payment" }];
+
+    // Fee to charge: an actual payment record wins, otherwise the amount the
+    // Zoning Officer set at review time.
+    const feeAmount = payment?.amount ?? paymentAmount ?? application?.payment_amount ?? null;
+    const feeDisplay = feeAmount !== null && feeAmount !== ""
+        ? `${pesoInWords(feeAmount)} (₱ ${Number(feeAmount).toLocaleString("en-PH", { minimumFractionDigits: 2 })})`
+        : "____________________________ (₱ __________)";
 
     const handlePrint = () => {
         const printContents = paymentRef.current.innerHTML;
@@ -54,13 +130,9 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer 
     };
 
     return (
-        <AdminLayout 
-            title="Generate Order of Payment" 
-            breadcrumbs={[
-                { label: "Dashboard", href: "/admin/dashboard" }, 
-                { label: "Applications", href: "/admin/requests" },
-                { label: "Order of Payment" }
-            ]}
+        <Layout
+            title="Order of Payment"
+            breadcrumbs={breadcrumbs}
         >
             <Head title={`Order of Payment - ${application.application_number}`} />
             
@@ -195,10 +267,7 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer 
 
                     <div style={{ marginBottom: '15pt' }}>
                         <span style={{ borderBottom: '1px solid #000', display: 'inline-block', minWidth: '500pt', fontWeight: 'bold', textAlign: 'center' }}>
-                            {payment?.amount ? 
-                                `Seven thousand two hundred Pesos (₱ ${Number(payment.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })})` : 
-                                'Seven thousand two hundred Pesos (₱ 7,200.00)'
-                            }
+                            {feeDisplay}
                         </span>
                     </div>
 
@@ -237,24 +306,24 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer 
                 {/* Signatures */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10pt' }}>
                     <div style={{ width: '48%' }}>
-                        <div>
-                            <span style={{ fontWeight: 'bold' }}>Prepared by: {reviewer?.name ? reviewer.name.toUpperCase() : 'MARYJANE P. BULAUAN'}</span>
-                        </div>
-                        <div style={{ marginLeft: '70pt', marginTop: '3pt' }}>
-                            Zoning Officer IV
-                        </div>
+                        <SigLine
+                            label="Prepared by"
+                            signatureUrl={reviewer?.signature_url}
+                            name={(reviewer?.name || 'MARY JANE P. BULAUAN').toUpperCase()}
+                            title="Zoning Officer IV"
+                        />
                     </div>
 
-                    <div style={{ width: '48%', textAlign: 'right' }}>
-                        <div>
-                            <span style={{ fontWeight: 'bold' }}>Approved: Engr. CRISANTA D. CONCEPCION, EnP</span>
-                        </div>
-                        <div style={{ marginTop: '3pt' }}>
-                            OIC- CPDC/Zoning Administrator
-                        </div>
+                    <div style={{ width: '48%' }}>
+                        <SigLine
+                            label="Approved"
+                            signatureUrl={zoningAdministrator?.signature_url}
+                            name={zoningAdministrator?.name || 'Engr. CRISANTA D. CONCEPCION, EnP'}
+                            title="OIC- CPDC/Zoning Administrator"
+                        />
                     </div>
                 </div>
             </div>
-        </AdminLayout>
+        </Layout>
     );
 }

@@ -6,6 +6,7 @@ import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { User, Mail, Lock, Shield, Save, Eye, EyeOff } from 'lucide-react';
+import AvatarUpload from '@/Components/AvatarUpload';
 
 export default function Profile({ mustVerifyEmail, status }) {
     const { auth } = usePage().props;
@@ -52,9 +53,12 @@ export default function Profile({ mustVerifyEmail, status }) {
                         style={{ background: "linear-gradient(135deg,#0d1f5c 0%,#1a3a8f 60%,#112068 100%)" }}>
                         <div className="relative z-10 p-6">
                             <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-full bg-[#d4a017]/20 border-2 border-[#d4a017]/30 flex items-center justify-center">
-                                    <Shield className="w-8 h-8 text-[#d4a017]" />
-                                </div>
+                                <AvatarUpload
+                                    shape="rounded-full"
+                                    sizeClass="w-16 h-16"
+                                    ring="border-2 border-white/30"
+                                    fallback={<Shield className="w-8 h-8 text-white" />}
+                                />
                                 <div>
                                     <h2 className="text-2xl font-black text-white">Super Admin Profile</h2>
                                     <p className="text-blue-200/70 text-sm mt-1">Manage your account information and security</p>

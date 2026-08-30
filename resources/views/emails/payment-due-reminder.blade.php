@@ -30,7 +30,7 @@
                 <td style="padding: 8px 0; color: #333; font-weight: 600; font-size: 14px;">#{{ $request->id }}</td>
             </tr>
             <tr>
-                <td style="padding: 8px 0; color: #666; font-size: 14px;">Project Type:</td>
+                <td style="padding: 8px 0; color: #666; font-size: 14px;">Locational Clearance:</td>
                 <td style="padding: 8px 0; color: #333; font-weight: 600; font-size: 14px;">{{ $request->project->project_type ?? 'N/A' }}</td>
             </tr>
             <tr>

@@ -135,7 +135,7 @@
                 <th style="width: 5%;">Corporation</th>
                 <th style="width: 5%;">Corp. Address</th>
                 <th style="width: 5%;">Auth. Rep.</th>
-                <th style="width: 4%;">Project Type</th>
+                <th style="width: 4%;">Locational Clearance</th>
                 <th style="width: 4%;">Project Nature</th>
                 <th style="width: 6%;">Location</th>
                 <th style="width: 3%;">Area (sqm)</th>

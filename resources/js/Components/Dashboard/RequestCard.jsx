@@ -13,7 +13,7 @@ import {
     Eye,
     XCircle,
 } from "lucide-react";
-import { getStatusColor, getStatusIcon, formatDate, formatLocation } from "./utils";
+import { getStatusColor, getStatusIcon, getStatusLabel, formatDate, formatLocation } from "./utils";
 
 export function RequestCard({ request, onClick }) {
     const hasVerifiedPayment = request?.payment_verified && request?.certificate_number;
@@ -62,10 +62,7 @@ export function RequestCard({ request, onClick }) {
                     >
                         <span className="flex items-center gap-1.5">
                             {getStatusIcon(request?.status || "pending")}
-                            {(request?.status || "pending")
-                                .charAt(0)
-                                .toUpperCase() +
-                                (request?.status || "pending").slice(1)}
+                            {getStatusLabel(request?.status || "pending")}
                         </span>
                     </Badge>
                 </div>
@@ -224,13 +221,13 @@ export function RequestCard({ request, onClick }) {
                         </div>
                     )}
 
-                    {/* Rejection Reason Preview for rejected requests */}
+                    {/* Denial Reason Preview for denied requests */}
                     {request?.status === "rejected" && request?.report_description && (
                         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                             <div className="flex items-center gap-2 mb-2">
                                 <XCircle className="h-4 w-4 text-red-600" />
                                 <span className="text-sm font-medium text-red-900">
-                                    Rejection Reason
+                                    Denial Reason
                                 </span>
                             </div>
                             <p className="text-sm text-red-700 line-clamp-2">

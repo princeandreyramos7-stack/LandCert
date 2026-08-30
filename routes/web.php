@@ -24,6 +24,9 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Profile picture — shared by applicant, admin and super-admin profile pages.
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+    Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.destroy');
     
     // Request routes
     Route::get('/request', [RequestController::class, 'index'])->name('request.index');
@@ -34,6 +37,9 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     Route::get('/my-applications/index', [RequestController::class, 'myApplications'])->name('my-applications.index');
     Route::get('/my-applications/{id}/print', [\App\Http\Controllers\AdminController::class, 'printForm'])->name('my-applications.print');
     Route::get('/my-applications/{id}/order-of-payment', [RequestController::class, 'generateOrderOfPayment'])->name('my-applications.order-of-payment');
+    Route::get('/my-applications/{id}/details', [RequestController::class, 'showApplication'])->name('my-applications.show');
+    Route::post('/my-applications/{id}/notarized-form', [\App\Http\Controllers\RequirementDocumentController::class, 'uploadNotarizedForm'])->name('my-applications.notarized-form');
+    Route::post('/my-applications/{id}/requirement-upload', [\App\Http\Controllers\RequirementDocumentController::class, 'uploadApplicantRequirement'])->name('my-applications.requirement-upload');
     Route::get('/requests/{id}/authorization-letter', [RequestController::class, 'authorizationLetter'])->name('requests.authorization-letter');
     
     // Requirement document routes (for viewing/deleting only - upload is now in Step 4)
@@ -44,7 +50,6 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     Route::get('/receipt/upload/{requestId}', [PaymentController::class, 'uploadReceiptPage'])->name('receipt.upload.page');
     
     // Payment routes for applicants
-    Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
     Route::get('/payments/{payment}/receipt', [PaymentController::class, 'viewReceipt'])->name('payments.receipt.view');
 
@@ -69,6 +74,7 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     
     Route::get('/requests/{id}/print', [\App\Http\Controllers\AdminController::class, 'printForm'])->name('requests.print');
     Route::get('/requests/{id}/generate-certificate', [\App\Http\Controllers\SuperAdminController::class, 'generateCertificate'])->name('generate-certificate');
+    Route::post('/requests/{id}/certificate-details', [AdminController::class, 'saveCertificateDetails'])->name('certificate-details');
     Route::get('/requests/{id}/generate-clearance', [\App\Http\Controllers\SuperAdminController::class, 'generateClearance'])->name('generate-clearance');
     Route::get('/requests/{id}/generate-order-of-payment', [\App\Http\Controllers\SuperAdminController::class, 'generateOrderOfPayment'])->name('generate-order-of-payment');
     Route::get('/export/requests', [\App\Http\Controllers\SuperAdminController::class, 'exportRequests'])->name('export.requests');
@@ -83,17 +89,20 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::get('/settings', [\App\Http\Controllers\SuperAdminController::class, 'settings'])->name('settings');
     
     // Super Admin specific actions
-    Route::post('/quick-approve/{requestId}', [\App\Http\Controllers\SuperAdminController::class, 'quickApprove'])->name('quick-approve');
-    Route::post('/quick-reject/{requestId}', [\App\Http\Controllers\SuperAdminController::class, 'quickReject'])->name('quick-reject');
     Route::post('/approve-request/{reportId}', [\App\Http\Controllers\SuperAdminController::class, 'approveRequest'])->name('approve-request');
     Route::post('/reject-request/{reportId}', [\App\Http\Controllers\SuperAdminController::class, 'rejectRequest'])->name('reject-request');
+    Route::post('/requests/{requestId}/review-and-decide', [\App\Http\Controllers\SuperAdminController::class, 'reviewAndDecide'])->name('review-and-decide');
     Route::post('/create-admin', [\App\Http\Controllers\SuperAdminController::class, 'createAdmin'])->name('create-admin');
     Route::put('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'deleteUser'])->name('users.delete');
     
     // Requirement verification toggle
     Route::post('/save-requirement-verification', [\App\Http\Controllers\SuperAdminController::class, 'saveRequirementVerification'])->name('save-requirement-verification');
-    
+
+    // Streamlined review workflow (same handler as the admin side; the Super Admin
+    // Document Verification page marks an application reviewed here).
+    Route::post('/review-application', [AdminController::class, 'reviewApplication'])->name('review-application');
+
     // Upload requirement document by super admin
     Route::post('/upload-requirement-document', [\App\Http\Controllers\SuperAdminController::class, 'uploadRequirementDocument'])->name('upload-requirement-document');
     
@@ -222,6 +231,7 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     
     // Generate documents routes
     Route::get('/requests/{id}/generate-certificate', [AdminController::class, 'generateCertificate'])->name('generate-certificate');
+    Route::post('/requests/{id}/certificate-details', [AdminController::class, 'saveCertificateDetails'])->name('certificate-details');
     Route::get('/requests/{id}/generate-clearance', [AdminController::class, 'generateClearance'])->name('generate-clearance');
     Route::get('/requests/{id}/generate-order-of-payment', [AdminController::class, 'generateOrderOfPayment'])->name('generate-order-of-payment');
     

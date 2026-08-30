@@ -36,13 +36,13 @@ const statusSteps = [
 
 const rejectedStep = {
   key: 'rejected',
-  label: 'Application Rejected',
+  label: 'Application Denied',
   icon: XCircle,
   description: 'Application was not approved'
 };
 
 export function ProgressIndicator({ currentStatus, rejectionReason = null, className = '' }) {
-  // Handle rejected status separately
+  // Handle denied status separately
   if (currentStatus === 'rejected') {
     const IconComponent = rejectedStep.icon;
     return (
@@ -169,7 +169,7 @@ export function CompactProgressIndicator({ currentStatus, className = '' }) {
     return (
       <div className={`flex items-center space-x-2 ${className}`}>
         <XCircle className="w-4 h-4 text-red-500" />
-        <span className="text-sm font-medium text-red-700">Rejected</span>
+        <span className="text-sm font-medium text-red-700">Denied</span>
       </div>
     );
   }

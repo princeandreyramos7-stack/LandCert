@@ -9,6 +9,7 @@ import { Button } from "@/Components/ui/button";
 import { useState } from "react";
 import { Award, RefreshCw, FileDown } from "lucide-react";
 import { Toaster } from "@/Components/ui/toaster";
+import { LiveRefresh } from "@/Components/LiveRefresh";
 
 export default function CertificatesIndex({ auth, certificates = {}, filters = {}, userType = 'admin' }) {
     const [selectedCertificate, setSelectedCertificate] = useState(null);
@@ -35,6 +36,8 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
         <>
             <Head title="Certificates"/>
             <Layout title="Certificates" breadcrumbs={breadcrumbs}>
+                <LiveRefresh only={["certificates"]} items={certificates} label="certificates" className="justify-end mb-4" />
+
                 {/* Page header card */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-5">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

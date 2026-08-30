@@ -38,6 +38,7 @@ class HandleInertiaRequests extends Middleware
                     'email' => $request->user()->email,
                     'user_type' => $request->user()->user_type,
                     'roles' => $request->user()->roles,
+                    'avatar_url' => $request->user()->avatar_url,
                 ] : null,
             ],
             // Add flash messages

@@ -78,10 +78,10 @@ export function OverviewTab({ monthlyChartData, statusData, projectTypeData }) {
                 </CardContent>
             </Card>
 
-            {/* Project Types Distribution */}
+            {/* Locational Clearance Distribution */}
             <Card className="md:col-span-2">
                 <CardHeader>
-                    <CardTitle>Project Types Distribution</CardTitle>
+                    <CardTitle>Locational Clearance Distribution</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <ResponsiveContainer width="100%" height={300}>

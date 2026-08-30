@@ -19,13 +19,13 @@ import { CheckCircle2, XCircle } from "lucide-react";
  * VerifyPaymentDialog
  *
  * Lets an admin/super admin confirm the amount, OR number, and payment date
- * before marking a pending payment as verified - or reject it with a reason.
+ * before marking a pending payment as verified - or deny it with a reason.
  * Both actions POST to the existing admin/super-admin payments.verify and
  * payments.reject routes (routePrefix picks the correct one per panel).
  */
 export function VerifyPaymentDialog({ isOpen, onClose, payment, routePrefix = "admin" }) {
     const { toast } = useToast();
-    const [mode, setMode] = useState("verify"); // "verify" | "reject"
+    const [mode, setMode] = useState("verify"); // "verify" | "deny"
     const [processing, setProcessing] = useState(false);
     const [verifyForm, setVerifyForm] = useState({
         amount: "",
@@ -82,15 +82,15 @@ export function VerifyPaymentDialog({ isOpen, onClose, payment, routePrefix = "a
             {
                 onSuccess: () => {
                     toast({
-                        title: "Payment Rejected",
-                        description: `Payment for Request #${payment.request_id} has been rejected.`,
+                        title: "Payment Denied",
+                        description: `Payment for Request #${payment.request_id} has been denied.`,
                     });
                     onClose();
                 },
                 onError: (errors) => {
                     toast({
                         variant: "destructive",
-                        title: "Rejection Failed",
+                        title: "Denial Failed",
                         description: Object.values(errors)[0] || "Please provide a reason and try again.",
                     });
                 },
@@ -191,12 +191,12 @@ export function VerifyPaymentDialog({ isOpen, onClose, payment, routePrefix = "a
                             <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => setMode("reject")}
+                                onClick={() => setMode("deny")}
                                 disabled={processing}
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50 sm:mr-auto"
                             >
                                 <XCircle className="h-4 w-4 mr-1.5" />
-                                Reject instead
+                                Deny instead
                             </Button>
                             <Button type="button" variant="outline" onClick={onClose} disabled={processing}>
                                 Cancel
@@ -221,23 +221,23 @@ export function VerifyPaymentDialog({ isOpen, onClose, payment, routePrefix = "a
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2 text-red-700">
                                 <XCircle className="h-5 w-5" />
-                                Reject Payment
+                                Deny Payment
                             </DialogTitle>
                             <DialogDescription>
-                                Provide a reason for rejecting this payment. This will be sent to
+                                Provide a reason for denying this payment. This will be sent to
                                 the applicant.
                             </DialogDescription>
                         </DialogHeader>
 
                         <div>
-                            <Label htmlFor="reject-reason">
-                                Rejection Reason <span className="text-red-500">*</span>
+                            <Label htmlFor="deny-reason">
+                                Denial Reason <span className="text-red-500">*</span>
                             </Label>
                             <Textarea
-                                id="reject-reason"
+                                id="deny-reason"
                                 value={rejectionReason}
                                 onChange={(e) => setRejectionReason(e.target.value)}
-                                placeholder="Explain why this payment is being rejected..."
+                                placeholder="Explain why this payment is being denied..."
                                 rows={4}
                                 className="mt-1 resize-none"
                             />
@@ -262,7 +262,7 @@ export function VerifyPaymentDialog({ isOpen, onClose, payment, routePrefix = "a
                                 onClick={handleReject}
                                 disabled={processing || !rejectionReason.trim()}
                             >
-                                {processing ? "Rejecting..." : "Reject Payment"}
+                                {processing ? "Denying..." : "Deny Payment"}
                             </Button>
                         </DialogFooter>
                     </>

@@ -1,9 +1,21 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
+import { Link } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
-import { Users, CheckCircle, XCircle, Clock, TrendingUp, Award, Activity } from 'lucide-react';
+import { Input } from '@/Components/ui/input';
+import { Users, CheckCircle, XCircle, Clock, TrendingUp, Award, Activity, Search, ArrowRight } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 import { HeatMap } from '@/Components/Admin/Analytics/Charts';
+
+// Colour the action chip by verb so scanning the log is fast.
+const actionBadgeClass = (action = '') => {
+    const a = String(action).toLowerCase();
+    if (a.includes('create') || a.includes('approve') || a.includes('verify') || a.includes('login')) return 'bg-green-100 text-green-700 border-green-300';
+    if (a.includes('delete') || a.includes('reject') || a.includes('fail')) return 'bg-red-100 text-red-700 border-red-300';
+    if (a.includes('update') || a.includes('edit')) return 'bg-blue-100 text-blue-700 border-blue-300';
+    if (a.includes('export') || a.includes('view')) return 'bg-amber-100 text-amber-700 border-amber-300';
+    return 'bg-gray-100 text-gray-700 border-gray-300';
+};
 
 /**
  * AdminWorkflowTab Component
@@ -13,6 +25,7 @@ export function AdminWorkflowTab({ adminActivity = {} }) {
     const {
         admin_performance = [],
         recent_actions = [],
+        recent_actions_total = 0,
         activity_by_hour = [],
         activity_by_day = [],
         review_trend = [],
@@ -20,13 +33,25 @@ export function AdminWorkflowTab({ adminActivity = {} }) {
         response_metrics = {},
     } = adminActivity;
 
+    // Client-side search over the loaded slice — never navigates away from the tab.
+    const [auditSearch, setAuditSearch] = useState('');
+    const filteredActions = useMemo(() => {
+        const q = auditSearch.trim().toLowerCase();
+        if (!q) return recent_actions;
+        return recent_actions.filter((a) =>
+            [a.admin_name, a.admin_email, a.action, a.model_type, a.reference, a.description, a.ip_address]
+                .filter(Boolean)
+                .some((f) => String(f).toLowerCase().includes(q))
+        );
+    }, [auditSearch, recent_actions]);
+
     const COLORS = ['#0d1f5c', '#2563eb', '#10b981', '#f59e0b', '#ef4444'];
 
     // Prepare review trend data for composed chart
     const reviewTrendData = review_trend.map(item => ({
         month: item.month,
         Approved: item.approved || 0,
-        Rejected: item.rejected || 0,
+        Denied: item.rejected || 0,
         Pending: item.pending || 0,
     }));
 
@@ -78,6 +103,79 @@ export function AdminWorkflowTab({ adminActivity = {} }) {
 
     return (
         <div className="space-y-6">
+            {/* Admin Audit Log — Zoning Officer actions across the system */}
+            <Card>
+                <CardHeader>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <CardTitle className="flex items-center gap-2">
+                                <Activity className="h-5 w-5 text-blue-600" />
+                                Admin Audit Log
+                            </CardTitle>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Every action performed by the Zoning Officer
+                                {recent_actions_total > 0 && (
+                                    <> — showing the latest {recent_actions.length.toLocaleString()} of {recent_actions_total.toLocaleString()}</>
+                                )}
+                            </p>
+                        </div>
+                        <Link
+                            href={route('super-admin.audit-logs')}
+                            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
+                        >
+                            View complete audit log
+                            <ArrowRight className="h-4 w-4" />
+                        </Link>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="relative mb-3">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                            value={auditSearch}
+                            onChange={(e) => setAuditSearch(e.target.value)}
+                            placeholder="Filter by officer, action, record or IP…"
+                            className="pl-9"
+                        />
+                    </div>
+
+                    <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
+                        {recent_actions.length === 0 ? (
+                            <p className="text-center py-8 text-gray-500">No Zoning Officer actions recorded yet</p>
+                        ) : filteredActions.length === 0 ? (
+                            <p className="text-center py-8 text-gray-500">No actions match “{auditSearch}”</p>
+                        ) : (
+                            filteredActions.map((action) => (
+                                <div key={action.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold text-xs flex-shrink-0">
+                                        {(action.admin_name || '?').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="font-medium text-sm">{action.admin_name}</p>
+                                            <Badge variant="outline" className={`text-xs ${actionBadgeClass(action.action)}`}>
+                                                {action.action}
+                                            </Badge>
+                                            {(action.reference || action.model_type) && (
+                                                <span className="text-xs text-gray-500">
+                                                    {action.reference
+                                                        || `${action.model_type}${action.model_id ? ` #${action.model_id}` : ''}`}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-gray-600 mt-1 break-words">{action.description}</p>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            {new Date(action.created_at).toLocaleString()}
+                                            {action.ip_address ? ` · ${action.ip_address}` : ''}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Response Time Metrics */}
             <div className="grid gap-4 md:grid-cols-3">
                 {responseCards.map((card, index) => (
@@ -116,7 +214,7 @@ export function AdminWorkflowTab({ adminActivity = {} }) {
                                     <th className="text-left p-3 text-sm font-semibold text-gray-700">Admin</th>
                                     <th className="text-center p-3 text-sm font-semibold text-gray-700">Total Reviews</th>
                                     <th className="text-center p-3 text-sm font-semibold text-gray-700">Approved</th>
-                                    <th className="text-center p-3 text-sm font-semibold text-gray-700">Rejected</th>
+                                    <th className="text-center p-3 text-sm font-semibold text-gray-700">Denied</th>
                                     <th className="text-center p-3 text-sm font-semibold text-gray-700">Pending</th>
                                     <th className="text-center p-3 text-sm font-semibold text-gray-700">Avg Time</th>
                                     <th className="text-center p-3 text-sm font-semibold text-gray-700">Approval Rate</th>
@@ -239,7 +337,7 @@ export function AdminWorkflowTab({ adminActivity = {} }) {
                                     />
                                     <Legend />
                                     <Line type="monotone" dataKey="Approved" stroke="#10b981" strokeWidth={2} />
-                                    <Line type="monotone" dataKey="Rejected" stroke="#ef4444" strokeWidth={2} />
+                                    <Line type="monotone" dataKey="Denied" stroke="#ef4444" strokeWidth={2} />
                                     <Line type="monotone" dataKey="Pending" stroke="#f59e0b" strokeWidth={2} />
                                 </LineChart>
                             </ResponsiveContainer>
@@ -273,43 +371,6 @@ export function AdminWorkflowTab({ adminActivity = {} }) {
                             y: daysOfWeek
                         }}
                     />
-                </CardContent>
-            </Card>
-
-            {/* Recent Admin Actions */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-blue-600" />
-                        Recent Admin Actions
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-3">
-                        {recent_actions.length === 0 ? (
-                            <p className="text-center py-8 text-gray-500">No recent actions</p>
-                        ) : (
-                            recent_actions.slice(0, 10).map((action, index) => (
-                                <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold text-xs flex-shrink-0">
-                                        {action.admin_name?.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p className="font-medium text-sm">{action.admin_name}</p>
-                                            <Badge variant="outline" className="text-xs">
-                                                {action.action}
-                                            </Badge>
-                                        </div>
-                                        <p className="text-xs text-gray-600 mt-1">{action.description || `${action.action} on ${action.entity_type}`}</p>
-                                        <p className="text-xs text-gray-400 mt-1">
-                                            {new Date(action.created_at).toLocaleString()}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
                 </CardContent>
             </Card>
         </div>

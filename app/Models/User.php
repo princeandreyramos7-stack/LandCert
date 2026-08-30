@@ -45,7 +45,43 @@ class User extends Authenticatable
         'contact_number',
         'address',
         'user_type',
+        'signature_path',
+        'avatar_path',
     ];
+
+    /**
+     * Expose the computed avatar URL on every serialized user (it is read from
+     * `auth.user.avatar_url` throughout the front end).
+     *
+     * @var list<string>
+     */
+    protected $appends = ['avatar_url'];
+
+    /**
+     * Public URL of this user's e-signature, or null when none is on file.
+     * Stored as a path relative to public/ (e.g. "images/E-signitures/x.png").
+     */
+    public function getSignatureUrlAttribute(): ?string
+    {
+        if (empty($this->signature_path)) {
+            return null;
+        }
+
+        return '/' . ltrim($this->signature_path, '/');
+    }
+
+    /**
+     * Public URL of this user's profile picture, or null when none is set.
+     * Stored on the "public" disk (e.g. "avatars/x.jpg").
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (empty($this->avatar_path)) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->avatar_path);
+    }
 
     /**
      * The attributes that should be hidden for serialization.

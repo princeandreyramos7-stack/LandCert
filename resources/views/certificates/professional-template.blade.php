@@ -405,7 +405,7 @@
         <div class="details-section">
             <table class="details-table">
                 <tr>
-                    <td class="label">Project Type</td>
+                    <td class="label">Locational Clearance</td>
                     <td class="colon">:</td>
                     <td class="value">{{ $projectType }}</td>
                 </tr>

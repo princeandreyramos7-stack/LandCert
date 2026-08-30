@@ -36,7 +36,6 @@ const navItems = [
     { title: "New Application", url: "/request",         icon: FilePlus },
     { title: "My Applications", url: "/my-applications", icon: FolderOpen },
     { title: "Notifications",   url: "/notifications",   icon: Bell },
-    { title: "Profile",         url: "/profile",         icon: User },
 ];
 
 /* ── Main sidebar ───────────────────────────────────────────────── */
@@ -48,6 +47,7 @@ export function AppSidebar({ ...props }) {
     const user = {
         name:  auth?.user?.name  || "User",
         email: auth?.user?.email || "user@example.com",
+        avatar_url: auth?.user?.avatar_url,
     };
 
     const initials = user.name
@@ -62,8 +62,12 @@ export function AppSidebar({ ...props }) {
             {/* ── Header / Logo ──────────────────────────────────── */}
             <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
                 <Link href="/dashboard" className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full border-2 border-sidebar-primary/60 bg-sidebar-primary/10 flex items-center justify-center shrink-0">
-                        <img src="/images/Ilagan.png" alt="CPDO" className="w-6 h-6 object-contain"/>
+                    <div className="w-9 h-9 rounded-full border-2 border-sidebar-primary/60 bg-sidebar-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+                        <img
+                            src="/images/ilagan1.png"
+                            alt="Ilagan Logo"
+                            className="w-full h-full object-cover p-0.5"
+                        />
                     </div>
                     {!collapsed && (
                         <div className="min-w-0">
@@ -122,8 +126,10 @@ export function AppSidebar({ ...props }) {
                                 <SidebarMenuButton
                                     size="lg"
                                     className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-                                    <div className="w-8 h-8 rounded-full bg-sidebar-primary/80 flex items-center justify-center text-sidebar-primary-foreground font-black text-xs shrink-0">
-                                        {initials}
+                                    <div className="w-8 h-8 rounded-full overflow-hidden bg-sidebar-primary/80 flex items-center justify-center text-sidebar-primary-foreground font-black text-xs shrink-0">
+                                        {user.avatar_url
+                                            ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                                            : initials}
                                     </div>
                                     {!collapsed && (
                                         <>

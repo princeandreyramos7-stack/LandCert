@@ -28,7 +28,6 @@ export function AnalyticsDashboard({ analytics }) {
         project_types = [],
         project_natures = [],
         barangay_distribution = [],
-        province_distribution = [],
         top_users = [],
         user_activity_metrics = {},
         weekly_activity = [],
@@ -85,7 +84,6 @@ export function AnalyticsDashboard({ analytics }) {
                 <TabsContent value="geographic" className="space-y-4">
                     <GeographicTab
                         barangayDistribution={barangay_distribution}
-                        provinceDistribution={province_distribution}
                     />
                 </TabsContent>
 

@@ -2,6 +2,7 @@ import { Head, Link, useForm, usePage } from "@inertiajs/react";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import { Transition } from "@headlessui/react";
 import InputError from "@/Components/InputError";
+import AvatarUpload from "@/Components/AvatarUpload";
 import { useRef, useState } from "react";
 import {
     User, Lock, Trash2, Mail, KeyRound, Eye, EyeOff,
@@ -272,7 +273,7 @@ export default function Edit({ mustVerifyEmail, status }) {
 
     return (
         <>
-            <Head title="Profile — CPDO LandCert"/>
+            <Head title="Profile — CPDO L.C"/>
             <ApplicantLayout title="My Account">
                 <div className="space-y-6">
 
@@ -289,13 +290,12 @@ export default function Edit({ mustVerifyEmail, status }) {
                             style={{ background: "radial-gradient(circle,#d4a017,transparent 70%)" }}/>
 
                         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6 p-6 lg:p-8">
-                            {/* Avatar */}
-                            <div className="relative">
-                                <div className="w-20 h-20 rounded-2xl bg-[#d4a017] flex items-center justify-center text-white font-black text-3xl shadow-xl border-4 border-white/20">
-                                    {initials}
-                                </div>
-                                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-500 border-2 border-white"/>
-                            </div>
+                            {/* Avatar — click the camera to upload a profile picture */}
+                            <AvatarUpload
+                                shape="rounded-2xl"
+                                sizeClass="w-20 h-20"
+                                fallback={<span className="font-black text-3xl">{initials}</span>}
+                            />
 
                             {/* Info */}
                             <div className="flex-1 min-w-0">

@@ -31,7 +31,7 @@ export function RequestTable({
                     <tr className="border-b bg-gray-50">
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Application No.</th>
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Applicant</th>
-                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Project Type</th>
+                        <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Locational Clearance</th>
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Location</th>
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Date</th>
                         <th className="text-left p-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Status of Application</th>

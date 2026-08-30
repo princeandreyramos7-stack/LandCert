@@ -110,7 +110,7 @@ class PaymentController extends Controller
     {
         // Task 11.1: Eager load all required relationships to avoid N+1 queries
         $query = Payment::with([
-            'request:id,applicant_id,application_number',
+            'request:id,applicant_id,application_number,decision_number',
             'request.applicant:id,applicant_name',
             'verifiedByUser:id,name,email',
             'certificate:id,payment_id,certificate_number,status'
@@ -197,7 +197,7 @@ class PaymentController extends Controller
     {
         // Task 11.1: Eager load only needed relationships and columns
         $payment = Payment::with([
-            'request:id,applicant_id,application_number',
+            'request:id,applicant_id,application_number,decision_number',
             'request.applicant:id,applicant_name,applicant_address,contact_number',
             'request.project:id,request_id,project_type,project_description',
             'verifiedByUser:id,name,email'
@@ -217,7 +217,7 @@ class PaymentController extends Controller
     {
         // Task 11.1: Eager load relationships with selective columns
         $query = Payment::with([
-            'request:id,applicant_id,application_number',
+            'request:id,applicant_id,application_number,decision_number',
             'request.applicant:id,applicant_name',
             'verifiedBy:id,name'
         ]);
@@ -268,10 +268,13 @@ class PaymentController extends Controller
             abort(403, 'You are not authorized to upload a receipt for this application.');
         }
 
-        // Check if application is approved
-        if (strtolower($request->status) !== 'approved') {
+        // Payment is only possible after the Zoning Administrator has APPROVED the
+        // application. An application the officer has merely reviewed is still
+        // waiting for that approval and must not be payable yet.
+        $payableStatuses = ['approved'];
+        if (!in_array(strtolower((string) $request->status), $payableStatuses, true)) {
             return redirect()->route('my-applications')
-                ->with('error', 'You can only upload payment receipt after your application is approved.');
+                ->with('error', 'You can record your payment once your application has been approved by the Zoning Administrator.');
         }
 
         // Get existing payment if any
@@ -307,6 +310,7 @@ class PaymentController extends Controller
     {
         $validated = $request->validate([
             'request_id' => 'required|exists:requests,id',
+            'or_number' => 'required|string|max:255',
             'amount' => 'nullable|numeric|min:0',
             'payment_method' => 'required|in:cash',
             'receipt' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120', // Max 5MB
@@ -314,14 +318,14 @@ class PaymentController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        // Get the request and check if it's approved
         $requestModel = \App\Models\Request::findOrFail($validated['request_id']);
-        
-        // Check if application is approved
-        if (strtolower($requestModel->status) !== 'approved') {
+
+        // Payment is only possible once the Zoning Administrator has approved.
+        $payableStatuses = ['approved'];
+        if (!in_array(strtolower((string) $requestModel->status), $payableStatuses, true)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Payment receipts can only be uploaded for approved applications.'
+                'message' => 'Payment can only be recorded once the application has been approved by the Zoning Administrator.'
             ], 403);
         }
 
@@ -342,8 +346,19 @@ class PaymentController extends Controller
             $validated['receipt_file_path'] = $path;
         }
 
-        // Generate receipt number
-        $validated['receipt_number'] = 'RCP-' . strtoupper(uniqid());
+        // The applicant supplies the Official Receipt number from the Treasury.
+        $validated['receipt_number'] = trim($validated['or_number']);
+        unset($validated['or_number']);
+
+        // The fee is whatever the Zoning Officer set at review time — do not trust
+        // an amount coming from the client.
+        $officerFee = optional(
+            \App\Models\Report::where('request_id', $requestModel->id)->orderByDesc('report_id')->first()
+        )->payment_amount;
+        if ($officerFee !== null) {
+            $validated['amount'] = $officerFee;
+        }
+
         $validated['payment_status'] = 'pending';
         $validated['user_id'] = auth()->id();
 
@@ -482,10 +497,10 @@ class PaymentController extends Controller
     }
 
     /**
-     * Reject a payment.
-     * Task 9.2: Add audit logging for payment rejection
+     * Deny a payment.
+     * Task 9.2: Add audit logging for payment denial
      */
-    public function reject(Request $request, Payment $payment)
+    public function deny(Request $request, Payment $payment)
     {
         $validated = $request->validate([
             'rejection_reason' => 'required|string',
@@ -500,10 +515,10 @@ class PaymentController extends Controller
             'verified_at' => now(),
         ]);
 
-        // Task 9.2: Log payment rejection action
+        // Task 9.2: Log payment denial action
         AuditLogService::log(
             'payment_rejected',
-            "Payment #{$payment->id} rejected. OR: {$payment->receipt_number}. Reason: {$validated['rejection_reason']}",
+            "Payment #{$payment->id} denied. OR: {$payment->receipt_number}. Reason: {$validated['rejection_reason']}",
             'Payment',
             $payment->id,
             ['payment_status' => $oldStatus, 'rejection_reason' => null],
@@ -520,11 +535,11 @@ class PaymentController extends Controller
         // Get the application/request
         $applicationRequest = ApplicationRequest::find($payment->request_id);
         if ($applicationRequest) {
-            // Create notification for payment rejection
+            // Create notification for payment denial
             NotificationService::paymentRejected($applicationRequest, $payment, $validated['rejection_reason'], auth()->user());
         }
 
-        return redirect()->back()->with('success', 'Payment rejected.');
+        return redirect()->back()->with('success', 'Payment denied.');
     }
 
     /**

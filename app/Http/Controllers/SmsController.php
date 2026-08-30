@@ -192,9 +192,9 @@ class SmsController extends Controller
         return [
             'application_submitted' => 'Hi {name}! Your application #{request_id} has been submitted. We will review it and notify you. - CPDO LandCert',
             'application_approved'  => 'Good news {name}! Application #{request_id} is APPROVED. Visit CPDO office to process payment and submit documents. - CPDO LandCert',
-            'application_rejected'  => '{name}, application #{request_id} was REJECTED. Reason: {reason}. Contact CPDO for details. - CPDO LandCert',
+            'application_rejected'  => '{name}, application #{request_id} was DENIED. Reason: {reason}. Contact CPDO for details. - CPDO LandCert',
             'payment_verified'      => '{name}, payment of PHP {amount} for application #{request_id} is VERIFIED. Certificate will be prepared. - CPDO LandCert',
-            'payment_rejected'      => '{name}, your payment for application #{request_id} was REJECTED. Reason: {reason}. Please resubmit or contact CPDO. - CPDO LandCert',
+            'payment_rejected'      => '{name}, your payment for application #{request_id} was DENIED. Reason: {reason}. Please resubmit or contact CPDO. - CPDO LandCert',
             'certificate_preparing' => '{name}, certificate #{cert_number} is being prepared. You will be notified when ready for pickup. - CPDO LandCert',
             'certificate_ready'     => '{name}, certificate #{cert_number} (App #{request_id}) is READY for pickup. Bring valid ID. - CPDO LandCert',
             'payment_reminder'      => 'Reminder: {name}, payment for application #{request_id} is due. Visit CPDO office. - CPDO LandCert',

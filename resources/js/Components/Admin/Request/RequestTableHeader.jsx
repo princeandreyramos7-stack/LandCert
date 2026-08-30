@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardContent } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
-import { FileText, Download } from "lucide-react";
+import { FileText, Download, Search } from "lucide-react";
 
 export function RequestTableHeader({
     filteredCount,
@@ -43,15 +43,14 @@ export function RequestTableHeader({
                         >
                             <option value="all">All Status of Application</option>
                             <option value="pending">For Verification</option>
-                            <option value="reviewed">For Payment</option>
-                            <option value="approved">Application Approved</option>
-                            <option value="rejected">Application Rejected</option>
+                            <option value="reviewed">For Approval</option>
+                            <option value="approved">Approved — For Payment</option>
+                            <option value="application_approved">Application Approved (paid)</option>
+                            <option value="rejected">Application Denied</option>
                         </select>
 
                         <div className="relative">
-                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
                                 placeholder="Search requests..."
                                 value={searchTerm}

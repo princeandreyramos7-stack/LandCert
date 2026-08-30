@@ -32,12 +32,12 @@ export function PaymentDetailsCard({ payment }) {
                     <InfoField
                         icon={<Receipt className="w-4 h-4 text-gray-500" />}
                         label="Decision No."
-                        value={`#${payment.id}`}
+                        value={payment.decision_number || payment.request?.decision_number || "—"}
                     />
                     <InfoField
                         icon={<FileText className="w-4 h-4 text-gray-500" />}
                         label="Application No."
-                        value={payment.application_number || `#${payment.request_id}`}
+                        value={payment.application_number || payment.request?.application_number || `#${payment.request_id}`}
                     />
                     <InfoField
                         icon={<User className="w-4 h-4 text-gray-500" />}
@@ -105,10 +105,10 @@ export function PaymentDetailsCard({ payment }) {
                                 value={payment.applicant_name || payment.request?.applicant?.applicant_name}
                             />
                         )}
-                        {/* Project type — from flat column or relationship */}
+                        {/* Locational Clearance — from flat column or relationship */}
                         {(payment.project_type || payment.request?.project_type) && (
                             <InfoField
-                                label="Project Type"
+                                label="Locational Clearance"
                                 value={payment.project_type || payment.request?.project_type}
                             />
                         )}
@@ -200,12 +200,12 @@ export function PaymentDetailsCard({ payment }) {
                 </div>
             )}
 
-            {/* Rejection Reason Section */}
+            {/* Denial Reason Section */}
             {payment.rejection_reason && (
                 <div className="bg-red-50 p-4 sm:p-6 rounded-lg border border-red-200 shadow-sm">
                     <h3 className="text-sm font-medium text-red-900 mb-2 flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 text-red-600" />
-                        Rejection Reason
+                        Denial Reason
                     </h3>
                     <p className="text-sm text-red-700 whitespace-pre-wrap">
                         {payment.rejection_reason}

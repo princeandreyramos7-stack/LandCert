@@ -52,7 +52,7 @@ export default function RequestDetails({ request }) {
             rejected: {
                 icon: XCircle,
                 color: "bg-red-100 text-red-800 border-red-200",
-                label: "Rejected",
+                label: "Denied",
             },
             reviewed: {
                 icon: AlertCircle,
@@ -366,7 +366,7 @@ function Step2Content({ request }) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InfoField
-                    label="Project Type"
+                    label="Locational Clearance"
                     value={request.project_type}
                 />
                 <InfoField

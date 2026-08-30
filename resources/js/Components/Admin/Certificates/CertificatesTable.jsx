@@ -89,17 +89,6 @@ export function CertificatesTable({
         });
     };
 
-    // Get status badge color
-    const getStatusBadge = (status) => {
-        const styles = {
-            preparing: "bg-amber-100 text-amber-800 border-amber-200",
-            ready_for_pickup: "bg-green-100 text-green-800 border-green-200",
-            released: "bg-blue-100 text-blue-800 border-blue-200",
-            cancelled: "bg-red-100 text-red-800 border-red-200",
-        };
-        return styles[status] || "bg-slate-100 text-slate-800 border-slate-200";
-    };
-
     // Navigate to page
     const goToPage = (page) => {
         router.get(
@@ -217,13 +206,10 @@ export function CertificatesTable({
                                     Applicant
                                 </th>
                                 <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
-                                    Project Type
+                                    Locational Clearance
                                 </th>
                                 <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
                                     Issued Date
-                                </th>
-                                <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
-                                    Status
                                 </th>
                                 <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
                                     Actions
@@ -234,7 +220,7 @@ export function CertificatesTable({
                             {certificatesData.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan="7"
+                                        colSpan="6"
                                         className="px-4 py-12 text-center text-slate-500"
                                     >
                                         <div className="flex flex-col items-center justify-center">
@@ -283,11 +269,6 @@ export function CertificatesTable({
                                             </div>
                                         </td>
                                         <td className="p-3">
-                                            <Badge className={getStatusBadge(certificate.certificate_file_path ? 'released' : 'preparing')}>
-                                                {certificate.certificate_file_path ? 'Released' : 'Preparing'}
-                                            </Badge>
-                                        </td>
-                                        <td className="p-3">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button
@@ -299,7 +280,12 @@ export function CertificatesTable({
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-56">
-                                                    {certificate.has_verified_payment ? (
+                                                    {/* The controller only generates for an approved application or a later
+                                                        certificate-lifecycle stage; denied / pre-approval requests are blocked
+                                                        server-side and would silently redirect back, so don't offer the action. */}
+                                                    {["approved", "certificate_preparing", "certificate_ready", "released"]
+                                                        .includes(String(certificate.request?.status || "").toLowerCase())
+                                                        ? (certificate.has_verified_payment ? (
                                                         <>
                                                             <DropdownMenuItem
                                                                 onClick={() => router.visit(route(`${routePrefix}.generate-clearance`, certificate.request_id))}
@@ -320,6 +306,13 @@ export function CertificatesTable({
                                                         <div className="px-3 py-2 text-sm text-slate-500 text-center">
                                                             <p className="font-medium">Payment Required</p>
                                                             <p className="text-xs mt-1">Awaiting treasury payment verification</p>
+                                                        </div>
+                                                    )) : (
+                                                        <div className="px-3 py-2 text-sm text-slate-500 text-center">
+                                                            <p className="font-medium">Not available</p>
+                                                            <p className="text-xs mt-1">
+                                                                Application is {(certificate.request?.status || "not approved").replace(/_/g, " ")}
+                                                            </p>
                                                         </div>
                                                     )}
                                                 </DropdownMenuContent>

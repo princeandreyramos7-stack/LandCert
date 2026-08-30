@@ -49,7 +49,7 @@ class RequestController extends Controller
                 'normalized_projects.project_type',
                 'normalized_projects.project_nature',
                 'locations.city_municipality as project_location_city',
-                DB::raw('COALESCE(reports.evaluation, requests.status) as status')
+                DB::raw("CASE WHEN requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN requests.status ELSE COALESCE(reports.evaluation, requests.status) END as status")
             )
             ->orderBy('requests.created_at', 'desc')
             ->get();
@@ -130,7 +130,10 @@ class RequestController extends Controller
                 // Report fields
                 'reports.evaluation',
                 'reports.amount as report_amount',
-                DB::raw('COALESCE(reports.evaluation, requests.status) as status')
+                DB::raw("CASE WHEN requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN requests.status ELSE COALESCE(reports.evaluation, requests.status) END as status"),
+                // Requirement #1 (notarized application form) is uploaded after
+                // submission, so the list needs to know whether it is still missing.
+                DB::raw('EXISTS(SELECT 1 FROM requirement_documents rd WHERE rd.request_id = requests.id AND rd.requirement_id = 1) as has_notarized_form')
             )
             ->orderBy('requests.created_at', 'desc')
             ->paginate(10); // Changed from ->get() to ->paginate(10)
@@ -141,7 +144,7 @@ class RequestController extends Controller
     }
 
     /**
-     * Show the form for editing a rejected/returned application.
+     * Show the form for editing a denied/returned application.
      * Only allows editing applications with 'rejected' or 'returned' status.
      */
     public function edit($id)
@@ -160,11 +163,11 @@ class RequestController extends Controller
             abort(403, 'You are not authorized to edit this application.');
         }
 
-        // Only allow editing if status is rejected or returned
+        // Only allow editing if status is denied or returned
         $editableStatuses = ['rejected', 'returned'];
         if (!in_array(strtolower($request->status), $editableStatuses)) {
             return redirect()->route('my-applications.index')
-                ->with('error', 'Only rejected or returned applications can be edited.');
+                ->with('error', 'Only denied or returned applications can be edited.');
         }
 
         // Prepare the application data for the form
@@ -302,6 +305,7 @@ class RequestController extends Controller
             'requirement_uploads' => 'nullable|array',
             'requirement_uploads.*' => 'nullable|array',
             'requirement_uploads.*.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'requirement_names' => 'nullable|array',
             'verified_requirements' => 'nullable|array',
         ]);
 
@@ -327,12 +331,17 @@ class RequestController extends Controller
                 'similar_application_dates' => $validated['similar_application_dates'] ?? null,
                 'preferred_release_mode' => $validated['preferred_release_mode'] ?? 'pickup',
                 'release_address' => $validated['release_address'] ?? null,
-                'verified_requirements' => json_encode($validated['verified_requirements'] ?? []),
+                // Verification is the officer's decision, never seeded from the applicant.
+                'verified_requirements' => json_encode([]),
             ]);
 
-            // Assign unique application number immediately after creation
+            // Assign unique application number immediately after creation.
+            // MM-YY is taken from the record's own creation timestamp.
             $newRequest->update([
-                'application_number' => RequestModel::generateApplicationNumber($applicant->id),
+                'application_number' => RequestModel::generateApplicationNumber(
+                    $applicant->id,
+                    $newRequest->created_at
+                ),
             ]);
 
             // 3. Create Corporation record if applicable
@@ -396,29 +405,37 @@ class RequestController extends Controller
             ]);
 
             // 9. Handle requirement document uploads (Step 4)
-            if ($request->hasFile('requirement_uploads')) {
-                foreach ($request->file('requirement_uploads') as $requirementId => $files) {
-                    if (is_array($files)) {
-                        foreach ($files as $file) {
-                            // Store the file
-                            $path = $file->store('requirements', 'local');
-                            
-                            // Get original filename and extension
-                            $originalName = $file->getClientOriginalName();
-                            $extension = $file->getClientOriginalExtension();
-                            
-                            // Create document record
-                            \App\Models\RequirementDocument::create([
-                                'request_id' => $newRequest->id,
-                                'requirement_id' => $requirementId,
-                                'requirement_name' => 'Requirement #' . $requirementId, // Add requirement name
-                                'file_path' => $path,
-                                'original_filename' => $originalName,
-                                'mime_type' => $file->getMimeType(),
-                                'file_size' => $file->getSize(),
-                            ]);
-                        }
+            // The wizard sends the human-readable name alongside each requirement so
+            // the stored document is self-describing and does not depend on a
+            // requirement list that may be re-resolved differently later.
+            $requirementNames = $request->input('requirement_names', []);
+
+            // NOTE: do NOT gate this on $request->hasFile('requirement_uploads').
+            // The uploads arrive two levels deep (requirement_uploads[id][index]),
+            // and Laravel's hasFile() only inspects the outer array — every element
+            // is itself an array rather than an SplFileInfo, so it always returns
+            // false and every upload would be silently dropped.
+            $allFiles = $request->allFiles();
+            $requirementFiles = $allFiles['requirement_uploads'] ?? [];
+
+            foreach ($requirementFiles as $requirementId => $files) {
+                // Tolerate both a single file and a list of files per requirement.
+                foreach (is_array($files) ? $files : [$files] as $file) {
+                    if (!$file instanceof \Illuminate\Http\UploadedFile) {
+                        continue;
                     }
+
+                    $path = $file->store('requirements', 'local');
+
+                    \App\Models\RequirementDocument::create([
+                        'request_id' => $newRequest->id,
+                        'requirement_id' => $requirementId,
+                        'requirement_name' => $requirementNames[$requirementId] ?? 'Requirement #' . $requirementId,
+                        'file_path' => $path,
+                        'original_filename' => $file->getClientOriginalName(),
+                        'mime_type' => $file->getMimeType(),
+                        'file_size' => $file->getSize(),
+                    ]);
                 }
             }
 
@@ -455,7 +472,7 @@ class RequestController extends Controller
     }
 
     /**
-     * Update an existing rejected/returned application - FRESH IMPLEMENTATION
+     * Update an existing denied/returned application - FRESH IMPLEMENTATION
      */
     public function update(Request $request, $id)
     {
@@ -486,9 +503,9 @@ class RequestController extends Controller
             abort(403, 'Unauthorized to update this application.');
         }
 
-        // Status check - only allow editing rejected or returned applications
+        // Status check - only allow editing denied or returned applications
         if (!in_array($existingRequest->status, ['rejected', 'returned'])) {
-            return back()->withErrors(['error' => 'Only rejected or returned applications can be edited.']);
+            return back()->withErrors(['error' => 'Only denied or returned applications can be edited.']);
         }
 
         // Validate input
@@ -533,6 +550,7 @@ class RequestController extends Controller
             'requirement_uploads' => 'nullable|array',
             'requirement_uploads.*' => 'nullable|array',
             'requirement_uploads.*.*' => 'file|max:5120',
+            'requirement_names' => 'nullable|array',
             'verified_requirements' => 'nullable|array',
         ]);
 
@@ -627,7 +645,8 @@ class RequestController extends Controller
                 'similar_application_dates' => $validated['similar_application_dates'] ?? null,
                 'preferred_release_mode' => $validated['preferred_release_mode'] ?? 'pickup',
                 'release_address' => $validated['release_address'] ?? null,
-                'verified_requirements' => json_encode($validated['verified_requirements'] ?? []),
+                // Verification is the officer's decision, never seeded from the applicant.
+                'verified_requirements' => json_encode([]),
             ]);
 
             // Update Report if exists
@@ -658,7 +677,8 @@ class RequestController extends Controller
                             \App\Models\RequirementDocument::create([
                                 'request_id' => $existingRequest->id,
                                 'requirement_id' => $requirementId,
-                                'requirement_name' => 'Requirement #' . $requirementId,
+                                'requirement_name' => $request->input("requirement_names.{$requirementId}")
+                                    ?? 'Requirement #' . $requirementId,
                                 'file_path' => $path,
                                 'original_filename' => $file->getClientOriginalName(),
                                 'mime_type' => $file->getMimeType(),
@@ -730,30 +750,25 @@ class RequestController extends Controller
             return redirect()->back()->with('error', 'Unauthorized access');
         }
 
-        // Order of payment can be generated for approved applications
-        if (strtolower($request->status) !== 'approved') {
-            return redirect()->back()->with('error', 'Order of payment can only be generated for approved applications');
+        // The Order of Payment is the document the applicant brings to the Treasury,
+        // so it is only issued once the Zoning Administrator has approved the
+        // application — not while it is still awaiting that approval.
+        $orderOfPaymentStatuses = ['approved'];
+        if (!in_array(strtolower((string) $request->status), $orderOfPaymentStatuses, true)) {
+            return redirect()->back()->with('error', 'The Order of Payment is available once your application has been approved by the Zoning Administrator.');
         }
 
         $payment = $request->payments->first();
-        
-        // Get the reviewer (admin who reviewed the application)
-        $report = \App\Models\Report::where('request_id', $id)
-            ->latest()
+
+        // The officer who reviewed this application — their e-signature is stamped
+        // on the Order of Payment as "Prepared by".
+        $report = \App\Models\Report::where('request_id', $id)->latest()->first();
+        $reviewer = $report?->resolveReviewer();
+
+        // "Approved by" is the Zoning Administrator.
+        $zoningAdministrator = \App\Models\User::where('user_type', 'super_admin')
+            ->whereNotNull('signature_path')
             ->first();
-            
-        $reviewer = null;
-        if ($report) {
-            // Try to get reviewer from issued_by (user ID) or reviewed_by (user ID)
-            $reviewerId = $report->reviewed_by ?? $report->issued_by;
-            if ($reviewerId) {
-                $reviewer = \App\Models\User::find($reviewerId);
-            }
-            // If no ID found, try issued_by as name (legacy support)
-            if (!$reviewer && $report->issued_by && !is_numeric($report->issued_by)) {
-                $reviewer = (object)['name' => $report->issued_by];
-            }
-        }
 
         $applicationData = [
             'id' => $request->id,
@@ -778,7 +793,17 @@ class RequestController extends Controller
         return \Inertia\Inertia::render('Admin/GenerateOrderOfPayment', [
             'application' => $applicationData,
             'payment' => $payment,
-            'reviewer' => $reviewer,
+            'reviewer' => $reviewer ? [
+                'name' => $reviewer->name ?? null,
+                'signature_url' => $reviewer->signature_url ?? null,
+            ] : null,
+            'zoningAdministrator' => $zoningAdministrator ? [
+                'name' => $zoningAdministrator->name,
+                'signature_url' => $zoningAdministrator->signature_url,
+            ] : null,
+            // The fee the Zoning Officer set at review time. At "For Payment" there
+            // is no Payment record yet, so this is the only source for the amount.
+            'paymentAmount' => $payment?->amount ?? $report?->payment_amount,
         ]);
     }
 
@@ -845,6 +870,145 @@ class RequestController extends Controller
             'application' => $this->formatApplicationData($request),
             'payment' => $payment,
             'reviewer' => $reviewer,
+        ]);
+    }
+
+    /**
+     * Applicant-facing detail page for one of their own applications.
+     * Shows the full application alongside the requirement documents.
+     */
+    public function showApplication($id): Response
+    {
+        $request = RequestModel::with([
+            'user',
+            'reports',
+            'applicant.corporation',
+            'applicant.primaryRepresentative',
+            'project',
+            'location',
+            'property',
+            'requirementDocuments',
+            'payments' => function ($query) {
+                $query->latest();
+            },
+        ])->findOrFail($id);
+
+        // Applicants may only view their own applications.
+        abort_if($request->user_id !== auth()->id(), 403, 'You are not authorized to view this application.');
+
+        $report = $request->reports->first();
+
+        // The requirement list is driven by the project type, same as the wizard.
+        $requirementsReference = \App\Constants\ApplicationRequirements::getRequirements(
+            $request->project?->project_type ?: 'ZONING CLEARANCE'
+        );
+
+        // Group uploaded documents by the requirement they belong to.
+        $grouped = $request->requirementDocuments->groupBy('requirement_id');
+
+        $documentsByRequirement = $grouped->map(function ($docs) {
+            return $docs->map(fn ($doc) => [
+                'id' => $doc->id,
+                'original_filename' => $doc->original_filename,
+                'file_size' => $doc->file_size,
+                'mime_type' => $doc->mime_type,
+                'uploaded_at' => $doc->created_at?->format('M d, Y g:i A'),
+            ])->values();
+        });
+
+        // The wizard collects documents against its own generic requirement list,
+        // while the reference list above varies by project type — and the project
+        // type is often only set by staff after submission. Prefer the name that
+        // was stored with the document, and append any uploaded requirement that
+        // the reference list does not know about, so nothing is ever hidden.
+        $requirementsReference = collect($requirementsReference)
+            ->map(function ($req) use ($grouped) {
+                $stored = $grouped->get($req['id']);
+                if ($stored && $stored->first()->requirement_name) {
+                    $req['name'] = $stored->first()->requirement_name;
+                }
+                return $req;
+            });
+
+        $knownIds = $requirementsReference->pluck('id')->map(fn ($id) => (string) $id);
+
+        $orphans = $grouped->keys()
+            ->reject(fn ($id) => $knownIds->contains((string) $id))
+            ->map(fn ($id) => [
+                'id' => $id,
+                'name' => $grouped->get($id)->first()->requirement_name ?: "Requirement #{$id}",
+                'required' => false,
+                'section' => 'additional',
+                'description' => '',
+            ]);
+
+        $requirementsReference = $requirementsReference->concat($orphans)->values()->all();
+
+        return Inertia::render('Applicant/ApplicationDetails', [
+            'application' => [
+                'id' => $request->id,
+                'application_number' => $request->application_number,
+                'decision_number' => $request->decision_number,
+                'status' => RequestModel::deriveStatus($request->status, $report?->evaluation),
+                'request_status' => $request->status,
+                'created_at' => $request->created_at?->format('F j, Y'),
+                'updated_at' => $request->updated_at?->format('F j, Y'),
+
+                // Applicant — fall back to the account contact number when the form
+                // did not carry one.
+                'applicant_name' => $request->applicant?->applicant_name,
+                'applicant_address' => $request->applicant?->applicant_address,
+                'applicant_contact' => $request->applicant?->applicant_contact
+                    ?: $request->user?->contact_number,
+                'applicant_email' => $request->user?->email,
+
+                'corporation_name' => $request->applicant?->corporation?->corporation_name,
+                'corporation_address' => $request->applicant?->corporation?->corporation_address,
+
+                'representative_name' => $request->applicant?->primaryRepresentative?->representative_name,
+                'representative_address' => $request->applicant?->primaryRepresentative?->representative_address,
+
+                'project_type' => $request->project?->project_type,
+                'project_nature' => $request->project?->project_nature,
+                'project_nature_duration' => $request->project?->project_nature_duration,
+                'project_nature_years' => $request->project?->project_nature_years,
+                'project_description' => $request->project?->project_description,
+                'project_cost' => $request->project?->project_cost,
+
+                'project_location_street' => $request->location?->street_address,
+                'project_location_barangay' => $request->location?->barangay,
+                'project_location_city' => $request->location?->city_municipality,
+                'project_location_province' => $request->location?->province,
+                'project_location_district' => $request->location?->district,
+                'project_location_postal_code' => $request->location?->postal_code,
+
+                'lot_area_sqm' => $request->property?->lot_area_sqm,
+                'bldg_improvement_sqm' => $request->property?->bldg_improvement_sqm,
+                'lot_number' => $request->property?->lot_number,
+                'title_number' => $request->property?->title_number,
+                'tax_declaration_no' => $request->property?->tax_declaration_no,
+                'zone_classification' => $request->property?->zone_classification,
+                'right_over_land' => $request->property?->right_over_land,
+                'existing_land_use' => $request->property?->existing_land_use,
+
+                'has_written_notice' => $request->has_written_notice,
+                'notice_officer_name' => $request->notice_officer_name,
+                'notice_dates' => optional($request->notice_dates)->format('F j, Y') ?? $request->notice_dates,
+                'has_similar_application' => $request->has_similar_application,
+                'similar_application_offices' => $request->similar_application_offices,
+                'similar_application_dates' => optional($request->similar_application_dates)->format('F j, Y') ?? $request->similar_application_dates,
+
+                // Release — a pickup application is collected at the CPDO office.
+                'preferred_release_mode' => $request->preferred_release_mode,
+                'release_address' => $request->release_address
+                    ?: 'City Planning and Development Office, Ground Floor, City Hall Bldg, City of Ilagan, Isabela',
+
+                'rejection_reason' => $report?->evaluation === 'rejected' ? $report?->description : null,
+                'payment_amount' => $report?->payment_amount,
+                'admin_notes' => $report?->admin_notes,
+            ],
+            'requirements' => $requirementsReference,
+            'documents' => $documentsByRequirement,
         ]);
     }
 

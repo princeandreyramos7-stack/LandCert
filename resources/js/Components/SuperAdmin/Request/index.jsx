@@ -27,27 +27,39 @@ import {
     FileCheck,
     Download,
     Eye,
+    Clock,
+    Search,
 } from "lucide-react";
 import { getStatusColor, getStatusIcon, getStatusLabel, formatDate, formatLocation } from "@/Components/Admin/Request/utils";
-import { ApproveDialog } from "./ApproveDialog";
-import { RejectDialog } from "./RejectDialog";
+import { useLiveData, useNewItemCount } from "@/hooks/useLiveData";
+import { LiveIndicator } from "@/Components/LiveIndicator";
+
+// Props refreshed by the live poller. Declared outside the component so the
+// array identity is stable and the polling effect is not re-created each render.
+const LIVE_PROPS = ["requests"];
 
 export function SuperAdminRequestList({ requests }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
-    const [selectedRequest, setSelectedRequest] = useState(null);
-    const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
-    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-    const [rejectionFeedback, setRejectionFeedback] = useState("");
     const { toast } = useToast();
 
     const requestsData = requests?.data || requests || [];
+
+    // Keep the list current without a manual browser refresh.
+    const { lastUpdated, isRefreshing, refreshNow } = useLiveData({ only: LIVE_PROPS });
+    const { newCount, acknowledge } = useNewItemCount(requestsData);
 
     const filteredRequests = useMemo(() => {
         let filtered = requestsData;
 
         if (filterStatus !== "all") {
-            filtered = filtered.filter((r) => r.status === filterStatus);
+            // "application_approved" groups every post-payment lifecycle status.
+            const paidStatuses = ["payment_confirmed", "certificate_preparing", "certificate_ready", "released", "approved_with_payment"];
+            filtered = filtered.filter((r) =>
+                filterStatus === "application_approved"
+                    ? paidStatuses.includes(r.status)
+                    : r.status === filterStatus
+            );
         }
 
         if (searchTerm) {
@@ -75,85 +87,6 @@ export function SuperAdminRequestList({ requests }) {
         };
     }, [requestsData]);
 
-    const handleApprove = (request) => {
-        setSelectedRequest(request);
-        setIsApproveDialogOpen(true);
-    };
-
-    const confirmApprove = () => {
-        if (!selectedRequest) return;
-
-        router.post(
-            route("super-admin.quick-approve", selectedRequest.id),
-            {},
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setIsApproveDialogOpen(false);
-                    setSelectedRequest(null);
-                    toast({
-                        title: "Request Approved!",
-                        description: `Request #${selectedRequest.application_number || selectedRequest.id} from ${selectedRequest.applicant_name} has been approved successfully.`,
-                    });
-                },
-                onError: () => {
-                    setIsApproveDialogOpen(false);
-                    toast({
-                        variant: "destructive",
-                        title: "Approval Failed!",
-                        description: "Failed to approve the request.",
-                    });
-                },
-            }
-        );
-    };
-
-    const handleReject = (request) => {
-        setSelectedRequest(request);
-        setRejectionFeedback("");
-        setIsRejectDialogOpen(true);
-    };
-
-    const confirmReject = () => {
-        if (!selectedRequest) return;
-
-        if (!rejectionFeedback.trim()) {
-            toast({
-                variant: "destructive",
-                title: "Feedback Required",
-                description: "Please provide a detailed rejection reason.",
-            });
-            return;
-        }
-
-        router.post(
-            route("super-admin.quick-reject", selectedRequest.id),
-            {
-                description: rejectionFeedback.trim(),
-            },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setIsRejectDialogOpen(false);
-                    setSelectedRequest(null);
-                    setRejectionFeedback("");
-                    toast({
-                        title: "Request Rejected!",
-                        description: `Request #${selectedRequest.application_number || selectedRequest.id} has been rejected.`,
-                    });
-                },
-                onError: () => {
-                    setIsRejectDialogOpen(false);
-                    toast({
-                        variant: "destructive",
-                        title: "Rejection Failed!",
-                        description: "Failed to reject the request.",
-                    });
-                },
-            }
-        );
-    };
-
     const handleExport = () => {
         const url = route("super-admin.export.requests", {
             status: filterStatus,
@@ -171,6 +104,18 @@ export function SuperAdminRequestList({ requests }) {
             {/* Single unified card containing everything */}
             <Card className="bg-white shadow-lg border border-gray-100">
                 <CardContent className="p-6">
+                    {/* Live refresh status — the list updates itself, no reload needed */}
+                    <div className="flex justify-end mb-3">
+                        <LiveIndicator
+                            isRefreshing={isRefreshing}
+                            lastUpdated={lastUpdated}
+                            newCount={newCount}
+                            onAcknowledge={acknowledge}
+                            onRefreshNow={refreshNow}
+                            label="applications"
+                        />
+                    </div>
+
                     {/* Statistics Cards at the top */}
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
                         <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
@@ -191,9 +136,7 @@ export function SuperAdminRequestList({ requests }) {
                                     <p className="text-2xl font-bold text-yellow-900">{stats.pending}</p>
                                     <p className="text-xs text-yellow-600 mt-1">Awaiting document check</p>
                                 </div>
-                                <svg className="h-8 w-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                                <Clock className="h-8 w-8 text-yellow-500" />
                             </div>
                         </div>
 
@@ -211,7 +154,7 @@ export function SuperAdminRequestList({ requests }) {
                         <div className="bg-red-50 rounded-lg p-4 border-l-4 border-red-500">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-medium text-red-600 uppercase mb-1">Application Rejected</p>
+                                    <p className="text-xs font-medium text-red-600 uppercase mb-1">Application Denied</p>
                                     <p className="text-2xl font-bold text-red-900">{stats.rejected}</p>
                                     <p className="text-xs text-red-600 mt-1">Needs attention</p>
                                 </div>
@@ -251,14 +194,13 @@ export function SuperAdminRequestList({ requests }) {
                                 <option value="all">All Status of Application</option>
                                 <option value="pending">For Verification</option>
                                 <option value="reviewed">For Payment</option>
-                                <option value="approved">Application Approved</option>
-                                <option value="rejected">Application Rejected</option>
+                                <option value="approved">Approved — For Payment</option>
+                                <option value="application_approved">Application Approved (paid)</option>
+                                <option value="rejected">Application Denied</option>
                             </select>
 
                             <div className="relative">
-                                <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 <Input
                                     placeholder="Search requests..."
                                     value={searchTerm}
@@ -276,7 +218,7 @@ export function SuperAdminRequestList({ requests }) {
                                 <TableRow className="bg-gray-50">
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Application No.</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Applicant</TableHead>
-                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Project Type</TableHead>
+                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Locational Clearance</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Location</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Date</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Status of Application</TableHead>
@@ -347,24 +289,7 @@ export function SuperAdminRequestList({ requests }) {
                                                             className="text-purple-600 font-medium"
                                                         >
                                                             <FileCheck className="h-4 w-4 mr-2" />
-                                                            Document Verification
-                                                        </DropdownMenuItem>
-                                                     
-                                                        <DropdownMenuItem
-                                                            onClick={() => handleApprove(request)}
-                                                            disabled={request.status === "approved"}
-                                                            className="text-green-600"
-                                                        >
-                                                            <CheckCircle className="h-4 w-4 mr-2" />
-                                                            Quick Approve
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => handleReject(request)}
-                                                            disabled={request.status === "rejected"}
-                                                            className="text-red-600"
-                                                        >
-                                                            <XCircle className="h-4 w-4 mr-2" />
-                                                            Quick Reject
+                                                            Review &amp; Decide
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -377,24 +302,6 @@ export function SuperAdminRequestList({ requests }) {
                     </div>
                 </CardContent>
             </Card>
-
-            {/* Approval Dialog */}
-            <ApproveDialog
-                isOpen={isApproveDialogOpen}
-                onClose={() => setIsApproveDialogOpen(false)}
-                request={selectedRequest}
-                onConfirm={confirmApprove}
-            />
-
-            {/* Rejection Dialog */}
-            <RejectDialog
-                isOpen={isRejectDialogOpen}
-                onClose={() => setIsRejectDialogOpen(false)}
-                request={selectedRequest}
-                feedback={rejectionFeedback}
-                onFeedbackChange={setRejectionFeedback}
-                onConfirm={confirmReject}
-            />
         </div>
     );
 }

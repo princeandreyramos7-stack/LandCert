@@ -9,10 +9,11 @@ import { AddPaymentPickerModal } from "@/Components/Admin/Payments/AddPaymentPic
 import { Card, CardContent } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
-import { 
-    DollarSign, Clock, AlertCircle, CreditCard, 
-    CheckCircle2, XCircle, Plus 
+import {
+    DollarSign, Clock, AlertCircle, CreditCard,
+    CheckCircle2, XCircle, Plus
 } from "lucide-react";
+import { LiveRefresh } from "@/Components/LiveRefresh";
 
 export default function PaymentsUnified({ 
     pendingPayments = [], 
@@ -95,6 +96,8 @@ export default function PaymentsUnified({
                 title="Payments Management" 
                 breadcrumbs={[{ label: "Dashboard", href: "/super-admin/dashboard" }]}
             >
+                <LiveRefresh only={["pendingPayments", "verifiedPayments", "allPayments"]} items={allPayments} label="payments" className="justify-end mb-4" />
+
                 {/* Page Header */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-5">
                     <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -183,7 +186,7 @@ export default function PaymentsUnified({
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-xs text-rose-700 font-bold mb-1 uppercase tracking-wide">
-                                        Rejected
+                                        Denied
                                     </p>
                                     <p className="text-2xl font-black text-rose-900">
                                         {rejectedCount}

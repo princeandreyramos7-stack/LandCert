@@ -9,14 +9,27 @@ import {
 import { Button } from "@/Components/ui/button";
 import { Loader2, CheckCircle2 } from "lucide-react";
 
-export function ApplicationSummaryModal({ 
-    isOpen, 
-    onClose, 
-    onConfirm, 
-    processing, 
-    data = {}, 
-    isEditing = false 
+export function ApplicationSummaryModal({
+    isOpen,
+    onClose,
+    onConfirm,
+    processing,
+    data = {},
+    isEditing = false,
+    // Selected files live in the parent's plain state, not in the Inertia form
+    // (useForm's cloneDeep destroys File objects), so they are passed in directly.
+    requirementFiles = {},
+    requirements = [],
 }) {
+    // Only requirements that actually have at least one file attached.
+    const uploadedEntries = Object.entries(requirementFiles)
+        .filter(([, files]) => Array.isArray(files) && files.length > 0);
+
+    const totalFiles = uploadedEntries.reduce((sum, [, files]) => sum + files.length, 0);
+
+    const requirementLabel = (reqId) =>
+        requirements.find((r) => String(r.id) === String(reqId))?.name || `Requirement #${reqId}`;
+
     const SummaryItem = ({ label, value }) => (
         <div className="flex justify-between gap-4">
             <span className="text-gray-600 text-xs">{label}:</span>
@@ -71,7 +84,7 @@ export function ApplicationSummaryModal({
                     <div className="space-y-3">
                         <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Project Details</h3>
                         <div className="space-y-2 text-sm">
-                            <SummaryItem label="Project Type" value={data.project_type} />
+                            <SummaryItem label="Locational Clearance" value={data.project_type} />
                             <SummaryItem label="Project Nature" value={data.project_nature} />
                             <SummaryItem label="Project Area (sqm)" value={data.project_area_sqm} />
                             <SummaryItem label="Lot Area (sqm)" value={data.lot_area_sqm} />
@@ -138,12 +151,12 @@ export function ApplicationSummaryModal({
                     <div className="space-y-3">
                         <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Requirements Uploaded</h3>
                         <div className="space-y-2 text-sm">
-                            {data.requirement_uploads && Object.keys(data.requirement_uploads).length > 0 ? (
+                            {uploadedEntries.length > 0 ? (
                                 <>
-                                    {Object.entries(data.requirement_uploads).map(([reqId, files]) => (
+                                    {uploadedEntries.map(([reqId, files]) => (
                                         <div key={reqId} className="flex justify-between gap-4">
-                                            <span className="text-gray-600 text-xs">Requirement #{reqId}:</span>
-                                            <span className="text-gray-900 font-medium text-xs">
+                                            <span className="text-gray-600 text-xs">{requirementLabel(reqId)}:</span>
+                                            <span className="text-gray-900 font-medium text-xs whitespace-nowrap">
                                                 {files.length} file{files.length !== 1 ? 's' : ''}
                                             </span>
                                         </div>
@@ -152,7 +165,7 @@ export function ApplicationSummaryModal({
                                         <div className="flex justify-between gap-4">
                                             <span className="text-gray-700 font-semibold text-xs">Total Files:</span>
                                             <span className="text-gray-900 font-bold text-xs">
-                                                {Object.values(data.requirement_uploads).reduce((sum, files) => sum + files.length, 0)} files
+                                                {totalFiles} file{totalFiles !== 1 ? 's' : ''}
                                             </span>
                                         </div>
                                     </div>

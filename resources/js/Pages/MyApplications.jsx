@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Head, usePage } from "@inertiajs/react";
+import { useToast } from "@/Components/ui/use-toast";
 import { AdminSidebar } from "@/Components/admin-sidebar";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import { MyApplicationsList } from "@/Components/MyApplications/MyApplicationsList";
@@ -8,6 +10,7 @@ import {
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/Components/ui/breadcrumb";
 import { Separator } from "@/Components/ui/separator";
 import { Toaster } from "@/Components/ui/toaster";
+import { LiveRefresh } from "@/Components/LiveRefresh";
 
 /* Admin variant of the layout (uses AdminSidebar) */
 function AdminWrapper({ children }) {
@@ -38,8 +41,27 @@ function AdminWrapper({ children }) {
 }
 
 export default function MyApplications({ applications = [] }) {
-    const { auth } = usePage().props;
+    const { auth, flash } = usePage().props;
     const isAdmin = auth?.user?.roles?.some(r => r.name === "admin");
+    const { toast } = useToast();
+
+    // The submit/update flows redirect here with a flash message. Surface it as a
+    // toast so the applicant gets confirmation that the submission went through.
+    useEffect(() => {
+        if (flash?.success) {
+            toast({
+                title: "Application Submitted",
+                description: flash.success,
+            });
+        }
+        if (flash?.error) {
+            toast({
+                variant: "destructive",
+                title: "Something went wrong",
+                description: flash.error,
+            });
+        }
+    }, [flash?.success, flash?.error]);
 
     if (isAdmin) {
         return (
@@ -56,6 +78,7 @@ export default function MyApplications({ applications = [] }) {
         <>
             <Head title="My Applications — CPDO"/>
             <ApplicantLayout title="My Applications">
+                <LiveRefresh only={["applications"]} items={applications} label="applications" className="justify-end mb-4" />
                 <MyApplicationsList applications={applications}/>
             </ApplicantLayout>
         </>

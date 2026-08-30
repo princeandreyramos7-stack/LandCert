@@ -119,7 +119,7 @@ export function UploadCertificateModal({ isOpen, onClose, certificate, routePref
                                 </span>
                             </div>
                             <div>
-                                <span className="text-slate-500">Project Type:</span>
+                                <span className="text-slate-500">Locational Clearance:</span>
                                 <span className="ml-2 font-semibold">
                                     {certificate.request?.project?.project_type || 'N/A'}
                                 </span>

@@ -29,7 +29,7 @@ export function RejectDialog({
     
     if (!request) return null;
 
-    // Common rejection reasons
+    // Common denial reasons
     const commonReasons = [
         "Incomplete documentation",
         "Does not meet zoning requirements",
@@ -55,10 +55,10 @@ export function RejectDialog({
                         <div className="p-3 bg-red-100 rounded-full">
                             <XCircle className="h-7 w-7 text-red-600" />
                         </div>
-                        <DialogTitle className="text-xl text-red-900">Reject Request</DialogTitle>
+                        <DialogTitle className="text-xl text-red-900">Deny Request</DialogTitle>
                     </div>
                     <DialogDescription className="pt-4 text-base">
-                        Please provide a detailed reason for rejecting this request. The applicant will receive this feedback.
+                        Please provide a detailed reason for denying this request. The applicant will receive this feedback.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -82,7 +82,7 @@ export function RejectDialog({
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-sm font-medium text-gray-600">
-                                Project Type:
+                                Locational Clearance:
                             </span>
                             <span className="text-sm font-bold text-gray-900">
                                 {request.project_type}
@@ -118,14 +118,14 @@ export function RejectDialog({
                     </div>
                 </div>
 
-                {/* Rejection Reason Text Area */}
+                {/* Denial Reason Text Area */}
                 <div className="space-y-3">
-                    <Label htmlFor="rejection-reason" className="text-sm font-semibold text-gray-700">
-                        Rejection Reason <span className="text-red-500">*</span>
+                    <Label htmlFor="denial-reason" className="text-sm font-semibold text-gray-700">
+                        Denial Reason <span className="text-red-500">*</span>
                     </Label>
                     <Textarea
-                        id="rejection-reason"
-                        placeholder="Enter detailed rejection reason here... (Required)"
+                        id="denial-reason"
+                        placeholder="Enter detailed denial reason here... (Required)"
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
                         className="min-h-[120px] resize-none border-2 focus:border-red-500"
@@ -142,7 +142,7 @@ export function RejectDialog({
                         <div>
                             <p className="text-sm font-semibold text-yellow-900 mb-1">Important Notice</p>
                             <p className="text-sm text-yellow-800">
-                                This rejection will be permanent. The applicant will be notified via email with the reason you provide. Please ensure your feedback is clear and constructive.
+                                This denial will be permanent. The applicant will be notified via email with the reason you provide. Please ensure your feedback is clear and constructive.
                             </p>
                         </div>
                     </div>
@@ -158,7 +158,7 @@ export function RejectDialog({
                         disabled={!feedback.trim()}
                     >
                         <XCircle className="h-4 w-4 mr-2" />
-                        Confirm Rejection
+                        Confirm Denial
                     </Button>
                 </DialogFooter>
             </DialogContent>

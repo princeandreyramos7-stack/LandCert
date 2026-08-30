@@ -39,6 +39,32 @@ class Request extends Model
     ];
 
     /**
+     * Statuses that live only on requests.status (set by the payment/certificate
+     * flow). Once the request reaches one of these, it is the source of truth —
+     * reports.evaluation stays frozen at "approved" through this stage.
+     */
+    public const CERT_LIFECYCLE_STATUSES = [
+        'payment_confirmed',
+        'certificate_preparing',
+        'certificate_ready',
+        'released',
+    ];
+
+    /**
+     * The status the applicant / officer / administrator should all see: the
+     * report evaluation while the application is being decided, then the
+     * request status once it enters the payment/certificate lifecycle.
+     */
+    public static function deriveStatus(?string $requestStatus, ?string $evaluation): ?string
+    {
+        if (in_array($requestStatus, self::CERT_LIFECYCLE_STATUSES, true)) {
+            return $requestStatus;
+        }
+
+        return $evaluation ?? $requestStatus;
+    }
+
+    /**
      * Get the user that owns the request.
      */
     public function user(): BelongsTo
@@ -131,12 +157,16 @@ class Request extends Model
      * Generate a unique Application Number in the format TPZ-MM-YY-NNNN.
      * Increments per applicant, creating a unique application number for each applicant.
      * 
+     * MM-YY is the month and year the application was CREATED, not the moment
+     * this method happens to run.
+     *
      * @param int $applicantId The ID of the applicant
-     * @return string e.g. TPZ-03-26-9627
+     * @param \DateTimeInterface|null $createdAt Application creation date (defaults to now)
+     * @return string e.g. TPZ-10-26-9627
      */
-    public static function generateApplicationNumber(int $applicantId): string
+    public static function generateApplicationNumber(int $applicantId, $createdAt = null): string
     {
-        $date = now();
+        $date = $createdAt ? \Illuminate\Support\Carbon::parse($createdAt) : now();
         $month = $date->format('m');
         $year = $date->format('y');
         $prefix = 'TPZ';
@@ -168,12 +198,17 @@ class Request extends Model
      * The prefix XXX is determined by the permit type set by admin.
      * If no permit type is set, it defaults to 'CPDO'.
      * 
+     * MM-YY is the month and year the APPLICATION was created, not the date it is
+     * approved — a request filed in October and approved in December still reads
+     * 10-26, matching its application number.
+     *
      * @param string|null $permitType The type of permit (e.g., 'Certificate of Zoning Compliance')
-     * @return string e.g. CZC-02-26-3114-5151 or CPDO-02-26-3114-5151
+     * @param \DateTimeInterface|null $createdAt Application creation date (defaults to now)
+     * @return string e.g. CZC-10-26-3114-5151 or CPDO-10-26-3114-5151
      */
-    public static function generateDecisionNumber(?string $permitType = null): string
+    public static function generateDecisionNumber(?string $permitType = null, $createdAt = null): string
     {
-        $date = now();
+        $date = $createdAt ? \Illuminate\Support\Carbon::parse($createdAt) : now();
         $month = $date->format('m');
         $year = $date->format('y');
         

@@ -396,7 +396,7 @@ export function PaymentHistoryTable({
                 )}
             </div>
 
-            {/* Verify / Reject Payment Dialog */}
+            {/* Verify / Deny Payment Dialog */}
             <VerifyPaymentDialog
                 isOpen={!!verifyingPayment}
                 onClose={() => setVerifyingPayment(null)}

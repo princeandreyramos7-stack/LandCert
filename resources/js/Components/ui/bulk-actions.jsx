@@ -57,8 +57,8 @@ function BulkActions({
     if (!rejectionReason.trim()) {
       toast({
         variant: 'destructive',
-        title: 'Rejection Reason Required',
-        description: 'Please provide a reason for rejection.'
+        title: 'Denial Reason Required',
+        description: 'Please provide a reason for denial.'
       });
       return;
     }
@@ -66,8 +66,8 @@ function BulkActions({
     try {
       await onBulkReject(selectedItems, rejectionReason);
       toast({
-        title: 'Requests Rejected',
-        description: `Successfully rejected ${selectedCount} request(s).`
+        title: 'Requests Denied',
+        description: `Successfully denied ${selectedCount} request(s).`
       });
       setShowRejectModal(false);
       setRejectionReason('');
@@ -75,8 +75,8 @@ function BulkActions({
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Rejection Failed',
-        description: 'Failed to reject some applications. Please try again.'
+        title: 'Denial Failed',
+        description: 'Failed to deny some applications. Please try again.'
       });
     }
   };
@@ -140,7 +140,7 @@ function BulkActions({
                 Approve
               </Button>
 
-              {/* Reject Button */}
+              {/* Deny Button */}
               <Button
                 size="sm"
                 variant="outline"
@@ -149,7 +149,7 @@ function BulkActions({
                 className="border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
               >
                 <XCircle className="w-4 h-4 mr-2" />
-                Reject
+                Deny
               </Button>
 
               {/* Export Button */}
@@ -241,7 +241,7 @@ function BulkActions({
         </div>
       )}
 
-      {/* Rejection Modal */}
+      {/* Denial Modal */}
       {showRejectModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-full max-w-md mx-4">
@@ -251,21 +251,21 @@ function BulkActions({
                   <XCircle className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Reject Requests</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Deny Requests</h3>
                   <p className="text-sm text-gray-600">
-                    You are about to reject {selectedCount} request(s)
+                    You are about to deny {selectedCount} request(s)
                   </p>
                 </div>
               </div>
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rejection Reason *
+                  Denial Reason *
                 </label>
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Please provide a reason for rejection..."
+                  placeholder="Please provide a reason for denial..."
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   rows={4}
                   required
@@ -293,7 +293,7 @@ function BulkActions({
                   ) : (
                     <XCircle className="w-4 h-4 mr-2" />
                   )}
-                  Reject Requests
+                  Deny Requests
                 </Button>
               </div>
             </CardContent>

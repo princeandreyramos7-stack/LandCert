@@ -68,7 +68,7 @@
             color: #f59e0b;
             font-weight: bold;
         }
-        .rejection-icon {
+        .denial-icon {
             font-size: 48px;
             margin-bottom: 10px;
         }
@@ -76,7 +76,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="rejection-icon">⚠️</div>
+        <div class="denial-icon">⚠️</div>
         <h1>Application Status Update</h1>
     </div>
     

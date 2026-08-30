@@ -1,12 +1,45 @@
 import React, { useRef } from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, usePage } from "@inertiajs/react";
 import { Button } from "@/Components/ui/button";
 import { ArrowLeft, Download, Printer, FileText } from "lucide-react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import html2pdf from 'html2pdf.js';
 
-export default function GenerateCertificate({ application, payment, reviewer, auth }) {
+/**
+ * One signature slot: the e-signature image sits ON the ruled line, with the
+ * printed name and title underneath. Falls back to an empty gap (same height,
+ * so the layout never shifts) when the signer has no signature on file.
+ */
+function SignatureLine({ signatureUrl, name, title }) {
+    return (
+        <div style={{ marginTop: '10pt' }}>
+            <div style={{ height: '38pt', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                {signatureUrl && (
+                    <img
+                        src={signatureUrl}
+                        alt=""
+                        crossOrigin="anonymous"
+                        style={{ maxHeight: '38pt', maxWidth: '85%', objectFit: 'contain', marginBottom: '-4pt' }}
+                    />
+                )}
+            </div>
+            <div style={{ borderTop: '1.5px solid #000', paddingTop: '3pt', textAlign: 'center' }}>
+                <strong>{name}</strong><br />
+                {title}
+            </div>
+        </div>
+    );
+}
+
+export default function GenerateCertificate({ application, payment, reviewer, zoningAdministrator, auth }) {
     const certificateRef = useRef(null);
+
+    // This page is rendered for both admins and super admins — follow the viewer.
+    const pageAuth = usePage().props.auth ?? auth;
+    const isSuperAdmin = pageAuth?.user?.user_type === 'super_admin';
+    const Layout = isSuperAdmin ? SuperAdminLayout : AdminLayout;
+    const routePrefix = isSuperAdmin ? 'super-admin' : 'admin';
 
     const handlePrint = () => {
         window.print();
@@ -38,11 +71,11 @@ export default function GenerateCertificate({ application, payment, reviewer, au
     };
 
     return (
-        <AdminLayout 
-            title="Generate Clearance" 
+        <Layout
+            title="Generate Clearance"
             breadcrumbs={[
-                { label: "Dashboard", href: "/admin/dashboard" }, 
-                { label: "Certificates", href: "/admin/certificates" }
+                { label: "Dashboard", href: `/${routePrefix}/dashboard` },
+                { label: "Certificates", href: `/${routePrefix}/certificates` }
             ]}
         >
             <Head title={`Certificate - ${application.application_number}`} />
@@ -380,31 +413,32 @@ export default function GenerateCertificate({ application, payment, reviewer, au
                 {/* Signatures Section */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20pt', marginBottom: '25pt', fontSize: '9pt' }}>
                     <div style={{ width: '45%' }}>
-                        <div style={{ marginBottom: '6pt' }}>Prepared & Evaluated by:</div>
-                        <div style={{ marginTop: '35pt', borderTop: '1.5px solid #000', paddingTop: '3pt', textAlign: 'center' }}>
-                            <strong>{reviewer?.name || 'MARY JANE M. BULAUAN'}</strong><br />
-                            Zoning Officer IV
-                        </div>
+                        <div style={{ marginBottom: '6pt' }}>Prepared &amp; Evaluated by:</div>
+                        <SignatureLine
+                            signatureUrl={reviewer?.signature_url}
+                            name={reviewer?.name || 'MARY JANE M. BULAUAN'}
+                            title={<>Zoning Officer IV</>}
+                        />
                     </div>
-                    
+
                     <div style={{ width: '45%' }}>
                         <div style={{ marginBottom: '6pt', visibility: 'hidden' }}>Placeholder</div>
-                        <div style={{ marginTop: '35pt', borderTop: '1.5px solid #000', paddingTop: '3pt', textAlign: 'center' }}>
-                            <strong>ENGR. CRISANTA D. CONCEPCION, EnP</strong><br />
-                            City Planning & Dev't. Coordinator/<br />
-                            Zoning Administrator
-                        </div>
+                        <SignatureLine
+                            signatureUrl={zoningAdministrator?.signature_url}
+                            name={zoningAdministrator?.name || 'ENGR. CRISANTA D. CONCEPCION, EnP'}
+                            title={<>City Planning &amp; Dev't. Coordinator/<br />Zoning Administrator</>}
+                        />
                     </div>
                 </div>
 
                 {/* Payment Details - Below signatures on the left */}
                 <div style={{ fontSize: '9pt', marginTop: '15pt' }}>
-                    <div><strong>O.R. No.:</strong> {payment?.reference_number || 'N/A'}</div>
+                    <div><strong>O.R. No.:</strong> {payment?.receipt_number || 'N/A'}</div>
                     <div><strong>Date Issued:</strong> {payment?.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : application.updated_at ? new Date(application.updated_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}</div>
                     <div><strong>Amount Paid:</strong> ₱{payment?.amount ? Number(payment.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00'}</div>
                 </div>
                 </div>
             </div>
-        </AdminLayout>
+        </Layout>
     );
 }

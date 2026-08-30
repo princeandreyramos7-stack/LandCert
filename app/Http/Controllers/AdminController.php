@@ -83,7 +83,7 @@ class AdminController extends Controller
                 'users.name as user_name',
                 'users.email as user_email',
                 // Status
-                DB::raw('COALESCE(reports.evaluation, requests.status) as status')
+                DB::raw("CASE WHEN requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN requests.status ELSE COALESCE(reports.evaluation, requests.status) END as status")
             )
             ->orderBy('requests.created_at', 'desc')
             ->paginate($perPage);
@@ -120,7 +120,7 @@ class AdminController extends Controller
             'total_revenue' => \App\Models\Payment::where('payment_status', 'verified')->sum('amount'),
             'pending_payments' => \App\Models\Payment::where('payment_status', 'pending')->count(),
             'verified_payments' => \App\Models\Payment::where('payment_status', 'verified')->count(),
-            'rejected_payments' => \App\Models\Payment::where('payment_status', 'rejected')->count(),
+            'denied_payments' => \App\Models\Payment::where('payment_status', 'rejected')->count(),
             'average_payment' => \App\Models\Payment::where('payment_status', 'verified')->avg('amount'),
         ];
         
@@ -180,7 +180,7 @@ class AdminController extends Controller
                 ];
             });
         
-        // Project type distribution
+        // Locational Clearance distribution
         $projectTypes = RequestModel::join('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
             ->select('normalized_projects.project_type', DB::raw('COUNT(*) as count'))
             ->whereNotNull('normalized_projects.project_type')
@@ -251,12 +251,12 @@ class AdminController extends Controller
             $requestArray['evaluation']               = $report?->evaluation;
             $requestArray['user_name']                = $request->user?->name;
             $requestArray['user_email']               = $request->user?->email;
-            $requestArray['status']                   = $report?->evaluation ?? $request->status;
+            $requestArray['status']                   = RequestModel::deriveStatus($request->status, $report?->evaluation);
 
             // Applicant
             $requestArray['applicant_name']           = $request->applicant?->applicant_name;
 
-            // Project type from normalized_projects
+            // Locational Clearance from normalized_projects
             $requestArray['project_type']             = $request->project?->project_type;
 
             // Location fields from locations table
@@ -385,7 +385,7 @@ class AdminController extends Controller
         $requestData['evaluation'] = $report?->evaluation;
         $requestData['user_name'] = $request->user?->name;
         $requestData['user_email'] = $request->user?->email;
-        $requestData['status'] = $report?->evaluation ?? $request->status;
+        $requestData['status'] = RequestModel::deriveStatus($request->status, $report?->evaluation);
         
         return Inertia::render('Admin/RequestDetails', [
             'request' => $requestData,
@@ -415,7 +415,7 @@ class AdminController extends Controller
         $requestData = [
             'id' => $request->id,
             'application_number' => $request->application_number,
-            'status' => $report?->evaluation ?? $request->status,
+            'status' => RequestModel::deriveStatus($request->status, $report?->evaluation),
             'created_at' => $request->created_at,
             'updated_at' => $request->updated_at,
             
@@ -532,7 +532,7 @@ class AdminController extends Controller
         $requestData = [
             'id' => $request->id,
             'application_number' => $request->application_number,
-            'status' => $report?->evaluation ?? $request->status,
+            'status' => RequestModel::deriveStatus($request->status, $report?->evaluation),
             'created_at' => $request->created_at,
             'updated_at' => $request->updated_at,
             
@@ -553,29 +553,35 @@ class AdminController extends Controller
             // Representative info
             'authorized_representative_name' => $request->applicant?->primaryRepresentative?->representative_name,
             'authorized_representative_address' => $request->applicant?->primaryRepresentative?->representative_address,
+            'authorized_representative_email' => $request->applicant?->primaryRepresentative?->representative_email,
             'authorization_letter_path' => $request->applicant?->primaryRepresentative?->authorization_letter_path,
-            
+
             // Project info
             'application_category' => $request->project?->project_type,
             'project_type' => $request->project?->project_type,
             'project_nature' => $request->project?->project_nature,
             'project_nature_duration' => $request->project?->project_nature_duration,
             'project_nature_years' => $request->project?->project_nature_years,
+            'project_description' => $request->project?->project_description,
             'project_cost' => $request->project?->project_cost,
-            
+
             // Location info
-            'project_location_number' => null,
+            'project_location_number' => $request->property?->lot_number,
             'project_location_street' => $request->location?->street_address,
             'project_location_barangay' => $request->location?->barangay,
             'project_location_municipality' => $request->location?->city_municipality,
             'project_location_province' => $request->location?->province,
-            
+
             // Property info
             'project_area_sqm' => ($request->property?->lot_area_sqm + $request->property?->bldg_improvement_sqm),
             'lot_area_sqm' => $request->property?->lot_area_sqm,
             'bldg_improvement_sqm' => $request->property?->bldg_improvement_sqm,
+            'lot_number' => $request->property?->lot_number,
+            'title_number' => $request->property?->title_number,
+            'tax_declaration_no' => $request->property?->tax_declaration_no,
+            'zone_classification' => $request->property?->zone_classification ?: $request->property?->existing_land_use,
             'right_over_land' => $request->property?->right_over_land,
-            
+
             // Land use info
             'existing_land_use' => $request->property?->existing_land_use,
             'has_written_notice' => $request->has_written_notice,
@@ -584,8 +590,16 @@ class AdminController extends Controller
             'has_similar_application' => $request->has_similar_application,
             'similar_application_offices' => $request->similar_application_offices,
             'similar_application_dates' => $request->similar_application_dates,
-            
+
+            // Release preference
+            'preferred_release_mode' => $request->preferred_release_mode,
+            'release_address' => $request->release_address,
+
             // Report info
+            'decision_number' => $request->decision_number,
+            'rejection_reason' => $report?->evaluation === 'rejected' ? $report?->description : null,
+            'payment_amount' => $report?->payment_amount,
+            'admin_notes' => $report?->admin_notes,
             'application_id' => $request->id,
         ];
         
@@ -617,7 +631,7 @@ class AdminController extends Controller
         $requestData = [
             'id' => $request->id,
             'application_number' => $request->application_number,
-            'status' => $report?->evaluation ?? $request->status,
+            'status' => RequestModel::deriveStatus($request->status, $report?->evaluation),
             'created_at' => $request->created_at,
             'updated_at' => $request->updated_at,
             
@@ -647,7 +661,7 @@ class AdminController extends Controller
             // Verified requirements toggle state
             'verified_requirements' => $request->verified_requirements ?? [],
             
-            // Review/rejection info
+            // Review/denial info
             'rejection_reason' => $report?->description ?? null,
             'admin_notes' => $report?->admin_notes ?? null,
             
@@ -775,9 +789,9 @@ class AdminController extends Controller
                                 \Log::error('Failed to schedule payment reminder: ' . $e->getMessage());
                             }
                         } elseif ($validated['evaluation'] === 'rejected') {
-                            $rejectionReason = $validated['description'] ?? 'Your application has been rejected. Please review and resubmit with the necessary corrections.';
+                            $rejectionReason = $validated['description'] ?? 'Your application has been denied. Please review and resubmit with the necessary corrections.';
                             
-                            // Send rejection email immediately (not queued)
+                            // Send denial email immediately (not queued)
                             \Mail::to($user->email)->send(
                                 new ApplicationRejected(
                                     $requestModel, // Pass request instead of application
@@ -787,7 +801,7 @@ class AdminController extends Controller
                                 )
                             );
                             
-                            // Create notification for rejection
+                            // Create notification for denial
                             NotificationService::applicationRejected($requestModel, $rejectionReason, auth()->user());
                             
                             // Send SMS notification
@@ -801,7 +815,7 @@ class AdminController extends Controller
                             }
                             
                             // Log the email sending for debugging
-                            \Log::info('Application rejection email sent to: ' . $user->email . ' for request ID: ' . $requestModel->id);
+                            \Log::info('Application denial email sent to: ' . $user->email . ' for request ID: ' . $requestModel->id);
                         }
                     } else {
                         \Log::warning('User not found for user_id: ' . $requestModel->user_id);
@@ -820,7 +834,7 @@ class AdminController extends Controller
 
     /**
      * Streamlined review application method (NEW)
-     * Allows admin to review or reject with one action
+     * Allows admin to review or deny with one action
      */
     public function reviewApplication(Request $request)
     {
@@ -839,15 +853,48 @@ class AdminController extends Controller
         \Log::info('Review Application - Request Data:', $request->all());
         \Log::info('Review Application - Validated Data:', $validated);
 
-        $requestModel = RequestModel::with(['applicant', 'project', 'user'])->findOrFail($validated['request_id']);
+        $requestModel = RequestModel::with(['applicant', 'project', 'user', 'property'])->findOrFail($validated['request_id']);
+
+        // Once the SuperAdmin has approved (or the certificate flow has started), the
+        // Zoning Officer's decision is final and cannot be changed.
+        $lockedStatuses = ['approved', 'certificate_preparing', 'certificate_ready', 'released'];
+        if (in_array(strtolower((string) $requestModel->status), $lockedStatuses, true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'action' => 'This application has already been approved. The decision can no longer be changed.',
+            ]);
+        }
 
         if ($validated['action'] === 'reviewed') {
+            // The Locational Clearance must be set before an application can be marked as
+            // reviewed — it drives the fee and the certificate wording.
+            $locationalClearance = strtoupper(trim((string) optional($requestModel->project)->project_type));
+            if ($locationalClearance === '' || $locationalClearance === 'N/A' || $locationalClearance === 'NA') {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'project_type' => 'Set the Locational Clearance before marking this application as reviewed.',
+                ]);
+            }
+
+            // The Lot Number and Tax Declaration No. must be recorded first — they
+            // are printed on the clearance/certificate and cannot be added later
+            // without re-opening the application. Set them on the View Application
+            // page (Step 2 → Property Details).
+            $lotNumber = trim((string) optional($requestModel->property)->lot_number);
+            $taxDeclarationNo = trim((string) optional($requestModel->property)->tax_declaration_no);
+            if ($lotNumber === '' || $taxDeclarationNo === '') {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'property' => 'Set the Lot Number and Tax Declaration No. (View Application → Step 2 → Property Details) before marking this application as reviewed.',
+                ]);
+            }
+
             // Create or update report with review details including payment info
             $report = Report::updateOrCreate(
                 ['request_id' => $requestModel->id],
                 [
                     'evaluation' => 'reviewed',
                     'issued_by' => auth()->user()->name,
+                    // Link the report to the reviewing officer's account so the
+                    // right e-signature lands on the certificate/clearance.
+                    'reviewed_by' => auth()->id(),
                     'date_reported' => now(),
                     'description' => 'Application reviewed by ' . auth()->user()->name . '. Pending SuperAdmin approval.',
                     'payment_amount' => $validated['payment_amount'] ?? null,
@@ -889,12 +936,13 @@ class AdminController extends Controller
             return back()->with('success', 'Application marked as reviewed with payment details! Sent to SuperAdmin for final approval. SMS will be sent to applicant after approval.');
 
         } else {
-            // Rejection flow
+            // Denial flow
             $report = Report::updateOrCreate(
                 ['request_id' => $requestModel->id],
                 [
                     'evaluation' => 'rejected',
                     'issued_by' => auth()->user()->name,
+                    'reviewed_by' => auth()->id(),
                     'date_reported' => now(),
                     'description' => $validated['rejection_reason']
                 ]
@@ -908,10 +956,10 @@ class AdminController extends Controller
                 'Report',
                 $report->id,
                 $report->toArray(),
-                "Admin rejected application #{$requestModel->id}"
+                "Admin denied application #{$requestModel->id}"
             );
 
-            // Send immediate rejection email and notification
+            // Send immediate denial email and notification
             try {
                 if ($requestModel->user && $requestModel->user->email) {
                     \Mail::to($requestModel->user->email)->send(
@@ -937,10 +985,10 @@ class AdminController extends Controller
                     );
                 }
             } catch (\Exception $e) {
-                \Log::error('Failed to send rejection notification: ' . $e->getMessage());
+                \Log::error('Failed to send denial notification: ' . $e->getMessage());
             }
 
-            return back()->with('success', 'Application rejected and applicant has been notified.');
+            return back()->with('success', 'Application denied and applicant has been notified.');
         }
     }
 
@@ -1046,6 +1094,7 @@ class AdminController extends Controller
                     'id' => $payment->id,
                     'request_id' => $payment->request_id,
                     'application_number' => $payment->request->application_number ?? null,
+                    'decision_number' => $payment->request->decision_number ?? null,
                     'amount' => $payment->amount,
                     'payment_method' => $payment->payment_method,
                     'receipt_number' => $payment->receipt_number,
@@ -1061,7 +1110,7 @@ class AdminController extends Controller
                 ];
             });
         
-        // Get ALL payments (including pending, verified, rejected)
+        // Get ALL payments (including pending, verified, denied)
         $allPayments = \App\Models\Payment::with(['request.applicant', 'verifiedByUser'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -1070,6 +1119,7 @@ class AdminController extends Controller
                     'id' => $payment->id,
                     'request_id' => $payment->request_id,
                     'application_number' => $payment->request->application_number ?? null,
+                    'decision_number' => $payment->request->decision_number ?? null,
                     'amount' => $payment->amount,
                     'payment_method' => $payment->payment_method,
                     'receipt_number' => $payment->receipt_number,
@@ -1191,7 +1241,15 @@ class AdminController extends Controller
                 \Log::warning("Request {$requestModel->id} has no associated user");
                 return back()->with('success', 'Payment verified successfully!');
             }
-            
+
+            // Payment verified → the application enters the certificate stage.
+            // This is what makes all three Applications views (applicant, Zoning
+            // Officer, Zoning Administrator) reflect the certificate progress and
+            // drop the "pay" actions.
+            if (in_array($requestModel->status, ['approved', 'payment_confirmed'], true)) {
+                $requestModel->update(['status' => 'certificate_preparing']);
+            }
+
             // Check if certificate already exists for this request
             $existingCertificate = \App\Models\Certificate::where('request_id', $requestModel->id)->first();
             
@@ -1262,7 +1320,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Reject a payment
+     * Deny a payment
      */
     public function rejectPayment(Request $request, $paymentId)
     {
@@ -1288,10 +1346,10 @@ class AdminController extends Controller
             $payment->id,
             ['payment_status' => $payment->getOriginal('payment_status')],
             ['payment_status' => 'rejected'],
-            'Payment rejected by admin: ' . $validated['rejection_reason']
+            'Payment denied by admin: ' . $validated['rejection_reason']
         );
 
-        // Notify applicant of payment rejection
+        // Notify applicant of payment denial
         try {
             $rejReq = $payment->request()->with('user')->first();
             if ($rejReq && $rejReq->user) {
@@ -1307,15 +1365,15 @@ class AdminController extends Controller
                     try {
                         \Mail::to($rejReq->user->email)->send(new \App\Mail\PaymentRejected($payment, $rejReq));
                     } catch (\Exception $e) {
-                        \Log::error('Failed to send payment rejection email: ' . $e->getMessage());
+                        \Log::error('Failed to send payment denial email: ' . $e->getMessage());
                     }
                 }
             }
         } catch (\Exception $e) {
-            \Log::error('Failed to send payment rejection SMS: ' . $e->getMessage());
+            \Log::error('Failed to send payment denial SMS: ' . $e->getMessage());
         }
 
-        return back()->with('success', 'Payment rejected! Applicant has been notified.');
+        return back()->with('success', 'Payment denied! Applicant has been notified.');
     }
 
     /**
@@ -1541,7 +1599,7 @@ class AdminController extends Controller
                 'Verified By',
                 'Verification Date',
                 'Receipt Document',
-                'Rejection Reason',
+                'Denial Reason',
                 'Notes'
             ]);
             
@@ -1747,7 +1805,7 @@ class AdminController extends Controller
                 'release_address' => $request->release_address,
                 'user_name' => $request->user?->name,
                 'user_email' => $request->user?->email,
-                'status' => $report?->evaluation ?? $request->status,
+                'status' => RequestModel::deriveStatus($request->status, $report?->evaluation),
                 'created_at' => $request->created_at,
             ];
         });
@@ -1778,7 +1836,7 @@ class AdminController extends Controller
                 'Applicant Name',
                 'Corporation',
                 'Address',
-                'Project Type',
+                'Locational Clearance',
                 'Project Nature',
                 'Location Street',
                 'Location Barangay',
@@ -1940,7 +1998,7 @@ class AdminController extends Controller
             $report = $request->reports->first();
             
             // Use report evaluation if available, otherwise use request status
-            $status = $report?->evaluation ?? $request->status;
+            $status = RequestModel::deriveStatus($request->status, $report?->evaluation);
             
             if (isset($statusCounts[$status])) {
                 $statusCounts[$status]++;
@@ -2042,7 +2100,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Bulk reject requests
+     * Bulk deny requests
      */
     public function bulkReject(Request $request)
     {
@@ -2073,7 +2131,7 @@ class AdminController extends Controller
                 $report->date_reported = now();
                 $report->save();
 
-                // Send rejection email
+                // Send denial email
                 try {
                     \Mail::to($requestModel->user->email)->send(new ApplicationRejected(
                         $requestModel,
@@ -2082,16 +2140,16 @@ class AdminController extends Controller
                         $request->reason
                     ));
                 } catch (\Exception $e) {
-                    \Log::error("Failed to send rejection email for request {$requestId}: " . $e->getMessage());
+                    \Log::error("Failed to send denial email for request {$requestId}: " . $e->getMessage());
                 }
 
                 $successCount++;
             } catch (\Exception $e) {
-                $errors[] = "Failed to reject request #{$requestId}: " . $e->getMessage();
+                $errors[] = "Failed to deny request #{$requestId}: " . $e->getMessage();
             }
         }
 
-        $flashData = ['success' => "Successfully rejected {$successCount} request(s)."];
+        $flashData = ['success' => "Successfully denied {$successCount} request(s)."];
         
         if (!empty($errors)) {
             $flashData['error'] = 'Some requests failed: ' . implode(', ', $errors);
@@ -2301,7 +2359,7 @@ class AdminController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Project type updated successfully',
+            'message' => 'Locational Clearance updated successfully',
             'project_type' => $validated['project_type']
         ]);
     }
@@ -2442,6 +2500,39 @@ class AdminController extends Controller
     }
 
     /**
+     * Save the details the Zoning Officer supplies when issuing a certificate.
+     *
+     * The Tax Declaration number, lot number and zoning classification are not
+     * collected from the applicant — they come from the City Assessor's records
+     * and the zoning map, so the officer enters them on the generate screen.
+     */
+    public function saveCertificateDetails(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'lot_number' => 'nullable|string|max:100',
+            'tax_declaration_no' => 'nullable|string|max:100',
+            'zone_classification' => 'nullable|string|max:150',
+        ]);
+
+        $requestModel = RequestModel::findOrFail($id);
+
+        // Not every request has a properties row yet, so create one on demand.
+        $property = \App\Models\Property::firstOrNew(['request_id' => $requestModel->id]);
+        $property->fill($validated);
+        $property->save();
+
+        AuditLogService::logUpdate(
+            'Request',
+            $requestModel->id,
+            [],
+            $validated,
+            "Certificate details set for request #{$requestModel->id}"
+        );
+
+        return back()->with('success', 'Certificate details saved.');
+    }
+
+    /**
      * Generate certificate for approved application
      */
     public function generateCertificate($id)
@@ -2457,8 +2548,12 @@ class AdminController extends Controller
             }
         ])->findOrFail($id);
 
-        // Allow generating certificate for approved applications
-        if (strtolower($request->status) !== 'approved') {
+        // A certificate can be produced once the application is approved and at every
+        // later stage of the certificate lifecycle (a Certificate row only exists after
+        // approval, and creating it bumps the request to certificate_preparing). Only
+        // pre-approval and denied applications are blocked.
+        $generatableStatuses = ['approved', 'certificate_preparing', 'certificate_ready', 'released'];
+        if (!in_array(strtolower((string) $request->status), $generatableStatuses, true)) {
             return redirect()->back()->with('error', 'Certificate can only be generated for approved applications');
         }
 
@@ -2470,18 +2565,17 @@ class AdminController extends Controller
             ->latest()
             ->first();
             
-        $reviewer = null;
-        if ($report) {
-            // Try to get reviewer from issued_by (user ID) or reviewed_by (user ID)
-            $reviewerId = $report->reviewed_by ?? $report->issued_by;
-            if ($reviewerId) {
-                $reviewer = \App\Models\User::find($reviewerId);
-            }
-            // If no ID found, try issued_by as name (legacy support)
-            if (!$reviewer && $report->issued_by && !is_numeric($report->issued_by)) {
-                $reviewer = (object)['name' => $report->issued_by];
-            }
-        }
+        $reviewer = $report ? $report->resolveReviewer() : null;
+
+        // Signer for the "Prepared & Evaluated by" block: the officer who
+        // actually reviewed this application, with their e-signature if on file.
+        $reviewerName = $reviewer->name ?? null;
+        $reviewerSignature = $reviewer->signature_url ?? null;
+
+        // Signer for the "Approved by" block: the Zoning Administrator.
+        $zoningAdministrator = \App\Models\User::where('user_type', 'super_admin')
+            ->whereNotNull('signature_path')
+            ->first();
 
         $applicationData = [
             'id' => $request->id,
@@ -2501,12 +2595,24 @@ class AdminController extends Controller
             'project_location_barangay' => $request->location?->barangay,
             'project_location_municipality' => $request->location?->city_municipality,
             'right_over_land' => $request->property?->right_over_land,
+            'lot_area_sqm' => $request->property?->lot_area_sqm,
+            // Filled in by the Zoning Officer at issuance time.
+            'lot_number' => $request->property?->lot_number,
+            'tax_declaration_no' => $request->property?->tax_declaration_no,
+            'zone_classification' => $request->property?->zone_classification ?: $request->property?->existing_land_use,
         ];
 
         return \Inertia\Inertia::render('Admin/GenerateCertificate', [
             'application' => $applicationData,
             'payment' => $payment,
-            'reviewer' => $reviewer,
+            'reviewer' => $reviewer ? [
+                'name' => $reviewerName,
+                'signature_url' => $reviewerSignature,
+            ] : null,
+            'zoningAdministrator' => $zoningAdministrator ? [
+                'name' => $zoningAdministrator->name,
+                'signature_url' => $zoningAdministrator->signature_url,
+            ] : null,
         ]);
     }
 
@@ -2526,8 +2632,9 @@ class AdminController extends Controller
             }
         ])->findOrFail($id);
 
-        // Allow generating clearance for approved applications
-        if (strtolower($request->status) !== 'approved') {
+        // See generateCertificate() — same lifecycle gate.
+        $generatableStatuses = ['approved', 'certificate_preparing', 'certificate_ready', 'released'];
+        if (!in_array(strtolower((string) $request->status), $generatableStatuses, true)) {
             return redirect()->back()->with('error', 'Clearance can only be generated for approved applications');
         }
 
@@ -2539,18 +2646,17 @@ class AdminController extends Controller
             ->latest()
             ->first();
             
-        $reviewer = null;
-        if ($report) {
-            // Try to get reviewer from issued_by (user ID) or reviewed_by (user ID)
-            $reviewerId = $report->reviewed_by ?? $report->issued_by;
-            if ($reviewerId) {
-                $reviewer = \App\Models\User::find($reviewerId);
-            }
-            // If no ID found, try issued_by as name (legacy support)
-            if (!$reviewer && $report->issued_by && !is_numeric($report->issued_by)) {
-                $reviewer = (object)['name' => $report->issued_by];
-            }
-        }
+        $reviewer = $report ? $report->resolveReviewer() : null;
+
+        // Signer for the "Prepared & Evaluated by" block: the officer who
+        // actually reviewed this application, with their e-signature if on file.
+        $reviewerName = $reviewer->name ?? null;
+        $reviewerSignature = $reviewer->signature_url ?? null;
+
+        // Signer for the "Approved by" block: the Zoning Administrator.
+        $zoningAdministrator = \App\Models\User::where('user_type', 'super_admin')
+            ->whereNotNull('signature_path')
+            ->first();
 
         $applicationData = [
             'id' => $request->id,
@@ -2570,12 +2676,24 @@ class AdminController extends Controller
             'project_location_barangay' => $request->location?->barangay,
             'project_location_municipality' => $request->location?->city_municipality,
             'right_over_land' => $request->property?->right_over_land,
+            'lot_area_sqm' => $request->property?->lot_area_sqm,
+            // Filled in by the Zoning Officer at issuance time.
+            'lot_number' => $request->property?->lot_number,
+            'tax_declaration_no' => $request->property?->tax_declaration_no,
+            'zone_classification' => $request->property?->zone_classification ?: $request->property?->existing_land_use,
         ];
 
         return \Inertia\Inertia::render('Admin/GenerateClearance', [
             'application' => $applicationData,
             'payment' => $payment,
-            'reviewer' => $reviewer,
+            'reviewer' => $reviewer ? [
+                'name' => $reviewerName,
+                'signature_url' => $reviewerSignature,
+            ] : null,
+            'zoningAdministrator' => $zoningAdministrator ? [
+                'name' => $zoningAdministrator->name,
+                'signature_url' => $zoningAdministrator->signature_url,
+            ] : null,
         ]);
     }
 
@@ -2607,18 +2725,17 @@ class AdminController extends Controller
             ->latest()
             ->first();
             
-        $reviewer = null;
-        if ($report) {
-            // Try to get reviewer from issued_by (user ID) or reviewed_by (user ID)
-            $reviewerId = $report->reviewed_by ?? $report->issued_by;
-            if ($reviewerId) {
-                $reviewer = \App\Models\User::find($reviewerId);
-            }
-            // If no ID found, try issued_by as name (legacy support)
-            if (!$reviewer && $report->issued_by && !is_numeric($report->issued_by)) {
-                $reviewer = (object)['name' => $report->issued_by];
-            }
-        }
+        $reviewer = $report ? $report->resolveReviewer() : null;
+
+        // Signer for the "Prepared & Evaluated by" block: the officer who
+        // actually reviewed this application, with their e-signature if on file.
+        $reviewerName = $reviewer->name ?? null;
+        $reviewerSignature = $reviewer->signature_url ?? null;
+
+        // Signer for the "Approved by" block: the Zoning Administrator.
+        $zoningAdministrator = \App\Models\User::where('user_type', 'super_admin')
+            ->whereNotNull('signature_path')
+            ->first();
 
         $applicationData = [
             'id' => $request->id,
@@ -2638,12 +2755,24 @@ class AdminController extends Controller
             'project_location_barangay' => $request->location?->barangay,
             'project_location_municipality' => $request->location?->city_municipality,
             'right_over_land' => $request->property?->right_over_land,
+            'lot_area_sqm' => $request->property?->lot_area_sqm,
+            // Filled in by the Zoning Officer at issuance time.
+            'lot_number' => $request->property?->lot_number,
+            'tax_declaration_no' => $request->property?->tax_declaration_no,
+            'zone_classification' => $request->property?->zone_classification ?: $request->property?->existing_land_use,
         ];
 
         return \Inertia\Inertia::render('Admin/GenerateOrderOfPayment', [
             'application' => $applicationData,
             'payment' => $payment,
-            'reviewer' => $reviewer,
+            'reviewer' => $reviewer ? [
+                'name' => $reviewerName,
+                'signature_url' => $reviewerSignature,
+            ] : null,
+            'zoningAdministrator' => $zoningAdministrator ? [
+                'name' => $zoningAdministrator->name,
+                'signature_url' => $zoningAdministrator->signature_url,
+            ] : null,
         ]);
     }
 

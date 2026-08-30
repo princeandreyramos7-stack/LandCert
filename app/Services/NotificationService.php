@@ -164,7 +164,7 @@ class NotificationService
     }
 
     /**
-     * Create notification when application is rejected
+     * Create notification when application is denied
      */
     public static function applicationRejected(RequestModel $request, string $reason, ?User $rejectedBy = null)
     {
@@ -174,8 +174,8 @@ class NotificationService
         Notification::createForUser(
             $request->user_id,
             'application_rejected',
-            'Application Rejected',
-            "Your application #{$request->id} has been rejected by {$rejectorName}. Reason: {$reason}",
+            'Application Denied',
+            "Your application #{$request->id} has been denied by {$rejectorName}. Reason: {$reason}",
             "/my-applications",
             [
                 'application_id' => $request->id,
@@ -255,7 +255,7 @@ class NotificationService
     }
 
     /**
-     * Create notification when payment is rejected
+     * Create notification when payment is denied
      */
     public static function paymentRejected(RequestModel $request, $payment, string $reason, ?User $rejectedBy = null)
     {
@@ -265,8 +265,8 @@ class NotificationService
         Notification::createForUser(
             $request->user_id,
             'payment_rejected',
-            'Payment Receipt Rejected',
-            "Your payment receipt for application #{$request->id} has been rejected by {$rejectorName}. Reason: {$reason}. Please upload a new receipt.",
+            'Payment Receipt Denied',
+            "Your payment receipt for application #{$request->id} has been denied by {$rejectorName}. Reason: {$reason}. Please upload a new receipt.",
             "/my-applications",
             [
                 'application_id' => $request->id,

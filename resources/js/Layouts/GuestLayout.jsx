@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { Globe, Activity, Award } from 'lucide-react';
 import { Toaster } from '@/Components/ui/toaster';
 
 export default function GuestLayout({ children }) {
@@ -28,8 +29,8 @@ export default function GuestLayout({ children }) {
 
                     {/* Logo */}
                     <Link href="/" className="inline-flex items-center gap-4 group">
-                        <div className="w-14 h-14 rounded-full border-2 border-[#d4a017]/40 bg-[#d4a017]/10 flex items-center justify-center shrink-0">
-                            <img src="/images/Ilagan.png" alt="CPDO L.C Logo" className="w-9 h-9 object-contain"/>
+                        <div className="w-14 h-14 rounded-full border-2 border-[#d4a017]/40 bg-white/10 overflow-hidden flex items-center justify-center shrink-0">
+                            <img src="/images/ilagan1.png" alt="City of Ilagan" className="w-full h-full object-cover"/>
                         </div>
                         <div>
                             <p className="text-white font-black text-sm tracking-[0.15em] uppercase leading-tight">
@@ -66,12 +67,14 @@ export default function GuestLayout({ children }) {
                         {/* Feature list */}
                         <div className="space-y-4">
                             {[
-                                { icon: "🖥️", title: "Apply Online, Anytime", desc: "Submit applications 24/7 from anywhere" },
-                                { icon: "📋", title: "Real-time Tracking", desc: "Monitor your application at every stage" },
-                                { icon: "🏛️", title: "Official Certificates", desc: "Receive government-issued digital documents" },
+                                { icon: Globe, title: "Apply Online, Anytime", desc: "Submit applications 24/7 from anywhere" },
+                                { icon: Activity, title: "Real-time Tracking", desc: "Monitor your application at every stage" },
+                                { icon: Award, title: "Official Certificates", desc: "Receive government-issued digital documents" },
                             ].map((f, i) => (
                                 <div key={i} className="flex items-center gap-4 p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors">
-                                    <span className="text-2xl">{f.icon}</span>
+                                    <div className="w-10 h-10 rounded-lg bg-[#d4a017]/15 border border-[#d4a017]/25 flex items-center justify-center shrink-0">
+                                        <f.icon className="w-5 h-5 text-[#d4a017]" />
+                                    </div>
                                     <div>
                                         <p className="font-bold text-white text-sm">{f.title}</p>
                                         <p className="text-blue-200/70 text-xs">{f.desc}</p>
@@ -94,7 +97,9 @@ export default function GuestLayout({ children }) {
                 {/* Mobile logo */}
                 <div className="lg:hidden w-full max-w-md mb-8">
                     <Link href="/" className="flex items-center gap-3">
-                        <img src="/images/Ilagan.png" alt="CPDO L.C" className="w-10 h-10 object-contain"/>
+                        <div className="w-10 h-10 rounded-full border border-[#0d1f5c]/20 overflow-hidden shrink-0">
+                            <img src="/images/ilagan1.png" alt="City of Ilagan" className="w-full h-full object-cover"/>
+                        </div>
                         <div>
                             <p className="text-[#0d1f5c] font-black text-sm tracking-wide">CPDO L.C</p>
                             <p className="text-[#d4a017] text-xs font-semibold">City of Ilagan, Isabela</p>

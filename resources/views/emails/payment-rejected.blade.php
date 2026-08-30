@@ -68,7 +68,7 @@
             color: #dc2626;
             font-weight: bold;
         }
-        .rejection-icon {
+        .denial-icon {
             font-size: 48px;
             margin-bottom: 10px;
         }
@@ -76,7 +76,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="rejection-icon">❌</div>
+        <div class="denial-icon">❌</div>
         <h1>Payment Verification Update</h1>
     </div>
     
@@ -96,11 +96,11 @@
             <p>Amount: <span class="highlight">₱{{ number_format($payment->amount, 2) }}</span></p>
             <p>Payment Method: <span class="highlight">{{ ucfirst(str_replace('_', ' ', $payment->payment_method)) }}</span></p>
             <p>Submitted: <span class="highlight">{{ $payment->created_at->format('F d, Y') }}</span></p>
-            <p>Status: <span class="highlight">Rejected</span></p>
+            <p>Status: <span class="highlight">Denied</span></p>
         </div>
         
         <div class="warning-box">
-            <p><strong>🚫 Reason for Rejection:</strong></p>
+            <p><strong>🚫 Reason for Denial:</strong></p>
             <p>{{ $rejectionReason }}</p>
         </div>
         
@@ -110,7 +110,7 @@
         <div class="info-box">
             <p><strong>What you need to do:</strong></p>
             <ol>
-                <li>Review the rejection reason above carefully</li>
+                <li>Review the denial reason above carefully</li>
                 <li>Prepare a new payment receipt that addresses the issues</li>
                 <li>Ensure all payment information is clear and accurate</li>
                 <li>Resubmit your payment through the receipt page</li>
@@ -134,7 +134,7 @@
         
         <div class="info-box">
             <p><strong>📞 Need Assistance?</strong></p>
-            <p>If you have questions about the rejection or need help with resubmitting your payment, please contact our office during business hours.</p>
+            <p>If you have questions about the denial or need help with resubmitting your payment, please contact our office during business hours.</p>
         </div>
         
         <p>We appreciate your understanding and look forward to processing your corrected payment submission.</p>
