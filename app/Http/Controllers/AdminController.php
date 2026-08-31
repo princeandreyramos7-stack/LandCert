@@ -427,8 +427,9 @@ class AdminController extends Controller
             // Applicant info
             'applicant_name' => $request->applicant?->applicant_name,
             'applicant_address' => $request->applicant?->applicant_address,
-            'applicant_contact' => $request->applicant?->applicant_contact,
-            
+            // Fall back to the account's contact number when the form did not carry one.
+            'applicant_contact' => $request->applicant?->applicant_contact ?: $request->user?->contact_number,
+
             // Corporation info
             'corporation_name' => $request->applicant?->corporation?->corporation_name,
             'corporation_address' => $request->applicant?->corporation?->corporation_address,
@@ -544,8 +545,9 @@ class AdminController extends Controller
             // Applicant info
             'applicant_name' => $request->applicant?->applicant_name,
             'applicant_address' => $request->applicant?->applicant_address,
-            'applicant_contact' => $request->applicant?->applicant_contact,
-            
+            // Fall back to the account's contact number when the form did not carry one.
+            'applicant_contact' => $request->applicant?->applicant_contact ?: $request->user?->contact_number,
+
             // Corporation info
             'corporation_name' => $request->applicant?->corporation?->corporation_name,
             'corporation_address' => $request->applicant?->corporation?->corporation_address,

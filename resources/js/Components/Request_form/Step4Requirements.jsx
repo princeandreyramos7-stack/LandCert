@@ -20,8 +20,9 @@ export function Step4Requirements({
     const uploads = files;
     const [previews, setPreviews] = useState({});
 
-    // Separate main and additional requirements
+    // Separate main, zoning-certification and additional requirements
     const mainRequirements = requirements.filter((req) => (req.section || 'main') === 'main');
+    const zoningCertRequirements = requirements.filter((req) => req.section === 'zoning_certification');
     const additionalRequirements = requirements.filter((req) => req.section === 'additional');
 
     const handleFileSelect = (requirementId, files) => {
@@ -267,6 +268,22 @@ export function Step4Requirements({
                 </h3>
                 {mainRequirements.map((requirement) => renderRequirement(requirement))}
             </div>
+
+            {/* Requirements of Zoning Certification (CZC only) */}
+            {zoningCertRequirements.length > 0 && (
+                <div className="space-y-4">
+                    <div className="border-t pt-6">
+                        <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                            Requirements of Zoning Certification <span className="text-red-500">*</span>
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-2 mb-4">
+                            Required for a Certificate of Zoning Compliance (CZC). All documents below
+                            must be uploaded before you can submit.
+                        </p>
+                    </div>
+                    {zoningCertRequirements.map((requirement) => renderRequirement(requirement))}
+                </div>
+            )}
 
             {/* Additional Requirements Section */}
             {additionalRequirements.length > 0 && (

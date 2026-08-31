@@ -118,7 +118,8 @@ export default function DocumentVerification({ request }) {
         return Array.from(groups.values());
     }, [request.uploaded_requirements, request.requirements_reference]);
 
-    const mainUploadedGroups = groupedRequirements.filter((g) => g.section !== 'additional');
+    const mainUploadedGroups = groupedRequirements.filter((g) => g.section !== 'additional' && g.section !== 'zoning_certification');
+    const zoningUploadedGroups = groupedRequirements.filter((g) => g.section === 'zoning_certification');
     const additionalUploadedGroups = groupedRequirements.filter((g) => g.section === 'additional');
 
     // Generate missing requirements message for denial
@@ -221,6 +222,7 @@ export default function DocumentVerification({ request }) {
 
     // Get all requirements from reference
     const allMainRequirements = (request.requirements_reference || []).filter(r => r.section === 'main');
+    const allZoningRequirements = (request.requirements_reference || []).filter(r => r.section === 'zoning_certification');
     const allAdditionalRequirements = (request.requirements_reference || []).filter(r => r.section === 'additional');
 
     return (
@@ -317,6 +319,47 @@ export default function DocumentVerification({ request }) {
                                 </div>
                             </div>
 
+                            {/* Requirements of Zoning Certification (CZC only) */}
+                            {allZoningRequirements.length > 0 && (
+                            <div className="space-y-4 pt-4 border-t">
+                                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                    <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-bold">ZONING CERT</span>
+                                    Requirements of Zoning Certification ({zoningUploadedGroups.length}/{allZoningRequirements.length} uploaded)
+                                </h4>
+
+                                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                                    <table className="w-full border-collapse">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="text-left p-3 font-semibold text-gray-700 text-xs uppercase tracking-wide w-16 border-r border-gray-200">NO.</th>
+                                                <th className="text-left p-3 font-semibold text-gray-700 text-xs uppercase tracking-wide border-r border-gray-200">Requirement Name</th>
+                                                <th className="text-center p-3 font-semibold text-gray-700 text-xs uppercase tracking-wide w-32 border-r border-gray-200">Mark as Verified</th>
+                                                <th className="text-center p-3 font-semibold text-gray-700 text-xs uppercase tracking-wide w-32 border-r border-gray-200">Remarks</th>
+                                                <th className="text-center p-3 font-semibold text-gray-700 text-xs uppercase tracking-wide w-40">Upload Docs</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200">
+                                            {allZoningRequirements.map((reqRef, index) => {
+                                                const uploadedGroup = zoningUploadedGroups.find(g => g.key === reqRef.id);
+                                                const isChecked = requirementChecks[reqRef.id] || false;
+                                                return (
+                                                    <RequirementTableRow
+                                                        key={reqRef.id}
+                                                        number={index + 1}
+                                                        requirement={reqRef}
+                                                        uploadedGroup={uploadedGroup}
+                                                        isChecked={isChecked}
+                                                        onToggle={(checked) => handleToggleRequirement(reqRef.id, reqRef.name, checked)}
+                                                        requestId={request.id}
+                                                    />
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            )}
+
                             {/* Additional Requirements Section */}
                             <div className="space-y-4 pt-4 border-t">
                                 <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
@@ -369,11 +412,13 @@ export default function DocumentVerification({ request }) {
                                     <div>
                                         <h5 className="text-sm font-semibold text-blue-900 mb-1">Requirements Summary</h5>
                                         <p className="text-sm text-blue-700">
-                                            Total Uploaded: <span className="font-bold">{mainUploadedGroups.length + additionalUploadedGroups.length}</span>
+                                            Total Uploaded: <span className="font-bold">{mainUploadedGroups.length + zoningUploadedGroups.length + additionalUploadedGroups.length}</span>
                                             {' / '}
-                                            <span className="font-bold">{allMainRequirements.length + allAdditionalRequirements.length}</span>
+                                            <span className="font-bold">{allMainRequirements.length + allZoningRequirements.length + allAdditionalRequirements.length}</span>
                                             {' • '}
                                             Main: <span className="font-bold">{mainUploadedGroups.length}/{allMainRequirements.length}</span>
+                                            {' • '}
+                                            Zoning Cert: <span className="font-bold">{zoningUploadedGroups.length}/{allZoningRequirements.length}</span>
                                             {' • '}
                                             Additional: <span className="font-bold">{additionalUploadedGroups.length}/{allAdditionalRequirements.length}</span>
                                         </p>

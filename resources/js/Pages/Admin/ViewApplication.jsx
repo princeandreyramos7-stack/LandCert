@@ -1,5 +1,5 @@
 import AdminLayout from "@/Layouts/AdminLayout";
-import { Head, Link } from "@inertiajs/react";
+import { Head } from "@inertiajs/react";
 import { Button } from "@/Components/ui/button";
 import { Badge } from "@/Components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
@@ -9,7 +9,6 @@ import {
     MapPin,
     Home,
     FileText,
-    ArrowLeft,
     Clock,
     CheckCircle2,
     XCircle,
@@ -103,15 +102,9 @@ export default function ViewApplication({ request }) {
             <Head title={`View Application ${request.application_number || `TPZ-${request.id}`}`} />
 
             <div className="max-w-7xl mx-auto">
-                {/* Back Button and Print Form Button */}
+                {/* Print Form Button */}
                 <div className="mb-4 flex gap-3">
-                    <Link href={route("admin.requests")}>
-                        <Button variant="outline" size="sm" className="hover:bg-gray-100">
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back to Applications
-                        </Button>
-                    </Link>
-                    <Button 
+                    <Button
                         variant="outline" 
                         size="sm" 
                         className="hover:bg-gray-100"
@@ -590,10 +583,6 @@ function Step3Content({ request }) {
                     <InfoField
                         label="Preferred Release Mode"
                         value={RELEASE_MODE_LABELS[request.preferred_release_mode] || request.preferred_release_mode}
-                    />
-                    <InfoField
-                        label="Release / Delivery Address"
-                        value={request.release_address}
                     />
                 </div>
             </div>

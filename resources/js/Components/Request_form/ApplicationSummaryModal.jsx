@@ -75,6 +75,7 @@ export function ApplicationSummaryModal({
                                     <SummaryItem label="Representative Name" value={data.authorized_representative_name} />
                                     <SummaryItem label="Representative Address" value={data.authorized_representative_address} />
                                     <SummaryItem label="Representative Email" value={data.authorized_representative_email} />
+                                    <SummaryItem label="Authorization Letter" value={data.authorization_letter ? "Attached" : "Not attached"} />
                                 </>
                             )}
                         </div>
@@ -88,13 +89,12 @@ export function ApplicationSummaryModal({
                             <SummaryItem label="Project Nature" value={data.project_nature} />
                             <SummaryItem label="Project Area (sqm)" value={data.project_area_sqm} />
                             <SummaryItem label="Lot Area (sqm)" value={data.lot_area_sqm} />
+                            <SummaryItem label="Building Improvement (sqm)" value={data.bldg_improvement_sqm} />
                             <SummaryItem label="Right Over Land" value={data.right_over_land} />
                             <SummaryItem label="Project Duration" value={
-                                data.project_nature_duration === 'temporary' 
-                                    ? `Temporary (${data.project_nature_years} years)`
-                                    : data.project_nature_duration === 'permanent' 
-                                    ? 'Permanent' 
-                                    : data.project_nature_duration
+                                String(data.project_nature_duration || '').toLowerCase() === 'temporary'
+                                    ? `Temporary${data.project_nature_years ? ` (${data.project_nature_years} year${Number(data.project_nature_years) === 1 ? '' : 's'})` : ''}`
+                                    : (data.project_nature_duration || null)
                             } />
                             <SummaryItem 
                                 label="Project Cost" 
@@ -140,7 +140,12 @@ export function ApplicationSummaryModal({
                                     <SummaryItem label="Application Dates" value={data.similar_application_dates} />
                                 </>
                             )}
-                            <SummaryItem label="Preferred Release Mode" value={data.preferred_release_mode} />
+                            <SummaryItem
+                                label="Preferred Release Mode"
+                                value={data.preferred_release_mode
+                                    ? data.preferred_release_mode.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+                                    : null}
+                            />
                             {data.preferred_release_mode === 'delivery' && (
                                 <SummaryItem label="Delivery Address" value={data.release_address} />
                             )}

@@ -287,6 +287,17 @@ export const validateStep4 = (data, requirements = [], existingDocuments = {}, r
         }
     });
 
+    // Zoning-certification requirements (CZC only) — every one is required.
+    requirements
+        .filter((req) => req.section === 'zoning_certification' && req.required !== false)
+        .forEach((req) => {
+            const reqFiles = uploads[req.id] || [];
+            const existingFiles = existingDocuments[req.id] || [];
+            if (reqFiles.length === 0 && existingFiles.length === 0) {
+                errors.push(`${req.name} is required - please upload at least one file`);
+            }
+        });
+
     // Check for Barangay Clearance (required from additional requirements)
     if (barangayClearance) {
         const barangayFiles = uploads[barangayClearance.id] || [];

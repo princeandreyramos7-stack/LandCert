@@ -59,7 +59,7 @@ export function VerifyPaymentDialog({ isOpen, onClose, payment, routePrefix = "a
             onSuccess: () => {
                 toast({
                     title: "Payment Verified",
-                    description: `Payment for Request #${payment.request_id} has been verified.`,
+                    description: `Payment for ${payment.application_number || `Request #${payment.request_id}`} has been verified.`,
                 });
                 onClose();
             },
@@ -83,7 +83,7 @@ export function VerifyPaymentDialog({ isOpen, onClose, payment, routePrefix = "a
                 onSuccess: () => {
                     toast({
                         title: "Payment Denied",
-                        description: `Payment for Request #${payment.request_id} has been denied.`,
+                        description: `Payment for ${payment.application_number || `Request #${payment.request_id}`} has been denied.`,
                     });
                     onClose();
                 },
@@ -120,8 +120,8 @@ export function VerifyPaymentDialog({ isOpen, onClose, payment, routePrefix = "a
                                 <span className="font-medium">{payment.applicant_name || "—"}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-slate-500">Request</span>
-                                <span className="font-medium">#{payment.request_id}</span>
+                                <span className="text-slate-500">Application No.</span>
+                                <span className="font-medium">{payment.application_number || `#${payment.request_id}`}</span>
                             </div>
                         </div>
 

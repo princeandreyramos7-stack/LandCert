@@ -77,6 +77,7 @@ export default function ApplicationDetails({ application, requirements = [], doc
     const StatusIcon = status.icon;
 
     const mainRequirements = requirements.filter((r) => (r.section || "main") === "main");
+    const zoningCertRequirements = requirements.filter((r) => r.section === "zoning_certification");
     const additionalRequirements = requirements.filter((r) => r.section === "additional");
 
     const docsFor = (id) => documents?.[id] || documents?.[String(id)] || [];
@@ -381,6 +382,15 @@ export default function ApplicationDetails({ application, requirements = [], doc
                                     {mainRequirements.map(renderRequirement)}
                                 </div>
                             </div>
+
+                            {zoningCertRequirements.length > 0 && (
+                                <div className="space-y-2 pt-2">
+                                    <h4 className="text-sm font-semibold text-gray-700">Requirements of Zoning Certification</h4>
+                                    <div className="space-y-2">
+                                        {zoningCertRequirements.map(renderRequirement)}
+                                    </div>
+                                </div>
+                            )}
 
                             {additionalRequirements.length > 0 && (
                                 <div className="space-y-2 pt-2">

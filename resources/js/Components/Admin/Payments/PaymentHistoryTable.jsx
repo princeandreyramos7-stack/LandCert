@@ -113,40 +113,45 @@ export function PaymentHistoryTable({
         <div className={`space-y-4 ${className}`}>
             {/* Filter Controls */}
             <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 space-y-4">
-                {/* Search and Quick Filters Row */}
-                <div className="flex flex-col lg:flex-row gap-3">
-                    {/* Search Input */}
-                    <div className="relative flex-1 group">
-                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 transition-all duration-300">
-                            <Search className="h-4 w-4 text-slate-400 group-focus-within:text-blue-600" />
+                {/* Filters — Payment Date + Search on the left, actions on the right */}
+                <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3 flex-1 min-w-0">
+                        {/* Payment Date */}
+                        <div className="space-y-1 sm:w-52 shrink-0">
+                            <label className="text-xs font-medium text-slate-600 flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                Payment Date
+                            </label>
+                            <Input
+                                type="date"
+                                value={filterDate}
+                                onChange={(e) => setFilterDate(e.target.value)}
+                                className="h-10 border-slate-200 bg-slate-50/50 focus:bg-white"
+                            />
                         </div>
-                        <Input
-                            placeholder="Search by OR Number, Request ID, or Applicant Name..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 h-10 border-slate-200 bg-slate-50/50 focus:bg-white transition-all duration-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
+
+                        {/* Search */}
+                        <div className="space-y-1 flex-1 min-w-0">
+                            <label className="text-xs font-medium text-slate-600 flex items-center gap-1">
+                                <Search className="h-3 w-3" />
+                                Search
+                            </label>
+                            <div className="relative group">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 transition-all duration-300">
+                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-blue-600" />
+                                </div>
+                                <Input
+                                    placeholder="Search by OR Number, Request ID, or Applicant Name..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-10 h-10 border-slate-200 bg-slate-50/50 focus:bg-white transition-all duration-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                        </div>
                     </div>
 
-                </div>
-
-                {/* Date Filter Row */}
-                <div className="flex flex-col sm:flex-row gap-3 items-end">
-                    <div className="flex-1 space-y-1">
-                        <label className="text-xs font-medium text-slate-600 flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Payment Date
-                        </label>
-                        <Input
-                            type="date"
-                            value={filterDate}
-                            onChange={(e) => setFilterDate(e.target.value)}
-                            className="h-10 border-slate-200 bg-slate-50/50 focus:bg-white"
-                        />
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
+                    {/* Action Buttons — right side */}
+                    <div className="flex gap-2 shrink-0">
                         <Button
                             variant="outline"
                             size="sm"
@@ -160,7 +165,7 @@ export function PaymentHistoryTable({
                             variant="outline"
                             size="sm"
                             onClick={handleExportExcel}
-                            className="h-10 px-4 border-slate-200 hover:bg-slate-50 text-green-700 border-green-200 hover:bg-green-50"
+                            className="h-10 px-4 text-green-700 border-green-200 hover:bg-green-50"
                         >
                             <Download className="h-4 w-4 mr-2" />
                             Export Excel
@@ -169,7 +174,7 @@ export function PaymentHistoryTable({
                             variant="outline"
                             size="sm"
                             onClick={handleExportPdf}
-                            className="h-10 px-4 border-slate-200 hover:bg-slate-50 text-red-700 border-red-200 hover:bg-red-50"
+                            className="h-10 px-4 text-red-700 border-red-200 hover:bg-red-50"
                         >
                             <FileText className="h-4 w-4 mr-2" />
                             Export PDF

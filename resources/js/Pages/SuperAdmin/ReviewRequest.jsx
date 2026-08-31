@@ -158,7 +158,8 @@ export default function SuperAdminReviewRequest({ request }) {
         return result;
     }, [request.uploaded_requirements, request.requirements_reference]);
 
-    const mainUploadedGroups = groupedRequirements.filter((g) => g.section !== 'additional');
+    const mainUploadedGroups = groupedRequirements.filter((g) => g.section !== 'additional' && g.section !== 'zoning_certification');
+    const zoningUploadedGroups = groupedRequirements.filter((g) => g.section === 'zoning_certification');
     const additionalUploadedGroups = groupedRequirements.filter((g) => g.section === 'additional');
 
     // Generate missing requirements message for denial
@@ -393,6 +394,7 @@ export default function SuperAdminReviewRequest({ request }) {
                                         <Step4Content 
                                             request={request}
                                             mainUploadedGroups={mainUploadedGroups}
+                                            zoningUploadedGroups={zoningUploadedGroups}
                                             additionalUploadedGroups={additionalUploadedGroups}
                                             requirementChecks={requirementChecks}
                                             onToggleRequirement={handleToggleRequirement}
@@ -1025,9 +1027,10 @@ function Step3Content({ request }) {
 }
 
 // Step 4: Requirements Upload
-function Step4Content({ request, mainUploadedGroups, additionalUploadedGroups, requirementChecks, onToggleRequirement }) {
+function Step4Content({ request, mainUploadedGroups, zoningUploadedGroups = [], additionalUploadedGroups, requirementChecks, onToggleRequirement }) {
     // Get all requirements from reference (what SHOULD be uploaded)
     const allMainRequirements = (request.requirements_reference || []).filter(r => r.section === 'main');
+    const allZoningRequirements = (request.requirements_reference || []).filter(r => r.section === 'zoning_certification');
     const allAdditionalRequirements = (request.requirements_reference || []).filter(r => r.section === 'additional');
     
     // Map uploaded requirement IDs for quick lookup
@@ -1073,6 +1076,39 @@ function Step4Content({ request, mainUploadedGroups, additionalUploadedGroups, r
                     })}
                 </div>
             </div>
+
+            {/* Requirements of Zoning Certification (CZC only) */}
+            {allZoningRequirements.length > 0 && (
+            <div className="space-y-4 pt-4 border-t">
+                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-bold">ZONING CERT</span>
+                    Requirements of Zoning Certification ({zoningUploadedGroups.length}/{allZoningRequirements.length} uploaded)
+                </h4>
+                <div className="space-y-3">
+                    {allZoningRequirements.map((reqRef) => {
+                        const uploadedGroup = zoningUploadedGroups.find(g => g.key === reqRef.id);
+                        if (uploadedGroup) {
+                            return (
+                                <UploadedRequirementGroup
+                                    key={reqRef.id}
+                                    group={uploadedGroup}
+                                    isChecked={requirementChecks[uploadedGroup.key] || false}
+                                    onToggle={(checked) => onToggleRequirement(uploadedGroup.key, uploadedGroup.requirement_name, checked)}
+                                />
+                            );
+                        }
+                        return (
+                            <MissingRequirementCard
+                                key={reqRef.id}
+                                requirement={reqRef}
+                                isChecked={requirementChecks[reqRef.id] || false}
+                                onToggle={(checked) => onToggleRequirement(reqRef.id, reqRef.name, checked)}
+                            />
+                        );
+                    })}
+                </div>
+            </div>
+            )}
 
             {/* Additional Requirements Section */}
             <div className="space-y-4 pt-4 border-t">
@@ -1123,9 +1159,11 @@ function Step4Content({ request, mainUploadedGroups, additionalUploadedGroups, r
                         <p className="text-sm text-blue-700">
                             Total Uploaded: <span className="font-bold">{mainUploadedGroups.length + additionalUploadedGroups.length}</span>
                             {' / '}
-                            <span className="font-bold">{allMainRequirements.length + allAdditionalRequirements.length}</span>
+                            <span className="font-bold">{allMainRequirements.length + allZoningRequirements.length + allAdditionalRequirements.length}</span>
                             {' • '}
                             Main: <span className="font-bold">{mainUploadedGroups.length}/{allMainRequirements.length}</span>
+                            {' • '}
+                            Zoning Cert: <span className="font-bold">{zoningUploadedGroups.length}/{allZoningRequirements.length}</span>
                             {' • '}
                             Additional: <span className="font-bold">{additionalUploadedGroups.length}/{allAdditionalRequirements.length}</span>
                         </p>

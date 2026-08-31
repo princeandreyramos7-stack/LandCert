@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, usePage, router } from "@inertiajs/react";
 import { useToast } from "@/Components/ui/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
@@ -80,25 +80,39 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     // silently shredded by the next setData and never reaches the server.
     const [requirementFiles, setRequirementFiles] = useState({});
 
-    // Define requirements structure (ALL requirements - main + additional)
-    const requirements = [
-        // Main Requirements
-        // Not required at submission time: the applicant has to print this form,
-        // get it notarized, then upload it afterwards from My Applications.
-        { id: 1, name: "1. Accomplished and notarized APPLICATION FORM", required: false, section: "main", description: "You can submit without this. After submitting, print your application form, have it notarized, then upload it from My Applications." },
-        { id: 2, name: "2. Right Over Land Documentation", required: true, section: "main" },
-        { id: 3, name: "3. VICINITY MAP", required: true, section: "main" },
-        { id: 4, name: "4. SITE DEVELOPMENT PLAN", required: true, section: "main" },
-        { id: 5, name: "5. ESTIMATED PROJECT COST / BILL OF MATERIALS", required: true, section: "main" },
-        // Additional Requirements (optional except Barangay Clearance)
-        { id: 6, name: "Endorsement/recommendation from Department of Agrarian Reform", required: false, section: "additional", description: "Required only for projects situated in tenanted rice and/or corn lands." },
-        { id: 7, name: "Description of Industry (Manufacturing Projects)", required: false, section: "additional" },
-        { id: 8, name: "Sworn Special Power of Attorney", required: false, section: "additional", description: "Required if the application is filed by an authorized representative." },
-        { id: 9, name: "Affidavit of No Objection", required: false, section: "additional" },
-        { id: 10, name: "Environmental Compliance Certificate (ECC) / Certificate of Non-Coverage (CNC)", required: false, section: "additional" },
-        { id: 11, name: "Certification of road right-of-way from DPWH", required: false, section: "additional", description: "Required if the project is located within a National Road." },
-        { id: 12, name: "Barangay Clearance", required: true, section: "additional" }, // Made required
-    ];
+    // Define requirements structure (ALL requirements - main + additional).
+    // CZC applications also carry the "Requirements of Zoning Certification" set.
+    const requirements = useMemo(() => {
+        const base = [
+            // Main Requirements
+            // Not required at submission time: the applicant has to print this form,
+            // get it notarized, then upload it afterwards from My Applications.
+            { id: 1, name: "1. Accomplished and notarized APPLICATION FORM", required: false, section: "main", description: "You can submit without this. After submitting, print your application form, have it notarized, then upload it from My Applications." },
+            { id: 2, name: "2. Right Over Land Documentation", required: true, section: "main" },
+            { id: 3, name: "3. VICINITY MAP", required: true, section: "main" },
+            { id: 4, name: "4. SITE DEVELOPMENT PLAN", required: true, section: "main" },
+            { id: 5, name: "5. ESTIMATED PROJECT COST / BILL OF MATERIALS", required: true, section: "main" },
+            // Additional Requirements (optional except Barangay Clearance)
+            { id: 6, name: "Endorsement/recommendation from Department of Agrarian Reform", required: false, section: "additional", description: "Required only for projects situated in tenanted rice and/or corn lands." },
+            { id: 7, name: "Description of Industry (Manufacturing Projects)", required: false, section: "additional" },
+            { id: 8, name: "Sworn Special Power of Attorney", required: false, section: "additional", description: "Required if the application is filed by an authorized representative." },
+            { id: 9, name: "Affidavit of No Objection", required: false, section: "additional" },
+            { id: 10, name: "Environmental Compliance Certificate (ECC) / Certificate of Non-Coverage (CNC)", required: false, section: "additional" },
+            { id: 11, name: "Certification of road right-of-way from DPWH", required: false, section: "additional", description: "Required if the project is located within a National Road." },
+            { id: 12, name: "Barangay Clearance", required: true, section: "additional" }, // Made required
+        ];
+
+        const isCZC = String(data.project_type || "").toUpperCase() === "CZC";
+        if (isCZC) {
+            base.push(
+                { id: 13, name: "Title", required: true, section: "zoning_certification" },
+                { id: 14, name: "Tax Declaration", required: true, section: "zoning_certification" },
+                { id: 15, name: "Latest Tax Receipt", required: true, section: "zoning_certification" },
+                { id: 17, name: "Sketch Plan with signature of Geodetic Engr.", required: true, section: "zoning_certification" },
+            );
+        }
+        return base;
+    }, [data.project_type]);
 
     // Set hasRepresentative based on existing data
     useEffect(() => {

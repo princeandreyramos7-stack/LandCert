@@ -98,6 +98,37 @@ class ApplicationRequirements
             'section' => 'additional',
             'description' => ''
         ],
+
+        // ── Requirements of Zoning Certification ──────────────────────────
+        // Required for the Zoning Certification issued for a CZC application.
+        [
+            'id' => 13,
+            'name' => 'Title',
+            'required' => true,
+            'section' => 'zoning_certification',
+            'description' => ''
+        ],
+        [
+            'id' => 14,
+            'name' => 'Tax Declaration',
+            'required' => true,
+            'section' => 'zoning_certification',
+            'description' => ''
+        ],
+        [
+            'id' => 15,
+            'name' => 'Latest Tax Receipt',
+            'required' => true,
+            'section' => 'zoning_certification',
+            'description' => ''
+        ],
+        [
+            'id' => 17,
+            'name' => 'Sketch Plan with signature of Geodetic Engr.',
+            'required' => true,
+            'section' => 'zoning_certification',
+            'description' => ''
+        ],
     ];
 
     /**
