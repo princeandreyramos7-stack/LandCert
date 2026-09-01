@@ -157,7 +157,7 @@ export function Dashboard({ requests }) {
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <div className="w-1 h-5 rounded-full bg-[#d4a017]"/>
-                            <p className="text-[#d4a017] text-xs font-black tracking-[0.2em] uppercase">CPDO L.C</p>
+                            <p className="text-[#d4a017] text-xs font-black tracking-[0.2em] uppercase">CPDO LC</p>
                         </div>
                         <h1 className="text-2xl lg:text-3xl font-black leading-tight">
                             Good day, {firstName}!

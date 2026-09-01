@@ -364,7 +364,7 @@ export default function ApplicationDetails({ application, requirements = [], doc
                             <Field label="Locational Clearance" value={application.project_type} />
                             {!isZC && (
                                 <>
-                                    <Field label="Project Nature" value={application.project_nature} />
+                                    <Field label="Project Classification" value={application.project_nature} />
                                     <Field label="Nature / Duration" value={application.project_nature_duration} />
                                     <Field
                                         label="Nature Duration (Years)"

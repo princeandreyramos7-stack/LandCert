@@ -10,7 +10,7 @@ export default function RequirementsChecklist() {
 
     return (
         <>
-            <Head title="Requirements Checklist - CPDO L.C" />
+            <Head title="Requirements Checklist - CPDO LC" />
             
             <style dangerouslySetInnerHTML={{ __html: `
                 @media print {

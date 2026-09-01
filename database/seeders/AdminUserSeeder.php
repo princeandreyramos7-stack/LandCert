@@ -45,7 +45,7 @@ class AdminUserSeeder extends Seeder
                 'address' => 'CPDO Office, City of Ilagan',
                 'email_verified_at' => now(),
                 // Signature printed on certificates and clearances.
-                'signature_path' => 'images/E-signitures/zoningadministrator.png',
+                'signature_path' => 'images/E-signitures/ENGR. CRISANTA D. CONCEPCION, EnP.png',
             ]
         );
 

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { router } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import axios from "axios";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import {
@@ -39,6 +39,7 @@ function timeAgo(value) {
 }
 
 export default function NotificationBell({ className = "" }) {
+    const { auth } = usePage().props;
     const [count, setCount] = useState(0);
     const [items, setItems] = useState([]);
     const [open, setOpen] = useState(false);
@@ -46,6 +47,14 @@ export default function NotificationBell({ className = "" }) {
 
     // Guards against overlapping polls on a slow connection.
     const inFlight = useRef(false);
+
+    // Determine the notification page URL based on user role
+    const getNotificationPageUrl = () => {
+        const role = auth?.user?.role;
+        if (role === 'admin') return '/admin/dashboard';
+        if (role === 'super_admin') return '/super-admin/dashboard';
+        return '/notifications'; // applicant route
+    };
 
     const fetchCount = useCallback(async () => {
         if (inFlight.current || document.hidden) return;
@@ -203,7 +212,7 @@ export default function NotificationBell({ className = "" }) {
                     type="button"
                     onClick={() => {
                         setOpen(false);
-                        router.visit("/notifications");
+                        router.visit(getNotificationPageUrl());
                     }}
                     className="block w-full border-t px-3 py-2 text-center text-xs font-semibold text-[#0d1f5c] hover:bg-gray-50"
                 >

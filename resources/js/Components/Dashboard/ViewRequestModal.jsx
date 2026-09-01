@@ -159,7 +159,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                     {request?.project_nature && (
                                         <div>
                                             <p className="text-xs font-medium text-gray-500">
-                                                Project Nature
+                                                Project Classification
                                             </p>
                                             <p className="font-semibold">
                                                 {request.project_nature}

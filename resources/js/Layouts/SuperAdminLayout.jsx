@@ -68,11 +68,17 @@ export default function SuperAdminLayout({
                         {/* Live-refresh status, portalled in by the page */}
                         <div ref={setHeaderSlot} className="flex items-center" />
                         <NotificationBell />
-                        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0d1f5c]/5 border border-[#0d1f5c]/10">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#d4a017] animate-pulse" />
+                        <div className="hidden sm:flex items-center gap-2">
+                            <img
+                                src="/images/Ilagan.png"
+                                alt="CPDO LC"
+                                className="w-6 h-6 object-contain"
+                            />
                             <span className="text-[#0d1f5c] text-xs font-black tracking-wide">
-                                CPDO L.C. Zoning Administrator
+                                CPDO LC
                             </span>
+                            <span className="text-gray-300 text-xs">|</span>
+                            <span className="text-gray-400 text-xs">City of Ilagan, Isabela</span>
                         </div>
                     </div>
                 </header>

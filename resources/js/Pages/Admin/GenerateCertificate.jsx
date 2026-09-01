@@ -114,36 +114,67 @@ function ZoningCertification({ application, payment, zoningAdministrator, issued
                 </span>
             </div>
 
-            <p style={{ textAlign: 'justify', textIndent: '40pt', lineHeight: '2', margin: 0 }}>
-                This is to certify that parcel of land, lot <Fill value={application.lot_number} width="190pt" />,
-                under Tax Dec. No. <Fill value={application.tax_declaration_no} width="190pt" />, registered under
-                name of <Fill value={application.applicant_name} width="230pt" /> with an area
-                of <Fill value={area} width="80pt" /> sq.m. located at brgy. <Fill value={application.project_location_barangay} width="170pt" />,
-                City of Ilagan, Isabela, was verified to fall within
-                the <Fill value={application.zone_classification} width="150pt" /> <strong>ZONE</strong> as
-                per article {ORDINANCE_ARTICLE}, section <Fill value={ORDINANCE_SECTION} width="70pt" /> of the
-                Comprehensive Land Use Plan and the Zoning Ordinance of City of Ilagan, Isabela approved by the
-                Sangguniang Panlalawigan of Isabela through SP Resolution No. <Fill value={SP_RESOLUTION_NO} width="60pt" /> dated <Fill value={SP_RESOLUTION_DATE} width="150pt" />.
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: '0 0 14pt 0' }}>
+                This is to certify that parcel of land, lot <Fill value={application.lot_number} width="190pt" />, under Tax Dec.
             </p>
 
-            <p style={{ textAlign: 'justify', textIndent: '40pt', lineHeight: '2', marginTop: '18pt' }}>
-                This certification is issued to <Fill value={application.applicant_name} width="250pt" />, for
-                whatever purpose it may serve.
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: 0 }}>
+                No. <Fill value={application.tax_declaration_no} width="180pt" />, registered under name of <Fill value={application.applicant_name} width="240pt" /> with an
             </p>
 
-            <p style={{ lineHeight: '2', marginTop: '18pt' }}>
-                City of Ilagan, Isabela <Fill value={issuedOn} width="220pt" />.
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: 0 }}>
+                area of <Fill value={area} width="90pt" /> sq.m. located at brgy. <Fill value={application.project_location_barangay} width="190pt" />, City of Ilagan, Isabela, was
             </p>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '46pt' }}>
-                <SignatureBlock
-                    signatureUrl={zoningAdministrator?.signature_url}
-                    name={zoningAdministratorName(zoningAdministrator?.name)}
-                    title={<>City Planning &amp; Development Coordinator/<br />Zoning Administrator</>}
-                />
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: 0 }}>
+                verified to fall within the <Fill value={application.zone_classification} width="160pt" /> <strong>ZONE</strong> as per article {ORDINANCE_ARTICLE}, section <Fill value={ORDINANCE_SECTION} width="70pt" /> of the
+            </p>
+
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: 0 }}>
+                Comprehensive Land Use Plan and the Zoning Ordinance of City of Ilagan, Isabela approved by
+            </p>
+
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: 0 }}>
+                the Sangguniang Panlalawigan of Isabela through SP Resolution No. <Fill value={SP_RESOLUTION_NO} width="60pt" /> dated <Fill value={SP_RESOLUTION_DATE} width="150pt" />.
+            </p>
+
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', marginTop: '18pt' }}>
+                This certification is issued to <Fill value={application.applicant_name} width="270pt" />, for whatever
+            </p>
+
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: 0 }}>
+                purpose it may serve.
+            </p>
+
+            <p style={{ lineHeight: '1.8', marginTop: '18pt' }}>
+                City of Ilagan, Isabela <Fill value={issuedOn} width="240pt" />.
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '52pt' }}>
+                <div style={{ textAlign: 'center', width: '280pt' }}>
+                    <div style={{ position: 'relative', height: '36pt', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                        <ESignatureImage src={zoningAdministrator?.signature_url} maxHeight="36pt" marginBottom="-2pt" />
+                    </div>
+                    <div style={{ fontWeight: 'bold', fontSize: '10pt' }}>{zoningAdministratorName(zoningAdministrator?.name)}</div>
+                    <div style={{ fontSize: '10pt' }}>City Planning &amp; Development Coordinator/</div>
+                    <div style={{ fontSize: '10pt' }}>Zoning Administrator</div>
+                </div>
             </div>
 
-            <PaymentFooter payment={payment} order="orFirst" />
+            <div style={{ marginTop: '40pt', fontSize: '10pt', lineHeight: 1.6 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '4pt' }}>
+                    <span style={{ width: '80pt' }}>O.R. No.  :</span>
+                    <Fill value={payment?.receipt_number || ''} width="160pt" />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '4pt' }}>
+                    <span style={{ width: '80pt' }}>Date       :</span>
+                    <Fill value={payment?.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''} width="160pt" />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <span style={{ width: '80pt' }}>Amount  :</span>
+                    <Fill value={payment?.amount ? `₱${Number(payment.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : ''} width="160pt" />
+                </div>
+            </div>
         </>
     );
 }
@@ -163,7 +194,7 @@ function RoadCertification({ application, payment, zoningAdministrator, issuedOn
 
             <p style={{ textAlign: 'justify', textIndent: '40pt', lineHeight: '2', margin: 0 }}>
                 This is to certify that as per certification issued by the City Assessor’s Office, there is
-                an <strong>existing road</strong> abutting lot no. <Fill value={application.lot_number} width="140pt" />,
+                an <strong>existing road</strong> abutting Title no. <Fill value={application.lot_number} width="140pt" />,
                 under Tax Dec. No. <Fill value={application.tax_declaration_no} width="180pt" /> registered under the
                 name of <Fill value={application.applicant_name} width="220pt" /> located at
                 brgy. <Fill value={application.project_location_barangay} width="180pt" />, City of Ilagan, Isabela.
@@ -260,7 +291,7 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
 
             `}} />
 
-            {/* ── Actions (never printed). Lot No. / Tax Declaration No. / Zone
+            {/* ── Actions (never printed). Title No. / Tax Declaration No. / Zone
                  Classification are set on the View Application page, Step 2. ── */}
             <DocumentActionBar
                 eyebrow="Certificate"

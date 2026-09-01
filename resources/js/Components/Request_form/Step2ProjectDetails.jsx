@@ -462,7 +462,7 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
 
             <div className="space-y-2">
                 <Label htmlFor="project_nature_duration">
-                    12. Project Nature <span className="text-red-500">*</span>
+                    8. Project Classification <span className="text-red-500">*</span>
                 </Label>
                 <Select
                     value={data.project_nature_duration}

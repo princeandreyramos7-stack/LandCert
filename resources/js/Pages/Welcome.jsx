@@ -52,7 +52,7 @@ export default function Welcome({ auth }) {
 
     return (
         <>
-            <Head title="CPDO L.C — City of Ilagan" />
+            <Head title="CPDO LC — City of Ilagan" />
 
             {/* ═══════════════════════ NAVBAR ═════════════════════════════ */}
             <nav className="sticky top-0 z-50 bg-[#0d1f5c] border-b border-[#1a3a8f]/60 shadow-md">
@@ -65,7 +65,7 @@ export default function Welcome({ auth }) {
                         </div>
                         <div className="leading-tight">
                             <p className="text-white font-black text-xs tracking-[0.15em] uppercase">Republic of the Philippines</p>
-                            <p className="text-[#d4a017] font-black text-sm tracking-wide uppercase">CPDO L.C</p>
+                            <p className="text-[#d4a017] font-black text-sm tracking-wide uppercase">CPDO LC</p>
                             <p className="text-blue-300 text-[10px] tracking-widest">City of Ilagan, Isabela</p>
                         </div>
                     </div>
@@ -127,7 +127,7 @@ export default function Welcome({ auth }) {
                             </div>
                             <div>
                                 <p className="text-blue-300 text-sm font-semibold">Welcome to</p>
-                                <p className="text-white font-black text-2xl lg:text-3xl leading-tight tracking-tight">CPDO L.C</p>
+                                <p className="text-white font-black text-2xl lg:text-3xl leading-tight tracking-tight">CPDO LC</p>
                             </div>
                         </div>
 
@@ -230,7 +230,7 @@ export default function Welcome({ auth }) {
                 <div className="max-w-6xl mx-auto px-6 lg:px-12">
                     <Reveal className="text-center mb-16">
                         <h2 className="text-3xl lg:text-4xl font-black text-white">
-                            Why use <span className="text-[#d4a017]">CPDO L.C</span>?
+                            Why use <span className="text-[#d4a017]">CPDO LC</span>?
                         </h2>
                         <p className="text-blue-200/70 mt-3 text-base max-w-xl mx-auto">
                             Your one-stop digital platform for all city planning and land use services in Ilagan City.
@@ -366,7 +366,7 @@ export default function Welcome({ auth }) {
                                     <img src="/images/ilagan1.png" alt="City of Ilagan" className="w-full h-full object-cover"/>
                                 </div>
                                 <div>
-                                    <p className="text-white font-black text-sm tracking-widest uppercase">CPDO L.C</p>
+                                    <p className="text-white font-black text-sm tracking-widest uppercase">CPDO LC</p>
                                     <p className="text-[#d4a017] text-xs font-semibold">City of Ilagan, Isabela</p>
                                 </div>
                             </div>
@@ -379,7 +379,7 @@ export default function Welcome({ auth }) {
                         <div>
                             <h4 className="text-white font-bold mb-4 text-sm tracking-wide">Quick Links</h4>
                             <ul className="space-y-2 text-blue-300/70 text-sm">
-                                <li><a href="#why" className="hover:text-[#d4a017] transition-colors">About CPDO L.C</a></li>
+                                <li><a href="#why" className="hover:text-[#d4a017] transition-colors">About CPDO LC</a></li>
                                 <li><a href="#how" className="hover:text-[#d4a017] transition-colors">How It Works</a></li>
                                 <li>
                                     {!auth.user

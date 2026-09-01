@@ -58,16 +58,18 @@ class NotificationService
         self::ensureRelationshipsLoaded($request);
         $applicantName = self::getApplicantName($request);
         $projectType = self::getProjectType($request);
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
         
         // Notify the applicant
         Notification::createForUser(
             $request->user_id,
             'application_submitted',
             'Application Submitted Successfully',
-            "Your application #{$request->id} for {$projectType} has been submitted successfully and is now pending review.",
+            "Your application {$applicationNumber} for {$projectType} has been submitted successfully and is now pending review.",
             "/my-applications",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'project_type' => $projectType,
                 'applicant_name' => $applicantName,
             ]
@@ -79,10 +81,11 @@ class NotificationService
             ['admin', 'super_admin'],
             'new_application',
             'New Application Received',
-            "A new {$projectType} application #{$request->id} from {$applicantName} has been submitted and requires review.",
+            "A new {$projectType} application {$applicationNumber} from {$applicantName} has been submitted and requires review.",
             "/admin/requests/{$request->id}",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'project_type' => $projectType,
                 'applicant_name' => $applicantName,
             ]
@@ -98,16 +101,18 @@ class NotificationService
         $applicantName = self::getApplicantName($request);
         $projectType = self::getProjectType($request);
         $reviewerName = $reviewedBy ? $reviewedBy->name : 'Admin';
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
         
         // Notify the applicant
         Notification::createForUser(
             $request->user_id,
             'application_reviewed',
             'Application Reviewed',
-            "Your application #{$request->id} has been reviewed by {$reviewerName}. Status: {$evaluation}",
+            "Your application {$applicationNumber} has been reviewed by {$reviewerName}. Status: {$evaluation}",
             "/my-applications",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'evaluation' => $evaluation,
                 'reviewed_by' => $reviewerName,
             ]
@@ -119,10 +124,11 @@ class NotificationService
                 ['super_admin'],
                 'application_awaiting_approval',
                 'Application Awaiting Final Approval',
-                "Application #{$request->id} from {$applicantName} has been reviewed and approved by {$reviewerName}. Awaiting your final approval.",
+                "Application {$applicationNumber} from {$applicantName} has been reviewed and approved by {$reviewerName}. Awaiting your final approval.",
                 "/super-admin/requests/{$request->id}/review",
                 [
                     'application_id' => $request->id,
+                    'application_number' => $applicationNumber,
                     'project_type' => $projectType,
                     'applicant_name' => $applicantName,
                     'reviewed_by' => $reviewerName,
@@ -139,16 +145,18 @@ class NotificationService
         self::ensureRelationshipsLoaded($request);
         $applicantName = self::getApplicantName($request);
         $approverName = $approvedBy ? $approvedBy->name : 'Super Admin';
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
         
         // Notify the applicant
         Notification::createForUser(
             $request->user_id,
             'application_approved',
             'Application Approved! 🎉',
-            "Congratulations! Your application #{$request->id} has been approved by {$approverName}. You can now proceed to payment.",
+            "Congratulations! Your application {$applicationNumber} has been approved by {$approverName}. You can now proceed to payment.",
             "/my-applications",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'approved_by' => $approverName,
             ]
         );
@@ -160,10 +168,11 @@ class NotificationService
                 $admin->id,
                 'application_final_approved',
                 'Application Finally Approved',
-                "Application #{$request->id} from {$applicantName} has been finally approved by {$approverName}.",
+                "Application {$applicationNumber} from {$applicantName} has been finally approved by {$approverName}.",
                 "/admin/requests/{$request->id}",
                 [
                     'application_id' => $request->id,
+                    'application_number' => $applicationNumber,
                     'applicant_name' => $applicantName,
                     'approved_by' => $approverName,
                 ]
@@ -177,16 +186,18 @@ class NotificationService
     public static function applicationRejected(RequestModel $request, string $reason, ?User $rejectedBy = null)
     {
         $rejectorName = $rejectedBy ? $rejectedBy->name : 'Admin';
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
         
         // Notify the applicant
         Notification::createForUser(
             $request->user_id,
             'application_rejected',
             'Application Denied',
-            "Your application #{$request->id} has been denied by {$rejectorName}. Reason: {$reason}",
+            "Your application {$applicationNumber} has been denied by {$rejectorName}. Reason: {$reason}",
             "/my-applications",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'reason' => $reason,
                 'rejected_by' => $rejectorName,
             ]
@@ -206,15 +217,17 @@ class NotificationService
         self::ensureRelationshipsLoaded($request);
         $applicantName = self::getApplicantName($request);
         $returnerName = $returnedBy ? $returnedBy->name : 'Zoning Administrator';
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
 
         self::notifyRoles(
             ['admin'],
             'application_returned',
             'Application Returned for Review',
-            "Application #{$request->id} from {$applicantName} was returned by {$returnerName}. Reason: {$reason}",
+            "Application {$applicationNumber} from {$applicantName} was returned by {$returnerName}. Reason: {$reason}",
             "/admin/requests/{$request->id}/document-verification",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'applicant_name' => $applicantName,
                 'reason' => $reason,
                 'returned_by' => $returnerName,
@@ -229,15 +242,17 @@ class NotificationService
     {
         self::ensureRelationshipsLoaded($request);
         $applicantName = self::getApplicantName($request);
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
         
         self::notifyRoles(
             ['admin', 'super_admin'],
             'payment_receipt_uploaded',
             'Payment Receipt Uploaded',
-            "Payment receipt has been uploaded for application #{$request->id} from {$applicantName}. Please verify.",
+            "Payment receipt has been uploaded for application {$applicationNumber} from {$applicantName}. Please verify.",
             "/admin/payments",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'payment_id' => $payment->id,
                 'applicant_name' => $applicantName,
             ]
@@ -248,10 +263,11 @@ class NotificationService
             $request->user_id,
             'payment_receipt_submitted',
             'Payment Receipt Submitted',
-            "Your payment receipt for application #{$request->id} has been submitted successfully and is awaiting verification.",
+            "Your payment receipt for application {$applicationNumber} has been submitted successfully and is awaiting verification.",
             "/my-applications",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'payment_id' => $payment->id,
             ]
         );
@@ -267,15 +283,17 @@ class NotificationService
     {
         self::ensureRelationshipsLoaded($request);
         $applicantName = self::getApplicantName($request);
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
 
         self::notifyRoles(
             ['admin', 'super_admin'],
             'requirement_uploaded',
             'Requirement Document Uploaded',
-            "{$applicantName} uploaded \"{$requirementName}\" for application #{$request->id}. Please verify.",
+            "{$applicantName} uploaded \"{$requirementName}\" for application {$applicationNumber}. Please verify.",
             "/admin/requests/{$request->id}/document-verification",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'applicant_name' => $applicantName,
                 'requirement_name' => $requirementName,
             ]
@@ -288,6 +306,7 @@ class NotificationService
     public static function paymentVerified(RequestModel $request, $payment, ?User $verifiedBy = null)
     {
         $verifierName = $verifiedBy ? $verifiedBy->name : 'Admin';
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
         
         // Format payment details for the message (FR8.2: OR Number, Amount, Date, Next steps)
         $receiptNumber = $payment->receipt_number ?? 'N/A';
@@ -299,10 +318,11 @@ class NotificationService
             $request->user_id,
             'payment_verified',
             'Payment Confirmed ✓',
-            "Your payment for application #{$request->id} has been confirmed by {$verifierName}. OR: {$receiptNumber}, Amount: ₱{$amount}, Date: {$paymentDate}. Your certificate will be processed next.",
+            "Your payment for application {$applicationNumber} has been confirmed by {$verifierName}. OR: {$receiptNumber}, Amount: ₱{$amount}, Date: {$paymentDate}. Your certificate will be processed next.",
             "/my-applications",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'payment_id' => $payment->id,
                 'receipt_number' => $receiptNumber,
                 'amount' => $payment->amount,
@@ -318,16 +338,18 @@ class NotificationService
     public static function paymentRejected(RequestModel $request, $payment, string $reason, ?User $rejectedBy = null)
     {
         $rejectorName = $rejectedBy ? $rejectedBy->name : 'Admin';
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
         
         // Notify the applicant
         Notification::createForUser(
             $request->user_id,
             'payment_rejected',
             'Payment Receipt Denied',
-            "Your payment receipt for application #{$request->id} has been denied by {$rejectorName}. Reason: {$reason}. Please upload a new receipt.",
+            "Your payment receipt for application {$applicationNumber} has been denied by {$rejectorName}. Reason: {$reason}. Please upload a new receipt.",
             "/my-applications",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'payment_id' => $payment->id,
                 'reason' => $reason,
                 'rejected_by' => $rejectorName,
@@ -340,15 +362,18 @@ class NotificationService
      */
     public static function certificateIssued(RequestModel $request, $certificate)
     {
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
+        
         // Notify the applicant
         Notification::createForUser(
             $request->user_id,
             'certificate_issued',
             'Certificate Issued! 🎊',
-            "Great news! Your certificate for application #{$request->id} has been issued and is ready for release.",
+            "Great news! Your certificate for application {$applicationNumber} has been issued and is ready for release.",
             "/my-applications",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'certificate_id' => $certificate->id,
             ]
         );
@@ -359,15 +384,18 @@ class NotificationService
      */
     public static function certificateReleased(RequestModel $request, $certificate, $release)
     {
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
+        
         // Notify the applicant
         Notification::createForUser(
             $request->user_id,
             'certificate_released',
             'Certificate Released 📄',
-            "Your certificate for application #{$request->id} has been released via {$release->release_mode}. Thank you for using our services!",
+            "Your certificate for application {$applicationNumber} has been released via {$release->release_mode}. Thank you for using our services!",
             "/my-applications",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'certificate_id' => $certificate->id,
                 'release_id' => $release->id,
                 'release_mode' => $release->release_mode,
@@ -381,16 +409,18 @@ class NotificationService
     public static function documentsIncomplete(RequestModel $request, array $missingDocuments)
     {
         $documentsList = implode(', ', $missingDocuments);
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
         
         // Notify the applicant
         Notification::createForUser(
             $request->user_id,
             'documents_incomplete',
             'Documents Required',
-            "Your application #{$request->id} is missing some documents: {$documentsList}. Please submit them as soon as possible.",
+            "Your application {$applicationNumber} is missing some documents: {$documentsList}. Please submit them as soon as possible.",
             "/my-applications",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'missing_documents' => $missingDocuments,
             ]
         );
@@ -401,15 +431,18 @@ class NotificationService
      */
     public static function pendingActionReminder(RequestModel $request, string $action)
     {
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
+        
         // Notify the applicant
         Notification::createForUser(
             $request->user_id,
             'pending_action_reminder',
             'Action Required ⏰',
-            "Reminder: Your application #{$request->id} requires action - {$action}.",
+            "Reminder: Your application {$applicationNumber} requires action - {$action}.",
             "/my-applications",
             [
                 'application_id' => $request->id,
+                'application_number' => $applicationNumber,
                 'action_required' => $action,
             ]
         );

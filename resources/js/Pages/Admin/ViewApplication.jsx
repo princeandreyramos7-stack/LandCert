@@ -140,18 +140,20 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
             <Head title={`View Application ${request.application_number || `TPZ-${request.id}`}`} />
 
             <div className="max-w-7xl mx-auto">
-                {/* Print Form Button */}
-                <div className="mb-4 flex gap-3">
-                    <Button
-                        variant="outline" 
-                        size="sm" 
-                        className="hover:bg-gray-100"
-                        onClick={() => window.open(route('admin.requests.print', request.id), '_blank')}
-                    >
-                        <Printer className="h-4 w-4 mr-2" />
-                        Print Form
-                    </Button>
-                </div>
+                {/* Print Form Button - Only show for CZC, TUP, SUP (not for ZC/Locational Clearance) */}
+                {!isZC && (
+                    <div className="mb-4 flex gap-3">
+                        <Button
+                            variant="outline" 
+                            size="sm" 
+                            className="hover:bg-gray-100"
+                            onClick={() => window.open(route('admin.requests.print', request.id), '_blank')}
+                        >
+                            <Printer className="h-4 w-4 mr-2" />
+                            Print Form
+                        </Button>
+                    </div>
+                )}
 
                 {/* Application Details Card */}
                 <Card className="mb-6">
@@ -501,7 +503,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
 
                 {!isZC && (
                     <InfoField
-                        label="Project Nature"
+                        label="Project Classification"
                         value={request.project_nature}
                     />
                 )}
@@ -797,7 +799,7 @@ function EditField({ label, value, onChange, placeholder }) {
     );
 }
 
-// Lot Number and Tax Declaration No. are entered by staff here and saved to the
+// Title Number (TCT/CCT) and Tax Declaration No. are entered by staff here and saved to the
 // property record; both are required before an application can be marked as
 // reviewed. Project Nature is set by the applicant and shown read-only.
 function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = [], isZC = false }) {
@@ -869,7 +871,7 @@ function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = []
                 )}
             </div>
 
-            {/* The Lot Number and Tax Declaration No. below are read off these
+            {/* The Title Number (TCT/CCT) and Tax Declaration No. below are read off these
                 documents, so they open straight from here. */}
             {uploadedRequirements.length > 0 && (
                 <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
@@ -911,10 +913,10 @@ function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = []
                 {editing ? (
                     <>
                         <EditField
-                            label="Lot Number"
+                            label="Title Number (TCT/CCT)"
                             value={values.lot_number}
                             onChange={(v) => setValues({ ...values, lot_number: v })}
-                            placeholder="e.g. 1234-B"
+                            placeholder="e.g. T-12345"
                         />
                         <EditField
                             label="Tax Declaration No."
@@ -922,13 +924,13 @@ function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = []
                             onChange={(v) => setValues({ ...values, tax_declaration_no: v })}
                             placeholder="e.g. 2024-12-0001"
                         />
-                        {!isZC && <InfoField label="Project Nature" value={request.zone_classification} />}
+                        {!isZC && <InfoField label="Project Classification" value={request.zone_classification} />}
                     </>
                 ) : (
                     <>
-                        <InfoField label="Lot Number" value={request.lot_number} />
+                        <InfoField label="Title Number (TCT/CCT)" value={request.lot_number} />
                         <InfoField label="Tax Declaration No." value={request.tax_declaration_no} />
-                        {!isZC && <InfoField label="Project Nature" value={request.zone_classification} />}
+                        {!isZC && <InfoField label="Project Classification" value={request.zone_classification} />}
                     </>
                 )}
             </div>
@@ -937,7 +939,7 @@ function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = []
                 <div className="mt-3 flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
                     <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
                     <span>
-                        Lot Number and Tax Declaration No. must be set before this application
+                        Title Number (TCT/CCT) and Tax Declaration No. must be set before this application
                         can be marked as reviewed.
                     </span>
                 </div>

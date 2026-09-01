@@ -81,7 +81,7 @@ export default function Login({ status, canResetPassword }) {
             <div className="mb-7">
                 <div className="flex items-center gap-2 mb-3">
                     <div className="w-1 h-6 rounded-full bg-[#d4a017]"/>
-                    <p className="text-[#d4a017] text-xs font-black tracking-[0.2em] uppercase">CPDO L.C</p>
+                    <p className="text-[#d4a017] text-xs font-black tracking-[0.2em] uppercase">CPDO LC</p>
                 </div>
                 <h2 className="text-2xl font-black text-[#0d1f5c]">Welcome Back</h2>
                 <p className="mt-1 text-sm text-gray-500">Sign in to your account to continue</p>

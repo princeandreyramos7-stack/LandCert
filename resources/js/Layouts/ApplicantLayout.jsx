@@ -52,11 +52,11 @@ export default function ApplicantLayout({ title, children }) {
                         <div className="hidden sm:flex items-center gap-2">
                             <img
                                 src="/images/Ilagan.png"
-                                alt="CPDO L.C"
+                                alt="CPDO LC"
                                 className="w-6 h-6 object-contain"
                             />
                             <span className="text-[#0d1f5c] text-xs font-black tracking-wide">
-                                CPDO L.C.
+                                CPDO LC
                             </span>
                             <span className="text-gray-300 text-xs">|</span>
                             <span className="text-gray-400 text-xs">

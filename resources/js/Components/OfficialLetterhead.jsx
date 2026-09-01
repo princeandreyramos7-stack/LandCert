@@ -39,7 +39,7 @@ export default function OfficialLetterhead({ code = null }) {
                     <img
                         src="/images/ilagan1logo.jpg"
                         alt="City of Ilagan"
-                        style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'darken' }}
                     />
                 </div>
                 <div style={{ textAlign: 'left', lineHeight: 1.25 }}>
@@ -62,7 +62,7 @@ export default function OfficialLetterhead({ code = null }) {
                 <img
                     src="/images/Ilagan Logo2.png"
                     alt="City of Ilagan 2030"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'darken' }}
                 />
             </div>
         </div>

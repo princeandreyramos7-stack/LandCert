@@ -254,7 +254,7 @@ export default function PrintClearance({ application, payment, reviewer }) {
 
                             {application.project_nature && (
                                 <p style={{ textIndent: '40pt', marginBottom: '12pt' }}>
-                                    <strong>Project Nature/Description:</strong> {application.project_nature}
+                                    <strong>Project Classification/Description:</strong> {application.project_nature}
                                 </p>
                             )}
 

@@ -764,7 +764,7 @@ export default function PrintForm({ application: a, auth }) {
                     </tbody>
                 </table>
 
-                {/* 11, 12 — Right Over Land / Project Nature */}
+                {/* 11, 12 — Right Over Land / Project Classification */}
                 <table>
                     <colgroup>
                         <col style={{ width: "33%" }} />
@@ -788,7 +788,7 @@ export default function PrintForm({ application: a, auth }) {
                             </td>
                             {/* 12 — project nature/status */}
                             <td className="nb-t nb-l" style={{ height: "26pt", verticalAlign: "top" }}>
-                                <span className="lbl">12. Project Nature</span>
+                                <span className="lbl">12. Project Classification</span>
                                 <div style={{ marginTop: "3pt" }}>
                                     <span className="opt">
                                         <Chk on={v(a.project_nature_duration).toLowerCase() === "permanent"} />

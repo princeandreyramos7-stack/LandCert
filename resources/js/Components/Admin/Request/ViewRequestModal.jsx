@@ -105,7 +105,7 @@ export function ViewRequestModal({ isOpen, onClose, request }) {
                                 value={request.project_type}
                             />
                             <InfoField
-                                label="Project Nature"
+                                label="Project Classification"
                                 value={request.project_nature}
                             />
                         </InfoSection>

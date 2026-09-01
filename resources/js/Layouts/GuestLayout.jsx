@@ -71,7 +71,7 @@ export default function GuestLayout({ children }) {
                                 Republic of the Philippines
                             </p>
                             <p className="text-[#d4a017] font-black text-base tracking-wide leading-tight">
-                                CPDO L.C.
+                                CPDO LC
                             </p>
                             <p className="text-blue-300 text-[11px] tracking-widest">
                                 City of Ilagan, Isabela
@@ -170,7 +170,7 @@ export default function GuestLayout({ children }) {
                         </div>
                         <div>
                             <p className="text-[#0d1f5c] font-black text-sm tracking-wide">
-                                CPDO L.C
+                                CPDO LC
                             </p>
                             <p className="text-[#d4a017] text-xs font-semibold">
                                 City of Ilagan, Isabela

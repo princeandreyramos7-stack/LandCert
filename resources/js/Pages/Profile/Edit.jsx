@@ -273,7 +273,7 @@ export default function Edit({ mustVerifyEmail, status }) {
 
     return (
         <>
-            <Head title="Profile — CPDO L.C"/>
+            <Head title="Profile — CPDO LC"/>
             <ApplicantLayout title="My Account">
                 <div className="space-y-6">
 

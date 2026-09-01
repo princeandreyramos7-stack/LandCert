@@ -176,13 +176,13 @@ class SmsController extends Controller
     private function getBroadcastTemplates(): array
     {
         return [
-            ['label' => 'Application Reminder',       'message' => 'Hi {name}! This is a reminder from CPDO LandCert regarding your land use permit application. Please log in to check your status. - CPDO LandCert'],
-            ['label' => 'Payment Reminder',            'message' => 'Hi {name}! Your approved application has a pending payment. Please pay at the City Treasury Office and bring your Official Receipt to the CPDO office (Mon-Fri 8AM-5PM). - CPDO LandCert'],
-            ['label' => 'Document Submission',         'message' => 'Hi {name}! Please submit the required documents for your application at CPDO office. Bring all requirements. - CPDO LandCert'],
-            ['label' => 'Office Announcement',         'message' => 'CPDO LandCert announcement: Please bring all required documents for walk-in transactions. Office hours: Mon-Fri 8AM-5PM. - CPDO LandCert'],
-            ['label' => 'Certificate Ready for Pickup','message' => 'Hi {name}! Your certificate is ready for pickup at CPDO office. Bring a valid government-issued ID. Office hours: Mon-Fri 8AM-5PM. - CPDO LandCert'],
-            ['label' => 'Payment Instructions',        'message' => 'Hi {name}! Your application is approved. Please pay the required fee at the City Treasury Office and bring the Official Receipt to the CPDO office to proceed. - CPDO LandCert'],
-            ['label' => 'General Reminder',            'message' => 'Hi {name}! This is a reminder from CPDO LandCert. Please log in to your account or visit our office for more information. Office hours: Mon-Fri 8AM-5PM. - CPDO LandCert'],
+            ['label' => 'Application Reminder',       'message' => 'Hi {name}! This is a reminder from CPDO LC regarding your locational clearance application. Please log in to check your status. - CPDO LC'],
+            ['label' => 'Payment Reminder',            'message' => 'Hi {name}! Your approved application has a pending payment. Please pay at the City Treasury Office and bring your Official Receipt to the CPDO office (Mon-Fri 8AM-5PM). - CPDO LC'],
+            ['label' => 'Document Submission',         'message' => 'Hi {name}! Please submit the required documents for your application at CPDO office. Bring all requirements. - CPDO LC'],
+            ['label' => 'Office Announcement',         'message' => 'CPDO LC announcement: Please bring all required documents for walk-in transactions. Office hours: Mon-Fri 8AM-5PM. - CPDO LC'],
+            ['label' => 'Certificate Ready for Pickup','message' => 'Hi {name}! Your certificate is ready for pickup at CPDO office. Bring a valid government-issued ID. Office hours: Mon-Fri 8AM-5PM. - CPDO LC'],
+            ['label' => 'Payment Instructions',        'message' => 'Hi {name}! Your application is approved. Please pay the required fee at the City Treasury Office and bring the Official Receipt to the CPDO office to proceed. - CPDO LC'],
+            ['label' => 'General Reminder',            'message' => 'Hi {name}! This is a reminder from CPDO LC. Please log in to your account or visit our office for more information. Office hours: Mon-Fri 8AM-5PM. - CPDO LC'],
             ['label' => 'Custom Message',              'message' => ''],
         ];
     }
@@ -190,15 +190,15 @@ class SmsController extends Controller
     private function defaultMessages(): array
     {
         return [
-            'application_submitted' => 'Hi {name}! Your application #{request_id} has been submitted. We will review it and notify you. - CPDO LandCert',
-            'application_approved'  => 'Good news {name}! Application #{request_id} is APPROVED. Visit CPDO office to process payment and submit documents. - CPDO LandCert',
-            'application_rejected'  => '{name}, application #{request_id} was DENIED. Reason: {reason}. Contact CPDO for details. - CPDO LandCert',
-            'payment_verified'      => '{name}, payment of PHP {amount} for application #{request_id} is VERIFIED. Certificate will be prepared. - CPDO LandCert',
-            'payment_rejected'      => '{name}, your payment for application #{request_id} was DENIED. Reason: {reason}. Please resubmit or contact CPDO. - CPDO LandCert',
-            'certificate_preparing' => '{name}, certificate #{cert_number} is being prepared. You will be notified when ready for pickup. - CPDO LandCert',
-            'certificate_ready'     => '{name}, certificate #{cert_number} (App #{request_id}) is READY for pickup. Bring valid ID. - CPDO LandCert',
-            'payment_reminder'      => 'Reminder: {name}, payment for application #{request_id} is due. Visit CPDO office. - CPDO LandCert',
-            'requirements_submitted'=> 'Hi {name}! Your requirements for application #{request_id} were submitted successfully. Please wait while our staff reviews your application. Once reviewed, you will be notified of your scheduled payment. - CPDO LandCert',
+            'application_submitted' => 'Hi {name}! Your application #{application_number} has been submitted. We will review it and notify you. - CPDO LC',
+            'application_approved'  => 'Good news {name}! Application #{application_number} is APPROVED. Visit CPDO office to process payment and submit documents. - CPDO LC',
+            'application_rejected'  => '{name}, application #{application_number} was DENIED. Reason: {reason}. Contact CPDO for details. - CPDO LC',
+            'payment_verified'      => '{name}, payment of PHP {amount} for application #{application_number} is VERIFIED. Certificate will be prepared. - CPDO LC',
+            'payment_rejected'      => '{name}, your payment for application #{application_number} was DENIED. Reason: {reason}. Please resubmit or contact CPDO. - CPDO LC',
+            'certificate_preparing' => '{name}, certificate #{cert_number} is being prepared. You will be notified when ready for pickup. - CPDO LC',
+            'certificate_ready'     => '{name}, certificate #{cert_number} (App #{application_number}) is READY for pickup. Bring valid ID. - CPDO LC',
+            'payment_reminder'      => 'Reminder: {name}, payment for application #{application_number} is due. Visit CPDO office. - CPDO LC',
+            'requirements_submitted'=> 'Hi {name}! Your requirements for application #{application_number} were submitted successfully. Please wait while our staff reviews your application. - CPDO LC',
         ];
     }
 }

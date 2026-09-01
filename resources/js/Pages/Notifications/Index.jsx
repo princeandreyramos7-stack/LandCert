@@ -151,7 +151,7 @@ export default function NotificationsPage({ notifications }) {
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
                                         <div className="w-1 h-4 rounded-full bg-[#d4a017]"/>
-                                        <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">CPDO L.C</p>
+                                        <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">CPDO LC</p>
                                     </div>
                                     <h1 className="text-xl font-black">Notifications</h1>
                                     <p className="text-blue-200/70 text-sm">Stay updated on your application status</p>

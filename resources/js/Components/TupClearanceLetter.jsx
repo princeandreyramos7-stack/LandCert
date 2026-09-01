@@ -41,31 +41,32 @@ export default function TupClearanceLetter({ application, payment, zoningAdminis
         'No major expansions, alterations and/or improvement shall be introduced without prior clearance from this office.',
         'This decision shall not be construed as a certification of HSRC to the ownership by the applicant of the parcel of land subject to this decision.',
         'Any misrepresentation, false statement or allegations materials to the issuance of this decision shall be a sufficient cause for its revocation.',
+        'Additional Conditions:',
     ];
 
     return (
         <div
             ref={innerRef}
             className="certificate-page print-document"
-            style={{ fontSize: '10.5pt', lineHeight: 1.45 }}
+            style={{ fontSize: '10pt', lineHeight: 1.35 }}
         >
             <OfficialLetterhead code="CPD-003-0" />
 
-            <div style={{ marginTop: '18pt' }}>{formatDate(issued)}</div>
+            <div style={{ marginTop: '14pt' }}>{formatDate(issued)}</div>
 
-            <div style={{ marginTop: '16pt', fontWeight: 'bold' }}>
+            <div style={{ marginTop: '12pt', fontWeight: 'bold' }}>
                 {(application.applicant_name || 'N/A').toUpperCase()}
             </div>
             <div>{application.applicant_address || 'N/A'}</div>
 
-            <div style={{ marginTop: '16pt' }}>Dear {surname}:</div>
+            <div style={{ marginTop: '12pt' }}>Dear {surname}:</div>
 
-            <p style={{ marginTop: '14pt', textAlign: 'justify', textIndent: '36pt' }}>
+            <p style={{ marginTop: '10pt', textAlign: 'justify', textIndent: '36pt' }}>
                 This has reference to your application for Locational Clearance of your{' '}
                 <strong>{project.toUpperCase()}</strong> project located at {location}.
             </p>
 
-            <p style={{ marginTop: '10pt', textAlign: 'justify', textIndent: '36pt' }}>
+            <p style={{ marginTop: '8pt', textAlign: 'justify', textIndent: '36pt' }}>
                 Relative thereto, this office interpose no objection to the operation of the subject{' '}
                 <strong>{project.toUpperCase()}</strong> project wherein no violation had been committed.
                 In view thereof, we are granting you <strong>Temporary Use Permit (TUP)</strong> valid for
@@ -73,19 +74,19 @@ export default function TupClearanceLetter({ application, payment, zoningAdminis
                 shall be subject to the following conditions which have to be strictly complied.
             </p>
 
-            <ol style={{ marginTop: '12pt', paddingLeft: '52pt', textAlign: 'justify' }}>
-                {conditions.map((condition) => (
-                    <li key={condition} style={{ marginBottom: '5pt' }}>{condition}</li>
+            <ol style={{ marginTop: '10pt', paddingLeft: '52pt', textAlign: 'justify' }}>
+                {conditions.slice(0, 7).map((condition, index) => (
+                    <li key={condition} style={{ marginBottom: '4pt' }}>{condition}</li>
                 ))}
-                <li>
+                <li style={{ marginBottom: '4pt' }}>
                     Additional Conditions:
-                    <div style={{ paddingLeft: '14pt', marginTop: '3pt' }}>
-                        <div style={{ marginBottom: '4pt' }}>
+                    <div style={{ paddingLeft: '14pt', marginTop: '2pt' }}>
+                        <div style={{ marginBottom: '3pt' }}>
                             a. Provision as to setback, yard requirement, bulk, easement, are height and other
                             restrictions shall strictly comply with the requirements of the National Building
                             Code and other related laws.
                         </div>
-                        <div style={{ marginBottom: '4pt' }}>
+                        <div style={{ marginBottom: '3pt' }}>
                             b. This decision shall be considered automatically revoked if project is not
                             commenced within one (1) year from date of issue of this decision.
                         </div>
@@ -94,11 +95,11 @@ export default function TupClearanceLetter({ application, payment, zoningAdminis
                 </li>
             </ol>
 
-            <p style={{ marginTop: '14pt' }}>Please be guided accordingly.</p>
+            <p style={{ marginTop: '10pt' }}>Please be guided accordingly.</p>
 
-            <div style={{ marginTop: '20pt' }}>
+            <div style={{ marginTop: '16pt' }}>
                 <div>Very truly yours,</div>
-                <div style={{ position: 'relative', marginTop: '34pt', height: '38pt', display: 'flex', alignItems: 'flex-end', width: '240pt' }}>
+                <div style={{ position: 'relative', marginTop: '28pt', height: '34pt', display: 'flex', alignItems: 'flex-end', width: '240pt' }}>
                     <ESignatureImage
                         src={zoningAdministrator?.signature_url}
                         maxWidth="200pt"
@@ -115,10 +116,10 @@ export default function TupClearanceLetter({ application, payment, zoningAdminis
             {/* Receipt details on the left, decision details on the right */}
             <div
                 style={{
-                    marginTop: '30pt',
+                    marginTop: '22pt',
                     display: 'flex',
                     justifyContent: 'space-between',
-                    fontSize: '10pt',
+                    fontSize: '9.5pt',
                 }}
             >
                 <div>

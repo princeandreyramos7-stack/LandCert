@@ -1047,7 +1047,7 @@ function Step2Content({ request }) {
                 </div>
 
                 <InfoField
-                    label="Project Nature"
+                    label="Project Classification"
                     value={request.project_nature}
                 />
             </div>
