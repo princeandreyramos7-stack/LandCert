@@ -104,17 +104,17 @@ export function SuperAdminRequestList({ requests }) {
             {/* Single unified card containing everything */}
             <Card className="bg-white shadow-lg border border-gray-100">
                 <CardContent className="p-6">
-                    {/* Live refresh status — the list updates itself, no reload needed */}
-                    <div className="flex justify-end mb-3">
-                        <LiveIndicator
-                            isRefreshing={isRefreshing}
-                            lastUpdated={lastUpdated}
-                            newCount={newCount}
-                            onAcknowledge={acknowledge}
-                            onRefreshNow={refreshNow}
-                            label="applications"
-                        />
-                    </div>
+                    {/* Live refresh status — the list updates itself, no reload
+                        needed. It renders into the layout's top bar. */}
+                    <LiveIndicator
+                        isRefreshing={isRefreshing}
+                        lastUpdated={lastUpdated}
+                        newCount={newCount}
+                        onAcknowledge={acknowledge}
+                        onRefreshNow={refreshNow}
+                        label="applications"
+                        className="justify-end mb-3"
+                    />
 
                     {/* Statistics Cards at the top */}
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">

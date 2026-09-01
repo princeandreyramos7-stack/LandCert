@@ -1,10 +1,11 @@
 import React, { useRef } from "react";
-import { Head, Link, usePage } from "@inertiajs/react";
-import { Button } from "@/Components/ui/button";
-import { ArrowLeft, Download, Printer, FileText } from "lucide-react";
+import { Head, usePage } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import html2pdf from 'html2pdf.js';
+import PrintDocumentStyles from "@/Components/PrintDocumentStyles";
+import OfficialLetterhead from "@/Components/OfficialLetterhead";
+import DocumentActionBar from "@/Components/DocumentActionBar";
 
 /**
  * One signature slot: the e-signature image sits ON the ruled line, with the
@@ -48,7 +49,14 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
     const handleDownload = () => {
         const element = certificateRef.current;
         const filename = `Clearance_${application.application_number || 'Certificate'}.pdf`;
-        
+
+        // On screen the sheet is a full A4 box. Captured at that height it fills
+        // the PDF page exactly, and the rounding spills a sliver onto a second,
+        // blank page — so the height is released for the capture and restored
+        // afterwards. The clearance is one page.
+        const restore = () => { element.style.minHeight = ''; };
+        element.style.minHeight = '0';
+
         const opt = {
             margin: 0,
             filename: filename,
@@ -67,7 +75,7 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
             pagebreak: { mode: 'avoid-all' }
         };
         
-        html2pdf().set(opt).from(element).save();
+        html2pdf().set(opt).from(element).save().then(restore, restore);
     };
 
     return (
@@ -80,208 +88,39 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
         >
             <Head title={`Certificate - ${application.application_number}`} />
             
+            <PrintDocumentStyles />
+
             <style dangerouslySetInnerHTML={{ __html: `
+                /* A4 sheet, matching the paper the office prints on. */
                 .certificate-page {
                     width: 100%;
-                    max-width: 8.5in;
-                    min-height: 11in;
+                    max-width: 210mm;
+                    min-height: 297mm;
                     margin: 0 auto;
                     background: white;
                     position: relative;
                     font-family: 'Times New Roman', serif;
-                    padding: 0.5in 0.75in;
+                    padding: 12mm 18mm;
                     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
                 }
 
-                /* Government-style header: small white area at the top,
-                   smoothly fading into light blue toward the right/bottom. */
-                .certificate-header {
-                    width: 100%;
-                    background: linear-gradient(
-                        180deg,
-                        #ffffff 0%,
-                        #eefdfd 8%,
-                        #d9f9fa 25%,
-                        #bff5f6 55%,
-                        #a8eff1 100%
-                    );
 
-                    border-bottom: 3px solid #2222ff;
-
-                    padding: 8pt 0 10pt 0;
-
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-
-                    position: relative;
-                }
-
-                /* Print colors exactly */
-                * {
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                    color-adjust: exact !important;
-                }
-
-                /* Hide browser print headers/footers */
-                @page {
-                    size: A4;
-                    margin: 0;
-                }
-
-                @media print {
-                    html, body {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                    }
-                }
             `}} />
 
             {/* Page header with action buttons */}
-            <div className="relative overflow-hidden rounded-2xl text-white mb-6 no-print"
-                style={{ background: "linear-gradient(135deg,#0d1f5c 0%,#1a3a8f 60%,#112068 100%)" }}>
-                <div className="relative z-10 flex items-center justify-between p-6">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-[#d4a017]/20 border border-[#d4a017]/30 rounded-xl">
-                            <FileText className="h-7 w-7 text-[#d4a017]"/>
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <div className="w-1 h-4 rounded-full bg-[#d4a017]"/>
-                                <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">Clearance</p>
-                            </div>
-                            <h1 className="text-xl font-black text-white">Zoning Clearance</h1>
-                            <p className="text-blue-200/70 text-sm">Application No: {application.application_number}</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-3">
-                        <Button 
-                            onClick={handlePrint}
-                            className="bg-[#d4a017] hover:bg-[#b8910f] text-white"
-                        >
-                            <Printer className="mr-2 h-4 w-4" />
-                            Print Clearance
-                        </Button>
-                        <Button 
-                            onClick={handleDownload}
-                            className="bg-white hover:bg-gray-100 text-[#0d1f5c] border-white"
-                        >
-                            <Download className="mr-2 h-4 w-4" />
-                            Download PDF
-                        </Button>
-                    </div>
-                </div>
-            </div>
+            <DocumentActionBar
+                eyebrow="Clearance"
+                title="Zoning Clearance"
+                subtitle={`Application No: ${application.application_number}`}
+                printLabel="Print Clearance"
+                onPrint={handlePrint}
+                onDownload={handleDownload}
+            />
 
             {/* Clearance Print Area */}
-            <div className="clearance-print-area">
-                <div ref={certificateRef} className="certificate-page" style={{ fontSize: '10pt', lineHeight: '1.4' }}>
-                <div className="certificate-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
-                    {/* Left Logo + Government Text */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15pt', flex: 1 }}>
-        {/* Left Logo */}
-        <div
-            style={{
-                width: '80pt',
-                height: '80pt',
-                flexShrink: 0
-            }}
-        >
-            <img
-                src="/images/ilagan1logo.jpg"
-                alt="Ilagan Logo"
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                    mixBlendMode: 'multiply'
-                }}
-            />
-        </div>
-
-        {/* Government Text */}
-        <div style={{ textAlign: 'left' }}>
-            <div
-                style={{
-                    fontSize: '10pt',
-                    marginBottom: '2pt',
-                    color: '#000080'
-                }}
-            >
-                Republic of the Philippines
-            </div>
-
-            <div
-                style={{
-                    fontSize: '12pt',
-                    fontWeight: 'bold',
-                    color: '#000080'
-                }}
-            >
-                CITY OF ILAGAN
-            </div>
-
-            <div
-                style={{
-                    fontSize: '10pt',
-                    color: '#000080'
-                }}
-            >
-                Province of Isabela
-            </div>
-
-            <div
-                style={{
-                    fontSize: '11pt',
-                    fontWeight: 'bold',
-                    marginTop: '3pt',
-                    color: '#000080'
-                }}
-            >
-                CITY PLANNING &amp; DEVELOPMENT OFFICE
-            </div>
-        </div>
-    </div>
-
-    {/* CPD Number */}
-    <div
-        style={{
-            position: 'absolute',
-            top: '0',
-            right: '100pt',
-            textAlign: 'center'
-        }}
-    >
-        <div
-            style={{
-                fontSize: '10pt',
-                fontWeight: 'bold'
-            }}
-        >
-            CPD-001-0
-        </div>
-    </div>
-
-    {/* Right Logo */}
-    <div
-        style={{
-            width: '80pt',
-            height: '80pt',
-            flexShrink: 0
-        }}
-    >
-        <img
-            src="/images/Ilagan Logo2.png"
-            alt="CPDO Logo"
-            style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain'
-            }}
-        />
-    </div>
-</div>
+            <div className="clearance-print-area print-document-area">
+                <div ref={certificateRef} className="certificate-page print-document" style={{ fontSize: '10pt', lineHeight: '1.4' }}>
+                <OfficialLetterhead code="CPD-001-0" />
                 
                 {/* Title with Yellow Highlight - Dynamic based on project type */}
                 <div style={{ 
@@ -322,7 +161,7 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
                     <div style={{ marginRight: '60px', marginTop: '10px' }}>
                         <div style={{ marginBottom: '' }}>
                             <strong>Decision No.: </strong>
-                            <span style={{ borderBottom: '1px solid #000', display: 'inline-block', minWidth: '150pt', textAlign: 'left' }}>
+                            <span style={{ borderBottom: '1px solid #000', display: 'inline-block', minWidth: '150pt', paddingBottom: '2pt', textAlign: 'left' }}>
                                 {application.decision_number || 'N/A'}
                             </span>
                         </div>

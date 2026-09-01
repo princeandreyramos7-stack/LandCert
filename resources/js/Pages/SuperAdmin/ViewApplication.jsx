@@ -23,6 +23,7 @@ import { useState } from "react";
 import { useToast } from "@/Components/ui/use-toast";
 import { Toaster } from "@/Components/ui/toaster";
 import axios from "axios";
+import { getStatusConfig } from "@/lib/applicationStatus";
 
 export default function ViewApplication({ request }) {
     const [currentStep, setCurrentStep] = useState(1);
@@ -54,33 +55,7 @@ export default function ViewApplication({ request }) {
         }
     };
 
-    // Status badge configuration
-    const getStatusConfig = (status) => {
-        const configs = {
-            pending: {
-                icon: Clock,
-                color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-                label: "Pending Review",
-            },
-            approved: {
-                icon: CheckCircle2,
-                color: "bg-green-100 text-green-800 border-green-200",
-                label: "Approved",
-            },
-            rejected: {
-                icon: XCircle,
-                color: "bg-red-100 text-red-800 border-red-200",
-                label: "Denied",
-            },
-            reviewed: {
-                icon: AlertCircle,
-                color: "bg-blue-100 text-blue-800 border-blue-200",
-                label: "Under Review",
-            },
-        };
-        return configs[status] || configs.pending;
-    };
-
+    // Status badge: the derived status can be any step of the lifecycle.
     const statusConfig = getStatusConfig(request.status || "pending");
     const StatusIcon = statusConfig.icon;
 

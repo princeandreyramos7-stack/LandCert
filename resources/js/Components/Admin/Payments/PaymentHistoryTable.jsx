@@ -22,6 +22,7 @@ import {
     MoreVertical,
     ThumbsUp,
     ThumbsDown,
+    Receipt,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "./utils.jsx";
 import { router } from "@inertiajs/react";
@@ -315,6 +316,23 @@ export function PaymentHistoryTable({
                                                     >
                                                         <Eye className="h-4 w-4 mr-2 text-blue-600" />
                                                         <span>View Details</span>
+                                                    </DropdownMenuItem>
+
+                                                    {/* The Order of Payment is the slip the applicant
+                                                        pays against, so it is reachable from the payment
+                                                        it belongs to. */}
+                                                    <DropdownMenuItem
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            window.open(
+                                                                route(`${routePrefix}.generate-order-of-payment`, payment.request_id),
+                                                                "_blank"
+                                                            );
+                                                        }}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        <Receipt className="h-4 w-4 mr-2 text-[#d4a017]" />
+                                                        <span>Order of Payment</span>
                                                     </DropdownMenuItem>
 
                                                     {payment.payment_status === "pending" && (

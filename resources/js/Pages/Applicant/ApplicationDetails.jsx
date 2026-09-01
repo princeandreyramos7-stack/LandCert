@@ -32,6 +32,9 @@ const STATUS_STYLES = {
     certificate_preparing: { label: "Application Approved",  cls: "bg-green-100 text-green-800 border-green-200",     icon: CheckCircle2 },
     certificate_ready:     { label: "Application Approved",  cls: "bg-green-100 text-green-800 border-green-200",     icon: CheckCircle2 },
     released:              { label: "Application Approved",  cls: "bg-green-100 text-green-800 border-green-200",     icon: CheckCircle2 },
+    completed:             { label: "Application Approved",  cls: "bg-green-100 text-green-800 border-green-200",     icon: CheckCircle2 },
+    for_payment:           { label: "Approved — For Payment", cls: "bg-amber-100 text-amber-800 border-amber-200",    icon: Clock },
+    pending_payment:       { label: "Approved — For Payment", cls: "bg-amber-100 text-amber-800 border-amber-200",    icon: Clock },
 };
 
 function Field({ label, value }) {
@@ -73,7 +76,15 @@ export default function ApplicationDetails({ application, requirements = [], doc
     const [uploadingId, setUploadingId] = useState(null);
 
     const statusKey = String(application.request_status || application.status || "pending").toLowerCase();
-    const status = STATUS_STYLES[statusKey] || STATUS_STYLES.pending;
+    // An unmapped status is shown as itself: reporting an approved application
+    // as "Pending Review" is worse than showing an unfamiliar label.
+    const status = STATUS_STYLES[statusKey] || {
+        label: statusKey
+            ? statusKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+            : "Pending Review",
+        cls: "bg-gray-100 text-gray-800 border-gray-200",
+        icon: Clock,
+    };
     const StatusIcon = status.icon;
 
     const mainRequirements = requirements.filter((r) => (r.section || "main") === "main");

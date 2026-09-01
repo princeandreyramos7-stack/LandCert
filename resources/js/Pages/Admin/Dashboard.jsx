@@ -13,9 +13,20 @@ export default function Page({
 }) {
     return (
         <>
-            <Head title="Dashboard — CPDO Admin"/>
+            <Head title="Dashboard — CPDO Admin" />
             <AdminLayout title="Dashboard">
-                <LiveRefresh only={["applications", "stats", "analytics", "pendingPaymentsCount", "recentPayments"]} items={applications} label="applications" className="justify-end mb-4" />
+                <LiveRefresh
+                    only={[
+                        "applications",
+                        "stats",
+                        "analytics",
+                        "pendingPaymentsCount",
+                        "recentPayments",
+                    ]}
+                    items={applications}
+                    label="applications"
+                    className="justify-end mb-4"
+                />
                 <AdminDashboard
                     applications={applications}
                     stats={stats}

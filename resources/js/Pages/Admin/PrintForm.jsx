@@ -4,6 +4,7 @@ import html2pdf from 'html2pdf.js';
 import AdminLayout from "@/Layouts/AdminLayout";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
+import DocumentActionBar from "@/Components/DocumentActionBar";
 
 /* ─── helpers ─────────────────────────────────────── */
 const v = (x) =>
@@ -213,47 +214,6 @@ body {
     text-align: justify;
 }
 
-/* ── print controls ── */
-.ctrl {
-    width: 210mm;
-    margin: 0 auto 20px;
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 16px 0;
-    border-bottom: 1px solid #e5e7eb;
-}
-.ctrl-btn {
-    padding: 8px 20px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-    background: transparent;
-    color: #374151;
-    font-family: Arial, sans-serif;
-    transition: all 0.15s ease;
-    letter-spacing: 0.3px;
-}
-.ctrl-btn:hover {
-    border-color: #9ca3af;
-    color: #111827;
-    background: rgba(0, 0, 0, 0.02);
-}
-.ctrl-btn:active {
-    background: rgba(0, 0, 0, 0.05);
-    transform: translateY(1px);
-}
-.ctrl-hint {
-    font-size: 12px;
-    color: #9ca3af;
-    font-family: Arial, sans-serif;
-    margin-right: auto;
-    font-style: italic;
-}
-
 /* ── print ── */
 @media print {
     html, body { 
@@ -266,7 +226,7 @@ body {
     /* Hide sidebar, header, and controls when printing */
     aside,
     header,
-    .ctrl,
+    .no-print,
     [data-sidebar],
     [data-sidebar-provider],
     button {
@@ -396,7 +356,11 @@ export default function PrintForm({ application: a, auth }) {
         // Get all form pages
         const pages = document.querySelectorAll('.pf-page');
         
-        // Clone and append each page
+        // Clone and append each page. The clones are never clamped to a full
+        // 297mm sheet: at exactly the page height the rounding spills a sliver
+        // onto an extra blank sheet. Each clone is as tall as its content and
+        // the explicit break after the first one starts the second — two pages,
+        // the form and the requirements checklist.
         pages.forEach((page, index) => {
             const clone = page.cloneNode(true);
             clone.classList.remove('no-border');
@@ -406,7 +370,7 @@ export default function PrintForm({ application: a, auth }) {
                 border: none;
                 background: white;
                 width: 210mm;
-                min-height: ${index === 0 ? '297mm' : 'auto'};
+                min-height: auto;
                 page-break-after: ${index === 0 ? 'always' : 'auto'};
                 page-break-inside: avoid;
             `;
@@ -429,7 +393,7 @@ export default function PrintForm({ application: a, auth }) {
                 format: 'a4', 
                 orientation: 'portrait' 
             },
-            pagebreak: { mode: 'css', after: '.pf-page' }
+            pagebreak: { mode: 'css' }
         };
         
         // Generate PDF
@@ -456,17 +420,14 @@ export default function PrintForm({ application: a, auth }) {
             <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
             {/* ── controls ── */}
-            <div className="ctrl">
-                <span className="ctrl-hint">
-                    Select an option to print or save this document
-                </span>
-                <button className="ctrl-btn" onClick={() => window.print()}>
-                    Print Form
-                </button>
-                <button className="ctrl-btn" onClick={handleSaveForm}>
-                    Download PDF
-                </button>
-            </div>
+            <DocumentActionBar
+                eyebrow="Form"
+                title="Application Form"
+                subtitle={`Application No: ${appNo}`}
+                printLabel="Print Form"
+                onPrint={() => window.print()}
+                onDownload={handleSaveForm}
+            />
 
             {/* ═══════════════════════════════════════════
                 OFFICIAL FORM
@@ -671,7 +632,7 @@ export default function PrintForm({ application: a, auth }) {
                             </td>
                             <td
                                 className="nb-t nb-l"
-                                style={{ border: "none", borderBottom: "1px solid #000", width: "9%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "1pt" }}
+                                style={{ border: "none", borderBottom: "1px solid #000", width: "9%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "3pt" }}
                             >
                                 {v(a.location_number) || nb}
                             </td>
@@ -683,7 +644,7 @@ export default function PrintForm({ application: a, auth }) {
                                 Street:
                             </td>
                             <td
-                                style={{ border: "none", borderBottom: "1px solid #000", width: "16%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "1pt" }}
+                                style={{ border: "none", borderBottom: "1px solid #000", width: "16%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "3pt" }}
                             >
                                 {v(a.location_street) || nb}
                             </td>
@@ -695,7 +656,7 @@ export default function PrintForm({ application: a, auth }) {
                                 Purok:
                             </td>
                             <td
-                                style={{ border: "none", borderBottom: "1px solid #000", width: "10%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "1pt" }}
+                                style={{ border: "none", borderBottom: "1px solid #000", width: "10%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "3pt" }}
                             >
                                 {nb}
                             </td>
@@ -707,7 +668,7 @@ export default function PrintForm({ application: a, auth }) {
                                 Brgy.:
                             </td>
                             <td
-                                style={{ border: "none", borderBottom: "1px solid #000", width: "17%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "1pt" }}
+                                style={{ border: "none", borderBottom: "1px solid #000", width: "17%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "3pt" }}
                             >
                                 {v(a.location_barangay) || nb}
                             </td>
@@ -719,7 +680,7 @@ export default function PrintForm({ application: a, auth }) {
                                 City/Mun.:
                             </td>
                             <td
-                                style={{ border: "none", borderBottom: "1px solid #000", width: "13%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "1pt" }}
+                                style={{ border: "none", borderBottom: "1px solid #000", width: "13%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "3pt" }}
                             >
                                 {v(a.location_city) || "City of Ilagan"}
                             </td>
@@ -731,7 +692,7 @@ export default function PrintForm({ application: a, auth }) {
                                 Prov.:
                             </td>
                             <td
-                                style={{ border: "none", borderBottom: "1px solid #000", width: "4%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "1pt" }}
+                                style={{ border: "none", borderBottom: "1px solid #000", width: "4%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "3pt" }}
                             >
                                 {v(a.location_province) || "Isabela"}
                             </td>

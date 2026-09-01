@@ -2715,8 +2715,12 @@ class AdminController extends Controller
             }
         ])->findOrFail($id);
 
-        // Order of payment can be generated for approved applications
-        if (!in_array(strtolower($request->status), ['approved'])) {
+        // The order of payment exists from approval onwards: it is the slip the
+        // applicant pays against, and it stays printable once the payment has
+        // been recorded and the certificate is being prepared — that is where
+        // the Payments page links to it from.
+        $printableStatuses = array_merge(['approved'], RequestModel::CERT_LIFECYCLE_STATUSES);
+        if (!in_array(strtolower($request->status), $printableStatuses, true)) {
             return redirect()->back()->with('error', 'Order of payment can only be generated for approved applications');
         }
 

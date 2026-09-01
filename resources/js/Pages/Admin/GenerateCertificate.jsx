@@ -1,10 +1,11 @@
 import React, { useRef } from "react";
 import { Head, usePage } from "@inertiajs/react";
-import { Button } from "@/Components/ui/button";
-import { Download, Printer } from "lucide-react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import html2pdf from 'html2pdf.js';
+import PrintDocumentStyles from "@/Components/PrintDocumentStyles";
+import OfficialLetterhead from "@/Components/OfficialLetterhead";
+import DocumentActionBar from "@/Components/DocumentActionBar";
 
 /* ── Zoning Ordinance constants ────────────────────────────────────────────
    Fixed references printed on every Zoning Certification. */
@@ -13,21 +14,28 @@ const ORDINANCE_SECTION = '12.6';
 const SP_RESOLUTION_NO = '160';
 const SP_RESOLUTION_DATE = 'March 05, 2019';
 
-/** A blank to be filled by hand, or the value when we have one. */
+/**
+ * A blank to be filled by hand, or the value when we have one.
+ *
+ * The blank sits on the sentence's own baseline, so the comma or period that
+ * follows it lines up with the value instead of floating above the rule.
+ *
+ * It deliberately does NOT set its own line-height: html2canvas (the engine
+ * behind Download PDF) then places the text by the paragraph's line box while
+ * drawing the border by the span's shorter one, and the rule comes out struck
+ * through the value. Inheriting the line-height keeps the two in agreement.
+ */
 function Fill({ value, width = '150pt', bold = false }) {
     return (
         <span
             style={{
-                display: 'inline-flex',
-                justifyContent: 'center',
-                alignItems: 'flex-end',
+                display: 'inline-block',
                 minWidth: width,
                 borderBottom: '1px solid #000',
                 textAlign: 'center',
                 fontWeight: bold ? 'bold' : 'normal',
                 padding: '0 4pt',
-                lineHeight: '1.2',
-                verticalAlign: 'bottom',
+                verticalAlign: 'baseline',
             }}
         >
             {value || ' '}
@@ -59,37 +67,6 @@ function SignatureBlock({ signatureUrl, name, title }) {
     );
 }
 
-/** Official letterhead shared by both certification templates. */
-function Letterhead() {
-    return (
-        <div className="certificate-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14pt', flex: 1 }}>
-                <div style={{ width: '74pt', height: '74pt', flexShrink: 0 }}>
-                    <img
-                        src="/images/ilagan1logo.jpg"
-                        alt="City of Ilagan"
-                        style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }}
-                    />
-                </div>
-                <div style={{ textAlign: 'left', color: '#000080' }}>
-                    <div style={{ fontSize: '10pt' }}>Republic of the Philippines</div>
-                    <div style={{ fontSize: '12pt', fontWeight: 'bold' }}>CITY OF ILAGAN</div>
-                    <div style={{ fontSize: '10pt' }}>Province of Isabela</div>
-                    <div style={{ fontSize: '11pt', fontWeight: 'bold', marginTop: '2pt' }}>
-                        CITY PLANNING &amp; DEVELOPMENT OFFICE
-                    </div>
-                </div>
-            </div>
-            <div style={{ width: '74pt', height: '74pt', flexShrink: 0 }}>
-                <img
-                    src="/images/Ilagan Logo2.png"
-                    alt="City of Ilagan 2030"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                />
-            </div>
-        </div>
-    );
-}
 
 /** Payment footer. `order` differs between the two official templates. */
 function PaymentFooter({ payment, order }) {
@@ -114,7 +91,9 @@ function PaymentFooter({ payment, order }) {
     }[order];
 
     return (
-        <div style={{ marginTop: '40pt', fontSize: '10pt' }}>
+        // The roomy line-height is what keeps the ruled blanks clear of the
+        // values in the downloaded PDF — see the note on <Fill>.
+        <div style={{ marginTop: '40pt', fontSize: '10pt', lineHeight: 2 }}>
             {rows.map(([label, value]) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '6pt' }}>
                     <span style={{ width: '90pt' }}>{label}</span>
@@ -240,6 +219,13 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
         const element = certificateRef.current;
         const filename = `${isCZC ? 'ZoningCertification' : 'Certification'}_${application.application_number || 'document'}.pdf`;
 
+        // On screen the sheet is a full A4 box. Captured at that height it fills
+        // the PDF page exactly, and the rounding spills a sliver onto a second,
+        // blank page — so the height is released for the capture and restored
+        // afterwards. The certificate is one page.
+        const restore = () => { element.style.minHeight = ''; };
+        element.style.minHeight = '0';
+
         html2pdf().set({
             margin: 0,
             filename,
@@ -247,7 +233,7 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
             html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: 'avoid-all' },
-        }).from(element).save();
+        }).from(element).save().then(restore, restore);
     };
 
     const TemplateBody = isCZC ? ZoningCertification : RoadCertification;
@@ -262,20 +248,9 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
         >
             <Head title={`Certificate — ${application.application_number}`} />
 
-            <style dangerouslySetInnerHTML={{ __html: `
-                @media print {
-                    body * { visibility: hidden; }
-                    .certificate-print-area, .certificate-print-area * { visibility: visible; }
-                    .certificate-print-area { position: absolute; left: 0; top: 0; width: 100%; }
-                    .no-print { display: none !important; }
-                    .certificate-header {
-                        background: linear-gradient(180deg,#ffffff 0%,#eefdfd 8%,#d9f9fa 25%,#bff5f6 55%,#a8eff1 100%) !important;
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                    }
-                    @page { size: A4; margin: 10mm; }
-                }
+            <PrintDocumentStyles />
 
+            <style dangerouslySetInnerHTML={{ __html: `
                 .certificate-page {
                     width: 210mm;
                     min-height: 297mm;
@@ -288,41 +263,23 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
                     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
                 }
 
-                .certificate-header {
-                    width: 100%;
-                    background: linear-gradient(180deg,#ffffff 0%,#eefdfd 8%,#d9f9fa 25%,#bff5f6 55%,#a8eff1 100%);
-                    border-bottom: 3px solid #2222ff;
-                    padding: 8pt 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                }
             `}} />
 
             {/* ── Actions (never printed). Lot No. / Tax Declaration No. / Zone
                  Classification are set on the View Application page, Step 2. ── */}
-            <div className="no-print max-w-4xl mx-auto mb-6 space-y-4">
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm text-gray-500">
-                        {isCZC
-                            ? 'Zoning Certification (CZC)'
-                            : `Certification — existing road${projectType ? ` (${projectType})` : ''}`}
-                    </p>
-                    <div className="flex gap-2">
-                        <Button variant="outline" onClick={handlePrint} className="gap-2">
-                            <Printer className="h-4 w-4" /> Print
-                        </Button>
-                        <Button onClick={handleDownload} className="gap-2 bg-[#0d1f5c] hover:bg-[#0d1f5c]/90">
-                            <Download className="h-4 w-4" /> Download PDF
-                        </Button>
-                    </div>
-                </div>
-            </div>
+            <DocumentActionBar
+                eyebrow="Certificate"
+                title={isCZC ? 'Zoning Certification' : 'Certification'}
+                subtitle={`Application No: ${application.application_number}`}
+                printLabel="Print Certificate"
+                onPrint={handlePrint}
+                onDownload={handleDownload}
+            />
 
             {/* ── The document itself ── */}
-            <div className="certificate-print-area">
-                <div ref={certificateRef} className="certificate-page">
-                    <Letterhead />
+            <div className="certificate-print-area print-document-area">
+                <div ref={certificateRef} className="certificate-page print-document">
+                    <OfficialLetterhead />
                     <TemplateBody
                         application={application}
                         payment={payment}

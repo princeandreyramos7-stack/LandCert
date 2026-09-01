@@ -16,11 +16,16 @@ import {
 } from "@/Components/ui/sidebar";
 import { Toaster } from "@/Components/ui/toaster";
 import { LiveRefresh } from "@/Components/LiveRefresh";
+import { HeaderSlotProvider } from "@/Components/HeaderSlot";
+import { useState } from "react";
 
 export default function Page({ requests = [] }) {
     const { auth } = usePage().props;
     const isAdmin = auth?.user?.roles?.some(role => role.name === "admin");
     const Sidebar = isAdmin ? AdminSidebar : AppSidebar;
+
+    // Live-refresh status sits in the top bar, beside the CPDO badge.
+    const [headerSlot, setHeaderSlot] = useState(null);
 
     return (
         <SidebarProvider>
@@ -43,12 +48,15 @@ export default function Page({ requests = [] }) {
                         </Breadcrumb>
                     </div>
 
-                    {/* Right side — CPDO branding pill */}
-                    <div className="ml-auto pr-4 hidden sm:flex items-center gap-2">
-                        <img src="/images/Ilagan.png" alt="CPDO" className="w-6 h-6 object-contain"/>
-                        <span className="text-[#0d1f5c] text-xs font-black tracking-wide">CPDO</span>
-                        <span className="text-gray-300 text-xs">|</span>
-                        <span className="text-gray-400 text-xs">City of Ilagan, Isabela</span>
+                    {/* Right side — live status, then the CPDO branding pill */}
+                    <div className="ml-auto pr-4 flex items-center gap-2">
+                        <div ref={setHeaderSlot} className="flex items-center"/>
+                        <div className="hidden sm:flex items-center gap-2">
+                            <img src="/images/Ilagan.png" alt="CPDO" className="w-6 h-6 object-contain"/>
+                            <span className="text-[#0d1f5c] text-xs font-black tracking-wide">CPDO</span>
+                            <span className="text-gray-300 text-xs">|</span>
+                            <span className="text-gray-400 text-xs">City of Ilagan, Isabela</span>
+                        </div>
                     </div>
                 </header>
 
@@ -56,8 +64,10 @@ export default function Page({ requests = [] }) {
                 <div className="flex flex-1 flex-col min-h-screen overflow-x-hidden"
                     style={{ background: "#f5f7ff" }}>
                     <div className="flex-1 p-4 sm:p-6 overflow-x-hidden max-w-7xl w-full mx-auto">
-                        <LiveRefresh only={["requests"]} items={requests} label="applications" className="justify-end mb-4" />
-                        <Dashboard requests={requests}/>
+                        <HeaderSlotProvider slot={headerSlot}>
+                            <LiveRefresh only={["requests"]} items={requests} label="applications" className="justify-end mb-4" />
+                            <Dashboard requests={requests}/>
+                        </HeaderSlotProvider>
                     </div>
                 </div>
             </SidebarInset>

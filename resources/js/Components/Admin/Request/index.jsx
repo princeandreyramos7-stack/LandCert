@@ -408,18 +408,18 @@ export function AdminRequestList({ requests, flash = {} }) {
 
     return (
         <div className="space-y-6 min-h-screen bg-white p-6">
-            {/* Statistics Cards, with the live-refresh status sitting right above them */}
+            {/* Statistics Cards. The live-refresh status renders itself into the
+                layout's top bar, so nothing is reserved for it here. */}
             <div>
-                <div className="flex justify-end mb-3">
-                    <LiveIndicator
-                        isRefreshing={isRefreshing}
-                        lastUpdated={lastUpdated}
-                        newCount={newCount}
-                        onAcknowledge={acknowledge}
-                        onRefreshNow={refreshNow}
-                        label="applications"
-                    />
-                </div>
+                <LiveIndicator
+                    isRefreshing={isRefreshing}
+                    lastUpdated={lastUpdated}
+                    newCount={newCount}
+                    onAcknowledge={acknowledge}
+                    onRefreshNow={refreshNow}
+                    label="applications"
+                    className="justify-end mb-3"
+                />
                 <RequestStats stats={stats} onFilterChange={setFilterStatus} />
             </div>
 
