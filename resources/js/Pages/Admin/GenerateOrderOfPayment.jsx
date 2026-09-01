@@ -6,6 +6,8 @@ import AdminLayout from "@/Layouts/AdminLayout";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import html2pdf from 'html2pdf.js';
+import { zoningAdministratorName } from "@/lib/signerName";
+import ESignatureImage from "@/Components/ESignatureImage";
 
 /** Whole-peso amount to English words, e.g. 7200 -> "Seven Thousand Two Hundred Pesos". */
 function pesoInWords(value) {
@@ -45,15 +47,8 @@ function pesoInWords(value) {
 function SigLine({ label, signatureUrl, name, title }) {
     return (
         <div>
-            <div style={{ height: '26pt', display: 'flex', alignItems: 'flex-end' }}>
-                {signatureUrl && (
-                    <img
-                        src={signatureUrl}
-                        alt=""
-                        crossOrigin="anonymous"
-                        style={{ maxHeight: '26pt', maxWidth: '150pt', objectFit: 'contain', marginBottom: '-3pt' }}
-                    />
-                )}
+            <div style={{ position: 'relative', height: '26pt', display: 'flex', alignItems: 'flex-end', width: '190pt' }}>
+                <ESignatureImage src={signatureUrl} maxHeight="26pt" maxWidth="150pt" marginBottom="-3pt" />
             </div>
             <div style={{ fontWeight: 'bold' }}>
                 {label}: {name}
@@ -318,7 +313,7 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
                         <SigLine
                             label="Approved"
                             signatureUrl={zoningAdministrator?.signature_url}
-                            name={zoningAdministrator?.name || 'Engr. CRISANTA D. CONCEPCION, EnP'}
+                            name={zoningAdministratorName(zoningAdministrator?.name)}
                             title="OIC- CPDC/Zoning Administrator"
                         />
                     </div>

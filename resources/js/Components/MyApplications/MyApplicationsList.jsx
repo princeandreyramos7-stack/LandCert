@@ -287,6 +287,8 @@ export function MyApplicationsList({ applications }) {
             key = "TUP";
         } else if (raw.includes("SUP") || raw.includes("SPECIAL")) {
             key = "SUP";
+        } else if (raw === "ZC" || raw.includes("ZONING CERTIFICATION")) {
+            key = "ZC";
         }
 
         const requirements = {
@@ -296,7 +298,8 @@ export function MyApplicationsList({ applications }) {
                     "Based on ANNEX B of HLURB Memorandum Circular No. 03 Series of 1998. Please bring the following documents to your scheduled appointment at the CPDO office.",
                 items: [
                     "1. Duly accomplished and notarized APPLICATION FORM",
-                    "2. Any of the following requirements relative to RIGHT OVER LAND:",
+                    "2. RIGHT OVER LAND — upload all three: Title, Tax Declaration, Tax Receipt",
+                    "   Any of the following establishes right over land:",
                     "   a. Photocopy of the Certificate of Title in case registered in the name of the applicant & latest Tax Declaration",
                     "   b. In the absence of any existing certificate of title in the name of the applicant, submit (1) certified true copy of the latest tax declaration and (2) pro forma affidavit (Annex C) to the effect that:",
                     "      - The applicant is the owner of the property subject of the application",
@@ -362,6 +365,18 @@ export function MyApplicationsList({ applications }) {
                     "   - ENVIRONMENTAL COMPLIANCE CERTIFICATE (ECC) or CERTIFICATE OF NON-COVERAGE (CNC)",
                     "9. Business documents (if the applicant is a company)",
                     "10. Payment of processing fees",
+                ],
+            },
+            ZC: {
+                title: "Requirements for ZC (Zoning Certification)",
+                description:
+                    "Please bring the following documents to the CPDO office.",
+                items: [
+                    "1. Title",
+                    "2. Tax Declaration",
+                    "3. VICINITY MAP",
+                    "4. Latest Tax Receipt",
+                    "5. Sketch Plan with signature of Geodetic Engr.",
                 ],
             },
         };
@@ -519,36 +534,41 @@ export function MyApplicationsList({ applications }) {
                                             
                                             {/* Action Buttons - Responsive */}
                                             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
-                                              {['payment_confirmed', 'certificate_preparing', 'certificate_ready', 'released'].includes(String(application.request_status || application.status || '').toLowerCase()) ? (
+                                              {/* The document is the applicant's to print only after the office
+                                                  has released it from Certificate Management. */}
+                                              {application.released_to_applicant_at && ['payment_confirmed', 'certificate_preparing', 'certificate_ready', 'released'].includes(String(application.request_status || application.status || '').toLowerCase()) ? (
                                                 <>
                                                     {/* Approved — applicant can generate both the clearance and the
                                                         certificate; all other actions removed */}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            window.open(route('print-clearance', application.id), '_blank');
-                                                        }}
-                                                        className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-200 text-[10px] sm:text-xs font-semibold"
-                                                        title="Generate Clearance"
-                                                    >
-                                                        <FileText className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                                        <span className="hidden sm:inline">Generate Clearance</span>
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            window.open(route('print-certificate', application.id), '_blank');
-                                                        }}
-                                                        className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-emerald-600 hover:bg-emerald-50 border border-emerald-200 text-[10px] sm:text-xs font-semibold"
-                                                        title="Generate Certificate"
-                                                    >
-                                                        <Award className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                                        <span className="hidden sm:inline">Generate Certificate</span>
-                                                    </Button>
+                                                    {String(application.project_type || '').toUpperCase() === 'ZC' ? (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                window.open(route('print-certificate', application.id), '_blank');
+                                                            }}
+                                                            className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-emerald-600 hover:bg-emerald-50 border border-emerald-200 text-[10px] sm:text-xs font-semibold"
+                                                            title="Generate Certificate"
+                                                        >
+                                                            <Award className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                            <span className="hidden sm:inline">Generate Certificate</span>
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                window.open(route('print-clearance', application.id), '_blank');
+                                                            }}
+                                                            className="h-8 px-2 sm:h-9 sm:px-3 rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-200 text-[10px] sm:text-xs font-semibold"
+                                                            title="Generate Clearance"
+                                                        >
+                                                            <FileText className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                            <span className="hidden sm:inline">Generate Clearance</span>
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"

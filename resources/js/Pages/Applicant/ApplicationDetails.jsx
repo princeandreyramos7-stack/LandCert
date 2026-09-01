@@ -19,6 +19,7 @@ import {
     Eye,
     Upload,
     Package,
+    Lock,
 } from "lucide-react";
 
 const STATUS_STYLES = {
@@ -87,14 +88,26 @@ export default function ApplicationDetails({ application, requirements = [], doc
     };
     const StatusIcon = status.icon;
 
-    const mainRequirements = requirements.filter((r) => (r.section || "main") === "main");
+    const isZC = String(application.project_type || "").toUpperCase() === "ZC";
+
+    // A requirement flagged is_group is a heading whose documents are its
+    // children (matched by parent_id); it has no upload slot of its own.
+    const allMain = requirements.filter((r) => (r.section || "main") === "main");
+    const mainRequirements = allMain.filter((r) => !r.parent_id);
+    const childrenOf = (req) => allMain.filter((c) => c.parent_id === req.id);
     const zoningCertRequirements = requirements.filter((r) => r.section === "zoning_certification");
     const additionalRequirements = requirements.filter((r) => r.section === "additional");
 
     const docsFor = (id) => documents?.[id] || documents?.[String(id)] || [];
 
-    // Editing is only allowed while the office has not begun processing.
-    const canUpload = ["pending", "in_applicant", "reviewed", "returned"].includes(statusKey);
+    // Supplying a document that is still missing stays open while the office has
+    // not begun processing — the notarized application form in particular can only
+    // be produced after submission, so it is uploaded from here.
+    const canUpload = ["pending", "in_applicant", "reviewed", "returned", "rejected"].includes(statusKey);
+    // Replacing a document already on file is not: once the application is with
+    // the office its submitted documents are frozen, and only reopen if the office
+    // returns the application to the applicant.
+    const canReplace = ["returned", "rejected"].includes(statusKey);
 
     const handleUpload = (req, file) => {
         if (!file) return;
@@ -127,6 +140,7 @@ export default function ApplicationDetails({ application, requirements = [], doc
         const files = docsFor(req.id);
         const uploaded = files.length > 0;
         const busy = uploadingId === req.id;
+        const allowed = uploaded ? canReplace : canUpload;
 
         return (
             <div
@@ -150,7 +164,7 @@ export default function ApplicationDetails({ application, requirements = [], doc
                                 : <span className="text-gray-400 ml-1 text-xs font-normal">(Optional)</span>}
                         </p>
 
-                        {canUpload && (
+                        {allowed ? (
                             <>
                                 <input
                                     type="file"
@@ -175,7 +189,12 @@ export default function ApplicationDetails({ application, requirements = [], doc
                                     {busy ? "Uploading…" : uploaded ? "Replace" : "Upload"}
                                 </Button>
                             </>
-                        )}
+                        ) : uploaded ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
+                                <Lock className="h-3 w-3" />
+                                Locked while under review
+                            </span>
+                        ) : null}
                     </div>
 
                     {req.description && (
@@ -216,6 +235,31 @@ export default function ApplicationDetails({ application, requirements = [], doc
             </div>
         );
     };
+
+    /**
+     * A grouped requirement: the heading names it, and each document it asks for
+     * gets its own row underneath.
+     */
+    const renderRequirementGroup = (req) => (
+        <div key={req.id} className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 space-y-2">
+            {/* An application filed before this requirement was split into separate
+                slots has its document attached to the group itself — keep it visible. */}
+            {docsFor(req.id).length > 0 ? (
+                renderRequirement(req)
+            ) : (
+                <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                        {req.name}
+                        <span className="text-red-500 ml-1">*</span>
+                    </p>
+                    {req.description && (
+                        <p className="text-xs text-gray-500 mt-0.5">{req.description}</p>
+                    )}
+                </div>
+            )}
+            <div className="space-y-2">{childrenOf(req).map(renderRequirement)}</div>
+        </div>
+    );
 
     return (
         <>
@@ -318,79 +362,94 @@ export default function ApplicationDetails({ application, requirements = [], doc
                     <Section icon={Building2} title="Project Details">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <Field label="Locational Clearance" value={application.project_type} />
-                            <Field label="Project Nature" value={application.project_nature} />
-                            <Field label="Nature / Duration" value={application.project_nature_duration} />
-                            <Field
-                                label="Nature Duration (Years)"
-                                value={application.project_nature_years ? `${application.project_nature_years} year(s)` : null}
-                            />
-                            <Field label="Project Cost" value={formatPeso(application.project_cost)} />
-                            <div className="md:col-span-2">
-                                <Field label="Project Description" value={application.project_description} />
-                            </div>
+                            {!isZC && (
+                                <>
+                                    <Field label="Project Nature" value={application.project_nature} />
+                                    <Field label="Nature / Duration" value={application.project_nature_duration} />
+                                    <Field
+                                        label="Nature Duration (Years)"
+                                        value={application.project_nature_years ? `${application.project_nature_years} year(s)` : null}
+                                    />
+                                    <Field label="Project Cost" value={formatPeso(application.project_cost)} />
+                                    <div className="md:col-span-2">
+                                        <Field label="Project Description" value={application.project_description} />
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </Section>
 
+                    {!isZC && (
+                        <>
                     {/* Location */}
-                    <Section icon={MapPin} title="Project Location">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <Field label="Lot / Blk / House No." value={application.lot_number} />
-                            <Field label="Street" value={application.project_location_street} />
-                            <Field label="Barangay" value={application.project_location_barangay} />
-                            <Field label="City / Municipality" value={application.project_location_city} />
-                            <Field label="Province" value={application.project_location_province} />
-                            <Field label="District" value={application.project_location_district} />
-                            <Field label="Postal Code" value={application.project_location_postal_code} />
-                        </div>
-                    </Section>
-
-                    {/* Property & Land Use */}
-                    <Section icon={Home} title="Property &amp; Land Use">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <Field label="Lot Area" value={formatSqm(application.lot_area_sqm)} />
-                            <Field label="Building / Improvement" value={formatSqm(application.bldg_improvement_sqm)} />
-                            <Field label="Title Number" value={application.title_number} />
-                            <Field label="Tax Declaration No." value={application.tax_declaration_no} />
-                            <Field label="Zone Classification" value={application.zone_classification} />
-                            <Field label="Right Over Land" value={application.right_over_land} />
-                            <Field label="Existing Land Use" value={application.existing_land_use} />
-                        </div>
-
-                        <div className="mt-6 pt-5 border-t grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <Field label="Written Notice Received" value={yesNo(application.has_written_notice)} />
-                            <Field label="Notice Officer" value={application.notice_officer_name} />
-                            <Field label="Notice Date(s)" value={application.notice_dates} />
-                            <Field label="Similar Application Filed" value={yesNo(application.has_similar_application)} />
-                            <Field label="Filed With (Offices)" value={application.similar_application_offices} />
-                            <Field label="Similar Application Date(s)" value={application.similar_application_dates} />
-                        </div>
-                    </Section>
-
-                    {/* Release */}
-                    <Section icon={Package} title="Release of Certificate">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <Field
-                                label="Preferred Release Mode"
-                                value={application.preferred_release_mode
-                                    ? application.preferred_release_mode.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-                                    : null}
-                            />
-                            <Field label="Release Address" value={application.release_address} />
-                        </div>
-                    </Section>
+                        <Section icon={MapPin} title="Project Location">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <Field label="Lot / Blk / House No." value={application.lot_number} />
+                                <Field label="Street" value={application.project_location_street} />
+                                <Field label="Barangay" value={application.project_location_barangay} />
+                                <Field label="City / Municipality" value={application.project_location_city} />
+                                <Field label="Province" value={application.project_location_province} />
+                                <Field label="District" value={application.project_location_district} />
+                                <Field label="Postal Code" value={application.project_location_postal_code} />
+                            </div>
+                        </Section>
+    
+                        {/* Property & Land Use */}
+                        <Section icon={Home} title="Property &amp; Land Use">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <Field label="Lot Area" value={formatSqm(application.lot_area_sqm)} />
+                                <Field label="Building / Improvement" value={formatSqm(application.bldg_improvement_sqm)} />
+                                <Field label="Title Number" value={application.title_number} />
+                                <Field label="Tax Declaration No." value={application.tax_declaration_no} />
+                                <Field label="Zone Classification" value={application.zone_classification} />
+                                <Field label="Right Over Land" value={application.right_over_land} />
+                                <Field label="Existing Land Use" value={application.existing_land_use} />
+                            </div>
+    
+                            <div className="mt-6 pt-5 border-t grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <Field label="Written Notice Received" value={yesNo(application.has_written_notice)} />
+                                <Field label="Notice Officer" value={application.notice_officer_name} />
+                                <Field label="Notice Date(s)" value={application.notice_dates} />
+                                <Field label="Similar Application Filed" value={yesNo(application.has_similar_application)} />
+                                <Field label="Filed With (Offices)" value={application.similar_application_offices} />
+                                <Field label="Similar Application Date(s)" value={application.similar_application_dates} />
+                            </div>
+                        </Section>
+    
+                        {/* Release */}
+                        <Section icon={Package} title="Release of Certificate">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <Field
+                                    label="Preferred Release Mode"
+                                    value={application.preferred_release_mode
+                                        ? application.preferred_release_mode.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+                                        : null}
+                                />
+                                <Field label="Release Address" value={application.release_address} />
+                            </div>
+                        </Section>
+    
+        </>
+                    )}
 
                     {/* Requirements */}
                     <Section icon={ListChecks} title="Requirements">
                         {canUpload && (
                             <p className="text-xs text-gray-500 mb-4">
-                                You can upload or replace a document for any requirement below while your application is still under review.
+                                {canReplace
+                                    ? "Your application has been returned to you. You can upload or replace a document for any requirement below."
+                                    : "You can still upload any requirement you have not submitted yet. Documents already on file are locked while the office reviews your application — they can only be replaced if the office returns it to you."}
                             </p>
                         )}
                         <div className="space-y-5">
                             <div className="space-y-2">
                                 <h4 className="text-sm font-semibold text-gray-700">Main Requirements</h4>
                                 <div className="space-y-2">
-                                    {mainRequirements.map(renderRequirement)}
+                                    {mainRequirements.map((req) =>
+                                        req.is_group
+                                            ? renderRequirementGroup(req)
+                                            : renderRequirement(req)
+                                    )}
                                 </div>
                             </div>
 

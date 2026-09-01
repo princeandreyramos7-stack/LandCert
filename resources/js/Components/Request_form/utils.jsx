@@ -4,10 +4,10 @@
 
 // Validation regex patterns
 const PATTERNS = {
-    // Only letters, spaces, hyphens, apostrophes, periods, and forward slash (for N/A)
-    NAME: /^[a-zA-Z0-9\s\-'./]+$/,
-    // Letters, numbers, spaces, and common address characters (including parentheses)
-    ADDRESS: /^[a-zA-Z0-9\s,.\-#/()]+$/,
+    // Names and addresses accept special characters (ñ, accents, &, (), etc.).
+    // Only control characters are rejected — anything a real name or address
+    // can contain is allowed through.
+    NO_CONTROL_CHARS: /^[^\x00-\x1F\x7F]+$/,
     // Valid email format
     EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     // Only numbers (positive integers)
@@ -32,8 +32,8 @@ const validateName = (value, fieldName) => {
     }
     // Allow N/A explicitly
     if (isNA(value)) return null;
-    if (!PATTERNS.NAME.test(value.trim())) {
-        return `${fieldName} must contain only letters, spaces, hyphens, apostrophes, periods, or N/A`;
+    if (!PATTERNS.NO_CONTROL_CHARS.test(value.trim())) {
+        return `${fieldName} contains invalid characters`;
     }
     if (value.trim().length < 2) {
         return `${fieldName} must be at least 2 characters long`;
@@ -50,11 +50,24 @@ const validateAddress = (value, fieldName) => {
     }
     // Allow N/A explicitly
     if (isNA(value)) return null;
-    if (!PATTERNS.ADDRESS.test(value.trim())) {
+    if (!PATTERNS.NO_CONTROL_CHARS.test(value.trim())) {
         return `${fieldName} contains invalid characters`;
     }
     if (value.trim().length < 5) {
         return `${fieldName} must be at least 5 characters long`;
+    }
+    if (value.trim().length > 255) {
+        return `${fieldName} must not exceed 255 characters`;
+    }
+    return null;
+};
+
+const validateBarangay = (value, fieldName) => {
+    if (!value || value.trim() === "") {
+        return `${fieldName} is required`;
+    }
+    if (!PATTERNS.NO_CONTROL_CHARS.test(value.trim())) {
+        return `${fieldName} contains invalid characters`;
     }
     if (value.trim().length > 255) {
         return `${fieldName} must not exceed 255 characters`;
@@ -103,7 +116,7 @@ export const validateStep1 = (data) => {
     // Corporation validation (if provided)
     if (data.corporation_name && data.corporation_name.trim() !== "") {
         // Corporation name validation — allow N/A
-        if (!isNA(data.corporation_name) && !PATTERNS.NAME.test(data.corporation_name.trim()) && !PATTERNS.ADDRESS.test(data.corporation_name.trim())) {
+        if (!isNA(data.corporation_name) && !PATTERNS.NO_CONTROL_CHARS.test(data.corporation_name.trim())) {
             errors.push("Corporation Name contains invalid characters");
         }
         
@@ -149,9 +162,14 @@ export const validateStep2 = (data) => {
     }
 
     // Project Location validations
+    const barangayError = validateBarangay(
+        data.project_location_barangay,
+        "Project Location Barangay"
+    );
+    if (barangayError) errors.push(barangayError);
+
     const locationFields = {
         project_location_street: "Project Location Street",
-        project_location_barangay: "Project Location Barangay",
         project_location_municipality: "Project Location Municipality/City",
         project_location_province: "Project Location Province",
     };
@@ -161,22 +179,10 @@ export const validateStep2 = (data) => {
         if (error) errors.push(error);
     });
 
-    // Project Area validation (must be positive number)
-    const areaError = validateNumber(data.project_area_sqm, "Project Area (sqm)", 1, 999999999);
-    if (areaError) errors.push(areaError);
-
-    // Lot Area validation (must be positive number)
-    const lotError = validateNumber(data.lot_area_sqm, "Lot Area (sqm)", 1, 999999999);
+    // Project Area — Title (sqm) is the one required figure in the group;
+    // Bldg. Improvement is optional.
+    const lotError = validateNumber(data.lot_area_sqm, "Project Area (sqm)", 1, 999999999);
     if (lotError) errors.push(lotError);
-
-    // Validate that lot area >= project area
-    if (data.lot_area_sqm && data.project_area_sqm) {
-        const lotArea = parseFloat(data.lot_area_sqm);
-        const projectArea = parseFloat(data.project_area_sqm);
-        if (lotArea < projectArea) {
-            errors.push("Lot Area must be greater than or equal to Project Area");
-        }
-    }
 
     // Right Over Land (Required)
     if (!data.right_over_land || data.right_over_land.trim() === "") {
@@ -257,11 +263,7 @@ export const validateStep4 = (data, requirements = [], existingDocuments = {}, r
 
     // Get main requirements
     const mainRequirements = requirements.filter((req) => (req.section || 'main') === 'main');
-    
-    // Get Barangay Clearance from additional requirements
-    const barangayClearance = requirements.find((req) => 
-        req.section === 'additional' && req.name.toLowerCase().includes('barangay')
-    );
+
 
     // Check if at least one file is uploaded for each main requirement
     // Consider BOTH new uploads AND existing documents.
@@ -270,6 +272,11 @@ export const validateStep4 = (data, requirements = [], existingDocuments = {}, r
     const uploads = requirementFiles || data.requirement_uploads || {};
     
     mainRequirements.forEach((req) => {
+        // A group header is only a label for the documents nested under it.
+        if (req.is_group) {
+            return;
+        }
+
         // Respect the requirement's own `required` flag. The notarized application
         // form is deliberately optional here — it can only be produced after the
         // form is submitted, printed and notarized, so it is uploaded later from
@@ -287,29 +294,8 @@ export const validateStep4 = (data, requirements = [], existingDocuments = {}, r
         }
     });
 
-    // Zoning-certification requirements (CZC only) — every one is required.
-    requirements
-        .filter((req) => req.section === 'zoning_certification' && req.required !== false)
-        .forEach((req) => {
-            const reqFiles = uploads[req.id] || [];
-            const existingFiles = existingDocuments[req.id] || [];
-            if (reqFiles.length === 0 && existingFiles.length === 0) {
-                errors.push(`${req.name} is required - please upload at least one file`);
-            }
-        });
-
-    // Check for Barangay Clearance (required from additional requirements)
-    if (barangayClearance) {
-        const barangayFiles = uploads[barangayClearance.id] || [];
-        const existingBarangayFiles = existingDocuments[barangayClearance.id] || [];
-        
-        if (barangayFiles.length === 0 && existingBarangayFiles.length === 0) {
-            errors.push(`${barangayClearance.name} is required - please upload at least one file`);
-        }
-    }
-
     // If no main requirements, at least check that some files were uploaded
-    if (mainRequirements.length === 0 && !barangayClearance) {
+    if (mainRequirements.length === 0) {
         const totalNewFiles = Object.values(uploads).reduce((sum, files) => sum + files.length, 0);
         const totalExistingFiles = Object.values(existingDocuments).reduce((sum, files) => sum + files.length, 0);
         
@@ -376,32 +362,19 @@ export const validateField = (fieldName, value, allData = {}) => {
         case "corporation_address":
         case "authorized_representative_address":
         case "project_location_street":
-        case "project_location_barangay":
         case "project_location_municipality":
         case "project_location_province":
         case "release_address":
             return validateAddress(value, fieldName.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()));
         
+        case "project_location_barangay":
+            return validateBarangay(value, "Barangay");
+        
         case "authorized_representative_email":
             return validateEmail(value, "Email");
         
-        case "project_area_sqm":
-            const areaError = validateNumber(value, "Project Area", 1, 999999999);
-            if (areaError) return areaError;
-            // Check against lot area if available
-            if (allData.lot_area_sqm && parseFloat(value) > parseFloat(allData.lot_area_sqm)) {
-                return "Project Area cannot exceed Lot Area";
-            }
-            return null;
-        
         case "lot_area_sqm":
-            const lotError = validateNumber(value, "Lot Area", 1, 999999999);
-            if (lotError) return lotError;
-            // Check against project area if available
-            if (allData.project_area_sqm && parseFloat(value) < parseFloat(allData.project_area_sqm)) {
-                return "Lot Area must be greater than or equal to Project Area";
-            }
-            return null;
+            return validateNumber(value, "Project Area (sqm)", 1, 999999999);
         
         case "project_cost":
             return validateNumber(value, "Project Cost", 1, 999999999999);
@@ -424,8 +397,8 @@ export const sanitizeInput = (value, type = "text") => {
     
     switch (type) {
         case "name":
-            // Remove numbers and special characters except spaces, hyphens, apostrophes, periods
-            sanitized = sanitized.replace(/[^a-zA-Z\s\-'.]/g, "");
+            // Special characters are allowed; only control characters are stripped
+            sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, "");
             break;
         case "number":
             // Remove non-numeric characters except decimal point
@@ -437,8 +410,8 @@ export const sanitizeInput = (value, type = "text") => {
             }
             break;
         case "address":
-            // Remove potentially harmful characters but keep common address chars
-            sanitized = sanitized.replace(/[^a-zA-Z0-9\s,.\-#/]/g, "");
+            // Special characters are allowed; only control characters are stripped
+            sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, "");
             break;
         default:
             // Basic sanitization - remove control characters

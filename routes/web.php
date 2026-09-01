@@ -75,6 +75,9 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::get('/requests/{id}/print', [\App\Http\Controllers\AdminController::class, 'printForm'])->name('requests.print');
     Route::get('/requests/{id}/generate-certificate', [\App\Http\Controllers\SuperAdminController::class, 'generateCertificate'])->name('generate-certificate');
     Route::post('/requests/{id}/certificate-details', [AdminController::class, 'saveCertificateDetails'])->name('certificate-details');
+    Route::post('/update-project-type/{id}', [AdminController::class, 'updateProjectType'])->name('update-project-type');
+    Route::post('/requests/{id}/application-details', [AdminController::class, 'updateApplicationDetails'])->name('application-details');
+    Route::post('/requests/{id}/release-to-applicant', [AdminController::class, 'releaseToApplicant'])->name('release-to-applicant');
     Route::get('/requests/{id}/generate-clearance', [\App\Http\Controllers\SuperAdminController::class, 'generateClearance'])->name('generate-clearance');
     Route::get('/requests/{id}/generate-order-of-payment', [\App\Http\Controllers\SuperAdminController::class, 'generateOrderOfPayment'])->name('generate-order-of-payment');
     Route::get('/export/requests', [\App\Http\Controllers\SuperAdminController::class, 'exportRequests'])->name('export.requests');
@@ -182,6 +185,8 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::post('/review-application', [AdminController::class, 'reviewApplication'])->name('review-application');
     Route::get('/get-requirements', [AdminController::class, 'getRequirements'])->name('get-requirements');
     Route::post('/update-project-type/{id}', [AdminController::class, 'updateProjectType'])->name('update-project-type');
+    Route::post('/requests/{id}/application-details', [AdminController::class, 'updateApplicationDetails'])->name('application-details');
+    Route::post('/requests/{id}/release-to-applicant', [AdminController::class, 'releaseToApplicant'])->name('release-to-applicant');
     
     // Requirement verification toggle
     Route::post('/save-requirement-verification', [AdminController::class, 'saveRequirementVerification'])->name('save-requirement-verification');

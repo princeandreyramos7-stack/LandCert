@@ -19,6 +19,7 @@ import { FileText, Clock, Shield, Building2, ListChecks, ArrowRight, Sparkles } 
 const CATEGORIES = [
     {
         id: "Zoning",
+        projectType: "CZC",
         title: "CZC (Certificate of Zoning Compliance)",
         description: "Certificate of Zoning Compliance for land use, construction, or business establishment projects.",
         icon: Building2,
@@ -26,6 +27,7 @@ const CATEGORIES = [
         requirements: [
             "1. Accomplished and notarized APPLICATION FORM",
             "2. Right Over Land Documentation",
+            "   Upload all three: Title, Tax Declaration, Tax Receipt",
             "   a. Photocopy of Certificate of Title registered in applicant's name & latest Tax Declaration",
             "   b. If title is NOT in applicant's name, submit:",
             "      - Certified true copy of latest Tax Declaration",
@@ -62,6 +64,7 @@ const CATEGORIES = [
     },
     {
         id: "TUP",
+        projectType: "TUP",
         title: "TUP (Temporary Use Permit)",
         description: "Permit allowing temporary use of land, space, structure, stall, or area for a limited time only.",
         icon: Clock,
@@ -69,6 +72,7 @@ const CATEGORIES = [
         requirements: [
             "1. Accomplished and notarized APPLICATION FORM",
             "2. Right Over Land Documentation",
+            "   Upload all three: Title, Tax Declaration, Tax Receipt",
             "   a. Photocopy of Certificate of Title registered in applicant's name & latest Tax Declaration",
             "   b. If title is NOT in applicant's name, submit:",
             "      - Certified true copy of latest Tax Declaration",
@@ -105,6 +109,7 @@ const CATEGORIES = [
     },
     {
         id: "SUP",
+        projectType: "SUP",
         title: "SUP (Special Use Permit)",
         description: "Permit required for specific land uses or businesses that need special approval because of their nature, impact, or location under zoning rules.",
         icon: Shield,
@@ -112,6 +117,7 @@ const CATEGORIES = [
         requirements: [
             "1. Accomplished and notarized APPLICATION FORM",
             "2. Right Over Land Documentation",
+            "   Upload all three: Title, Tax Declaration, Tax Receipt",
             "   a. Photocopy of Certificate of Title registered in applicant's name & latest Tax Declaration",
             "   b. If title is NOT in applicant's name, submit:",
             "      - Certified true copy of latest Tax Declaration",
@@ -146,6 +152,21 @@ const CATEGORIES = [
             "   7. Barangay Clearance",
         ],
     },
+    {
+        id: "ZC",
+        projectType: "ZC",
+        title: "ZC (Zoning Certification)",
+        description: "Certification of the zoning classification of a property, issued on the strength of its title and tax records.",
+        icon: FileText,
+        color: "emerald",
+        requirements: [
+            "1. Title",
+            "2. Tax Declaration",
+            "3. VICINITY MAP",
+            "4. Latest Tax Receipt",
+            "5. Sketch Plan with signature of Geodetic Engr.",
+        ],
+    },
 ];
 
 const COLOR_STYLES = {
@@ -169,6 +190,13 @@ const COLOR_STYLES = {
         icon: "bg-purple-100 text-purple-600",
         button: "text-purple-700 border-purple-300 hover:bg-purple-50",
         ring: "hover:shadow-purple-200/60",
+    },
+    emerald: {
+        bg: "bg-emerald-50",
+        border: "border-emerald-200 hover:border-emerald-400",
+        icon: "bg-emerald-100 text-emerald-600",
+        button: "text-emerald-700 border-emerald-300 hover:bg-emerald-50",
+        ring: "hover:shadow-emerald-200/60",
     },
 };
 
@@ -203,7 +231,7 @@ export function WelcomeBoard({ onContinue }) {
             </div>
 
             {/* Category Cards */}
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3 px-3 sm:px-0">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 px-3 sm:px-0">
                 {CATEGORIES.map((category, index) => {
                     const Icon = category.icon;
                     const colors = COLOR_STYLES[category.color];
@@ -233,14 +261,23 @@ export function WelcomeBoard({ onContinue }) {
                                     <CardDescription className="text-gray-700 text-center flex-1 mb-4 text-xs sm:text-sm leading-relaxed">
                                         {category.description}
                                     </CardDescription>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => handleViewRequirements(category)}
-                                        className={`w-full h-10 mt-auto ${colors.button} transform hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 text-xs sm:text-sm font-medium`}
-                                    >
-                                        <ListChecks className="h-4 w-4 mr-2" />
-                                        View Requirements
-                                    </Button>
+                                    <div className="mt-auto space-y-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => handleViewRequirements(category)}
+                                            className={`w-full h-10 ${colors.button} transform hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 text-xs sm:text-sm font-medium`}
+                                        >
+                                            <ListChecks className="h-4 w-4 mr-2" />
+                                            View Requirements
+                                        </Button>
+                                        <Button
+                                            onClick={() => onContinue(category.projectType)}
+                                            className="w-full h-10 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs sm:text-sm font-semibold gap-1.5"
+                                        >
+                                            Apply for this
+                                            <ArrowRight className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>
@@ -251,10 +288,11 @@ export function WelcomeBoard({ onContinue }) {
             {/* Continue to Application */}
             <div className="mt-8 sm:mt-10 flex flex-col items-center gap-3 animate-cardFadeInUp" style={{ animationDelay: "420ms" }}>
                 <Button
-                    onClick={onContinue}
-                    className="h-12 px-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-300/40 hover:shadow-xl hover:shadow-blue-300/50 transform hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 text-sm sm:text-base font-semibold gap-2"
+                    variant="outline"
+                    onClick={() => onContinue(null)}
+                    className="h-12 px-8 transform hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 text-sm sm:text-base font-semibold gap-2"
                 >
-                    Continue to Application
+                    I'm not sure — continue anyway
                     <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 <p className="text-xs sm:text-sm text-gray-500 text-center max-w-md">

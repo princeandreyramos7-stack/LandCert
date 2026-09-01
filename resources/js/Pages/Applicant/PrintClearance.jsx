@@ -3,9 +3,15 @@ import { Head } from "@inertiajs/react";
 import { Button } from "@/Components/ui/button";
 import { Download, Printer } from "lucide-react";
 import html2pdf from 'html2pdf.js';
+import { zoningAdministratorName } from "@/lib/signerName";
+import TupClearanceLetter from "@/Components/TupClearanceLetter";
 
 export default function PrintClearance({ application, payment, reviewer }) {
     const clearanceRef = useRef(null);
+
+    // A Temporary Use Permit is released as a letter, so the applicant prints
+    // the same document the office issued rather than the tabular decision sheet.
+    const isTup = String(application.project_type || '').toUpperCase() === 'TUP';
 
     useEffect(() => {
         // Auto-print when page loads (optional)
@@ -166,6 +172,14 @@ export default function PrintClearance({ application, payment, reviewer }) {
                 </div>
 
                 <div className="clearance-print-area">
+                    {isTup ? (
+                        <TupClearanceLetter
+                            application={application}
+                            payment={payment}
+                            zoningAdministrator={null}
+                            innerRef={clearanceRef}
+                        />
+                    ) : (
                     <div ref={clearanceRef} className="clearance-page" style={{ fontSize: '10pt', lineHeight: '1.4' }}>
                         <div className="clearance-header-bg" style={{ padding: '10pt 0', marginBottom: '10pt', borderBottom: '3px solid #2222ff' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
@@ -261,13 +275,14 @@ export default function PrintClearance({ application, payment, reviewer }) {
                             <div style={{ width: '45%' }}>
                                 <div style={{ marginBottom: '6pt' }}>Approved by:</div>
                                 <div style={{ marginTop: '35pt', paddingTop: '3pt', textAlign: 'center' }}>
-                                    <strong>ENGR. CRISANTA D. CONCEPCION, EnP</strong><br />
+                                    <strong>{zoningAdministratorName()}</strong><br />
                                     OIC- City Planning & Dev't. Coordinator/<br />
                                     Zoning Administrator
                                 </div>
                             </div>
                         </div>
                     </div>
+                    )}
                 </div>
             </div>
         </>

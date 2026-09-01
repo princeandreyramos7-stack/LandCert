@@ -3,6 +3,7 @@ import { Head } from "@inertiajs/react";
 import { Button } from "@/Components/ui/button";
 import { Download, Printer } from "lucide-react";
 import html2pdf from 'html2pdf.js';
+import { zoningAdministratorName } from "@/lib/signerName";
 
 export default function PrintCertificate({ application, payment, reviewer }) {
     const certificateRef = useRef(null);
@@ -316,7 +317,7 @@ export default function PrintCertificate({ application, payment, reviewer }) {
                             <div style={{ width: '45%' }}>
                                 <div style={{ marginBottom: '6pt', visibility: 'hidden' }}>Placeholder</div>
                                 <div style={{ marginTop: '35pt', paddingTop: '3pt', textAlign: 'center' }}>
-                                    <strong>ENGR. CRISANTA D. CONCEPCION, EnP</strong><br />
+                                    <strong>{zoningAdministratorName()}</strong><br />
                                     City Planning & Dev't. Coordinator/<br />
                                     Zoning Administrator
                                 </div>

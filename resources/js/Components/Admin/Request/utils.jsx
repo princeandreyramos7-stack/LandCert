@@ -150,6 +150,7 @@ export const formatProjectType = (type) => {
         "Zoning Clearance": "CZC (Certificate of Zoning Compliance)", // Legacy support
         "Zoning": "CZC (Certificate of Zoning Compliance)", // Legacy support
         "SUP": "SUP (Special Use Permit)",
+        "ZC": "ZC (Zoning Certification)",
     };
     return labels[type] || type;
 };

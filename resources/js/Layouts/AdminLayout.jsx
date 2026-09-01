@@ -16,6 +16,7 @@ import {
     SidebarTrigger,
 } from "@/Components/ui/sidebar";
 import { Toaster } from "@/Components/ui/toaster";
+import NotificationBell from "@/Components/NotificationBell";
 import { Link } from "@inertiajs/react";
 
 /**
@@ -69,6 +70,7 @@ export default function AdminLayout({ title, breadcrumbs = [], children }) {
                     <div className="ml-auto pr-4 flex items-center gap-2">
                         {/* Live-refresh status, portalled in by the page */}
                         <div ref={setHeaderSlot} className="flex items-center" />
+                        <NotificationBell />
                         <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0d1f5c]/5 border border-[#0d1f5c]/10">
                             <div className="w-1.5 h-1.5 rounded-full bg-[#d4a017] animate-pulse" />
                             <span className="text-[#0d1f5c] text-xs font-black tracking-wide">

@@ -602,9 +602,58 @@ class SuperAdminController extends Controller
             'project',
             'location',
             'property',
+            'requirementDocuments',
         ])->findOrFail($id);
-        
-        // Get the latest report for this request
+
+        // The officer reads the Lot Number and Tax Declaration No. off the
+        // applicant's uploads, so every submitted document is listed on this page.
+        // Scoping this to the CZC-only "Right Over Land" group meant a ZC or TUP
+        // application showed nothing at all.
+        $requirementList = collect(\App\Constants\ApplicationRequirements::getRequirements(
+            $request->project?->project_type ?: 'ZONING CLEARANCE'
+        ));
+        $documentsByRequirement = $request->requirementDocuments->groupBy('requirement_id');
+        $knownIds = $requirementList->pluck('id');
+
+        // Reference order first, then anything filed against a requirement the
+        // current list no longer knows about, so nothing is ever hidden.
+        $uploadedRequirements = $requirementList
+            ->reject(fn ($r) => !empty($r['is_group']))
+            ->map(fn ($r) => ['id' => $r['id'], 'name' => $r['name']])
+            ->concat(
+                $documentsByRequirement->keys()
+                    ->reject(fn ($id) => $knownIds->contains($id))
+                    ->map(fn ($id) => [
+                        'id' => $id,
+                        'name' => $documentsByRequirement->get($id)->first()->requirement_name
+                            ?: "Requirement #{$id}",
+                    ])
+            )
+            ->map(fn ($r) => array_merge($r, [
+                'files' => ($documentsByRequirement->get($r['id']) ?? collect())
+                    ->map(fn ($doc) => [
+                        'id' => $doc->id,
+                        'original_filename' => $doc->original_filename,
+                    ])->values()->all(),
+            ]))
+            ->values();
+
+        // Only the documents the officer reads while filling in Property Details:
+        // the Title and Tax Declaration carry the lot and tax numbers, and the cost
+        // estimate backs the fee. Matched by name so it works in every category.
+        $wanted = ['title', 'tax declaration', 'estimated project cost', 'bill of materials'];
+        $uploadedRequirements = $uploadedRequirements
+            ->filter(function ($r) use ($wanted) {
+                $name = mb_strtolower($r['name']);
+                foreach ($wanted as $needle) {
+                    if (str_contains($name, $needle)) {
+                        return true;
+                    }
+                }
+                return false;
+            })
+            ->values();
+
         $report = $request->reports->first();
         
         // Build the request data - same as reviewRequest but for ViewApplication page
@@ -685,6 +734,7 @@ class SuperAdminController extends Controller
         
         return Inertia::render('SuperAdmin/ViewApplication', [
             'request' => $requestData,
+            'uploadedRequirements' => $uploadedRequirements,
         ]);
     }
 
@@ -961,7 +1011,11 @@ class SuperAdminController extends Controller
     }
 
     /**
-     * Deny a request (Super Admin only)
+     * Deny a request (Super Admin only).
+     *
+     * A denial here is not the end of the application: it goes back to the Zoning
+     * Officer's queue so they can review it again and address the reason given.
+     * The applicant is not notified — nothing has been decided against them yet.
      */
     public function rejectRequest(Request $request, $reportId)
     {
@@ -988,51 +1042,45 @@ class SuperAdminController extends Controller
 
         $oldValues = ['evaluation' => $report->evaluation];
 
+        // Back to 'pending' so the application reappears in the Zoning Officer's
+        // queue; the reason is kept on the report for them to act on.
         $report->update([
-            'evaluation' => 'rejected',
+            'evaluation' => 'pending',
             'description' => $validated['description'],
+            'admin_notes' => 'Returned by the Zoning Administrator: ' . $validated['description'],
             'date_reported' => now(),
             'issued_by' => auth()->user()->name,
         ]);
 
-        // Log the denial
         AuditLogService::logUpdate(
             'Report',
             $report->id,
             $oldValues,
-            ['evaluation' => 'rejected'],
-            "SuperAdmin denied application #{$report->request_id} — Reason: " . $validated['description']
+            ['evaluation' => 'pending'],
+            "SuperAdmin returned application #{$report->request_id} to the Zoning Officer — Reason: " . $validated['description']
         );
 
-        // Notify applicant
-        try {
-            if ($requestModel && $requestModel->user) {
-                $requestModel->status = 'rejected';
-                $requestModel->save();
-
-                \Mail::to($requestModel->user->email)->send(
-                    new \App\Mail\ApplicationRejected(
-                        $requestModel,
-                        $requestModel->applicant->applicant_name ?? 'Applicant',
-                        $requestModel->id,
-                        $validated['description']
-                    )
-                );
-
-                if ($requestModel->user->contact_number) {
-                    app(\App\Services\SmsService::class)->sendApplicationRejected(
-                        $requestModel->user->contact_number,
-                        $requestModel->user->name,
-                        $requestModel->control_number ?? 'CPD-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT),
-                        $validated['description']
-                    );
-                }
-            }
-        } catch (\Exception $e) {
-            \Log::error('Failed to send denial notification: ' . $e->getMessage());
+        // The application goes back to the Zoning Officer, so the applicant is
+        // not told anything — no decision has been made against them.
+        if ($requestModel) {
+            $requestModel->status = 'pending';
+            $requestModel->save();
         }
 
-        return back()->with('success', 'Application denied. The applicant has been notified.');
+        // The Zoning Officer's queue needs to know this came back, and why.
+        try {
+            if ($requestModel) {
+                NotificationService::applicationReturnedToAdmin(
+                    $requestModel,
+                    $validated['description'],
+                    auth()->user()
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to notify admin of returned application: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Application returned to the Zoning Officer for another review.');
     }
 
     /**
@@ -1073,7 +1121,7 @@ class SuperAdminController extends Controller
         $report = Report::updateOrCreate(
             ['request_id' => $requestModel->id],
             [
-                'evaluation'     => $isApprove ? 'approved' : 'rejected',
+                'evaluation'     => $isApprove ? 'approved' : 'pending',
                 'issued_by'      => auth()->user()->name,
                 'reviewed_by'    => auth()->id(),
                 'approved_by'    => $isApprove ? auth()->user()->name : null,
@@ -1087,7 +1135,8 @@ class SuperAdminController extends Controller
             ]
         );
 
-        $requestModel->status = $isApprove ? 'approved' : 'rejected';
+        // A denial returns the application to the Zoning Officer's queue.
+        $requestModel->status = $isApprove ? 'approved' : 'pending';
 
         if ($isApprove && empty($requestModel->decision_number)) {
             $projectType = $requestModel->project->project_type ?: 'CZC';
@@ -1102,7 +1151,7 @@ class SuperAdminController extends Controller
             $report->toArray(),
             $isApprove
                 ? "Zoning Administrator reviewed & approved application #{$requestModel->id}"
-                : "Zoning Administrator reviewed & denied application #{$requestModel->id} — Reason: " . $validated['rejection_reason']
+                : "Zoning Administrator returned application #{$requestModel->id} to the Zoning Officer — Reason: " . $validated['rejection_reason']
         );
 
         try {
@@ -1129,25 +1178,14 @@ class SuperAdminController extends Controller
                     );
                 }
             } else {
-                NotificationService::applicationRejected($requestModel, $validated['rejection_reason'], auth()->user());
-
-                if ($requestModel->user && $requestModel->user->email) {
-                    Mail::to($requestModel->user->email)->send(new ApplicationRejected(
-                        $requestModel,
-                        $requestModel->applicant->applicant_name ?? 'Applicant',
-                        $requestModel->id,
-                        $validated['rejection_reason']
-                    ));
-                }
-
-                if ($requestModel->user && $requestModel->user->contact_number) {
-                    app(\App\Services\SmsService::class)->sendApplicationRejected(
-                        $requestModel->user->contact_number,
-                        $requestModel->user->name,
-                        $requestModel->control_number ?? ('CPD-' . str_pad((string) $requestModel->id, 4, '0', STR_PAD_LEFT)),
-                        $validated['rejection_reason']
-                    );
-                }
+                // No applicant notification on a denial: the application has gone
+                // back to the Zoning Officer, not been decided against the
+                // applicant. The officer's queue is told instead.
+                NotificationService::applicationReturnedToAdmin(
+                    $requestModel,
+                    $validated['rejection_reason'],
+                    auth()->user()
+                );
             }
         } catch (\Exception $e) {
             \Log::error('reviewAndDecide notification failed: ' . $e->getMessage());
@@ -1155,7 +1193,7 @@ class SuperAdminController extends Controller
 
         return back()->with('success', $isApprove
             ? 'Application reviewed and approved. The applicant has been notified.'
-            : 'Application reviewed and denied. The applicant has been notified.');
+            : 'Application returned to the Zoning Officer for another review.');
     }
 
     /**
@@ -1886,6 +1924,7 @@ class SuperAdminController extends Controller
         return match (strtoupper(trim($projectType))) {
             'SUP', 'SPECIAL USE PERMIT' => 750.00,
             'TUP', 'TEMPORARY USE PERMIT' => 350.00,
+            'ZC', 'ZONING CERTIFICATION' => 500.00,
             'CZC', 'CERTIFICATE OF ZONING COMPLIANCE', 'ZONING CLEARANCE', 'LOCATIONAL CLEARANCE', 'ZONING' => 500.00,
             default => 500.00, // Default for any other type
         };

@@ -29,6 +29,19 @@ class NotificationService
     }
 
     /**
+     * Send the same notification to every staff account holding one of the
+     * given roles.
+     *
+     * @param  string[]  $roles  user_type values, e.g. ['admin', 'super_admin']
+     */
+    private static function notifyRoles(array $roles, string $type, string $title, string $message, ?string $link = null, ?array $data = null): void
+    {
+        foreach (User::whereIn('user_type', $roles)->get() as $staff) {
+            Notification::createForUser($staff->id, $type, $title, $message, $link, $data);
+        }
+    }
+
+    /**
      * Helper method to safely get project type
      */
     private static function getProjectType(RequestModel $request): string
@@ -60,22 +73,20 @@ class NotificationService
             ]
         );
 
-        // Notify all admins
-        $admins = User::where('user_type', 'admin')->get();
-        foreach ($admins as $admin) {
-            Notification::createForUser(
-                $admin->id,
-                'new_application',
-                'New Application Received',
-                "A new {$projectType} application #{$request->id} from {$applicantName} has been submitted and requires review.",
-                "/admin/requests/{$request->id}",
-                [
-                    'application_id' => $request->id,
-                    'project_type' => $projectType,
-                    'applicant_name' => $applicantName,
-                ]
-            );
-        }
+        // The officer has to act on it; the administrator wants to see the
+        // queue building up.
+        self::notifyRoles(
+            ['admin', 'super_admin'],
+            'new_application',
+            'New Application Received',
+            "A new {$projectType} application #{$request->id} from {$applicantName} has been submitted and requires review.",
+            "/admin/requests/{$request->id}",
+            [
+                'application_id' => $request->id,
+                'project_type' => $projectType,
+                'applicant_name' => $applicantName,
+            ]
+        );
     }
 
     /**
@@ -102,24 +113,21 @@ class NotificationService
             ]
         );
 
-        // Notify super admins if evaluation is approved
+        // Waiting on the Zoning Administrator's decision — and only theirs.
         if ($evaluation === 'approved') {
-            $superAdmins = User::where('user_type', 'admin')->get();
-            foreach ($superAdmins as $superAdmin) {
-                Notification::createForUser(
-                    $superAdmin->id,
-                    'application_awaiting_approval',
-                    'Application Awaiting Final Approval',
-                    "Application #{$request->id} from {$applicantName} has been reviewed and approved by {$reviewerName}. Awaiting your final approval.",
-                    "/super-admin/requests/{$request->id}/review",
-                    [
-                        'application_id' => $request->id,
-                        'project_type' => $projectType,
-                        'applicant_name' => $applicantName,
-                        'reviewed_by' => $reviewerName,
-                    ]
-                );
-            }
+            self::notifyRoles(
+                ['super_admin'],
+                'application_awaiting_approval',
+                'Application Awaiting Final Approval',
+                "Application #{$request->id} from {$applicantName} has been reviewed and approved by {$reviewerName}. Awaiting your final approval.",
+                "/super-admin/requests/{$request->id}/review",
+                [
+                    'application_id' => $request->id,
+                    'project_type' => $projectType,
+                    'applicant_name' => $applicantName,
+                    'reviewed_by' => $reviewerName,
+                ]
+            );
         }
     }
 
@@ -186,6 +194,35 @@ class NotificationService
     }
 
     /**
+     * Create notification when the Zoning Administrator returns a reviewed
+     * application to the Zoning Officer instead of approving it.
+     *
+     * This is not a denial the applicant is told about — the office has not
+     * finished with the application, it has just gone back a step — so only
+     * the Zoning Officer's queue (every admin account) is notified.
+     */
+    public static function applicationReturnedToAdmin(RequestModel $request, string $reason, ?User $returnedBy = null)
+    {
+        self::ensureRelationshipsLoaded($request);
+        $applicantName = self::getApplicantName($request);
+        $returnerName = $returnedBy ? $returnedBy->name : 'Zoning Administrator';
+
+        self::notifyRoles(
+            ['admin'],
+            'application_returned',
+            'Application Returned for Review',
+            "Application #{$request->id} from {$applicantName} was returned by {$returnerName}. Reason: {$reason}",
+            "/admin/requests/{$request->id}/document-verification",
+            [
+                'application_id' => $request->id,
+                'applicant_name' => $applicantName,
+                'reason' => $reason,
+                'returned_by' => $returnerName,
+            ]
+        );
+    }
+
+    /**
      * Create notification when payment receipt is uploaded
      */
     public static function paymentReceiptUploaded(RequestModel $request, $payment)
@@ -193,22 +230,18 @@ class NotificationService
         self::ensureRelationshipsLoaded($request);
         $applicantName = self::getApplicantName($request);
         
-        // Notify admins
-        $admins = User::where('user_type', 'admin')->get();
-        foreach ($admins as $admin) {
-            Notification::createForUser(
-                $admin->id,
-                'payment_receipt_uploaded',
-                'Payment Receipt Uploaded',
-                "Payment receipt has been uploaded for application #{$request->id} from {$applicantName}. Please verify.",
-                "/admin/payments",
-                [
-                    'application_id' => $request->id,
-                    'payment_id' => $payment->id,
-                    'applicant_name' => $applicantName,
-                ]
-            );
-        }
+        self::notifyRoles(
+            ['admin', 'super_admin'],
+            'payment_receipt_uploaded',
+            'Payment Receipt Uploaded',
+            "Payment receipt has been uploaded for application #{$request->id} from {$applicantName}. Please verify.",
+            "/admin/payments",
+            [
+                'application_id' => $request->id,
+                'payment_id' => $payment->id,
+                'applicant_name' => $applicantName,
+            ]
+        );
 
         // Notify the applicant
         Notification::createForUser(
@@ -220,6 +253,31 @@ class NotificationService
             [
                 'application_id' => $request->id,
                 'payment_id' => $payment->id,
+            ]
+        );
+    }
+
+    /**
+     * Create notification when the applicant uploads a requirement document.
+     *
+     * Nothing used to be raised for this at all — a document could sit
+     * unnoticed until somebody happened to open the application.
+     */
+    public static function requirementUploaded(RequestModel $request, string $requirementName)
+    {
+        self::ensureRelationshipsLoaded($request);
+        $applicantName = self::getApplicantName($request);
+
+        self::notifyRoles(
+            ['admin', 'super_admin'],
+            'requirement_uploaded',
+            'Requirement Document Uploaded',
+            "{$applicantName} uploaded \"{$requirementName}\" for application #{$request->id}. Please verify.",
+            "/admin/requests/{$request->id}/document-verification",
+            [
+                'application_id' => $request->id,
+                'applicant_name' => $applicantName,
+                'requirement_name' => $requirementName,
             ]
         );
     }

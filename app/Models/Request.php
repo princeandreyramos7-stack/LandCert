@@ -30,9 +30,12 @@ class Request extends Model
         
         // Status
         'status',
+        'released_to_applicant_at',
+        'released_by',
     ];
 
     protected $casts = [
+        'released_to_applicant_at' => 'datetime',
         'notice_dates' => 'date',
         'similar_application_dates' => 'date',
         'verified_requirements' => 'array',
@@ -70,6 +73,21 @@ class Request extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Staff member who released the decision to the applicant (see
+     * released_to_applicant_at) — for Certificate Management to show and the
+     * audit trail to answer "who did this".
+     *
+     * Named `releaser`, not `releasedBy`: Eloquent serializes a relation's
+     * camelCase method name to snake_case for its JSON key, and `releasedBy`
+     * would collide with the `released_by` column itself — silently replacing
+     * the raw id with the nested user object wherever this relation is loaded.
+     */
+    public function releaser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'released_by');
     }
 
     /**

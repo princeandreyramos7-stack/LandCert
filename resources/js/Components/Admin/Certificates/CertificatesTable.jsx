@@ -27,8 +27,18 @@ import {
     MoreVertical,
     Upload,
     Printer,
+    Send,
+    Undo2,
 } from "lucide-react";
 import { router } from "@inertiajs/react";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/Components/ui/dialog";
 
 export function CertificatesTable({
     certificates = {},
@@ -43,6 +53,10 @@ export function CertificatesTable({
 }) {
     const [searchTerm, setSearchTerm] = useState(filters.search || "");
     const [statusFilter, setStatusFilter] = useState(filters.status || "all");
+    // { certificate, released } — releasing notifies the applicant by SMS and
+    // withdrawing takes a document back they may already have been told about,
+    // so both are confirmed rather than fired straight off the menu item.
+    const [pendingRelease, setPendingRelease] = useState(null);
 
     // Handle certificate data (paginated object)
     const certificatesData = certificates?.data || [];
@@ -212,6 +226,9 @@ export function CertificatesTable({
                                     Issued Date
                                 </th>
                                 <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
+                                    Status
+                                </th>
+                                <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
                                     Actions
                                 </th>
                             </tr>
@@ -220,7 +237,7 @@ export function CertificatesTable({
                             {certificatesData.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan="6"
+                                        colSpan="7"
                                         className="px-4 py-12 text-center text-slate-500"
                                     >
                                         <div className="flex flex-col items-center justify-center">
@@ -269,6 +286,27 @@ export function CertificatesTable({
                                             </div>
                                         </td>
                                         <td className="p-3">
+                                            {certificate.request?.released_to_applicant_at ? (
+                                                <div
+                                                    title={`Released by ${certificate.request?.releaser?.name || "staff"} on ${formatDate(certificate.request.released_to_applicant_at)}`}
+                                                >
+                                                    <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-100">
+                                                        Released
+                                                    </Badge>
+                                                    <div className="text-xs text-slate-500 mt-1">
+                                                        by {certificate.request?.releaser?.name || "staff"}
+                                                    </div>
+                                                    <div className="text-xs text-slate-400">
+                                                        {formatDate(certificate.request.released_to_applicant_at)}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <Badge className="bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-100">
+                                                    Preparing
+                                                </Badge>
+                                            )}
+                                        </td>
+                                        <td className="p-3">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button
@@ -287,13 +325,29 @@ export function CertificatesTable({
                                                         .includes(String(certificate.request?.status || "").toLowerCase())
                                                         ? (certificate.has_verified_payment ? (
                                                         <>
+                                                        {/* Until the office releases it, the applicant cannot print anything. */}
+                                                        {certificate.request?.released_to_applicant_at ? (
                                                             <DropdownMenuItem
-                                                                onClick={() => router.visit(route(`${routePrefix}.generate-clearance`, certificate.request_id))}
-                                                                className="text-blue-600 font-medium"
+                                                                onClick={() => setPendingRelease({ certificate, released: false })}
+                                                                className="text-amber-700 font-medium"
                                                             >
-                                                                <Printer className="h-4 w-4 mr-2" />
-                                                                Generate Clearance
+                                                                <Undo2 className="h-4 w-4 mr-2" />
+                                                                Withdraw from Applicant
                                                             </DropdownMenuItem>
+                                                        ) : (
+                                                            <DropdownMenuItem
+                                                                onClick={() => setPendingRelease({ certificate, released: true })}
+                                                                className="text-emerald-700 font-medium"
+                                                            >
+                                                                <Send className="h-4 w-4 mr-2" />
+                                                                Release to Applicant
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        {String(
+                                                            certificate.request?.project?.project_type
+                                                            || certificate.request?.project_type
+                                                            || ''
+                                                        ).toUpperCase() === 'ZC' ? (
                                                             <DropdownMenuItem
                                                                 onClick={() => router.visit(route(`${routePrefix}.generate-certificate`, certificate.request_id))}
                                                                 className="text-green-600 font-medium"
@@ -301,6 +355,15 @@ export function CertificatesTable({
                                                                 <FileText className="h-4 w-4 mr-2" />
                                                                 Generate Certificate
                                                             </DropdownMenuItem>
+                                                        ) : (
+                                                            <DropdownMenuItem
+                                                                onClick={() => router.visit(route(`${routePrefix}.generate-clearance`, certificate.request_id))}
+                                                                className="text-blue-600 font-medium"
+                                                            >
+                                                                <Printer className="h-4 w-4 mr-2" />
+                                                                Generate Clearance
+                                                            </DropdownMenuItem>
+                                                        )}
                                                         </>
                                                     ) : (
                                                         <div className="px-3 py-2 text-sm text-slate-500 text-center">
@@ -354,6 +417,59 @@ export function CertificatesTable({
                     </div>
                 )}
             </div>
+
+            {/* Release / withdraw confirmation */}
+            <Dialog open={!!pendingRelease} onOpenChange={(open) => !open && setPendingRelease(null)}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {pendingRelease?.released
+                                ? "Release to applicant?"
+                                : "Withdraw from applicant?"}
+                        </DialogTitle>
+                        <DialogDescription asChild>
+                            <div className="space-y-2 pt-1 text-sm text-slate-600">
+                                <p>
+                                    Application{" "}
+                                    <span className="font-semibold text-slate-800">
+                                        {pendingRelease?.certificate?.request?.application_number
+                                            || `#${pendingRelease?.certificate?.request_id ?? ""}`}
+                                    </span>
+                                    {pendingRelease?.certificate?.request?.applicant?.applicant_name && (
+                                        <> — {pendingRelease.certificate.request.applicant.applicant_name}</>
+                                    )}
+                                </p>
+                                <p>
+                                    {pendingRelease?.released
+                                        ? "The applicant will be able to print their document, and will be notified by SMS and in the app."
+                                        : "The applicant will no longer be able to print their document. They are not notified of the withdrawal."}
+                                </p>
+                            </div>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={() => setPendingRelease(null)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            className={pendingRelease?.released
+                                ? "bg-emerald-600 hover:bg-emerald-700"
+                                : "bg-amber-600 hover:bg-amber-700"}
+                            onClick={() => {
+                                const { certificate, released } = pendingRelease;
+                                setPendingRelease(null);
+                                router.post(
+                                    route(`${routePrefix}.release-to-applicant`, certificate.request_id),
+                                    { released },
+                                    { preserveScroll: true }
+                                );
+                            }}
+                        >
+                            {pendingRelease?.released ? "Release" : "Withdraw"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -566,21 +566,11 @@ export default function SuperAdminReviewRequest({ request }) {
                                     {action === 'rejected' && (
                                         <div className="animate-in slide-in-from-top-2 duration-300">
                                             <div className="bg-white rounded-lg p-5 border-2 border-gray-200">
-                                                <label className="block text-sm font-semibold text-gray-800 mb-3">
-                                                    Denial Reason <span className="text-red-500">*</span>
+                                                <label className="block text-sm font-semibold text-gray-800 mb-1">
+                                                    Reason for Return <span className="text-red-500">*</span>
                                                 </label>
-                                                
-                                                <textarea
-                                                    value={formData.rejection_reason}
-                                                    onChange={(e) => setFormData({ ...formData, rejection_reason: e.target.value })}
-                                                    rows="5"
-                                                    required
-                                                    maxLength="1000"
-                                                    placeholder="Provide a comprehensive reason for denial..."
-                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all resize-none"
-                                                />
-                                                <p className="text-xs text-gray-500 mt-2">
-                                                    {formData.rejection_reason.length}/1000 characters
+                                                <p className="text-xs text-gray-500 mb-3">
+                                                    The application goes back to the Zoning Officer to review again. Pick the reason below.
                                                 </p>
 
                                                 {/* Quick Reasons */}
@@ -590,7 +580,7 @@ export default function SuperAdminReviewRequest({ request }) {
                                                         {[
                                                             'Non-compliant with regulations',
                                                             'Incomplete documentation',
-                                                            'Location not zoned for this use',
+                                                            'Verify Location',
                                                             'Policy violation',
                                                             'Environmental concerns'
                                                         ].map((reason) => (
@@ -604,6 +594,11 @@ export default function SuperAdminReviewRequest({ request }) {
                                                             </button>
                                                         ))}
                                                     </div>
+                                                    {formData.rejection_reason && (
+                                                        <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-sm text-red-800">
+                                                            <span className="font-medium">{formData.rejection_reason}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -921,6 +916,7 @@ function Step2Content({ request }) {
                             <option value="TUP">TUP (Temporary Use Permit)</option>
                             <option value="SUP">SUP (Special Use Permit)</option>
                             <option value="CZC">CZC (Certificate of Zoning Compliance)</option>
+                            <option value="ZC">ZC (Zoning Certification)</option>
                         </select>
                     ) : (
                         <p className="text-sm text-gray-900 font-medium">
@@ -1006,6 +1002,11 @@ function Step3Content({ request }) {
 function Step4Content({ request, mainUploadedGroups, zoningUploadedGroups = [], additionalUploadedGroups, requirementChecks, onToggleRequirement }) {
     // Get all requirements from reference (what SHOULD be uploaded)
     const allMainRequirements = (request.requirements_reference || []).filter(r => r.section === 'main');
+    // A requirement flagged is_group is a heading only — the documents it asks
+    // for are its children, matched by parent_id, and only those are uploaded.
+    const uploadableMainRequirements = allMainRequirements.filter(r => !r.is_group);
+    const topLevelMainRequirements = allMainRequirements.filter(r => !r.parent_id);
+    const mainChildrenOf = (req) => allMainRequirements.filter(c => c.parent_id === req.id);
     const allZoningRequirements = (request.requirements_reference || []).filter(r => r.section === 'zoning_certification');
     const allAdditionalRequirements = (request.requirements_reference || []).filter(r => r.section === 'additional');
     
@@ -1013,6 +1014,32 @@ function Step4Content({ request, mainUploadedGroups, zoningUploadedGroups = [], 
     const uploadedMainIds = new Set(mainUploadedGroups.map(g => g.key));
     const uploadedAdditionalIds = new Set(additionalUploadedGroups.map(g => g.key));
     
+    // One requirement card: the uploaded files if there are any, otherwise the
+    // "missing" placeholder.
+    const renderMainRequirement = (reqRef) => {
+        const uploadedGroup = mainUploadedGroups.find(g => g.key === reqRef.id);
+
+        if (uploadedGroup) {
+            return (
+                <UploadedRequirementGroup
+                    key={reqRef.id}
+                    group={uploadedGroup}
+                    isChecked={requirementChecks[uploadedGroup.key] || false}
+                    onToggle={(checked) => onToggleRequirement(uploadedGroup.key, uploadedGroup.requirement_name, checked)}
+                />
+            );
+        }
+
+        return (
+            <MissingRequirementCard
+                key={reqRef.id}
+                requirement={reqRef}
+                isChecked={requirementChecks[reqRef.id] || false}
+                onToggle={(checked) => onToggleRequirement(reqRef.id, reqRef.name, checked)}
+            />
+        );
+    };
+
     return (
         <div className="space-y-6">
             <SectionTitle icon={FileText} title="Requirements Checklist" />
@@ -1021,34 +1048,35 @@ function Step4Content({ request, mainUploadedGroups, zoningUploadedGroups = [], 
             <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                     <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">REQUIRED</span>
-                    Main Requirements ({mainUploadedGroups.length}/{allMainRequirements.length} uploaded)
+                    Main Requirements ({mainUploadedGroups.length}/{uploadableMainRequirements.length} uploaded)
                 </h4>
                 <div className="space-y-3">
-                    {allMainRequirements.map((reqRef) => {
-                        // Find if this requirement was uploaded
-                        const uploadedGroup = mainUploadedGroups.find(g => g.key === reqRef.id);
-                        
-                        if (uploadedGroup) {
-                            // Show uploaded requirement with files
+                    {topLevelMainRequirements.map((reqRef) => {
+                        // A group heading carries no upload of its own: it labels the
+                        // documents nested under it.
+                        if (reqRef.is_group) {
+                            // An application filed before this requirement was split
+                            // into separate slots has its document attached to the
+                            // group itself — show it in place of the plain heading.
+                            const ownUpload = mainUploadedGroups.find(g => g.key === reqRef.id);
                             return (
-                                <UploadedRequirementGroup 
-                                    key={reqRef.id} 
-                                    group={uploadedGroup} 
-                                    isChecked={requirementChecks[uploadedGroup.key] || false}
-                                    onToggle={(checked) => onToggleRequirement(uploadedGroup.key, uploadedGroup.requirement_name, checked)}
-                                />
-                            );
-                        } else {
-                            // Show missing requirement placeholder
-                            return (
-                                <MissingRequirementCard 
-                                    key={reqRef.id}
-                                    requirement={reqRef}
-                                    isChecked={requirementChecks[reqRef.id] || false}
-                                    onToggle={(checked) => onToggleRequirement(reqRef.id, reqRef.name, checked)}
-                                />
+                                <div key={reqRef.id} className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 space-y-3">
+                                    {ownUpload ? renderMainRequirement(reqRef) : (
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-900">{reqRef.name}</p>
+                                        {reqRef.description && (
+                                            <p className="text-xs text-gray-500 mt-0.5">{reqRef.description}</p>
+                                        )}
+                                    </div>
+                                    )}
+                                    <div className="space-y-3">
+                                        {mainChildrenOf(reqRef).map((child) => renderMainRequirement(child))}
+                                    </div>
+                                </div>
                             );
                         }
+
+                        return renderMainRequirement(reqRef);
                     })}
                 </div>
             </div>
@@ -1135,9 +1163,9 @@ function Step4Content({ request, mainUploadedGroups, zoningUploadedGroups = [], 
                         <p className="text-sm text-blue-700">
                             Total Uploaded: <span className="font-bold">{mainUploadedGroups.length + additionalUploadedGroups.length}</span>
                             {' / '}
-                            <span className="font-bold">{allMainRequirements.length + allZoningRequirements.length + allAdditionalRequirements.length}</span>
+                            <span className="font-bold">{uploadableMainRequirements.length + allZoningRequirements.length + allAdditionalRequirements.length}</span>
                             {' • '}
-                            Main: <span className="font-bold">{mainUploadedGroups.length}/{allMainRequirements.length}</span>
+                            Main: <span className="font-bold">{mainUploadedGroups.length}/{uploadableMainRequirements.length}</span>
                             {' • '}
                             Zoning Cert: <span className="font-bold">{zoningUploadedGroups.length}/{allZoningRequirements.length}</span>
                             {' • '}

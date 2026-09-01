@@ -26,6 +26,31 @@ class ApplicationRequirements
             'name' => '2. Right Over Land Documentation',
             'required' => true,
             'section' => 'main',
+            'is_group' => true,
+            'description' => 'Submit all three documents below.'
+        ],
+        [
+            'id' => 13,
+            'name' => 'Title',
+            'required' => true,
+            'section' => 'main',
+            'parent_id' => 2,
+            'description' => ''
+        ],
+        [
+            'id' => 14,
+            'name' => 'Tax Declaration',
+            'required' => true,
+            'section' => 'main',
+            'parent_id' => 2,
+            'description' => ''
+        ],
+        [
+            'id' => 15,
+            'name' => 'Tax Receipt',
+            'required' => true,
+            'section' => 'main',
+            'parent_id' => 2,
             'description' => ''
         ],
         [
@@ -45,6 +70,13 @@ class ApplicationRequirements
         [
             'id' => 5,
             'name' => '5. ESTIMATED PROJECT COST / BILL OF MATERIALS',
+            'required' => true,
+            'section' => 'main',
+            'description' => ''
+        ],
+        [
+            'id' => 12,
+            'name' => '6. Barangay Clearance',
             'required' => true,
             'section' => 'main',
             'description' => ''
@@ -91,42 +123,48 @@ class ApplicationRequirements
             'section' => 'additional',
             'description' => 'Required if the project is located within a National Road.'
         ],
-        [
-            'id' => 12,
-            'name' => 'Barangay Clearance',
-            'required' => false,
-            'section' => 'additional',
-            'description' => ''
-        ],
+    ];
 
-        // ── Requirements of Zoning Certification ──────────────────────────
-        // Required for the Zoning Certification issued for a CZC application.
+    /**
+     * Requirements for Zoning Certification (ZC)
+     *
+     * A standalone category with its own short document set — nothing else is
+     * asked for, so there are no "additional" requirements here.
+     */
+    public const ZC_REQUIREMENTS = [
         [
-            'id' => 13,
-            'name' => 'Title',
+            'id' => 1,
+            'name' => '1. Title',
             'required' => true,
-            'section' => 'zoning_certification',
+            'section' => 'main',
             'description' => ''
         ],
         [
-            'id' => 14,
-            'name' => 'Tax Declaration',
+            'id' => 2,
+            'name' => '2. Tax Declaration',
             'required' => true,
-            'section' => 'zoning_certification',
+            'section' => 'main',
             'description' => ''
         ],
         [
-            'id' => 15,
-            'name' => 'Latest Tax Receipt',
+            'id' => 3,
+            'name' => '3. VICINITY MAP',
             'required' => true,
-            'section' => 'zoning_certification',
+            'section' => 'main',
             'description' => ''
         ],
         [
-            'id' => 17,
-            'name' => 'Sketch Plan with signature of Geodetic Engr.',
+            'id' => 4,
+            'name' => '4. Latest Tax Receipt',
             'required' => true,
-            'section' => 'zoning_certification',
+            'section' => 'main',
+            'description' => ''
+        ],
+        [
+            'id' => 5,
+            'name' => '5. Sketch Plan with signature of Geodetic Engr.',
+            'required' => true,
+            'section' => 'main',
             'description' => ''
         ],
     ];
@@ -171,16 +209,16 @@ class ApplicationRequirements
             'description' => ''
         ],
         [
-            'id' => 6,
-            'name' => 'Certificate of Zoning Compliance (CZC) or locational clearance request',
-            'required' => false,
-            'section' => 'additional',
+            'id' => 7,
+            'name' => '6. Barangay clearance / endorsement',
+            'required' => true,
+            'section' => 'main',
             'description' => ''
         ],
         [
-            'id' => 7,
-            'name' => 'Barangay clearance / endorsement',
-            'required' => true,
+            'id' => 6,
+            'name' => 'Certificate of Zoning Compliance (CZC) or locational clearance request',
+            'required' => false,
             'section' => 'additional',
             'description' => ''
         ],
@@ -248,9 +286,9 @@ class ApplicationRequirements
         ],
         [
             'id' => 6,
-            'name' => 'Barangay clearance',
+            'name' => '6. Barangay clearance',
             'required' => true,
-            'section' => 'additional',
+            'section' => 'main',
             'description' => ''
         ],
         [
@@ -282,6 +320,7 @@ class ApplicationRequirements
     public static function getRequirements(string $projectType): array
     {
         return match (strtoupper($projectType)) {
+            'ZC', 'ZONING CERTIFICATION' => self::ZC_REQUIREMENTS,
             'SUP', 'SPECIAL USE PERMIT' => self::SUP_REQUIREMENTS,
             'TUP', 'TEMPORARY USE PERMIT' => self::TUP_REQUIREMENTS,
             'CZC', 'CERTIFICATE OF ZONING COMPLIANCE', 'LOCATIONAL CLEARANCE', 'ZONING', 'ZONING CLEARANCE' => self::CZC_REQUIREMENTS,
@@ -298,6 +337,7 @@ class ApplicationRequirements
             'SUP' => self::SUP_REQUIREMENTS,
             'TUP' => self::TUP_REQUIREMENTS,
             'CZC' => self::CZC_REQUIREMENTS,
+            'ZC' => self::ZC_REQUIREMENTS,
         ];
     }
 }

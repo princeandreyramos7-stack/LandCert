@@ -20,9 +20,12 @@ export function Step4Requirements({
     const uploads = files;
     const [previews, setPreviews] = useState({});
 
-    // Separate main, zoning-certification and additional requirements
-    const mainRequirements = requirements.filter((req) => (req.section || 'main') === 'main');
-    const zoningCertRequirements = requirements.filter((req) => req.section === 'zoning_certification');
+    // Separate main and additional requirements. A requirement flagged is_group
+    // is only a heading — the documents it asks for are its children, matched by
+    // parent_id — so the top level lists parents and standalone requirements only.
+    const allMain = requirements.filter((req) => (req.section || 'main') === 'main');
+    const mainRequirements = allMain.filter((req) => !req.parent_id);
+    const childrenOf = (req) => allMain.filter((child) => child.parent_id === req.id);
     const additionalRequirements = requirements.filter((req) => req.section === 'additional');
 
     const handleFileSelect = (requirementId, files) => {
@@ -244,6 +247,39 @@ export function Step4Requirements({
         );
     };
 
+    /**
+     * A grouped requirement: the heading names the requirement, and each document
+     * it asks for gets its own upload slot underneath.
+     */
+    const renderRequirementGroup = (requirement) => {
+        // An application filed before this requirement was split into separate
+        // slots has its document attached to the group itself — keep it visible.
+        const hasOwnFiles =
+            (uploads[requirement.id] || []).length > 0 ||
+            (existingDocuments[requirement.id] || []).length > 0;
+
+        return (
+            <div key={requirement.id} className="rounded-lg border border-gray-200 bg-gray-50/60 p-4 space-y-3">
+                {hasOwnFiles ? (
+                    renderRequirement(requirement)
+                ) : (
+                    <div>
+                        <Label className="text-base font-semibold text-gray-900">
+                            {requirement.name}
+                            <span className="text-red-500 ml-1">*</span>
+                        </Label>
+                        {requirement.description && (
+                            <p className="text-sm text-gray-600 mt-1">{requirement.description}</p>
+                        )}
+                    </div>
+                )}
+                <div className="space-y-3">
+                    {childrenOf(requirement).map((child) => renderRequirement(child))}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="space-y-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -264,26 +300,14 @@ export function Step4Requirements({
             {/* Main Requirements Section */}
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
-                    Main Requirements (1-5) <span className="text-red-500">*</span>
+                    Main Requirements (1-{mainRequirements.length}) <span className="text-red-500">*</span>
                 </h3>
-                {mainRequirements.map((requirement) => renderRequirement(requirement))}
+                {mainRequirements.map((requirement) =>
+                    requirement.is_group
+                        ? renderRequirementGroup(requirement)
+                        : renderRequirement(requirement)
+                )}
             </div>
-
-            {/* Requirements of Zoning Certification (CZC only) */}
-            {zoningCertRequirements.length > 0 && (
-                <div className="space-y-4">
-                    <div className="border-t pt-6">
-                        <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
-                            Requirements of Zoning Certification <span className="text-red-500">*</span>
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-2 mb-4">
-                            Required for a Certificate of Zoning Compliance (CZC). All documents below
-                            must be uploaded before you can submit.
-                        </p>
-                    </div>
-                    {zoningCertRequirements.map((requirement) => renderRequirement(requirement))}
-                </div>
-            )}
 
             {/* Additional Requirements Section */}
             {additionalRequirements.length > 0 && (

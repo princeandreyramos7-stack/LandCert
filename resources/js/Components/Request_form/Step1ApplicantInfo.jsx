@@ -14,7 +14,7 @@ export function Step1ApplicantInfo({
         <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
                 <Label htmlFor="applicant_name">
-                    Name of Applicant <span className="text-red-500">*</span>
+                    1. Name of Applicant <span className="text-red-500">*</span>
                 </Label>
                 <Input
                     id="applicant_name"
@@ -28,7 +28,7 @@ export function Step1ApplicantInfo({
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="corporation_name">Name of Corporation</Label>
+                <Label htmlFor="corporation_name">2. Name of Corporation</Label>
                 <Input
                     id="corporation_name"
                     value={data.corporation_name}
@@ -42,7 +42,7 @@ export function Step1ApplicantInfo({
 
             <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="applicant_address">
-                    Address of Applicant <span className="text-red-500">*</span>
+                    3. Address of Applicant <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
                     id="applicant_address"
@@ -56,7 +56,7 @@ export function Step1ApplicantInfo({
             </div>
 
             <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="corporation_address">Address of Corporation</Label>
+                <Label htmlFor="corporation_address">4. Address of Corporation</Label>
                 <Textarea
                     id="corporation_address"
                     value={data.corporation_address}
@@ -101,7 +101,7 @@ export function Step1ApplicantInfo({
 
                     <div className="space-y-2">
                         <Label htmlFor="authorized_representative_name">
-                            Name of Authorized Representative{" "}
+                            5. Name of Authorized Representative{" "}
                             <span className="text-red-500">*</span>
                         </Label>
                         <Input
@@ -174,7 +174,7 @@ export function Step1ApplicantInfo({
 
                     <div className="space-y-2 md:col-span-2">
                         <Label htmlFor="authorized_representative_address">
-                            Address of Authorized Representative{" "}
+                            6. Address of Authorized Representative{" "}
                             <span className="text-red-500">*</span>
                         </Label>
                         <Textarea

@@ -15,7 +15,7 @@ export function Step3LandUse({
             <div className="space-y-4">
                 <div className="space-y-3">
                     <Label className="text-base">
-                        Is the project applied for the subject of written notice(s) from
+                        15. Is the project applied for the subject of written notice(s) from
                         this office and/or its zoning administrator to effect requiring
                         for presentation of locational clearance/certificate of zoning
                         compliance (LC/CZC) or to apply for LC/CZC?{" "}
@@ -102,7 +102,7 @@ export function Step3LandUse({
             <div className="space-y-4 border-t pt-4">
                 <div className="space-y-3">
                     <Label className="text-base">
-                        Is the project applied for subject of similar application(s) with
+                        16. Is the project applied for subject of similar application(s) with
                         other offices of the commission and/or deputized zoning
                         administrator? <span className="text-red-500">*</span>
                     </Label>
@@ -195,7 +195,7 @@ export function Step3LandUse({
             <div className="space-y-4 border-t pt-4">
                 <div className="space-y-3">
                     <Label className="text-base">
-                        Preferred mode of release of decision{" "}
+                        17. Preferred mode of release of decision{" "}
                         <span className="text-red-500">*</span>
                     </Label>
                     <div className="space-y-2">

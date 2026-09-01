@@ -25,12 +25,72 @@ import { Toaster } from "@/Components/ui/toaster";
 import axios from "axios";
 import { getStatusConfig } from "@/lib/applicationStatus";
 
-export default function ViewApplication({ request }) {
+export default function ViewApplication({ request, uploadedRequirements = [] }) {
     const [currentStep, setCurrentStep] = useState(1);
     const [editingProjectType, setEditingProjectType] = useState(false);
     const [projectType, setProjectType] = useState(request.project_type || '');
     const [savingProjectType, setSavingProjectType] = useState(false);
+    // Application number and project cost are corrections staff make after the
+    // fact, so each is edited on its own and saved independently.
+    const [editingAppNumber, setEditingAppNumber] = useState(false);
+    const [applicationNumber, setApplicationNumber] = useState(request.application_number || '');
+    const [savingAppNumber, setSavingAppNumber] = useState(false);
+    const [editingProjectCost, setEditingProjectCost] = useState(false);
+    const [projectCost, setProjectCost] = useState(
+        request.project_cost === null || request.project_cost === undefined ? '' : String(request.project_cost)
+    );
+    const [savingProjectCost, setSavingProjectCost] = useState(false);
     const { toast } = useToast();
+
+    const handleSaveAppNumber = async () => {
+        setSavingAppNumber(true);
+        try {
+            await axios.post(`/super-admin/requests/${request.id}/application-details`, {
+                application_number: applicationNumber,
+            });
+            request.application_number = applicationNumber;
+            toast({
+                title: "Success!",
+                description: "Application number updated successfully.",
+            });
+            setEditingAppNumber(false);
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description:
+                    error.response?.data?.errors?.application_number?.[0] ||
+                    "Failed to update the application number.",
+            });
+        } finally {
+            setSavingAppNumber(false);
+        }
+    };
+
+    const handleSaveProjectCost = async () => {
+        setSavingProjectCost(true);
+        try {
+            await axios.post(`/super-admin/requests/${request.id}/application-details`, {
+                project_cost: projectCost === '' ? null : projectCost,
+            });
+            request.project_cost = projectCost === '' ? null : projectCost;
+            toast({
+                title: "Success!",
+                description: "Project cost updated successfully.",
+            });
+            setEditingProjectCost(false);
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description:
+                    error.response?.data?.errors?.project_cost?.[0] ||
+                    "Failed to update the project cost.",
+            });
+        } finally {
+            setSavingProjectCost(false);
+        }
+    };
 
     const handleSaveProjectType = async () => {
         setSavingProjectType(true);
@@ -59,11 +119,14 @@ export default function ViewApplication({ request }) {
     const statusConfig = getStatusConfig(request.status || "pending");
     const StatusIcon = statusConfig.icon;
 
-    // Define steps (only 1-3)
+    // A Zoning Certification never fills in the project or land-use steps, so
+    // it has nothing to show on Land Use.
+    const isZC = String(request.project_type || "").toUpperCase() === "ZC";
+
     const steps = [
         { number: 1, title: "Applicant Info", icon: User },
         { number: 2, title: "Project Details", icon: Building2 },
-        { number: 3, title: "Land Use", icon: Home },
+        ...(isZC ? [] : [{ number: 3, title: "Land Use", icon: Home }]),
     ];
 
     return (
@@ -99,9 +162,52 @@ export default function ViewApplication({ request }) {
                                     <FileText className="h-6 w-6 text-blue-600" />
                                 </div>
                                 <div>
-                                    <CardTitle className="text-2xl text-gray-900">
-                                        {request.application_number || `TPZ-${request.id}`}
-                                    </CardTitle>
+                                    {editingAppNumber ? (
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                value={applicationNumber}
+                                                onChange={(e) => setApplicationNumber(e.target.value)}
+                                                placeholder={`TPZ-${request.id}`}
+                                                className="px-3 py-1.5 text-xl font-semibold text-gray-900 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                            <button
+                                                onClick={handleSaveAppNumber}
+                                                disabled={savingAppNumber}
+                                                className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
+                                            >
+                                                {savingAppNumber ? (
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                ) : (
+                                                    <Save className="h-3 w-3" />
+                                                )}
+                                                Save
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setApplicationNumber(request.application_number || '');
+                                                    setEditingAppNumber(false);
+                                                }}
+                                                disabled={savingAppNumber}
+                                                className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <CardTitle className="text-2xl text-gray-900">
+                                                {applicationNumber || `TPZ-${request.id}`}
+                                            </CardTitle>
+                                            <button
+                                                onClick={() => setEditingAppNumber(true)}
+                                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                            >
+                                                <Edit2 className="h-3 w-3" />
+                                                Edit
+                                            </button>
+                                        </div>
+                                    )}
                                     <p className="text-sm text-gray-600 mt-1">
                                         Application Type: <span className="font-semibold text-gray-900">{request.application_category || "N/A"}</span>
                                     </p>
@@ -129,12 +235,21 @@ export default function ViewApplication({ request }) {
                             {currentStep === 2 && (
                                 <Step2Content 
                                     request={request} 
+                                    uploadedRequirements={uploadedRequirements}
+                                    
                                     editingProjectType={editingProjectType}
                                     setEditingProjectType={setEditingProjectType}
                                     projectType={projectType}
                                     setProjectType={setProjectType}
                                     handleSaveProjectType={handleSaveProjectType}
                                     savingProjectType={savingProjectType}
+                                    editingProjectCost={editingProjectCost}
+                                    setEditingProjectCost={setEditingProjectCost}
+                                    projectCost={projectCost}
+                                    setProjectCost={setProjectCost}
+                                    handleSaveProjectCost={handleSaveProjectCost}
+                                    savingProjectCost={savingProjectCost}
+                                    isZC={isZC}
                                 />
                             )}
                             {currentStep === 3 && (
@@ -318,7 +433,7 @@ function Step1Content({ request }) {
 }
 
 // Step 2: Project Details
-function Step2Content({ request, editingProjectType, setEditingProjectType, projectType, setProjectType, handleSaveProjectType, savingProjectType }) {
+function Step2Content({ request, uploadedRequirements = [], editingProjectType, setEditingProjectType, projectType, setProjectType, handleSaveProjectType, savingProjectType, editingProjectCost, setEditingProjectCost, projectCost, setProjectCost, handleSaveProjectCost, savingProjectCost, isZC = false }) {
     return (
         <div className="space-y-6">
             <SectionTitle icon={Building2} title="Project Details" />
@@ -375,6 +490,7 @@ function Step2Content({ request, editingProjectType, setEditingProjectType, proj
                             <option value="TUP">TUP (Temporary Use Permit)</option>
                             <option value="SUP">SUP (Special Use Permit)</option>
                             <option value="CZC">CZC (Certificate of Zoning Compliance)</option>
+                            <option value="ZC">ZC (Zoning Certification)</option>
                         </select>
                     ) : (
                         <p className="text-sm text-gray-900 font-medium">
@@ -383,106 +499,173 @@ function Step2Content({ request, editingProjectType, setEditingProjectType, proj
                     )}
                 </div>
 
-                <InfoField
-                    label="Project Nature"
-                    value={request.project_nature}
-                />
+                {!isZC && (
+                    <InfoField
+                        label="Project Nature"
+                        value={request.project_nature}
+                    />
+                )}
             </div>
 
+            {!isZC && (
+                <>
             <div className="pt-4 border-t">
-                <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Project Location
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InfoField
-                        label="House/Building Number"
-                        value={request.project_location_number}
-                    />
-                    <InfoField
-                        label="Street"
-                        value={request.project_location_street}
-                    />
-                    <InfoField
-                        label="Barangay"
-                        value={request.project_location_barangay}
-                    />
-                    <InfoField
-                        label="Municipality"
-                        value={request.project_location_municipality}
-                    />
-                    <InfoField
-                        label="Province"
-                        value={request.project_location_province}
-                    />
-                </div>
-            </div>
-
-            <div className="pt-4 border-t">
-                <h4 className="text-sm font-semibold text-gray-700 mb-4">Project Area</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InfoField
-                        label="Project Area (sqm)"
-                        value={
-                            request.project_area_sqm
-                                ? `${parseFloat(request.project_area_sqm).toLocaleString()} sqm`
-                                : "N/A"
-                        }
-                    />
-                    <InfoField
-                        label="Lot (sqm)"
-                        value={
-                            request.lot_area_sqm
-                                ? `${parseFloat(request.lot_area_sqm).toLocaleString()} sqm`
-                                : "N/A"
-                        }
-                    />
-                    <InfoField
-                        label="Bldg. Improvement (sqm)"
-                        value={
-                            request.bldg_improvement_sqm
-                                ? `${parseFloat(request.bldg_improvement_sqm).toLocaleString()} sqm`
-                                : "N/A"
-                        }
-                    />
-                    <InfoField
-                        label="Right Over Land"
-                        value={request.right_over_land}
-                    />
-                </div>
-            </div>
-
-            <PropertyDetailsEditor request={request} routePrefix="super-admin" />
-
-            <div className="pt-4 border-t">
-                <h4 className="text-sm font-semibold text-gray-700 mb-4">Project Nature & Cost</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InfoField
-                        label="Project Duration"
-                        value={request.project_nature_duration}
-                    />
-                    {request.project_nature_years && (
+                    <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Project Location
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InfoField
-                            label="Specify Years"
-                            value={`${request.project_nature_years} ${Number(request.project_nature_years) === 1 ? "year" : "years"}`}
+                            label="House/Building Number"
+                            value={request.project_location_number}
                         />
-                    )}
-                    <InfoField
-                        label="Project Cost/Capitalization (in Pesos)"
-                        value={
-                            request.project_cost
-                                ? `₱${parseFloat(request.project_cost).toLocaleString()}`
-                                : "N/A"
-                        }
-                    />
-                    {request.project_description && (
                         <InfoField
-                            label="Project Description"
-                            value={request.project_description}
+                            label="Street"
+                            value={request.project_location_street}
                         />
-                    )}
+                        <InfoField
+                            label="Barangay"
+                            value={request.project_location_barangay}
+                        />
+                        <InfoField
+                            label="Municipality"
+                            value={request.project_location_municipality}
+                        />
+                        <InfoField
+                            label="Province"
+                            value={request.project_location_province}
+                        />
+                    </div>
                 </div>
-            </div>
+    
+                <div className="pt-4 border-t">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InfoField
+                            label="Project Area (sqm)"
+                            value={
+                                request.lot_area_sqm
+                                    ? `${parseFloat(request.lot_area_sqm).toLocaleString()} sqm`
+                                    : "N/A"
+                            }
+                        />
+                        <InfoField
+                            label="Bldg. Improvement (sqm)"
+                            value={
+                                request.bldg_improvement_sqm
+                                    ? `${parseFloat(request.bldg_improvement_sqm).toLocaleString()} sqm`
+                                    : "N/A"
+                            }
+                        />
+                        <InfoField
+                            label="Right Over Land"
+                            value={request.right_over_land}
+                        />
+                    </div>
+                </div>
+    
+    </>
+            )}
+
+            <PropertyDetailsEditor
+                request={request}
+                routePrefix="super-admin"
+                uploadedRequirements={uploadedRequirements}
+                isZC={isZC}
+            />
+
+            {!isZC && (
+                <>
+            <div className="pt-4 border-t">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-4">Project Nature & Cost</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InfoField
+                            label="Project Duration"
+                            value={request.project_nature_duration}
+                        />
+                        {request.project_nature_years && (
+                            <InfoField
+                                label="Specify Years"
+                                value={`${request.project_nature_years} ${Number(request.project_nature_years) === 1 ? "year" : "years"}`}
+                            />
+                        )}
+                        <div className="group">
+                            <div className="flex items-center justify-between mb-1.5">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                    Project Cost/Capitalization (in Pesos)
+                                </p>
+                                {!editingProjectCost ? (
+                                    <button
+                                        onClick={() => setEditingProjectCost(true)}
+                                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                    >
+                                        <Edit2 className="h-3 w-3" />
+                                        Edit
+                                    </button>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={handleSaveProjectCost}
+                                            disabled={savingProjectCost}
+                                            className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
+                                        >
+                                            {savingProjectCost ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                            ) : (
+                                                <Save className="h-3 w-3" />
+                                            )}
+                                            Save
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setProjectCost(
+                                                    request.project_cost === null || request.project_cost === undefined
+                                                        ? ''
+                                                        : String(request.project_cost)
+                                                );
+                                                setEditingProjectCost(false);
+                                            }}
+                                            disabled={savingProjectCost}
+                                            className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                            {editingProjectCost ? (
+                                <div className="relative">
+                                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 select-none text-sm font-semibold text-gray-500">
+                                        ₱
+                                    </span>
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={projectCost}
+                                        onChange={(e) =>
+                                            setProjectCost(e.target.value.replace(/[^\d.]/g, ''))
+                                        }
+                                        placeholder="0.00"
+                                        className="w-full pl-7 pr-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-900 font-medium">
+                                    {projectCost !== ''
+                                        ? `₱${parseFloat(projectCost).toLocaleString()}`
+                                        : <span className="text-gray-400 italic">Not set</span>}
+                                </p>
+                            )}
+                        </div>
+                        {request.project_description && (
+                            <InfoField
+                                label="Project Description"
+                                value={request.project_description}
+                            />
+                        )}
+                    </div>
+                </div>
+    </>
+            )}
         </div>
     );
 }
@@ -617,7 +800,7 @@ function EditField({ label, value, onChange, placeholder }) {
 // Lot Number and Tax Declaration No. are entered by staff here and saved to the
 // property record; both are required before an application can be marked as
 // reviewed. Project Nature is set by the applicant and shown read-only.
-function PropertyDetailsEditor({ request, routePrefix }) {
+function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = [], isZC = false }) {
     const { toast } = useToast();
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -686,6 +869,44 @@ function PropertyDetailsEditor({ request, routePrefix }) {
                 )}
             </div>
 
+            {/* The Lot Number and Tax Declaration No. below are read off these
+                documents, so they open straight from here. */}
+            {uploadedRequirements.length > 0 && (
+                <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                        Submitted Requirements
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        {uploadedRequirements.map((doc) =>
+                            doc.files.length > 0 ? (
+                                doc.files.map((file, index) => (
+                                    <a
+                                        key={file.id}
+                                        href={`/requirements/${file.id}/view`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title={file.original_filename}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
+                                    >
+                                        <FileText className="h-3.5 w-3.5" />
+                                        {doc.name}
+                                        {doc.files.length > 1 ? ` (${index + 1})` : ''}
+                                    </a>
+                                ))
+                            ) : (
+                                <span
+                                    key={doc.id}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-gray-300 text-gray-400 text-xs font-medium"
+                                >
+                                    <FileText className="h-3.5 w-3.5" />
+                                    {doc.name} — not uploaded
+                                </span>
+                            )
+                        )}
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {editing ? (
                     <>
@@ -701,13 +922,13 @@ function PropertyDetailsEditor({ request, routePrefix }) {
                             onChange={(v) => setValues({ ...values, tax_declaration_no: v })}
                             placeholder="e.g. 2024-12-0001"
                         />
-                        <InfoField label="Project Nature" value={request.zone_classification} />
+                        {!isZC && <InfoField label="Project Nature" value={request.zone_classification} />}
                     </>
                 ) : (
                     <>
                         <InfoField label="Lot Number" value={request.lot_number} />
                         <InfoField label="Tax Declaration No." value={request.tax_declaration_no} />
-                        <InfoField label="Project Nature" value={request.zone_classification} />
+                        {!isZC && <InfoField label="Project Nature" value={request.zone_classification} />}
                     </>
                 )}
             </div>

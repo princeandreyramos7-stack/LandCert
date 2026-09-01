@@ -43,6 +43,7 @@ class RequestController extends Controller
                 'requests.id',
                 'requests.user_id',
                 'requests.status as request_status',
+                'requests.released_to_applicant_at',
                 'requests.created_at',
                 'requests.updated_at',
                 'applicants.applicant_name',
@@ -86,6 +87,7 @@ class RequestController extends Controller
                 'requests.id as application_id',
                 'requests.user_id',
                 'requests.status as request_status',
+                'requests.released_to_applicant_at',
                 'requests.application_number',
                 'requests.decision_number',
                 'requests.has_written_notice',
@@ -206,7 +208,6 @@ class RequestController extends Controller
             'project_location_province' => $request->location->province ?? '',
             
             // Property details
-            'project_area_sqm' => $request->property->lot_area_sqm ?? null,
             'lot_area_sqm' => $request->property->lot_area_sqm ?? null,
             'bldg_improvement_sqm' => $request->property->bldg_improvement_sqm ?? null,
             'right_over_land' => $request->property->right_over_land ?? '',

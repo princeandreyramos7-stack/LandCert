@@ -207,6 +207,14 @@ body {
     line-height: 1.3;
 }
 
+/* ── page number footer ── */
+.pf-pageno {
+    text-align: right;
+    font-size: 7pt;
+    font-weight: bold;
+    margin-top: 8pt;
+}
+
 /* ── certification text ── */
 .cert-text {
     font-size: 6.5pt;
@@ -601,11 +609,11 @@ export default function PrintForm({ application: a, auth }) {
                     <tbody>
                         <tr>
                             <td className="nb-t" style={{ height: "22pt" }}>
-                                <span className="lbl">7. Project Type</span>
+                                <span className="lbl">7. Locational Clearance</span>
                                 <span className="val">{v(a.project_type) || nb}</span>
                             </td>
                             <td className="nb-t nb-l" style={{ height: "22pt" }}>
-                                <span className="lbl">8. Project Nature / Description</span>
+                                <span className="lbl">8. Classification</span>
                                 <span className="val">{v(a.project_nature) || nb}</span>
                             </td>
                         </tr>
@@ -708,22 +716,64 @@ export default function PrintForm({ application: a, auth }) {
                     </tbody>
                 </table>
 
-                {/* 10, 11, 12 — Area / Right / Status */}
+                {/* 10 — Project Area (structured row, same shape as 9) */}
+                <table>
+                    <tbody>
+                        <tr>
+                            <td className="nb-t nb-b" colSpan={4} style={{ paddingBottom: "1pt" }}>
+                                <span className="lbl" style={{ marginBottom: 0 }}>
+                                    10. Project Area
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            {/* Title */}
+                            <td
+                                className="nb-t nb-l nb-r"
+                                style={{ border: "none", width: "5%", fontSize: "6pt", paddingTop: "2pt", paddingRight: "2pt", verticalAlign: "bottom" }}
+                            >
+                                Project Area:
+                            </td>
+                            <td
+                                className="nb-t nb-l"
+                                style={{ border: "none", borderBottom: "1px solid #000", width: "38%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "3pt" }}
+                            >
+                                {v(a.lot_area_sqm) || nb}
+                            </td>
+                            {/* Bldg. Improvement */}
+                            <td
+                                className="nb"
+                                style={{ border: "none", width: "14%", fontSize: "6pt", paddingLeft: "5pt", paddingRight: "2pt", verticalAlign: "bottom", whiteSpace: "nowrap" }}
+                            >
+                                Bldg. Improvement:
+                            </td>
+                            <td
+                                style={{ border: "none", borderBottom: "1px solid #000", width: "43%", fontSize: "8pt", verticalAlign: "bottom", paddingBottom: "3pt" }}
+                            >
+                                {v(a.bldg_improvement_sqm) || nb}
+                            </td>
+                        </tr>
+                        {/* closing bottom border */}
+                        <tr>
+                            <td
+                                colSpan={4}
+                                className="nb-t nb-l nb-r"
+                                style={{ border: "none", borderBottom: "1px solid #000", height: "3pt", padding: 0 }}
+                            />
+                        </tr>
+                    </tbody>
+                </table>
+
+                {/* 11, 12 — Right Over Land / Project Nature */}
                 <table>
                     <colgroup>
-                        <col style={{ width: "22%" }} />
-                        <col style={{ width: "26%" }} />
-                        <col style={{ width: "52%" }} />
+                        <col style={{ width: "33%" }} />
+                        <col style={{ width: "67%" }} />
                     </colgroup>
                     <tbody>
                         <tr>
-                            {/* 10 — area */}
-                            <td className="nb-t" style={{ height: "26pt", verticalAlign: "top" }}>
-                                <span className="lbl">10. Project Area (sq.m.)</span>
-                                <span className="val">{v(a.project_area_sqm) || nb}</span>
-                            </td>
                             {/* 11 — right over land */}
-                            <td className="nb-t nb-l" style={{ height: "26pt", verticalAlign: "top" }}>
+                            <td className="nb-t" style={{ height: "26pt", verticalAlign: "top" }}>
                                 <span className="lbl">11. Right Over Land</span>
                                 <div style={{ marginTop: "3pt" }}>
                                     <span className="opt">
@@ -738,7 +788,7 @@ export default function PrintForm({ application: a, auth }) {
                             </td>
                             {/* 12 — project nature/status */}
                             <td className="nb-t nb-l" style={{ height: "26pt", verticalAlign: "top" }}>
-                                <span className="lbl">12. Project Nature / Status</span>
+                                <span className="lbl">12. Project Nature</span>
                                 <div style={{ marginTop: "3pt" }}>
                                     <span className="opt">
                                         <Chk on={v(a.project_nature_duration).toLowerCase() === "permanent"} />
@@ -762,7 +812,7 @@ export default function PrintForm({ application: a, auth }) {
                     <tbody>
                         <tr>
                             <td className="nb-t" style={{ paddingBottom: "4pt" }}>
-                                <span className="lbl">13. Existing Land Uses of Project Site</span>
+                                <span className="lbl">13. Existing Land Uses of Project Use</span>
                                 {/* Line 1 */}
                                 <div style={{ marginTop: "3pt", display: "flex", flexWrap: "nowrap", gap: "0 4pt", alignItems: "center" }}>
                                     {[
@@ -1018,6 +1068,8 @@ export default function PrintForm({ application: a, auth }) {
                     </div>
                 </div>
 
+                <div className="pf-pageno">1/1</div>
+
             </div>{/* end .pf-page */}
 
             {/* PAGE 2: REQUIREMENTS CHECKLIST */}
@@ -1131,6 +1183,8 @@ export default function PrintForm({ application: a, auth }) {
                         <strong>7.</strong> <strong>Barangay clearance</strong>
                     </div>
                 </div>
+
+                <div className="pf-pageno">2/2</div>
             </div>{/* end requirements page */}
         </Layout>
     );

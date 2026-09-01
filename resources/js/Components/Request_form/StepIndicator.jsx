@@ -1,20 +1,27 @@
 import React from "react";
 import { Check, FileText, MapPin, Home, Upload, Info } from "lucide-react";
 
-export function StepIndicator({ currentStep, completedSteps, onStepClick, isEditing = false }) {
-    const steps = [
-        { number: 1, title: "Applicant Info", icon: FileText },
-        { number: 2, title: "Project Details", icon: MapPin },
-        { number: 3, title: "Land Use", icon: Home },
-        { number: 4, title: "Requirements", icon: Upload },
-    ];
+const ALL_STEPS = [
+    { number: 1, title: "Applicant Info", icon: FileText },
+    { number: 2, title: "Project Details", icon: MapPin },
+    { number: 3, title: "Land Use", icon: Home },
+    { number: 4, title: "Requirements", icon: Upload },
+];
+
+export function StepIndicator({ currentStep, completedSteps, onStepClick, isEditing = false, activeSteps = [1, 2, 3, 4] }) {
+    // A Zoning Certification skips Project Details and Land Use, so the
+    // indicator only draws the steps this application actually has.
+    // Renumbered for display: a Zoning Certification's Requirements step is
+    // its second step, so it reads "Step 2", not "Step 4".
+    const steps = ALL_STEPS.filter((s) => activeSteps.includes(s.number)).map((s, i) => ({
+        ...s,
+        position: i + 1,
+    }));
 
     const handleStepClick = (stepNumber) => {
         // When editing, allow all steps to be clicked
         // When creating, only allow current step, completed steps, or the next step
-        if (isEditing) {
-            onStepClick?.(stepNumber);
-        } else if (stepNumber <= currentStep || completedSteps.includes(stepNumber - 1)) {
+        if (isEditing || isClickable(stepNumber)) {
             onStepClick?.(stepNumber);
         }
     };
@@ -22,8 +29,12 @@ export function StepIndicator({ currentStep, completedSteps, onStepClick, isEdit
     const isClickable = (stepNumber) => {
         // In edit mode, all steps are clickable
         if (isEditing) return true;
-        // In create mode, only current and previous steps are clickable
-        return stepNumber <= currentStep || completedSteps.includes(stepNumber - 1);
+        // In create mode, only the current step, earlier ones, and the step right
+        // after the last completed one. Compared by position, since a Zoning
+        // Certification jumps straight from step 1 to step 4.
+        const target = activeSteps.indexOf(stepNumber);
+        const here = activeSteps.indexOf(currentStep);
+        return target <= here || completedSteps.includes(activeSteps[target - 1]);
     };
 
     return (
@@ -92,7 +103,7 @@ export function StepIndicator({ currentStep, completedSteps, onStepClick, isEdit
                                     {step.title}
                                 </p>
                                 <p className="text-xs text-gray-400">
-                                    Step {step.number}
+                                    Step {step.position}
                                     {isCompleted && <span className="ml-1 text-green-500">✓</span>}
                                 </p>
                             </div>

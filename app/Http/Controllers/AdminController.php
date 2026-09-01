@@ -6,6 +6,7 @@ use App\Models\Report;
 use App\Models\Request as RequestModel;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Facades\DB;
@@ -322,14 +323,14 @@ class AdminController extends Controller
             'project_cost'             => $request->project?->project_cost ?? null,
 
             // Location
-            'location_number'       => '',
+            'location_number'       => $request->property?->lot_number ?? '',
             'location_street'       => $request->location?->street_address ?? '',
             'location_barangay'     => $request->location?->barangay ?? '',
             'location_city'         => $request->location?->city_municipality ?? 'City of Ilagan',
             'location_province'     => $request->location?->province ?? 'Isabela',
 
             // Property
-            'project_area_sqm'        => $request->property?->lot_area_sqm ?? '',
+            'lot_area_sqm'            => $request->property?->lot_area_sqm ?? '',
             'bldg_improvement_sqm'    => $request->property?->bldg_improvement_sqm ?? '',
             'right_over_land'         => $request->property?->right_over_land ?? '',
             'existing_land_use'       => $request->property?->existing_land_use ?? '',
@@ -524,9 +525,58 @@ class AdminController extends Controller
             'project',
             'location',
             'property',
+            'requirementDocuments',
         ])->findOrFail($id);
-        
-        // Get the latest report for this request
+
+        // The officer reads the Lot Number and Tax Declaration No. off the
+        // applicant's uploads, so every submitted document is listed on this page.
+        // Scoping this to the CZC-only "Right Over Land" group meant a ZC or TUP
+        // application showed nothing at all.
+        $requirementList = collect(\App\Constants\ApplicationRequirements::getRequirements(
+            $request->project?->project_type ?: 'ZONING CLEARANCE'
+        ));
+        $documentsByRequirement = $request->requirementDocuments->groupBy('requirement_id');
+        $knownIds = $requirementList->pluck('id');
+
+        // Reference order first, then anything filed against a requirement the
+        // current list no longer knows about, so nothing is ever hidden.
+        $uploadedRequirements = $requirementList
+            ->reject(fn ($r) => !empty($r['is_group']))
+            ->map(fn ($r) => ['id' => $r['id'], 'name' => $r['name']])
+            ->concat(
+                $documentsByRequirement->keys()
+                    ->reject(fn ($id) => $knownIds->contains($id))
+                    ->map(fn ($id) => [
+                        'id' => $id,
+                        'name' => $documentsByRequirement->get($id)->first()->requirement_name
+                            ?: "Requirement #{$id}",
+                    ])
+            )
+            ->map(fn ($r) => array_merge($r, [
+                'files' => ($documentsByRequirement->get($r['id']) ?? collect())
+                    ->map(fn ($doc) => [
+                        'id' => $doc->id,
+                        'original_filename' => $doc->original_filename,
+                    ])->values()->all(),
+            ]))
+            ->values();
+
+        // Only the documents the officer reads while filling in Property Details:
+        // the Title and Tax Declaration carry the lot and tax numbers, and the cost
+        // estimate backs the fee. Matched by name so it works in every category.
+        $wanted = ['title', 'tax declaration', 'estimated project cost', 'bill of materials'];
+        $uploadedRequirements = $uploadedRequirements
+            ->filter(function ($r) use ($wanted) {
+                $name = mb_strtolower($r['name']);
+                foreach ($wanted as $needle) {
+                    if (str_contains($name, $needle)) {
+                        return true;
+                    }
+                }
+                return false;
+            })
+            ->values();
+
         $report = $request->reports->first();
         
         // Build the request data - same as reviewRequest but for ViewApplication page
@@ -607,6 +657,7 @@ class AdminController extends Controller
         
         return Inertia::render('Admin/ViewApplication', [
             'request' => $requestData,
+            'uploadedRequirements' => $uploadedRequirements,
         ]);
     }
 
@@ -2331,12 +2382,142 @@ class AdminController extends Controller
     }
 
     /**
+     * Update the application number and project cost from the View Application page.
+     *
+     * Both are corrections staff make after the fact: an application number that
+     * has to match a paper record, and a project cost the applicant mis-keyed.
+     */
+    public function updateApplicationDetails(Request $request, $id)
+    {
+        $requestModel = RequestModel::findOrFail($id);
+
+        $validated = $request->validate([
+            'application_number' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('requests', 'application_number')->ignore($requestModel->id),
+            ],
+            'project_cost' => 'nullable|numeric|min:0|max:999999999999.99',
+        ]);
+
+        $oldNumber = $requestModel->application_number;
+        if (array_key_exists('application_number', $validated)) {
+            $requestModel->update([
+                'application_number' => $validated['application_number'] ?: null,
+            ]);
+        }
+
+        $project = $requestModel->project;
+        $oldCost = $project?->project_cost;
+        if ($project && array_key_exists('project_cost', $validated)) {
+            $project->update([
+                'project_cost' => $validated['project_cost'],
+            ]);
+        }
+
+        AuditLogService::logUpdate(
+            'Request',
+            $requestModel->id,
+            ['application_number' => $oldNumber, 'project_cost' => $oldCost],
+            ['application_number' => $requestModel->application_number, 'project_cost' => $project?->fresh()?->project_cost],
+            "Updated application details for request #{$requestModel->id}"
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Application details updated successfully',
+            'application_number' => $requestModel->application_number,
+            'project_cost' => $project?->fresh()?->project_cost,
+        ]);
+    }
+
+    /**
+     * Release the decision to the applicant, or take it back.
+     *
+     * Until the office does this the applicant has no way to print their
+     * clearance or certificate — the document is only theirs to take once the
+     * office says it is finished.
+     */
+    public function releaseToApplicant(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'released' => 'required|boolean',
+        ]);
+
+        $requestModel = RequestModel::with(['user', 'applicant', 'project'])->findOrFail($id);
+
+        $releasable = ['approved', 'payment_confirmed', 'certificate_preparing', 'certificate_ready', 'released'];
+        if ($validated['released'] && !in_array(strtolower((string) $requestModel->status), $releasable, true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'released' => 'Only an approved application can be released to the applicant.',
+            ]);
+        }
+
+        $staff = auth()->user();
+
+        $requestModel->update([
+            'released_to_applicant_at' => $validated['released'] ? now() : null,
+            // Kept even after a withdrawal — "who last touched this" stays on the
+            // record; only the timestamp that gates the applicant's button is cleared.
+            'released_by' => $validated['released'] ? $staff->id : $requestModel->released_by,
+        ]);
+
+        AuditLogService::logUpdate(
+            'Request',
+            $requestModel->id,
+            [],
+            [
+                'released_to_applicant_at' => $requestModel->released_to_applicant_at,
+                'released_by' => $staff->name,
+            ],
+            $validated['released']
+                ? "Released the decision for request #{$requestModel->id} to the applicant ({$staff->name})"
+                : "Withdrew the decision for request #{$requestModel->id} from the applicant ({$staff->name})"
+        );
+
+        // Tell the applicant their document is ready to print — in-app and by SMS,
+        // the same two channels every other stage-change notification uses.
+        if ($validated['released']) {
+            $certNumber = $requestModel->decision_number ?: $requestModel->application_number ?: (string) $requestModel->id;
+            $applicantName = $requestModel->applicant?->applicant_name ?? $requestModel->user?->name ?? 'Applicant';
+
+            try {
+                if ($requestModel->user_id) {
+                    \App\Models\Notification::createForUser(
+                        $requestModel->user_id,
+                        'certificate_released',
+                        'Your document is ready 📄',
+                        "Your " . ($requestModel->project?->project_type ?: 'application') . " document for #{$requestModel->application_number} has been released. You can now print it from My Applications.",
+                        '/my-applications',
+                        ['application_id' => $requestModel->id]
+                    );
+                }
+
+                if ($requestModel->user?->contact_number) {
+                    app(\App\Services\SmsService::class)->sendCertificateReleased(
+                        $requestModel->user->contact_number,
+                        $applicantName,
+                        $certNumber
+                    );
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to notify applicant of release: ' . $e->getMessage());
+            }
+        }
+
+        return back()->with('success', $validated['released']
+            ? 'Released to the applicant. They can now print the document.'
+            : 'Withdrawn. The applicant can no longer print the document.');
+    }
+
+    /**
      * Update project type for a request
      */
     public function updateProjectType(Request $request, $id)
     {
         $validated = $request->validate([
-            'project_type' => 'nullable|string|in:N/A,TUP,SUP,Zoning',
+            'project_type' => 'nullable|string|in:N/A,CZC,TUP,SUP,ZC,Zoning',
         ]);
 
         $requestModel = RequestModel::findOrFail($id);
@@ -2429,6 +2610,7 @@ class AdminController extends Controller
         return match (strtoupper(trim($projectType))) {
             'SUP', 'SPECIAL USE PERMIT' => 750.00,
             'TUP', 'TEMPORARY USE PERMIT' => 350.00,
+            'ZC', 'ZONING CERTIFICATION' => 500.00,
             'CZC', 'CERTIFICATE OF ZONING COMPLIANCE', 'ZONING CLEARANCE', 'LOCATIONAL CLEARANCE', 'ZONING' => 500.00,
             default => 500.00, // Default for any other type
         };

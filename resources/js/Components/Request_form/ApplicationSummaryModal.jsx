@@ -21,6 +21,10 @@ export function ApplicationSummaryModal({
     requirementFiles = {},
     requirements = [],
 }) {
+    // A Zoning Certification skips the project and land-use steps, so its
+    // summary skips those sections too.
+    const isZC = String(data.project_type || "").toUpperCase() === "ZC";
+
     // Only requirements that actually have at least one file attached.
     const uploadedEntries = Object.entries(requirementFiles)
         .filter(([, files]) => Array.isArray(files) && files.length > 0);
@@ -81,76 +85,82 @@ export function ApplicationSummaryModal({
                         </div>
                     </div>
 
+                    {/* Project, location and land use — skipped for a Zoning
+                        Certification, which has no project to describe. */}
+                    {!isZC && (
+                        <>
                     {/* Project Details */}
-                    <div className="space-y-3">
-                        <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Project Details</h3>
-                        <div className="space-y-2 text-sm">
-                            <SummaryItem label="Locational Clearance" value={data.project_type} />
-                            <SummaryItem label="Project Nature" value={data.project_nature} />
-                            <SummaryItem label="Project Area (sqm)" value={data.project_area_sqm} />
-                            <SummaryItem label="Lot Area (sqm)" value={data.lot_area_sqm} />
-                            <SummaryItem label="Building Improvement (sqm)" value={data.bldg_improvement_sqm} />
-                            <SummaryItem label="Right Over Land" value={data.right_over_land} />
-                            <SummaryItem label="Project Duration" value={
-                                String(data.project_nature_duration || '').toLowerCase() === 'temporary'
-                                    ? `Temporary${data.project_nature_years ? ` (${data.project_nature_years} year${Number(data.project_nature_years) === 1 ? '' : 's'})` : ''}`
-                                    : (data.project_nature_duration || null)
-                            } />
-                            <SummaryItem 
-                                label="Project Cost" 
-                                value={data.project_cost ? `₱${parseFloat(data.project_cost).toLocaleString()}` : 'N/A'} 
-                            />
+                        <div className="space-y-3">
+                            <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Project Details</h3>
+                            <div className="space-y-2 text-sm">
+                                <SummaryItem label="Locational Clearance" value={data.project_type} />
+                                <SummaryItem label="Classification" value={data.project_nature} />
+                                <SummaryItem label="Project Area (sqm)" value={data.lot_area_sqm} />
+                                <SummaryItem label="Bldg. Improvement (sqm)" value={data.bldg_improvement_sqm} />
+                                <SummaryItem label="Right Over Land" value={data.right_over_land} />
+                                <SummaryItem label="Project Duration" value={
+                                    String(data.project_nature_duration || '').toLowerCase() === 'temporary'
+                                        ? `Temporary${data.project_nature_years ? ` (${data.project_nature_years} year${Number(data.project_nature_years) === 1 ? '' : 's'})` : ''}`
+                                        : (data.project_nature_duration || null)
+                                } />
+                                <SummaryItem 
+                                    label="Project Cost" 
+                                    value={data.project_cost ? `₱${parseFloat(data.project_cost).toLocaleString()}` : 'N/A'} 
+                                />
+                            </div>
                         </div>
-                    </div>
-
-                    {/* Project Location */}
-                    <div className="space-y-3">
-                        <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Project Location</h3>
-                        <div className="space-y-2 text-sm">
-                            <SummaryItem label="House/Lot Number" value={data.project_location_number} />
-                            <SummaryItem label="Street" value={data.project_location_street} />
-                            <SummaryItem label="Barangay" value={data.project_location_barangay} />
-                            <SummaryItem label="Municipality/City" value={data.project_location_municipality} />
-                            <SummaryItem label="Province" value={data.project_location_province} />
+    
+                        {/* Project Location */}
+                        <div className="space-y-3">
+                            <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Project Location</h3>
+                            <div className="space-y-2 text-sm">
+                                <SummaryItem label="House/Lot Number" value={data.project_location_number} />
+                                <SummaryItem label="Street" value={data.project_location_street} />
+                                <SummaryItem label="Barangay" value={data.project_location_barangay} />
+                                <SummaryItem label="Municipality/City" value={data.project_location_municipality} />
+                                <SummaryItem label="Province" value={data.project_location_province} />
+                            </div>
                         </div>
-                    </div>
-
-                    {/* Land Use Information */}
-                    <div className="space-y-3">
-                        <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Land Use Information</h3>
-                        <div className="space-y-2 text-sm">
-                            <SummaryItem label="Existing Land Use" value={data.existing_land_use} />
-                            <SummaryItem 
-                                label="Written Notice to Tenants" 
-                                value={data.has_written_notice === 'yes' ? 'Yes' : data.has_written_notice === 'no' ? 'No' : 'N/A'} 
-                            />
-                            {data.has_written_notice === 'yes' && (
-                                <>
-                                    <SummaryItem label="Notice Officer Name" value={data.notice_officer_name} />
-                                    <SummaryItem label="Notice Dates" value={data.notice_dates} />
-                                </>
-                            )}
-                            <SummaryItem 
-                                label="Similar Application Filed" 
-                                value={data.has_similar_application === 'yes' ? 'Yes' : data.has_similar_application === 'no' ? 'No' : 'N/A'} 
-                            />
-                            {data.has_similar_application === 'yes' && (
-                                <>
-                                    <SummaryItem label="Application Offices" value={data.similar_application_offices} />
-                                    <SummaryItem label="Application Dates" value={data.similar_application_dates} />
-                                </>
-                            )}
-                            <SummaryItem
-                                label="Preferred Release Mode"
-                                value={data.preferred_release_mode
-                                    ? data.preferred_release_mode.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-                                    : null}
-                            />
-                            {data.preferred_release_mode === 'delivery' && (
-                                <SummaryItem label="Delivery Address" value={data.release_address} />
-                            )}
+    
+                        {/* Land Use Information */}
+                        <div className="space-y-3">
+                            <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Land Use Information</h3>
+                            <div className="space-y-2 text-sm">
+                                <SummaryItem label="Existing Land Use" value={data.existing_land_use} />
+                                <SummaryItem 
+                                    label="Written Notice to Tenants" 
+                                    value={data.has_written_notice === 'yes' ? 'Yes' : data.has_written_notice === 'no' ? 'No' : 'N/A'} 
+                                />
+                                {data.has_written_notice === 'yes' && (
+                                    <>
+                                        <SummaryItem label="Notice Officer Name" value={data.notice_officer_name} />
+                                        <SummaryItem label="Notice Dates" value={data.notice_dates} />
+                                    </>
+                                )}
+                                <SummaryItem 
+                                    label="Similar Application Filed" 
+                                    value={data.has_similar_application === 'yes' ? 'Yes' : data.has_similar_application === 'no' ? 'No' : 'N/A'} 
+                                />
+                                {data.has_similar_application === 'yes' && (
+                                    <>
+                                        <SummaryItem label="Application Offices" value={data.similar_application_offices} />
+                                        <SummaryItem label="Application Dates" value={data.similar_application_dates} />
+                                    </>
+                                )}
+                                <SummaryItem
+                                    label="Preferred Release Mode"
+                                    value={data.preferred_release_mode
+                                        ? data.preferred_release_mode.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+                                        : null}
+                                />
+                                {data.preferred_release_mode === 'delivery' && (
+                                    <SummaryItem label="Delivery Address" value={data.release_address} />
+                                )}
+                            </div>
                         </div>
-                    </div>
+    
+        </>
+                    )}
 
                     {/* Requirements Uploaded */}
                     <div className="space-y-3">

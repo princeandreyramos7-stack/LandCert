@@ -5,6 +5,8 @@ import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import html2pdf from 'html2pdf.js';
 import PrintDocumentStyles from "@/Components/PrintDocumentStyles";
 import OfficialLetterhead from "@/Components/OfficialLetterhead";
+import ESignatureImage from "@/Components/ESignatureImage";
+import { zoningAdministratorName } from "@/lib/signerName";
 import DocumentActionBar from "@/Components/DocumentActionBar";
 
 /* ── Zoning Ordinance constants ────────────────────────────────────────────
@@ -51,15 +53,8 @@ function Fill({ value, width = '150pt', bold = false }) {
 function SignatureBlock({ signatureUrl, name, title }) {
     return (
         <div style={{ textAlign: 'center', width: '260pt' }}>
-            <div style={{ height: '36pt', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                {signatureUrl && (
-                    <img
-                        src={signatureUrl}
-                        alt=""
-                        crossOrigin="anonymous"
-                        style={{ maxHeight: '36pt', maxWidth: '85%', objectFit: 'contain', marginBottom: '-2pt' }}
-                    />
-                )}
+            <div style={{ position: 'relative', height: '36pt', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                <ESignatureImage src={signatureUrl} maxHeight="36pt" marginBottom="-2pt" />
             </div>
             <div style={{ fontWeight: 'bold', fontSize: '10pt' }}>{name}</div>
             <div style={{ fontSize: '10pt' }}>{title}</div>
@@ -143,7 +138,7 @@ function ZoningCertification({ application, payment, zoningAdministrator, issued
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '46pt' }}>
                 <SignatureBlock
                     signatureUrl={zoningAdministrator?.signature_url}
-                    name={zoningAdministrator?.name || 'Engr. CRISANTA D. CONCEPCION, EnP'}
+                    name={zoningAdministratorName(zoningAdministrator?.name)}
                     title={<>City Planning &amp; Development Coordinator/<br />Zoning Administrator</>}
                 />
             </div>
@@ -185,7 +180,7 @@ function RoadCertification({ application, payment, zoningAdministrator, issuedOn
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '52pt' }}>
                 <SignatureBlock
                     signatureUrl={zoningAdministrator?.signature_url}
-                    name={zoningAdministrator?.name || 'Engr. CRISANTA D. CONCEPCION, EnP'}
+                    name={zoningAdministratorName(zoningAdministrator?.name)}
                     title={<>City Planning &amp; Development Coordinator/<br />Zoning Administrator</>}
                 />
             </div>

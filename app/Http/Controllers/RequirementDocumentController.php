@@ -175,6 +175,10 @@ class RequirementDocumentController extends Controller
      * Applicant uploads a document against any single requirement of their own
      * application, from the Application Details page. Same storage rules as the
      * notarized-form upload — just parameterised by requirement.
+     *
+     * Supplying a requirement that has nothing on file yet stays open while the
+     * office works, but a document already submitted is frozen: it can only be
+     * replaced once the office returns the application to the applicant.
      */
     public function uploadApplicantRequirement(Request $request, $id)
     {
@@ -183,6 +187,19 @@ class RequirementDocumentController extends Controller
             'requirement_name' => 'nullable|string|max:255',
             'document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
+
+        $requestModel = RequestModel::findOrFail($id);
+        $isStaff = in_array(auth()->user()->user_type, ['admin', 'super_admin'], true);
+        $isReturned = in_array(strtolower((string) $requestModel->status), ['returned', 'rejected'], true);
+        $alreadyOnFile = RequirementDocument::where('request_id', $requestModel->id)
+            ->where('requirement_id', $validated['requirement_id'])
+            ->exists();
+
+        if (!$isStaff && $alreadyOnFile && !$isReturned) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'document' => 'This document is locked while your application is under review. You can replace it once the office returns the application to you.',
+            ]);
+        }
 
         return $this->storeApplicantRequirement(
             $request,
@@ -237,6 +254,16 @@ class RequirementDocumentController extends Controller
             'Request',
             $requestModel->id
         );
+
+        // Staff uploading on the applicant's behalf are already looking at the
+        // application — only an applicant's own upload is news to the office.
+        if (!in_array($currentUser->user_type, ['admin', 'super_admin'], true)) {
+            try {
+                \App\Services\NotificationService::requirementUploaded($requestModel, $requirementName);
+            } catch (\Exception $e) {
+                \Log::error('Failed to notify staff of requirement upload: ' . $e->getMessage());
+            }
+        }
 
         return redirect()->back()->with('success', $successMessage);
     }

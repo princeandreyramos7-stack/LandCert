@@ -50,7 +50,6 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         project_location_barangay: existingApplication?.project_location_barangay || "",
         project_location_municipality: existingApplication?.project_location_municipality || "City of Ilagan",
         project_location_province: existingApplication?.project_location_province || "Isabela",
-        project_area_sqm: existingApplication?.project_area_sqm || "",
         lot_area_sqm: existingApplication?.lot_area_sqm || "",
         bldg_improvement_sqm: existingApplication?.bldg_improvement_sqm || "",
         right_over_land: existingApplication?.right_over_land || "",
@@ -81,38 +80,63 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     const [requirementFiles, setRequirementFiles] = useState({});
 
     // Define requirements structure (ALL requirements - main + additional).
-    // CZC applications also carry the "Requirements of Zoning Certification" set.
+    // Mirrors app/Constants/ApplicationRequirements.php.
     const requirements = useMemo(() => {
-        const base = [
+        // Zoning Certification is a standalone category with its own short
+        // document set — nothing else is asked for.
+        if (String(data.project_type || "").toUpperCase() === "ZC") {
+            return [
+                { id: 1, name: "1. Title", required: true, section: "main" },
+                { id: 2, name: "2. Tax Declaration", required: true, section: "main" },
+                { id: 3, name: "3. VICINITY MAP", required: true, section: "main" },
+                { id: 4, name: "4. Latest Tax Receipt", required: true, section: "main" },
+                { id: 5, name: "5. Sketch Plan with signature of Geodetic Engr.", required: true, section: "main" },
+            ];
+        }
+
+        return [
             // Main Requirements
             // Not required at submission time: the applicant has to print this form,
             // get it notarized, then upload it afterwards from My Applications.
             { id: 1, name: "1. Accomplished and notarized APPLICATION FORM", required: false, section: "main", description: "You can submit without this. After submitting, print your application form, have it notarized, then upload it from My Applications." },
-            { id: 2, name: "2. Right Over Land Documentation", required: true, section: "main" },
+            // Right Over Land is a group: the header carries no upload of its own,
+            // the three documents under it do.
+            { id: 2, name: "2. Right Over Land Documentation", required: true, section: "main", is_group: true, description: "Submit all three documents below." },
+            { id: 13, name: "Title", required: true, section: "main", parent_id: 2 },
+            { id: 14, name: "Tax Declaration", required: true, section: "main", parent_id: 2 },
+            { id: 15, name: "Tax Receipt", required: true, section: "main", parent_id: 2 },
             { id: 3, name: "3. VICINITY MAP", required: true, section: "main" },
             { id: 4, name: "4. SITE DEVELOPMENT PLAN", required: true, section: "main" },
             { id: 5, name: "5. ESTIMATED PROJECT COST / BILL OF MATERIALS", required: true, section: "main" },
-            // Additional Requirements (optional except Barangay Clearance)
+            { id: 12, name: "6. Barangay Clearance", required: true, section: "main" },
+            // Additional Requirements (all situational)
             { id: 6, name: "Endorsement/recommendation from Department of Agrarian Reform", required: false, section: "additional", description: "Required only for projects situated in tenanted rice and/or corn lands." },
             { id: 7, name: "Description of Industry (Manufacturing Projects)", required: false, section: "additional" },
             { id: 8, name: "Sworn Special Power of Attorney", required: false, section: "additional", description: "Required if the application is filed by an authorized representative." },
             { id: 9, name: "Affidavit of No Objection", required: false, section: "additional" },
             { id: 10, name: "Environmental Compliance Certificate (ECC) / Certificate of Non-Coverage (CNC)", required: false, section: "additional" },
             { id: 11, name: "Certification of road right-of-way from DPWH", required: false, section: "additional", description: "Required if the project is located within a National Road." },
-            { id: 12, name: "Barangay Clearance", required: true, section: "additional" }, // Made required
         ];
-
-        const isCZC = String(data.project_type || "").toUpperCase() === "CZC";
-        if (isCZC) {
-            base.push(
-                { id: 13, name: "Title", required: true, section: "zoning_certification" },
-                { id: 14, name: "Tax Declaration", required: true, section: "zoning_certification" },
-                { id: 15, name: "Latest Tax Receipt", required: true, section: "zoning_certification" },
-                { id: 17, name: "Sketch Plan with signature of Geodetic Engr.", required: true, section: "zoning_certification" },
-            );
-        }
-        return base;
     }, [data.project_type]);
+
+    // A Zoning Certification has no project to describe: the applicant fills in
+    // their details and uploads the documents, so steps 2 and 3 drop out.
+    const activeSteps = useMemo(
+        () =>
+            String(data.project_type || "").toUpperCase() === "ZC"
+                ? [1, 4]
+                : [1, 2, 3, 4],
+        [data.project_type]
+    );
+    const stepPosition = Math.max(1, activeSteps.indexOf(currentStep) + 1);
+
+    // If the category changes to one with fewer steps while standing on a step
+    // that no longer exists, fall back to the last step that does.
+    useEffect(() => {
+        if (!activeSteps.includes(currentStep)) {
+            setCurrentStep(activeSteps[activeSteps.length - 1]);
+        }
+    }, [activeSteps, currentStep]);
 
     // Set hasRepresentative based on existing data
     useEffect(() => {
@@ -234,25 +258,32 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             setCompletedSteps([...completedSteps, currentStep]);
         }
 
-        // Move to next step
-        setCurrentStep(currentStep + 1);
+        // Move to the next step this application actually has
+        const next = activeSteps[activeSteps.indexOf(currentStep) + 1];
+        if (next === undefined) return;
+        setCurrentStep(next);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
     // Handle previous step
     const handlePrevious = () => {
-        if (currentStep === 1) {
+        if (currentStep === activeSteps[0]) {
             // Go back to the welcome/requirements board instead of nowhere
             setShowWelcome(true);
             window.scrollTo({ top: 0, behavior: "smooth" });
             return;
         }
-        setCurrentStep(currentStep - 1);
+        setCurrentStep(activeSteps[activeSteps.indexOf(currentStep) - 1]);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    // Handle continuing from the welcome board into the actual form
-    const handleContinueFromWelcome = () => {
+    // Handle continuing from the welcome board into the actual form. Picking a
+    // category card starts the application in that category; the plain Continue
+    // button leaves it unset for staff to decide later.
+    const handleContinueFromWelcome = (projectType) => {
+        if (projectType) {
+            setData("project_type", projectType);
+        }
         setShowWelcome(false);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
@@ -265,8 +296,13 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             setCurrentStep(stepNumber);
             window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
-            // Only allow navigation to current step, completed steps, or next step after completing current
-            if (stepNumber <= currentStep || completedSteps.includes(stepNumber - 1)) {
+            // Only allow navigation to the current step, a completed one, or the
+            // step right after the last completed one. Compared by position, since
+            // a Zoning Certification jumps straight from step 1 to step 4.
+            const target = activeSteps.indexOf(stepNumber);
+            const here = activeSteps.indexOf(currentStep);
+            const previous = activeSteps[target - 1];
+            if (target <= here || completedSteps.includes(previous)) {
                 setCurrentStep(stepNumber);
                 window.scrollTo({ top: 0, behavior: "smooth" });
             }
@@ -561,6 +597,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                                     completedSteps={completedSteps}
                                     onStepClick={handleStepClick}
                                     isEditing={isEditing}
+                                    activeSteps={activeSteps}
                                 />
                             </div>
 
@@ -650,8 +687,8 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                             {/* Navigation with enhanced styling */}
                             <div className="animate-slideUp">
                                 <FormNavigation
-                                    currentStep={currentStep}
-                                    totalSteps={4}
+                                    currentStep={stepPosition}
+                                    totalSteps={activeSteps.length}
                                     processing={processing}
                                     onPrevious={handlePrevious}
                                     onNext={handleNext}

@@ -115,7 +115,7 @@ export default function DocumentVerification({ request }) {
 
     // Generate missing requirements message for denial
     const getMissingRequirements = () => {
-        const allRequirements = [...(request.requirements_reference || [])];
+        const allRequirements = (request.requirements_reference || []).filter(r => !r.is_group);
         const uploadedIds = new Set(groupedRequirements.map(g => g.key));
         const missing = allRequirements.filter(req => !uploadedIds.has(req.id) || !requirementChecks[req.id]);
         
@@ -124,8 +124,19 @@ export default function DocumentVerification({ request }) {
     };
 
     // Update denial reason when action changes to denied
+    // The standing instruction the office gives every reviewed application.
+    const REVIEWED_NOTE = 'Submit the application form, and the requirements in the CPDO.';
+
     const handleActionChange = (newAction) => {
         setAction(newAction);
+
+        // Fill the note in on "reviewed" unless the officer has written their own.
+        if (newAction === 'reviewed') {
+            setFormData((prev) => ({
+                ...prev,
+                admin_notes: prev.admin_notes?.trim() ? prev.admin_notes : REVIEWED_NOTE,
+            }));
+        }
         if (newAction === 'rejected') {
             const missingReqs = getMissingRequirements();
             if (missingReqs) {
@@ -213,6 +224,27 @@ export default function DocumentVerification({ request }) {
 
     // Get all requirements from reference
     const allMainRequirements = (request.requirements_reference || []).filter(r => r.section === 'main');
+    // A requirement flagged is_group is a heading only — the documents it asks
+    // for are its children, matched by parent_id.
+    const uploadableMainRequirements = allMainRequirements.filter(r => !r.is_group);
+    const mainRequirementRows = [];
+    allMainRequirements
+        .filter(r => !r.parent_id)
+        .forEach((req, index) => {
+            const number = String(index + 1);
+            mainRequirementRows.push({ req, number, isGroup: !!req.is_group });
+            if (req.is_group) {
+                allMainRequirements
+                    .filter(child => child.parent_id === req.id)
+                    .forEach((child, childIndex) => {
+                        mainRequirementRows.push({
+                            req: child,
+                            number: `${number}.${childIndex + 1}`,
+                            isChild: true,
+                        });
+                    });
+            }
+        });
     const allZoningRequirements = (request.requirements_reference || []).filter(r => r.section === 'zoning_certification');
     const allAdditionalRequirements = (request.requirements_reference || []).filter(r => r.section === 'additional');
 
@@ -272,7 +304,7 @@ export default function DocumentVerification({ request }) {
                             <div className="space-y-4">
                                 <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                                     <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">REQUIRED</span>
-                                    Main Requirements ({mainUploadedGroups.length}/{allMainRequirements.length} uploaded)
+                                    Main Requirements ({mainUploadedGroups.length}/{uploadableMainRequirements.length} uploaded)
                                 </h4>
                                 
                                 {/* Requirements Table */}
@@ -288,14 +320,36 @@ export default function DocumentVerification({ request }) {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200">
-                                            {allMainRequirements.map((reqRef, index) => {
+                                            {mainRequirementRows.map(({ req: reqRef, number, isGroup, isChild }) => {
+                                                // An application filed before this
+                                                // requirement was split into separate
+                                                // slots has its document attached to
+                                                // the group itself — fall back to a
+                                                // normal row so it stays visible.
+                                                if (isGroup && !mainUploadedGroups.some(g => g.key === reqRef.id)) {
+                                                    return (
+                                                        <tr key={reqRef.id} className="bg-gray-50">
+                                                            <td className="p-3 text-sm font-semibold text-gray-700 border-r border-gray-200">
+                                                                {number}
+                                                            </td>
+                                                            <td className="p-3" colSpan={4}>
+                                                                <p className="text-sm font-semibold text-gray-900">{reqRef.name}</p>
+                                                                {reqRef.description && (
+                                                                    <p className="text-xs text-gray-500 mt-0.5">{reqRef.description}</p>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                }
+
                                                 const uploadedGroup = mainUploadedGroups.find(g => g.key === reqRef.id);
                                                 const isChecked = requirementChecks[reqRef.id] || false;
-                                                
+
                                                 return (
                                                     <RequirementTableRow
                                                         key={reqRef.id}
-                                                        number={index + 1}
+                                                        number={number}
+                                                        indented={isChild}
                                                         requirement={reqRef}
                                                         uploadedGroup={uploadedGroup}
                                                         isChecked={isChecked}
@@ -404,9 +458,9 @@ export default function DocumentVerification({ request }) {
                                         <p className="text-sm text-blue-700">
                                             Total Uploaded: <span className="font-bold">{mainUploadedGroups.length + zoningUploadedGroups.length + additionalUploadedGroups.length}</span>
                                             {' / '}
-                                            <span className="font-bold">{allMainRequirements.length + allZoningRequirements.length + allAdditionalRequirements.length}</span>
+                                            <span className="font-bold">{uploadableMainRequirements.length + allZoningRequirements.length + allAdditionalRequirements.length}</span>
                                             {' • '}
-                                            Main: <span className="font-bold">{mainUploadedGroups.length}/{allMainRequirements.length}</span>
+                                            Main: <span className="font-bold">{mainUploadedGroups.length}/{uploadableMainRequirements.length}</span>
                                             {' • '}
                                             Zoning Cert: <span className="font-bold">{zoningUploadedGroups.length}/{allZoningRequirements.length}</span>
                                             {' • '}
@@ -583,27 +637,10 @@ export default function DocumentVerification({ request }) {
                                 <div>
                                     <div className="bg-white rounded-lg p-5 border border-gray-200">
                                         <div className="mb-4">
-                                            <h3 className="text-base font-semibold text-gray-900">Denial Reason</h3>
-                                        </div>
-                                        
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Detailed Reason <span className="text-red-500">*</span>
-                                            </label>
-                                            <textarea
-                                                value={formData.rejection_reason}
-                                                onChange={(e) => setFormData({ ...formData, rejection_reason: e.target.value })}
-                                                rows="4"
-                                                required
-                                                maxLength="1000"
-                                                placeholder="Please provide a clear and detailed reason for denial..."
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-gray-400 focus:ring-1 focus:ring-gray-400 resize-none"
-                                            />
-                                            <div className="flex justify-between items-center mt-2">
-                                                <p className="text-xs text-gray-500">
-                                                    {formData.rejection_reason.length}/1000 characters
-                                                </p>
-                                            </div>
+                                            <h3 className="text-base font-semibold text-gray-900">Reason for Return</h3>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                The application goes back to the Zoning Officer to review again. Pick the reason below.
+                                            </p>
                                         </div>
 
                                         {/* Quick Reasons */}
@@ -624,7 +661,7 @@ export default function DocumentVerification({ request }) {
                                                 
                                                 {[
                                                     'Incomplete Documents',
-                                                    'Invalid Location',
+                                                    'Verify Location',
                                                     'Zoning Violation',
                                                     'Missing Information'
                                                 ].map((reason) => (
@@ -639,6 +676,12 @@ export default function DocumentVerification({ request }) {
                                                 ))}
                                             </div>
                                             
+                                        {formData.rejection_reason && (
+                                            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-sm text-red-800">
+                                                <CheckCircle2 className="h-4 w-4" />
+                                                <span className="font-medium">{formData.rejection_reason}</span>
+                                            </div>
+                                        )}
                                             <p className="text-xs text-gray-500 mt-2 flex items-start gap-1.5">
                                                 <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
                                                 <span>
@@ -651,7 +694,7 @@ export default function DocumentVerification({ request }) {
                                         <div className="mt-4 flex items-start gap-3 bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3">
                                             <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                                             <p className="text-sm text-yellow-800">
-                                                <span className="font-semibold">Note:</span> The applicant will receive an email with your denial reason. Please ensure it's clear and professional.
+                                                <span className="font-semibold">Note:</span> The applicant is not notified. The application returns to the Zoning Officer's queue with this reason attached.
                                             </p>
                                         </div>
                                     </div>
@@ -788,7 +831,7 @@ export default function DocumentVerification({ request }) {
 }
 
 // Requirement Table Row Component
-function RequirementTableRow({ number, requirement, uploadedGroup, isChecked, onToggle, requestId }) {
+function RequirementTableRow({ number, requirement, uploadedGroup, isChecked, onToggle, requestId, indented = false }) {
     const [uploading, setUploading] = useState(false);
     const [uploadError, setUploadError] = useState('');
     const fileInputRef = useRef(null);
@@ -859,7 +902,7 @@ function RequirementTableRow({ number, requirement, uploadedGroup, isChecked, on
 
             {/* Requirement Name */}
             <td className="p-3 border-r border-gray-200">
-                <div>
+                <div className={indented ? 'pl-4 border-l-2 border-gray-200' : undefined}>
                     <p className="text-sm font-medium text-gray-900">
                         {requirement.name}
                     </p>
