@@ -102,7 +102,7 @@ export function RejectDialog({
                 {/* Quick Selection - Common Reasons */}
                 <div className="space-y-3">
                     <Label className="text-sm font-semibold text-gray-700">Quick Select (Common Reasons):</Label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {commonReasons.map((reason, index) => (
                             <Button
                                 key={index}

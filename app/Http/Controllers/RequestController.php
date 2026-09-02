@@ -988,7 +988,10 @@ class RequestController extends Controller
                 'lot_number' => $request->property?->lot_number,
                 'title_number' => $request->property?->title_number,
                 'tax_declaration_no' => $request->property?->tax_declaration_no,
-                'zone_classification' => $request->property?->zone_classification,
+                // Applicants never supply a zone classification — the office sets
+                // it during review. Until then fall back to the land use they did
+                // declare, matching what the admin screens show.
+                'zone_classification' => $request->property?->zone_classification ?: $request->property?->existing_land_use,
                 'right_over_land' => $request->property?->right_over_land,
                 'existing_land_use' => $request->property?->existing_land_use,
 

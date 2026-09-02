@@ -101,7 +101,7 @@ export function VerifyPaymentDialog({ isOpen, onClose, payment, routePrefix = "a
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 {mode === "verify" ? (
                     <>
                         <DialogHeader>
@@ -126,7 +126,7 @@ export function VerifyPaymentDialog({ isOpen, onClose, payment, routePrefix = "a
                         </div>
 
                         <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <Label htmlFor="verify-amount">
                                         Amount (₱) <span className="text-red-500">*</span>

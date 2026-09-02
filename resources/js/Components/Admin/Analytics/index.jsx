@@ -53,13 +53,13 @@ export function AnalyticsDashboard({ analytics }) {
             />
 
             <Tabs defaultValue="overview" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-6">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="trends">Trends</TabsTrigger>
-                    <TabsTrigger value="geographic">Geographic</TabsTrigger>
-                    <TabsTrigger value="documents">Documents</TabsTrigger>
-                    <TabsTrigger value="performance">Performance</TabsTrigger>
-                    <TabsTrigger value="users">Users</TabsTrigger>
+                <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto sm:grid sm:h-10 sm:grid-cols-6">
+                    <TabsTrigger value="overview" className="shrink-0">Overview</TabsTrigger>
+                    <TabsTrigger value="trends" className="shrink-0">Trends</TabsTrigger>
+                    <TabsTrigger value="geographic" className="shrink-0">Geographic</TabsTrigger>
+                    <TabsTrigger value="documents" className="shrink-0">Documents</TabsTrigger>
+                    <TabsTrigger value="performance" className="shrink-0">Performance</TabsTrigger>
+                    <TabsTrigger value="users" className="shrink-0">Users</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4">

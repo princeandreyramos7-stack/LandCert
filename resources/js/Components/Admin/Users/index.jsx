@@ -206,7 +206,7 @@ export function AdminUserManagement({ users }) {
 
             {/* Edit Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="max-w-lg rounded-2xl">
+                <DialogContent className="max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <div className="flex items-center gap-3 mb-1">
                             <div className="w-9 h-9 rounded-lg bg-[#0d1f5c]/10 flex items-center justify-center">
@@ -252,7 +252,7 @@ export function AdminUserManagement({ users }) {
 
             {/* Delete Dialog */}
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogContent className="rounded-2xl max-w-md">
+                <DialogContent className="rounded-2xl max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-[#0d1f5c] font-black">Delete User</DialogTitle>
                         <DialogDescription>

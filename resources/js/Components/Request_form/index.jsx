@@ -8,6 +8,7 @@ import { FileText } from "lucide-react";
 // Local Components
 import { WelcomeBoard } from "./WelcomeBoard";
 import { StepIndicator } from "./StepIndicator";
+import { ClearanceTypeSelector } from "./ClearanceTypeSelector";
 import { Step1ApplicantInfo } from "./Step1ApplicantInfo";
 import { Step2ProjectDetails } from "./Step2ProjectDetails";
 import { Step3LandUse } from "./Step3LandUse";
@@ -590,6 +591,13 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-8">
+                            {/* Clearance category: decides which steps the applicant sees */}
+                            <ClearanceTypeSelector
+                                value={data.project_type}
+                                error={errors.project_type}
+                                onChange={(value) => setData("project_type", value)}
+                            />
+
                             {/* Step Indicator with animation */}
                             <div className="animate-slideIn">
                                 <StepIndicator

@@ -38,19 +38,19 @@ export function AdminDashboard({ analytics = null, stats = {}, applications = []
                 <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none"
                     style={{ background: "radial-gradient(circle,#d4a017,transparent 70%)" }} />
 
-                <div className="relative z-10 flex items-center justify-between p-6">
-                    <div className="flex items-center gap-4">
+                <div className="relative z-10 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                         <div className="w-16 h-16 rounded-full border-2 border-[#d4a017]/50 bg-white overflow-hidden flex items-center justify-center shrink-0 shadow-lg">
                             <img src="/images/ilagan1.png" alt="City of Ilagan" className="w-full h-full object-cover" />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                                 <div className="w-1 h-4 rounded-full bg-[#d4a017]" />
                                 <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">
                                     CPDO Zoning Officer
                                 </p>
                             </div>
-                            <h2 className="text-2xl font-black text-white">Dashboard Overview</h2>
+                            <h2 className="truncate text-xl font-black text-white sm:text-2xl">Dashboard Overview</h2>
                             <p className="text-blue-200/70 text-sm mt-0.5">
                                 Comprehensive analytics and insights
                             </p>
@@ -60,7 +60,7 @@ export function AdminDashboard({ analytics = null, stats = {}, applications = []
                         variant="outline"
                         onClick={handleToggle}
                         disabled={isTransitioning}
-                        className="gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white transition-all rounded-xl"
+                        className="w-full shrink-0 justify-center gap-2 rounded-xl border-white/20 bg-white/10 text-white transition-all hover:bg-white/20 hover:text-white sm:w-auto"
                     >
                         <BarChart3 className={`h-4 w-4 transition-transform duration-300 ${isTransitioning ? "rotate-180" : ""}`} />
                         {showAnalytics ? "Hide" : "Show"} Analytics

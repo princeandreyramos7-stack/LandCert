@@ -930,7 +930,7 @@ export function MyApplicationsList({ applications }) {
                                 <div className="overflow-y-auto h-[calc(90vh-100px)] p-2 sm:p-4">
                                     <div className="space-y-3">
                                         {/* Quick Stats Row - Responsive: 2 cols on mobile, 4 cols on desktop */}
-                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 min-w-0">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 min-w-0">
                                             <div className={`${theme.bg} rounded-xl p-3 border ${theme.border} hover:shadow-md transition-all duration-300`}>
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <Building2 className={`h-4 w-4 ${theme.icon}`} />
@@ -1028,7 +1028,7 @@ export function MyApplicationsList({ applications }) {
                                                     </h3>
                                                 </div>
                                                 <div className="p-4 space-y-3">
-                                                    <div className="grid grid-cols-2 gap-3">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                         <div className={`${theme.bg} rounded-lg p-2.5 border ${theme.border}`}>
                                                             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Type</p>
                                                             <p className="text-sm font-semibold text-gray-900">{selectedApplication.project_type || "N/A"}</p>
@@ -1059,7 +1059,7 @@ export function MyApplicationsList({ applications }) {
                                                         </div>
                                                     </div>
 
-                                                    <div className="grid grid-cols-2 gap-3">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                         <div className="space-y-1">
                                                             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Duration</p>
                                                             <p className="text-sm font-semibold text-gray-900">{selectedApplication.project_nature_duration || "N/A"}</p>

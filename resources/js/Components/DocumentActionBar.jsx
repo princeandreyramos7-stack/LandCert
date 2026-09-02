@@ -32,36 +32,42 @@ export default function DocumentActionBar({
             className="relative overflow-hidden rounded-2xl text-white mb-6 no-print"
             style={{ background: "linear-gradient(135deg,#0d1f5c 0%,#1a3a8f 60%,#112068 100%)" }}
         >
-            <div className="relative z-10 flex items-center justify-between p-6">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-[#d4a017]/20 border border-[#d4a017]/30 rounded-xl">
-                        <Icon className="h-7 w-7 text-[#d4a017]" />
+            <div className="relative z-10 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                    <div className="shrink-0 rounded-xl border border-[#d4a017]/30 bg-[#d4a017]/20 p-2.5 sm:p-3">
+                        <Icon className="h-6 w-6 text-[#d4a017] sm:h-7 sm:w-7" />
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className="w-1 h-4 rounded-full bg-[#d4a017]" />
-                            <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">
+                    <div className="min-w-0">
+                        <div className="mb-1 flex items-center gap-2">
+                            <div className="h-4 w-1 shrink-0 rounded-full bg-[#d4a017]" />
+                            <p className="truncate text-xs font-black uppercase tracking-widest text-[#d4a017]">
                                 {eyebrow}
                             </p>
                         </div>
-                        <h1 className="text-xl font-black text-white">{title}</h1>
-                        {subtitle && <p className="text-blue-200/70 text-sm">{subtitle}</p>}
+                        <h1 className="text-lg font-black text-white sm:text-xl">{title}</h1>
+                        {subtitle && (
+                            <p className="truncate text-xs text-blue-200/70 sm:text-sm">
+                                {subtitle}
+                            </p>
+                        )}
                     </div>
                 </div>
-                <div className="flex gap-3">
+                {/* Side by side and equal width on a phone, natural width once
+                    there is room to sit beside the title. */}
+                <div className="flex shrink-0 gap-2 sm:gap-3">
                     <Button
                         onClick={onPrint}
-                        className="bg-[#d4a017] hover:bg-[#b8910f] text-white"
+                        className="flex-1 bg-[#d4a017] text-white hover:bg-[#b8910f] sm:flex-none"
                     >
-                        <Printer className="mr-2 h-4 w-4" />
+                        <Printer className="mr-2 h-4 w-4 shrink-0" />
                         {printLabel}
                     </Button>
                     <Button
                         onClick={onDownload}
-                        className="bg-white hover:bg-gray-100 text-[#0d1f5c] border-white"
+                        className="flex-1 border-white bg-white text-[#0d1f5c] hover:bg-gray-100 sm:flex-none"
                     >
-                        <Download className="mr-2 h-4 w-4" />
-                        Download PDF
+                        <Download className="mr-2 h-4 w-4 shrink-0" />
+                        <span className="truncate">Download PDF</span>
                     </Button>
                 </div>
             </div>

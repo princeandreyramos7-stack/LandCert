@@ -267,7 +267,7 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = [], a
                 {activeTab === "broadcast" && (
                     <>
                         {/* Stat cards */}
-                        <div className="grid grid-cols-3 gap-4 mb-5">
+                        <div className="grid grid-cols-1 gap-4 mb-5 sm:grid-cols-3">
                             <Card className="border-l-4 border-l-[#0d1f5c] bg-white shadow-sm">
                                 <CardContent className="p-4">
                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Total Applicants</p>

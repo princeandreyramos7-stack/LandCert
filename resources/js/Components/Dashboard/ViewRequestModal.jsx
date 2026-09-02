@@ -76,7 +76,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                 Applicant Information
                             </h3>
                             <div className="space-y-2 text-xs">
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <div>
                                         <p className="text-[10px] font-medium text-gray-500">
                                             Applicant Name
@@ -145,7 +145,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                 Project Details
                             </h3>
                             <div className="space-y-3 text-sm">
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {request?.project_type && (
                                         <div>
                                             <p className="text-xs font-medium text-gray-500">
@@ -167,7 +167,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                         </div>
                                     )}
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {request?.project_nature_duration && (
                                         <div>
                                             <p className="text-xs font-medium text-gray-500">
@@ -191,7 +191,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                         </div>
                                     )}
                                 </div>
-                                <div className="grid grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                                     {request?.project_area_sqm && (
                                         <div>
                                             <p className="text-xs font-medium text-gray-500">
@@ -258,7 +258,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                 Project Location
                             </h3>
                             <div className="space-y-3 text-sm">
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {request?.project_location_number && (
                                         <div>
                                             <p className="text-xs font-medium text-gray-500">
@@ -280,7 +280,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                         </div>
                                     )}
                                 </div>
-                                <div className="grid grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                                     {request?.project_location_barangay && (
                                         <div>
                                             <p className="text-xs font-medium text-gray-500">
@@ -324,7 +324,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                 Land Use Information
                             </h3>
                             <div className="space-y-3 text-sm">
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {request?.existing_land_use && (
                                         <div>
                                             <p className="text-xs font-medium text-gray-500">
@@ -347,7 +347,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                     </div>
                                 </div>
                                 {request?.has_written_notice === "yes" && (
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {request.notice_officer_name && (
                                             <div>
                                                 <p className="text-xs font-medium text-gray-500">
@@ -370,7 +370,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                         )}
                                     </div>
                                 )}
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <p className="text-xs font-medium text-gray-500">
                                             Similar Application Filed
@@ -383,7 +383,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                     </div>
                                 </div>
                                 {request?.has_similar_application === "yes" && (
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {request.similar_application_offices && (
                                             <div>
                                                 <p className="text-xs font-medium text-gray-500">
@@ -447,7 +447,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                     Certificate Information
                                 </h3>
                                 <div className="space-y-3 text-sm mb-4">
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div>
                                             <p className="text-xs font-medium text-gray-500">
                                                 Certificate Number
@@ -466,7 +466,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                         </div>
                                     </div>
                                     {(request.payment_amount || request.payment_date) && (
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             {request.payment_amount && (
                                                 <div>
                                                     <p className="text-xs font-medium text-gray-500">

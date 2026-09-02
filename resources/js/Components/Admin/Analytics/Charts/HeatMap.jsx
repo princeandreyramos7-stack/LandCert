@@ -20,8 +20,15 @@ export function HeatMap({ data, maxValue, labels = { x: [], y: [] } }) {
 
     return (
         <div className="space-y-3">
+            {/* 24 hour columns cannot share the width of a phone — squeezed to
+                a few pixels each the labels overlap and the cells stop being
+                readable. The grid keeps a workable minimum size and the whole
+                map scrolls sideways instead, header and rows together so the
+                columns stay aligned. */}
+            <div className="overflow-x-auto">
+            <div className="min-w-[760px] space-y-3">
             <div className="flex gap-2">
-                <div className="w-16" /> {/* Spacer for y-axis labels */}
+                <div className="w-16 shrink-0" /> {/* Spacer for y-axis labels */}
                 <div className="flex-1 grid gap-1" style={{ gridTemplateColumns: `repeat(${labels.x.length}, minmax(0, 1fr))` }}>
                     {labels.x.map((label, idx) => (
                         <div key={idx} className="text-xs text-gray-500 text-center font-medium">
@@ -33,7 +40,7 @@ export function HeatMap({ data, maxValue, labels = { x: [], y: [] } }) {
             
             {data.map((row, yIdx) => (
                 <div key={yIdx} className="flex gap-2 items-center">
-                    <div className="w-16 text-xs text-gray-500 font-medium text-right">
+                    <div className="w-16 shrink-0 text-xs text-gray-500 font-medium text-right">
                         {labels.y[yIdx]}
                     </div>
                     <div className="flex-1 grid gap-1" style={{ gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))` }}>
@@ -56,7 +63,9 @@ export function HeatMap({ data, maxValue, labels = { x: [], y: [] } }) {
                     </div>
                 </div>
             ))}
-            
+            </div>{/* end min-width track */}
+            </div>{/* end horizontal scroll */}
+
             {/* Legend */}
             <div className="flex items-center justify-center gap-4 pt-4">
                 <span className="text-xs text-gray-500">Less</span>

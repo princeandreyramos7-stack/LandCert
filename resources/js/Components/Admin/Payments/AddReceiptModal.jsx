@@ -102,7 +102,7 @@ export function AddReceiptModal({ isOpen, onClose, payment }) {
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-bold text-[#0d1f5c]">
                         Upload Payment Receipt
@@ -115,7 +115,7 @@ export function AddReceiptModal({ isOpen, onClose, payment }) {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Payment Info */}
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span className="text-slate-500">Application Number:</span>
                                 <span className="ml-2 font-semibold text-[#0d1f5c]">

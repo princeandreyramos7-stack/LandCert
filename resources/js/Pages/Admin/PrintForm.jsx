@@ -5,6 +5,7 @@ import AdminLayout from "@/Layouts/AdminLayout";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import DocumentActionBar from "@/Components/DocumentActionBar";
+import FitToWidth from "@/Components/FitToWidth";
 
 /* ─── helpers ─────────────────────────────────────── */
 const v = (x) =>
@@ -116,10 +117,6 @@ body {
 .pf-page.no-border {
     border: none;
     margin: 0;
-}
-    font-size: 8pt;
-    color: #000;
-    line-height: 1.25;
 }
 
 /* ── all tables ── */
@@ -408,6 +405,7 @@ export default function PrintForm({ application: a, auth }) {
         html2pdf().set(opt).from(wrapper).save();
     };
 
+
     /* land-use checks */
     const lu = v(a.existing_land_use).toLowerCase();
     const knownLU = [
@@ -440,6 +438,7 @@ export default function PrintForm({ application: a, auth }) {
             {/* ═══════════════════════════════════════════
                 OFFICIAL FORM
                ═══════════════════════════════════════════ */}
+            <FitToWidth>
             <div className="pf-page">
 
                 {/* ╔══════════════════════════════════════╗
@@ -481,7 +480,13 @@ export default function PrintForm({ application: a, auth }) {
                                     backgroundColor: "#FFFF00",
                                     padding: "4pt 8pt",
                                     display: "inline-block",
-                                    width: "100%",
+                                    // Fills the cell, but grows with the text
+                                    // rather than clipping to it: at a flat
+                                    // width:100% the nowrap title ran past the
+                                    // box and the last letters lost their
+                                    // highlight.
+                                    minWidth: "100%",
+                                    width: "auto",
                                     boxSizing: "border-box",
                                     whiteSpace: "nowrap",
                                 }}>
@@ -1186,6 +1191,7 @@ export default function PrintForm({ application: a, auth }) {
 
                 <div className="pf-pageno">2/2</div>
             </div>{/* end requirements page */}
+            </FitToWidth>
         </Layout>
     );
 }

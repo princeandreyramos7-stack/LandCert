@@ -108,7 +108,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                     )}
 
                     {/* Summary cards */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {[
                             { label: "Total Revenue", value: `₱${fmt(stats.total_revenue)}`, sub: `${stats.verified || 0} verified`, icon: DollarSign },
                             { label: "This Month",    value: `₱${fmt(stats.this_month)}`,    sub: `₱${fmt(stats.last_month)} last month`, icon: TrendingUp },
@@ -290,7 +290,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
 
             {/* Verify Modal */}
             <Dialog open={showVerify} onOpenChange={setShowVerify}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-green-700">
                             <CheckCircle2 className="h-5 w-5" />Verify Payment
@@ -310,7 +310,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
                         </div>
                     )}
                     <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <Label htmlFor="v-amount">Amount (₱) <span className="text-red-500">*</span></Label>
                                 <Input id="v-amount" type="number" step="0.01" value={verifyForm.amount}
@@ -348,7 +348,7 @@ export default function Payments({ payments = {}, filters = {}, stats = {} }) {
 
             {/* Deny Modal */}
             <Dialog open={showReject} onOpenChange={setShowReject}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-red-700">
                             <XCircle className="h-5 w-5" />Deny Payment

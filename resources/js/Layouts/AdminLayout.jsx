@@ -6,8 +6,6 @@ import {
     BreadcrumbItem,
     BreadcrumbList,
     BreadcrumbPage,
-    BreadcrumbLink,
-    BreadcrumbSeparator,
 } from "@/Components/ui/breadcrumb";
 import { Separator } from "@/Components/ui/separator";
 import {
@@ -17,14 +15,16 @@ import {
 } from "@/Components/ui/sidebar";
 import { Toaster } from "@/Components/ui/toaster";
 import NotificationBell from "@/Components/NotificationBell";
-import { Link } from "@inertiajs/react";
 
 /**
  * Shared layout for all admin pages.
- * Usage: <AdminLayout title="Requests" breadcrumbs={[{label:"Dashboard",href:"/admin/dashboard"}]}>
+ * Usage: <AdminLayout title="Requests">
  *          …content…
  *        </AdminLayout>
  */
+// `breadcrumbs` is accepted but no longer rendered: the top bar shows the page
+// name on its own. Dozens of pages still pass an ancestor trail, so the prop
+// stays in the signature rather than being ripped out of every call site.
 export default function AdminLayout({ title, breadcrumbs = [], children }) {
     // Where a page's live-refresh status lands: the top-right of the top bar,
     // beside the role badge. See @/Components/HeaderSlot.
@@ -36,7 +36,7 @@ export default function AdminLayout({ title, breadcrumbs = [], children }) {
             <SidebarInset>
                 {/* Top bar */}
                 <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 bg-white border-b border-gray-100 shadow-sm ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-                    <div className="flex items-center gap-2 px-4">
+                    <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
                         <SidebarTrigger className="-ml-1 text-[#0d1f5c] hover:bg-[#0d1f5c]/5" />
                         <Separator
                             orientation="vertical"
@@ -44,30 +44,15 @@ export default function AdminLayout({ title, breadcrumbs = [], children }) {
                         />
                         <Breadcrumb>
                             <BreadcrumbList>
-                                {breadcrumbs.map((crumb, i) => (
-                                    <React.Fragment key={i}>
-                                        <BreadcrumbItem>
-                                            <BreadcrumbLink asChild>
-                                                <Link
-                                                    href={crumb.href}
-                                                    className="text-gray-500 hover:text-[#0d1f5c] text-sm transition-colors"
-                                                >
-                                                    {crumb.label}
-                                                </Link>
-                                            </BreadcrumbLink>
-                                        </BreadcrumbItem>
-                                        <BreadcrumbSeparator />
-                                    </React.Fragment>
-                                ))}
                                 <BreadcrumbItem>
-                                    <BreadcrumbPage className="text-sm font-bold text-[#0d1f5c]">
+                                    <BreadcrumbPage className="truncate text-sm font-bold text-[#0d1f5c]">
                                         {title}
                                     </BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
                         </Breadcrumb>
                     </div>
-                    <div className="ml-auto pr-4 flex items-center gap-2">
+                    <div className="ml-auto flex shrink-0 items-center gap-2 pr-4">
                         {/* Live-refresh status, portalled in by the page */}
                         <div ref={setHeaderSlot} className="flex items-center" />
                         <NotificationBell />

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link, router, usePage } from "@inertiajs/react";
+import { Link, usePage } from "@inertiajs/react";
 import {
     LayoutDashboard,
     FileText,
@@ -9,11 +9,9 @@ import {
     Users,
     Activity,
     ChevronRight,
-    LogOut,
-    ChevronsUpDown,
     MessageSquare,
-    User,
 } from "lucide-react";
+import SidebarUserMenu from "@/Components/SidebarUserMenu";
 import {
     Sidebar,
     SidebarContent,
@@ -32,13 +30,6 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/Components/ui/collapsible";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/Components/ui/dropdown-menu";
 
 /* ── Nav structure ──────────────────────────────────────────────── */
 const navGroups = [
@@ -197,85 +188,13 @@ export function AdminSidebar({ ...props }) {
 
             {/* ── Footer / User ──────────────────────────────── */}
             <SidebarFooter className="border-t border-sidebar-border px-2 py-3">
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <SidebarMenuButton
-                                    size="lg"
-                                    className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
-                                >
-                                    <div className="w-8 h-8 rounded-full overflow-hidden bg-sidebar-primary/80 flex items-center justify-center text-sidebar-primary-foreground font-black text-xs shrink-0">
-                                        {user.avatar_url
-                                            ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                                            : initials}
-                                    </div>
-                                    {!collapsed && (
-                                        <>
-                                            <div className="flex-1 min-w-0 grid text-left leading-tight">
-                                                <span className="truncate font-semibold text-sm">
-                                                    {user.name}
-                                                </span>
-                                                <span className="truncate text-xs text-sidebar-foreground/60">
-                                                    {user.email}
-                                                </span>
-                                            </div>
-                                            <ChevronsUpDown className="w-4 h-4 text-sidebar-foreground/50 shrink-0" />
-                                        </>
-                                    )}
-                                </SidebarMenuButton>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                side="right"
-                                align="end"
-                                sideOffset={8}
-                                className="w-56 rounded-xl shadow-xl"
-                            >
-                                <div className="px-3 py-2 border-b border-gray-100">
-                                    <p className="text-sm font-bold text-gray-900 truncate">
-                                        {user.name}
-                                    </p>
-                                    <p className="text-xs text-gray-500 truncate">
-                                        {user.email}
-                                    </p>
-                                    <p className="text-xs text-[#d4a017] font-semibold mt-0.5">
-                                        Zoning Officer
-                                    </p>
-                                </div>
-                                <DropdownMenuItem asChild>
-                                    <Link
-                                        href="/admin/profile"
-                                        className="flex items-center gap-2 cursor-pointer"
-                                    >
-                                        <User className="w-4 h-4" />
-                                        My Profile
-                                    </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-                                    onClick={() => {
-                                        router.post(
-                                            "/logout",
-                                            {},
-                                            {
-                                                onSuccess: () =>
-                                                    (window.location.href =
-                                                        "/"),
-                                                onError: () =>
-                                                    (window.location.href =
-                                                        "/"),
-                                            },
-                                        );
-                                    }}
-                                >
-                                    <LogOut className="w-4 h-4 mr-2" />
-                                    Log Out
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+                <SidebarUserMenu
+                    user={user}
+                    initials={initials}
+                    collapsed={collapsed}
+                    profileHref="/admin/profile"
+                    roleLabel="Zoning Officer"
+                />
             </SidebarFooter>
 
             <SidebarRail />

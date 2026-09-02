@@ -100,14 +100,13 @@ export default function ApplicationDetails({ application, requirements = [], doc
 
     const docsFor = (id) => documents?.[id] || documents?.[String(id)] || [];
 
-    // Supplying a document that is still missing stays open while the office has
-    // not begun processing — the notarized application form in particular can only
-    // be produced after submission, so it is uploaded from here.
-    const canUpload = ["pending", "in_applicant", "reviewed", "returned", "rejected"].includes(statusKey);
-    // Replacing a document already on file is not: once the application is with
-    // the office its submitted documents are frozen, and only reopen if the office
-    // returns the application to the applicant.
-    const canReplace = ["returned", "rejected"].includes(statusKey);
+    // Once submitted, the application's documents are frozen — the applicant
+    // cannot add or replace anything while it sits with the office. Uploading
+    // only reopens when the office hands it back (in_applicant) or denies it
+    // (rejected). Both actions are gated identically: a missing document is no
+    // more editable than one already on file.
+    const canUpload = ["in_applicant", "rejected"].includes(statusKey);
+    const canReplace = canUpload;
 
     const handleUpload = (req, file) => {
         if (!file) return;
@@ -389,8 +388,6 @@ export default function ApplicationDetails({ application, requirements = [], doc
                                 <Field label="Barangay" value={application.project_location_barangay} />
                                 <Field label="City / Municipality" value={application.project_location_city} />
                                 <Field label="Province" value={application.project_location_province} />
-                                <Field label="District" value={application.project_location_district} />
-                                <Field label="Postal Code" value={application.project_location_postal_code} />
                             </div>
                         </Section>
     
@@ -434,11 +431,17 @@ export default function ApplicationDetails({ application, requirements = [], doc
 
                     {/* Requirements */}
                     <Section icon={ListChecks} title="Requirements">
-                        {canUpload && (
+                        {canUpload ? (
                             <p className="text-xs text-gray-500 mb-4">
-                                {canReplace
-                                    ? "Your application has been returned to you. You can upload or replace a document for any requirement below."
-                                    : "You can still upload any requirement you have not submitted yet. Documents already on file are locked while the office reviews your application — they can only be replaced if the office returns it to you."}
+                                {statusKey === "rejected"
+                                    ? "Your application was denied. You can upload or replace a document for any requirement below."
+                                    : "Your application has been returned to you. You can upload or replace a document for any requirement below."}
+                            </p>
+                        ) : (
+                            <p className="text-xs text-gray-500 mb-4">
+                                Your documents are locked while the office reviews
+                                your application. You can upload or replace them
+                                only if the office returns the application to you.
                             </p>
                         )}
                         <div className="space-y-5">

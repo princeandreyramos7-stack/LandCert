@@ -182,7 +182,7 @@ export default function Payments({ auth, payments, filters }) {
                                             value={search}
                                             onChange={(e) => setSearch(e.target.value)}
                                             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                                            className="w-64"
+                                            className="w-full sm:w-64"
                                         />
                                         <Button onClick={handleSearch} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                                             <Search className="h-4 w-4" />
@@ -346,13 +346,13 @@ export default function Payments({ auth, payments, filters }) {
 
             {/* Details Modal */}
             <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Payment Details</DialogTitle>
                     </DialogHeader>
                     {selectedPayment && (
                         <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <Label className="font-semibold">Receipt Number</Label>
                                     <p>{selectedPayment.receipt_number || 'N/A'}</p>
@@ -391,7 +391,7 @@ export default function Payments({ auth, payments, filters }) {
                             {selectedPayment.verified_by && (
                                 <div className="border-t pt-4">
                                     <h4 className="font-semibold mb-3">Verification Details</h4>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <Label className="font-semibold">Verified By</Label>
                                             <p>{selectedPayment.verified_by_user?.name || 'N/A'}</p>

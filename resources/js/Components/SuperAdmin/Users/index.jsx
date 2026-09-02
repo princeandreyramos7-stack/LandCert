@@ -153,19 +153,19 @@ export function SuperAdminUserManagement({ users }) {
         <div className="space-y-6 p-6">
             {/* Enhanced Header */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-0">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-[#0d1f5c]/8 rounded-xl" style={{background:"rgba(13,31,92,0.06)"}}>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                        <div className="shrink-0 p-3 bg-[#0d1f5c]/8 rounded-xl" style={{background:"rgba(13,31,92,0.06)"}}>
                             <Shield className="h-7 w-7 text-[#0d1f5c]"/>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase mb-0.5">User Management</p>
                             <h1 className="text-xl font-black text-[#0d1f5c]">System Users</h1>
                             <p className="text-gray-400 text-sm">Manage all system users and permissions</p>
                         </div>
                     </div>
                     <Button onClick={() => router.visit(route("super-admin.users.create"))}
-                        className="gap-2 bg-[#0d1f5c] hover:bg-[#1a3a8f] text-white font-bold shadow">
+                        className="w-full shrink-0 justify-center gap-2 bg-[#0d1f5c] font-bold text-white shadow hover:bg-[#1a3a8f] sm:w-auto">
                         <UserPlus className="h-4 w-4"/> Create New User
                     </Button>
                 </div>

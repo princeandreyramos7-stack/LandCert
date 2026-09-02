@@ -420,7 +420,7 @@ export function CertificatesTable({
 
             {/* Release / withdraw confirmation */}
             <Dialog open={!!pendingRelease} onOpenChange={(open) => !open && setPendingRelease(null)}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>
                             {pendingRelease?.released

@@ -5,6 +5,7 @@ import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import html2pdf from 'html2pdf.js';
 import PrintDocumentStyles from "@/Components/PrintDocumentStyles";
 import OfficialLetterhead from "@/Components/OfficialLetterhead";
+import FitToWidth, { suspendFit } from "@/Components/FitToWidth";
 import ESignatureImage from "@/Components/ESignatureImage";
 import { zoningAdministratorName } from "@/lib/signerName";
 import DocumentActionBar from "@/Components/DocumentActionBar";
@@ -249,7 +250,10 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
         // the PDF page exactly, and the rounding spills a sliver onto a second,
         // blank page — so the height is released for the capture and restored
         // afterwards. The certificate is one page.
-        const restore = () => { element.style.minHeight = ''; };
+        // html2canvas reads computed styles, so the on-screen fit-to-width zoom
+        // would otherwise be baked into the saved PDF.
+        const resumeFit = suspendFit(element);
+        const restore = () => { element.style.minHeight = ''; resumeFit(); };
         element.style.minHeight = '0';
 
         html2pdf().set({
@@ -304,6 +308,7 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
 
             {/* ── The document itself ── */}
             <div className="certificate-print-area print-document-area">
+                <FitToWidth>
                 <div ref={certificateRef} className="certificate-page print-document">
                     <OfficialLetterhead />
                     <TemplateBody
@@ -314,6 +319,7 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
                         issuedOn={issuedOn}
                     />
                 </div>
+                </FitToWidth>
             </div>
         </Layout>
     );

@@ -2,6 +2,8 @@ import { Head, router } from "@inertiajs/react";
 import axios from "axios";
 import { useState } from "react";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
+import AdminLayout from "@/Layouts/AdminLayout";
+import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import { useToast } from "@/Components/ui/use-toast";
 import { Toaster } from "@/Components/ui/toaster";
 import {
@@ -89,7 +91,18 @@ function NotifRow({ notif, onRead, onDelete }) {
 }
 
 /* ── Main page ───────────────────────────────────────────── */
-export default function NotificationsPage({ notifications }) {
+export default function NotificationsPage({ notifications, auth }) {
+    // Every role shares this page, so the chrome has to follow the viewer.
+    // Hardcoding the applicant layout dropped admins into the applicant panel
+    // when they opened their own notifications.
+    const userRole = auth?.user ? (auth.user.user_type || auth.user.role) : null;
+    const Layout =
+        userRole === "super_admin"
+            ? SuperAdminLayout
+            : userRole === "admin"
+            ? AdminLayout
+            : ApplicantLayout;
+
     const { toast } = useToast();
     const [list, setList] = useState(notifications.data || []);
 
@@ -131,7 +144,7 @@ export default function NotificationsPage({ notifications }) {
     return (
         <>
             <Head title="Notifications — CPDO"/>
-            <ApplicantLayout title="Notifications">
+            <Layout title="Notifications">
                 <LiveRefresh only={["notifications"]} items={notifications} label="notifications" className="justify-end mb-4" />
                 <div className="space-y-5">
                     {/* Page header */}
@@ -204,7 +217,7 @@ export default function NotificationsPage({ notifications }) {
                         </div>
                     )}
                 </div>
-            </ApplicantLayout>
+            </Layout>
             <Toaster/>
         </>
     );

@@ -49,12 +49,11 @@ export default function NotificationBell({ className = "" }) {
     const inFlight = useRef(false);
 
     // Determine the notification page URL based on user role
-    const getNotificationPageUrl = () => {
-        const role = auth?.user?.role;
-        if (role === 'admin') return '/admin/dashboard';
-        if (role === 'super_admin') return '/super-admin/dashboard';
-        return '/notifications'; // applicant route
-    };
+    // /notifications is auth-only and renders in the viewer's own layout, so
+    // every role goes to the same place. The old branch keyed off `auth.user.role`,
+    // which the shared Inertia props never set — the name is `user_type` — so it
+    // always fell through to the applicant page regardless of who was signed in.
+    const getNotificationPageUrl = () => '/notifications';
 
     const fetchCount = useCallback(async () => {
         if (inFlight.current || document.hidden) return;

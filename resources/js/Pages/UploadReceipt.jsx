@@ -674,7 +674,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                             </div>
 
                             {/* Amount & date summary */}
-                            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                                 <div className="rounded-xl border border-blue-100 bg-blue-50 p-2.5 text-center sm:p-3">
                                     <p className="text-lg font-bold text-[#0d1f5c] sm:text-xl">
                                         ₱{formatAmountForDisplay(paymentAmount) || '0.00'}

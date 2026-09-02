@@ -151,34 +151,39 @@ export function PaymentHistoryTable({
                         </div>
                     </div>
 
-                    {/* Action Buttons — right side */}
-                    <div className="flex gap-2 shrink-0">
+                    {/* Action Buttons — right side. Below sm the two exports drop
+                        their labels and sit as icons so all three fit one row. */}
+                    <div className="flex shrink-0 gap-2">
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={handleClearFilters}
-                            className="h-10 px-4 border-slate-200 hover:bg-slate-50"
+                            className="h-10 shrink-0 border-slate-200 px-3 hover:bg-slate-50 sm:px-4"
                         >
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Clear
+                            <RefreshCw className="h-4 w-4 shrink-0 sm:mr-2" />
+                            <span className="hidden sm:inline">Clear</span>
                         </Button>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={handleExportExcel}
-                            className="h-10 px-4 text-green-700 border-green-200 hover:bg-green-50"
+                            title="Export Excel"
+                            aria-label="Export Excel"
+                            className="h-10 shrink-0 border-green-200 px-3 text-green-700 hover:bg-green-50 sm:px-4"
                         >
-                            <Download className="h-4 w-4 mr-2" />
-                            Export Excel
+                            <Download className="h-4 w-4 shrink-0 sm:mr-2" />
+                            <span className="hidden sm:inline">Export Excel</span>
                         </Button>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={handleExportPdf}
-                            className="h-10 px-4 text-red-700 border-red-200 hover:bg-red-50"
+                            title="Export PDF"
+                            aria-label="Export PDF"
+                            className="h-10 shrink-0 border-red-200 px-3 text-red-700 hover:bg-red-50 sm:px-4"
                         >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Export PDF
+                            <FileText className="h-4 w-4 shrink-0 sm:mr-2" />
+                            <span className="hidden sm:inline">Export PDF</span>
                         </Button>
                     </div>
                 </div>

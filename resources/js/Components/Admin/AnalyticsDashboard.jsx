@@ -170,11 +170,11 @@ export function AnalyticsDashboard({ analytics }) {
 
             {/* Tabbed Analytics Section */}
             <Tabs defaultValue="overview" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="payments">Payments</TabsTrigger>
-                    <TabsTrigger value="performance">Performance</TabsTrigger>
-                    <TabsTrigger value="users">Users</TabsTrigger>
+                <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto sm:grid sm:h-10 sm:grid-cols-4">
+                    <TabsTrigger value="overview" className="shrink-0">Overview</TabsTrigger>
+                    <TabsTrigger value="payments" className="shrink-0">Payments</TabsTrigger>
+                    <TabsTrigger value="performance" className="shrink-0">Performance</TabsTrigger>
+                    <TabsTrigger value="users" className="shrink-0">Users</TabsTrigger>
                 </TabsList>
 
                 {/* Overview Tab */}

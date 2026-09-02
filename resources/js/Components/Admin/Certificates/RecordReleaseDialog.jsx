@@ -48,7 +48,7 @@ export function RecordReleaseDialog({ certificate, open, onOpenChange, routePref
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[550px]">
+            <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-purple-600">
                         <FileText className="h-5 w-5" />
@@ -116,7 +116,7 @@ export function RecordReleaseDialog({ certificate, open, onOpenChange, routePref
                             )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-2">
                                 <Label htmlFor="released_to_id_type">
                                     ID Type

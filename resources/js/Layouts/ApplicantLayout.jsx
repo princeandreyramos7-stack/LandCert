@@ -30,7 +30,7 @@ export default function ApplicantLayout({ title, children }) {
             <SidebarInset>
                 {/* Top bar */}
                 <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 bg-white border-b border-gray-100 shadow-sm ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-                    <div className="flex items-center gap-2 px-4">
+                    <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
                         <SidebarTrigger className="-ml-1 text-[#0d1f5c] hover:bg-[#0d1f5c]/5" />
                         <Separator
                             orientation="vertical"
@@ -39,14 +39,14 @@ export default function ApplicantLayout({ title, children }) {
                         <Breadcrumb>
                             <BreadcrumbList>
                                 <BreadcrumbItem>
-                                    <BreadcrumbPage className="text-sm font-bold text-[#0d1f5c]">
+                                    <BreadcrumbPage className="truncate text-sm font-bold text-[#0d1f5c]">
                                         {title}
                                     </BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
                         </Breadcrumb>
                     </div>
-                    <div className="ml-auto pr-4 flex items-center gap-2">
+                    <div className="ml-auto flex shrink-0 items-center gap-2 pr-4">
                         {/* Live-refresh status, portalled in by the page */}
                         <div ref={setHeaderSlot} className="flex items-center" />
                         <div className="hidden sm:flex items-center gap-2">

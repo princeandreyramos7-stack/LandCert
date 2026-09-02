@@ -238,8 +238,12 @@ const SidebarTrigger = React.forwardRef(({ className, onClick, ...props }, ref) 
       variant="ghost"
       size="icon"
       className={cn(
-        "h-10 w-10 rounded-md", 
-        isMobile && "fixed top-3 right-3 z-50 bg-white border border-gray-300 shadow-md hover:bg-gray-50 hover:border-gray-400",
+        "h-10 w-10 shrink-0 rounded-md",
+        // The trigger already sits at the start of the header on every layout.
+        // Pinning it to the top-right on mobile parked it on top of the
+        // notification bell, so it keeps its place in the flow and only picks
+        // up the extra contrast that made it easier to spot on small screens.
+        isMobile && "bg-white border border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400",
         className
       )}
       onClick={(event) => {

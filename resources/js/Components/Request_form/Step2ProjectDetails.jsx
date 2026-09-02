@@ -56,43 +56,7 @@ const parseCostInput = (displayValue) => {
 export function Step2ProjectDetails({ data, errors, onDataChange }) {
     return (
         <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-                <Label htmlFor="project_type">7. Locational Clearance</Label>
-                <Select
-                    value={data.project_type}
-                    onValueChange={(value) =>
-                        onDataChange("project_type", value)
-                    }
-                >
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select project type (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="CZC">
-                            CZC (Certificate of Zoning Compliance)
-                        </SelectItem>
-                        <SelectItem value="TUP">
-                            TUP (Temporary Use Permit)
-                        </SelectItem>
-                        <SelectItem value="SUP">
-                            SUP (Special Use Permit)
-                        </SelectItem>
-                        <SelectItem value="ZC">
-                            ZC (Zoning Certification)
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-400">
-                    Admin can update this field later if needed
-                </p>
-                {errors.project_type && (
-                    <p className="text-sm text-red-500">
-                        {errors.project_type}
-                    </p>
-                )}
-            </div>
-
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="project_nature">8. Classification</Label>
                 <Input
                     id="project_nature"
@@ -294,7 +258,7 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
                         </SelectItem>
                         <SelectItem value="Namnam">Namnam</SelectItem>
                         <SelectItem value="Nanaguan">Nanaguan</SelectItem>
-                        <SelectItem value="Osmena ">Osmena</SelectItem>
+                        <SelectItem value="Osmeña">Osmeña</SelectItem>
                         <SelectItem value="Paliueg">Paliueg</SelectItem>
                         <SelectItem value="Pasa">Pasa</SelectItem>
                         <SelectItem value="Pilar">Pilar</SelectItem>

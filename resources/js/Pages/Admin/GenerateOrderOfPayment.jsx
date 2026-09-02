@@ -1,13 +1,13 @@
 import React, { useRef } from "react";
-import { Head, Link, usePage } from "@inertiajs/react";
-import { Button } from "@/Components/ui/button";
-import { Printer, Download, FileText } from "lucide-react";
+import { Head, usePage } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import html2pdf from 'html2pdf.js';
 import { zoningAdministratorName } from "@/lib/signerName";
 import ESignatureImage from "@/Components/ESignatureImage";
+import DocumentActionBar from "@/Components/DocumentActionBar";
+import FitToWidth, { suspendFit } from "@/Components/FitToWidth";
 
 /** Whole-peso amount to English words, e.g. 7200 -> "Seven Thousand Two Hundred Pesos". */
 function pesoInWords(value) {
@@ -112,7 +112,10 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
             pagebreak: { mode: 'avoid-all' }
         };
         
-        html2pdf().set(opt).from(element).save();
+        // html2canvas reads computed styles, so the on-screen fit-to-width zoom
+        // would otherwise be baked into the saved PDF.
+        const resumeFit = suspendFit(element);
+        html2pdf().set(opt).from(element).save().then(resumeFit, resumeFit);
     };
 
     // Get project type display text
@@ -133,8 +136,11 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
             
             <style dangerouslySetInnerHTML={{ __html: `
                 .payment-page {
-                    width: 100%;
-                    max-width: 8.5in;
+                    /* A fixed sheet, like the other printable documents. At a
+                       fluid width the pt-sized fields and the absolutely
+                       positioned CPD number collided on narrow screens;
+                       FitToWidth scales the whole sheet down instead. */
+                    width: 8.5in;
                     min-height: 11in;
                     margin: 0 auto;
                     background: white;
@@ -163,44 +169,20 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
                 }
             `}} />
 
-            {/* Page header with action buttons */}
-            <div className="relative overflow-hidden rounded-2xl text-white mb-6"
-                style={{ background: "linear-gradient(135deg,#0d1f5c 0%,#1a3a8f 60%,#112068 100%)" }}>
-                <div className="relative z-10 flex items-center justify-between p-6">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-[#d4a017]/20 border border-[#d4a017]/30 rounded-xl">
-                            <FileText className="h-7 w-7 text-[#d4a017]"/>
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <div className="w-1 h-4 rounded-full bg-[#d4a017]"/>
-                                <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">Payment</p>
-                            </div>
-                            <h1 className="text-xl font-black text-white">Order of Payment</h1>
-                            <p className="text-blue-200/70 text-sm">Application No: {application.application_number}</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-3 no-print">
-                        <Button 
-                            onClick={handlePrint}
-                            className="bg-[#d4a017] hover:bg-[#b8910f] text-white"
-                        >
-                            <Printer className="mr-2 h-4 w-4" />
-                            Print
-                        </Button>
-                        <Button 
-                            onClick={handleDownload}
-                            className="bg-white hover:bg-gray-100 text-[#0d1f5c] border-white"
-                        >
-                            <Download className="mr-2 h-4 w-4" />
-                            Download PDF
-                        </Button>
-                    </div>
-                </div>
-            </div>
+            {/* Was a hand-rolled copy of this bar, which never picked up the
+                responsive layout the shared one has. */}
+            <DocumentActionBar
+                eyebrow="Payment"
+                title="Order of Payment"
+                subtitle={`Application No: ${application.application_number}`}
+                printLabel="Print"
+                onPrint={handlePrint}
+                onDownload={handleDownload}
+            />
 
             {/* Order of Payment Page */}
-            <div ref={paymentRef} className="payment-page" style={{ 
+            <FitToWidth>
+            <div ref={paymentRef} className="payment-page" style={{
                 fontSize: '9pt',
                 lineHeight: '1.4',
                 pageBreakAfter: 'always',
@@ -319,6 +301,7 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
                     </div>
                 </div>
             </div>
+            </FitToWidth>
         </Layout>
     );
 }

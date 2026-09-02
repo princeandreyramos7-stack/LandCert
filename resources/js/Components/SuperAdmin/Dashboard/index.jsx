@@ -35,22 +35,22 @@ export function SuperAdminDashboard({ analytics = null, systemStats = {}, adminA
                 </svg>
                 <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none"
                     style={{ background: "radial-gradient(circle,#d4a017,transparent 70%)" }}/>
-                <div className="relative z-10 flex items-center justify-between p-6">
-                    <div className="flex items-center gap-4">
+                <div className="relative z-10 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                         <div className="w-14 h-14 rounded-full border-2 border-[#d4a017]/40 bg-white/10 overflow-hidden flex items-center justify-center shrink-0">
                             <img src="/images/ilagan1.png" alt="City of Ilagan" className="w-full h-full object-cover"/>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                                 <div className="w-1 h-4 rounded-full bg-[#d4a017]"/>
                                 <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">CPDO Zoning Administrator</p>
                             </div>
-                            <h2 className="text-2xl font-black text-white">Dashboard Overview</h2>
+                            <h2 className="truncate text-xl font-black text-white sm:text-2xl">Dashboard Overview</h2>
                             <p className="text-blue-200/70 text-sm mt-0.5">Advanced analytics, system monitoring & admin workflow</p>
                         </div>
                     </div>
                     <Button variant="outline" onClick={handleToggle} disabled={isTransitioning}
-                        className="gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white transition-all rounded-xl">
+                        className="w-full shrink-0 justify-center gap-2 rounded-xl border-white/20 bg-white/10 text-white transition-all hover:bg-white/20 hover:text-white sm:w-auto">
                         <BarChart3 className={`h-4 w-4 transition-transform duration-300 ${isTransitioning ? "rotate-180" : ""}`}/>
                         {showAnalytics ? "Hide" : "Show"} Analytics
                     </Button>
@@ -81,12 +81,12 @@ export function SuperAdminDashboard({ analytics = null, systemStats = {}, adminA
             {showAnalytics && (
                 <div className="animate-in fade-in slide-in-from-bottom duration-500">
                     <Tabs defaultValue="analytics" className="space-y-4">
-                        <TabsList className="grid w-full grid-cols-2 max-w-md">
-                            <TabsTrigger value="analytics" className="gap-2">
+                        <TabsList className="flex h-auto w-full max-w-md justify-start gap-1 overflow-x-auto sm:grid sm:h-10 sm:grid-cols-2">
+                            <TabsTrigger value="analytics" className="shrink-0 gap-2">
                                 <BarChart3 className="h-4 w-4" />
                                 System Analytics
                             </TabsTrigger>
-                            <TabsTrigger value="workflow" className="gap-2">
+                            <TabsTrigger value="workflow" className="shrink-0 gap-2">
                                 <Activity className="h-4 w-4" />
                                 Admin Workflow
                             </TabsTrigger>

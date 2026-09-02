@@ -36,10 +36,15 @@ export default function OfficialLetterhead({ code = null }) {
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: '14pt', flex: 1 }}>
                 <div style={{ width: '74pt', height: '74pt', flexShrink: 0 }}>
+                    {/* Real alpha, not mix-blend-mode: html2canvas (behind the
+                        Download PDF button) ignores blend modes, so the JPG's
+                        white box reappeared in every saved PDF. The seal now
+                        sits on the gradient in print, on screen and in the PDF
+                        alike. */}
                     <img
-                        src="/images/ilagan1logo.jpg"
+                        src="/images/ilagan1logo.png"
                         alt="City of Ilagan"
-                        style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'darken' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     />
                 </div>
                 <div style={{ textAlign: 'left', lineHeight: 1.25 }}>
@@ -59,10 +64,11 @@ export default function OfficialLetterhead({ code = null }) {
             )}
 
             <div style={{ width: '74pt', height: '74pt', flexShrink: 0 }}>
+                {/* Already a transparent PNG, so it needs no blend mode either. */}
                 <img
                     src="/images/Ilagan Logo2.png"
                     alt="City of Ilagan 2030"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'darken' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
             </div>
         </div>

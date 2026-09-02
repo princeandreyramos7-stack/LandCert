@@ -96,7 +96,7 @@ export function RequestCard({ request, onClick }) {
                                 </p>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                             <div>
                                 <p className="text-xs font-medium text-emerald-600">
                                     Certificate No.
@@ -183,7 +183,7 @@ export function RequestCard({ request, onClick }) {
 
                 {/* Project Summary */}
                 <div className="pt-3 border-t border-gray-100 space-y-3">
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                         {request?.project_type && (
                             <div>
                                 <p className="text-xs font-medium text-gray-500">

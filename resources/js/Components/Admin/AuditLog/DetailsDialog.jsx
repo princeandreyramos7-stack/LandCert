@@ -23,7 +23,7 @@ export function DetailsDialog({ isOpen, onOpenChange, selectedLog }) {
                 </DialogHeader>
                 <div className="p-3 space-y-2.5 overflow-y-auto max-h-[calc(90vh-64px)]">
                     {/* Top Row - User Info and Action */}
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         {/* User Information */}
                         <div className="bg-blue-50 rounded-md p-2.5 border border-blue-200">
                             <h3 className="text-xs font-semibold text-blue-900 mb-1.5 flex items-center gap-1">
@@ -46,7 +46,7 @@ export function DetailsDialog({ isOpen, onOpenChange, selectedLog }) {
                                     <label className="text-xs font-medium text-gray-600">
                                         Action
                                     </label>
-                                    <p className="mt-0.5">
+                                    <div className="mt-0.5">
                                         <Badge
                                             variant={getActionBadge(
                                                 selectedLog.action
@@ -57,7 +57,7 @@ export function DetailsDialog({ isOpen, onOpenChange, selectedLog }) {
                                                 selectedLog.action
                                             )}
                                         </Badge>
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -68,7 +68,7 @@ export function DetailsDialog({ isOpen, onOpenChange, selectedLog }) {
                                 <Activity className="h-3 w-3" />
                                 Action Details
                             </h3>
-                            <div className="grid grid-cols-2 gap-1.5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                                 <div>
                                     <label className="text-xs font-medium text-gray-600">
                                         Date & Time
@@ -124,7 +124,7 @@ export function DetailsDialog({ isOpen, onOpenChange, selectedLog }) {
                         <h3 className="text-xs font-semibold text-gray-900 mb-1.5">
                             Technical Details
                         </h3>
-                        <div className="grid grid-cols-2 gap-2.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                             <div>
                                 <label className="text-xs font-medium text-gray-600">
                                     URL
@@ -171,7 +171,7 @@ export function DetailsDialog({ isOpen, onOpenChange, selectedLog }) {
                                                                 " "
                                                             )}
                                                         </div>
-                                                        <div className="grid grid-cols-2 gap-1.5">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                                                             <div className="bg-red-50 rounded p-1.5 border border-red-200">
                                                                 <span className="text-xs font-medium text-red-700">
                                                                     Before:

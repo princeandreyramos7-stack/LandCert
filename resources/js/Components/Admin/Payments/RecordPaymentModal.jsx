@@ -424,7 +424,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
                         {/* Request Summary Card */}
                         <Card className="bg-gray-50 border-gray-200">
                             <CardContent className="pt-6">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="flex items-start gap-3">
                                         <User className="h-5 w-5 text-gray-500 mt-0.5" />
                                         <div>
