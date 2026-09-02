@@ -73,42 +73,44 @@ return new class extends Migration
         // 3. ADD CHECK CONSTRAINTS (MySQL 8.0.16+)
         // ========================================
         
-        // Only create check constraints if MySQL version supports them
-        $mysqlVersion = DB::select("SELECT VERSION() as version")[0]->version;
-        $versionNumber = (float) $mysqlVersion;
-        
-        if ($versionNumber >= 8.0) {
+        // Only create check constraints if the database engine supports them.
+        // These are defensive, DB-level guards only - the same rules are enforced
+        // in the application layer - so a server that rejects any of them must not
+        // abort the migration (Hostinger's MySQL rejects the multi-column ones).
+        $version = DB::select("SELECT VERSION() as version")[0]->version;
+        $isMariaDb = stripos($version, 'mariadb') !== false;
+        $versionNumber = (float) $version;
+
+        if ($isMariaDb || $versionNumber >= 8.0) {
             // Payment amount must be positive
-            if (!$this->hasConstraint('payments', 'payments_amount_positive')) {
-                DB::statement("ALTER TABLE payments ADD CONSTRAINT payments_amount_positive CHECK (amount > 0)");
-            }
+            $this->addCheckConstraint(
+                'payments',
+                'payments_amount_positive',
+                "CHECK (amount > 0)"
+            );
 
             // Note: payment_date check removed - MySQL doesn't support CURDATE() in CHECK constraints
             // This will be validated in the application layer instead
 
             // Verified payments must have verifier and timestamp
-            if (!$this->hasConstraint('payments', 'payments_verified_consistency')) {
-                DB::statement("
-                    ALTER TABLE payments 
-                    ADD CONSTRAINT payments_verified_consistency 
-                    CHECK (
-                        (payment_status = 'verified' AND verified_by IS NOT NULL AND verified_at IS NOT NULL) 
-                        OR payment_status != 'verified'
-                    )
-                ");
-            }
+            $this->addCheckConstraint(
+                'payments',
+                'payments_verified_consistency',
+                "CHECK (
+                    (payment_status = 'verified' AND verified_by IS NOT NULL AND verified_at IS NOT NULL)
+                    OR payment_status != 'verified'
+                )"
+            );
 
             // Rejected payments must have rejection reason
-            if (!$this->hasConstraint('payments', 'payments_rejection_reason_required')) {
-                DB::statement("
-                    ALTER TABLE payments 
-                    ADD CONSTRAINT payments_rejection_reason_required 
-                    CHECK (
-                        (payment_status = 'rejected' AND rejection_reason IS NOT NULL) 
-                        OR payment_status != 'rejected'
-                    )
-                ");
-            }
+            $this->addCheckConstraint(
+                'payments',
+                'payments_rejection_reason_required',
+                "CHECK (
+                    (payment_status = 'rejected' AND rejection_reason IS NOT NULL)
+                    OR payment_status != 'rejected'
+                )"
+            );
         }
 
         // ========================================
@@ -166,22 +168,38 @@ return new class extends Migration
             }
         });
 
-        // Drop check constraints
-        $mysqlVersion = DB::select("SELECT VERSION() as version")[0]->version;
-        $versionNumber = (float) $mysqlVersion;
-        
-        if ($versionNumber >= 8.0) {
-            $constraints = [
-                'payments_amount_positive',
-                'payments_verified_consistency',
-                'payments_rejection_reason_required'
-            ];
-            
-            foreach ($constraints as $constraint) {
-                if ($this->hasConstraint('payments', $constraint)) {
-                    DB::statement("ALTER TABLE payments DROP CONSTRAINT {$constraint}");
-                }
+        // Drop check constraints (only those that were actually created - a server
+        // that rejected one on the way up simply has nothing to drop here)
+        $constraints = [
+            'payments_amount_positive',
+            'payments_verified_consistency',
+            'payments_rejection_reason_required'
+        ];
+
+        foreach ($constraints as $constraint) {
+            if ($this->hasConstraint('payments', $constraint)) {
+                DB::statement("ALTER TABLE payments DROP CONSTRAINT {$constraint}");
             }
+        }
+    }
+
+    /**
+     * Add a CHECK constraint, skipping it if the database engine rejects it.
+     *
+     * These constraints are optional integrity guards; the same rules are
+     * enforced in the application layer. A server that refuses one must not
+     * take the whole migration down with it.
+     */
+    private function addCheckConstraint(string $table, string $name, string $check): void
+    {
+        if ($this->hasConstraint($table, $name)) {
+            return;
+        }
+
+        try {
+            DB::statement("ALTER TABLE {$table} ADD CONSTRAINT {$name} {$check}");
+        } catch (\Illuminate\Database\QueryException $e) {
+            echo "  Skipped CHECK constraint {$name}: not supported by this database.\n";
         }
     }
 
