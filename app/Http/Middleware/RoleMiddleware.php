@@ -16,11 +16,21 @@ class RoleMiddleware
     public function handle(Request $request, Closure $next, string $role): Response
     {
         $user = $request->user();
-        
+
         if (!$user) {
-            abort(403, 'Unauthorized access.');
+            // A guest is unauthenticated, not forbidden. Aborting with 403 here
+            // surfaced as "403 Forbidden" the moment a session ended: the
+            // live-refresh poll (see useLiveData) re-requests the current page
+            // on a timer, so logging out of a role-protected page fired one
+            // last request as a guest and got a hard 403 instead of being sent
+            // to the login screen. Match what `auth` middleware does.
+            if ($request->expectsJson()) {
+                abort(401, 'Unauthenticated.');
+            }
+
+            return redirect()->guest(route('login'));
         }
-        
+
         // `user_type` is the single source of truth for authorization.
         // Spatie roles are kept in sync with it automatically (see User::booted())
         // and are used only for granular permission checks elsewhere, not as a
