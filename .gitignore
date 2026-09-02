@@ -14,7 +14,10 @@
 /.zed
 /auth.json
 /node_modules
-/public/build
+# public/build is deliberately NOT ignored. The Hostinger plan has no Node, so
+# the compiled assets have to travel through the repo — without them the server
+# serves a stale manifest and none of the frontend changes appear.
+# Run `npm run build` and commit the result whenever frontend code changes.
 /public/hot
 /public/storage
 /storage/*.key
