@@ -894,8 +894,17 @@ class RequestController extends Controller
             },
         ])->findOrFail($id);
 
-        // Applicants may only view their own applications.
-        abort_if($request->user_id !== auth()->id(), 403, 'You are not authorized to view this application.');
+        // Applicants may only view their own applications. Staff are exempt —
+        // reviewing other people's applications is their job, and the sibling
+        // check on the document viewer already reads this way. Without the
+        // exemption an officer following a link to this page was refused with
+        // "You are not authorized to view this application."
+        $currentUser = auth()->user();
+        abort_if(
+            $currentUser?->user_type === 'applicant' && $request->user_id !== $currentUser->id,
+            403,
+            'You are not authorized to view this application.'
+        );
 
         $report = $request->reports->first();
 
