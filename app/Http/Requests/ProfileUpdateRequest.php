@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Rules\LowercaseEmailDomain;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,20 +23,22 @@ class ProfileUpdateRequest extends FormRequest
                 'string',
                 'email',
                 'max:255',
+                new LowercaseEmailDomain,
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
         ];
     }
 
     /**
-     * Accept the address in any casing. The `lowercase` rule rejected anything
-     * with a capital in it, so a user could not save "Juan@Gmail.com" at all.
-     * Folding it here keeps the unique check consistent with what is stored.
+     * Only trim. The `lowercase` rule that used to sit on this field rejected
+     * "JuanDelaCruz@gmail.com" outright, which is a perfectly good address —
+     * the name half is the mailbox owner's to capitalise. The domain half is
+     * held to lowercase by LowercaseEmailDomain instead.
      */
     protected function prepareForValidation(): void
     {
         if (is_string($this->input('email'))) {
-            $this->merge(['email' => mb_strtolower(trim($this->input('email')))]);
+            $this->merge(['email' => trim($this->input('email'))]);
         }
     }
 }

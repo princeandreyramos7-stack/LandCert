@@ -1,1 +1,0 @@
-import{j as n,r as e}from"./app-DSQQB64A.js";const t=e.createContext(null);function a(){return e.useContext(t)}function u({slot:r,children:o}){return n.jsx(t.Provider,{value:r,children:o})}export{u as H,a as u};

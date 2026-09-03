@@ -34,15 +34,31 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Addresses are stored folded to lowercase, so fold what is typed here too.
-     * Otherwise signing in as "Juan@Gmail.com" would depend on the database
-     * collation happening to be case-insensitive.
+     * Sign-in stays lenient: fold only the domain, never the name half.
+     *
+     * Registration keeps the name half exactly as typed, so lowercasing the
+     * whole address here would stop "JuanDelaCruz@gmail.com" matching its own
+     * stored row under a case-sensitive collation. Folding the domain lets
+     * someone who types "GMAIL.COM" still get in, since that half is
+     * case-insensitive by definition.
      */
     protected function prepareForValidation(): void
     {
-        if (is_string($this->input('email'))) {
-            $this->merge(['email' => mb_strtolower(trim($this->input('email')))]);
+        $email = $this->input('email');
+
+        if (!is_string($email)) {
+            return;
         }
+
+        $email = trim($email);
+        $atPosition = mb_strrpos($email, '@');
+
+        if ($atPosition !== false) {
+            $email = mb_substr($email, 0, $atPosition + 1)
+                . mb_strtolower(mb_substr($email, $atPosition + 1));
+        }
+
+        $this->merge(['email' => $email]);
     }
 
     /**

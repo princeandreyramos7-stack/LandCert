@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Rules\LowercaseEmailDomain;
 use App\Mail\UserRegistrationWelcome;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
@@ -33,21 +34,19 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        // Accept the address however the applicant types it. The `lowercase`
-        // rule used to reject anything with a capital in it, so "Juan@Gmail.com"
-        // failed registration outright. Mail domains are case-insensitive and
-        // every mail provider treats the local part that way too, so the address
-        // is folded here and stored lowercase — which also keeps the unique
-        // check from letting the same person register twice under two casings.
+        // Only trim. The `lowercase` rule that used to sit on this field
+        // rejected "JuanDelaCruz@gmail.com" outright, which is a perfectly good
+        // address — the name half is the mailbox owner's to capitalise. The
+        // domain half is held to lowercase by LowercaseEmailDomain instead.
         $request->merge([
             'email' => is_string($request->input('email'))
-                ? mb_strtolower(trim($request->input('email')))
+                ? trim($request->input('email'))
                 : $request->input('email'),
         ]);
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:'.User::class,
+            'email' => ['required', 'string', 'email', 'max:255', new LowercaseEmailDomain, 'unique:'.User::class],
             'address' => 'nullable|string|max:500',
             'contact_number' => 'nullable|string|regex:/^09[0-9]{9}$/|size:11',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
