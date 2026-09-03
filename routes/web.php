@@ -34,19 +34,28 @@ Route::get('/', function () {
 Route::get('/dashboard', [RequestController::class, 'dashboard'])->middleware(['auth', 'verified', 'prevent.back'])->name('dashboard');
 
 /*
- | The printable documents, at plain addresses with no route structure and no
- | application id on show. The id-bearing routes further down are the way in:
- | each records which application is being opened and forwards here.
+ | Every page that used to carry a role prefix and a record id, served from a
+ | plain address instead. The id-bearing routes further down are the way in:
+ | each records what is being opened and forwards here.
  |
  | Kept out of the role-prefixed groups on purpose — the URL is the same
- | whoever is signed in, and DocumentPageController hands off to the controller
+ | whoever is signed in, and CleanPageController hands off to the controller
  | that already builds the page for that role.
  */
 Route::middleware(['auth', 'prevent.back'])->group(function () {
-    Route::get('/generate-clearance', [\App\Http\Controllers\DocumentPageController::class, 'clearance'])->name('document.clearance');
-    Route::get('/generate-certificate', [\App\Http\Controllers\DocumentPageController::class, 'certificate'])->name('document.certificate');
-    Route::get('/order-of-payment', [\App\Http\Controllers\DocumentPageController::class, 'orderOfPayment'])->name('document.order-of-payment');
-    Route::get('/print-form', [\App\Http\Controllers\DocumentPageController::class, 'printForm'])->name('document.print-form');
+    foreach (\App\Http\Controllers\CleanPageController::slugs() as $cleanSlug) {
+        Route::get('/' . $cleanSlug, [\App\Http\Controllers\CleanPageController::class, 'show'])
+            ->defaults('slug', $cleanSlug)
+            ->name('page.' . $cleanSlug);
+    }
+
+    // The list and section screens. No id to remember — the slug names the
+    // page and the signed-in role decides which controller builds it.
+    foreach (\App\Http\Controllers\CleanPageController::sectionSlugs() as $sectionSlug) {
+        Route::get('/' . $sectionSlug, [\App\Http\Controllers\CleanPageController::class, 'section'])
+            ->defaults('slug', $sectionSlug)
+            ->name('section.' . $sectionSlug);
+    }
 });
 
 Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () {
@@ -60,13 +69,13 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     // Request routes
     Route::get('/request', [RequestController::class, 'index'])->name('request.index');
     Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:10,1')->name('request.store');
-    Route::get('/requests/{id}/edit', [RequestController::class, 'edit'])->name('requests.edit');
+    Route::get('/requests/{id}/edit', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'edit-application', $id)); })->name('requests.edit');
     Route::put('/requests/{id}', [RequestController::class, 'update'])->middleware('throttle:10,1')->name('requests.update');
     Route::get('/my-applications', [RequestController::class, 'myApplications'])->name('my-applications');
     Route::get('/my-applications/index', [RequestController::class, 'myApplications'])->name('my-applications.index');
-    Route::get('/my-applications/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\DocumentPageController::remember($request, 'print-form', $id)); })->name('my-applications.print');
-    Route::get('/my-applications/{id}/order-of-payment', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\DocumentPageController::remember($request, 'order-of-payment', $id)); })->name('my-applications.order-of-payment');
-    Route::get('/my-applications/{id}/details', [RequestController::class, 'showApplication'])->name('my-applications.show');
+    Route::get('/my-applications/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'print-form', $id)); })->name('my-applications.print');
+    Route::get('/my-applications/{id}/order-of-payment', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'order-of-payment', $id)); })->name('my-applications.order-of-payment');
+    Route::get('/my-applications/{id}/details', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'application-details', $id)); })->name('my-applications.show');
     Route::post('/my-applications/{id}/notarized-form', [\App\Http\Controllers\RequirementDocumentController::class, 'uploadNotarizedForm'])->name('my-applications.notarized-form');
     Route::post('/my-applications/{id}/requirement-upload', [\App\Http\Controllers\RequirementDocumentController::class, 'uploadApplicantRequirement'])->name('my-applications.requirement-upload');
     Route::get('/requests/{id}/authorization-letter', [RequestController::class, 'authorizationLetter'])->name('requests.authorization-letter');
@@ -76,7 +85,7 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     Route::get('/requirements/{id}/view', [\App\Http\Controllers\RequirementDocumentController::class, 'view'])->name('requirements.view');
     
     // Payment receipt upload routes
-    Route::get('/receipt/upload/{requestId}', [PaymentController::class, 'uploadReceiptPage'])->name('receipt.upload.page');
+    Route::get('/receipt/upload/{requestId}', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'upload-receipt', $id)); })->name('receipt.upload.page');
     
     // Payment routes for applicants
     Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
@@ -93,31 +102,31 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
 
 // Super Admin routes (highest privilege)
 Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-admin')->name('super-admin.')->group(function () {
-    Route::get('/dashboard', [\App\Http\Controllers\SuperAdminController::class, 'dashboard'])->name('dashboard');
-    Route::get('/requests', [\App\Http\Controllers\SuperAdminController::class, 'requests'])->name('requests');
-    Route::get('/requests/{id}/review', [\App\Http\Controllers\SuperAdminController::class, 'reviewRequest'])->name('requests.review');
+    Route::get('/dashboard', function () { return redirect('/dashboard-panel'); })->name('dashboard');
+    Route::get('/requests', function () { return redirect('/applications'); })->name('requests');
+    Route::get('/requests/{id}/review', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'review-application', $id)); })->name('requests.review');
     
     // NEW: Split Review Pages
-    Route::get('/requests/{id}/view-application', [\App\Http\Controllers\SuperAdminController::class, 'viewApplication'])->name('requests.view-application');
-    Route::get('/requests/{id}/document-verification', [\App\Http\Controllers\SuperAdminController::class, 'documentVerification'])->name('requests.document-verification');
+    Route::get('/requests/{id}/view-application', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'view-application', $id)); })->name('requests.view-application');
+    Route::get('/requests/{id}/document-verification', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'document-verification', $id)); })->name('requests.document-verification');
     
-    Route::get('/requests/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\DocumentPageController::remember($request, 'print-form', $id)); })->name('requests.print');
-    Route::get('/requests/{id}/generate-certificate', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\DocumentPageController::remember($request, 'generate-certificate', $id)); })->name('generate-certificate');
+    Route::get('/requests/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'print-form', $id)); })->name('requests.print');
+    Route::get('/requests/{id}/generate-certificate', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'generate-certificate', $id)); })->name('generate-certificate');
     Route::post('/requests/{id}/certificate-details', [AdminController::class, 'saveCertificateDetails'])->name('certificate-details');
     Route::post('/update-project-type/{id}', [AdminController::class, 'updateProjectType'])->name('update-project-type');
     Route::post('/requests/{id}/application-details', [AdminController::class, 'updateApplicationDetails'])->name('application-details');
     Route::post('/requests/{id}/release-to-applicant', [AdminController::class, 'releaseToApplicant'])->name('release-to-applicant');
-    Route::get('/requests/{id}/generate-clearance', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\DocumentPageController::remember($request, 'generate-clearance', $id)); })->name('generate-clearance');
-    Route::get('/requests/{id}/generate-order-of-payment', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\DocumentPageController::remember($request, 'order-of-payment', $id)); })->name('generate-order-of-payment');
+    Route::get('/requests/{id}/generate-clearance', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'generate-clearance', $id)); })->name('generate-clearance');
+    Route::get('/requests/{id}/generate-order-of-payment', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'order-of-payment', $id)); })->name('generate-order-of-payment');
     Route::get('/export/requests', [\App\Http\Controllers\SuperAdminController::class, 'exportRequests'])->name('export.requests');
     
     // Management
-    Route::get('/users', [\App\Http\Controllers\SuperAdminController::class, 'users'])->name('users');
+    Route::get('/users', function () { return redirect('/users'); })->name('users');
     Route::get('/users/create', function () {
         return Inertia::render('SuperAdmin/CreateUser');
     })->name('users.create');
-    Route::get('/users/{userId}/edit', [\App\Http\Controllers\SuperAdminController::class, 'editUser'])->name('users.edit');
-    Route::get('/audit-logs', [\App\Http\Controllers\SuperAdminController::class, 'auditLogs'])->name('audit-logs');
+    Route::get('/users/{userId}/edit', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'edit-user', $id)); })->name('users.edit');
+    Route::get('/audit-logs', function () { return redirect('/audit-logs'); })->name('audit-logs');
     Route::get('/settings', [\App\Http\Controllers\SuperAdminController::class, 'settings'])->name('settings');
     
     // Super Admin specific actions
@@ -140,7 +149,7 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     
     // Certificate Management Routes (NEW: Using CertificateController with PDF generation)
     Route::prefix('certificates')->name('certificates.')->group(function () {
-        Route::get('/', [CertificateController::class, 'index'])->name('index');
+        Route::get('/', function () { return redirect('/certificates'); })->name('index');
         Route::get('/{certificate}', [CertificateController::class, 'show'])->name('show');
         Route::get('/{certificate}/download', [CertificateController::class, 'download'])->name('download');
         Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
@@ -159,13 +168,13 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::post('/certificates-old/{certificate}/release', [\App\Http\Controllers\SuperAdminController::class, 'releaseCertificate'])->name('certificates-old.release');
     
     // SMS Broadcast + Auto-Templates
-    Route::get('/sms', [\App\Http\Controllers\SmsController::class, 'index'])->name('sms.index');
+    Route::get('/sms', function () { return redirect('/sms-broadcast'); })->name('sms.index');
     Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
     Route::put('/sms/templates/{id}', [\App\Http\Controllers\SmsController::class, 'updateTemplate'])->name('sms.templates.update');
     Route::post('/sms/templates/{id}/reset', [\App\Http\Controllers\SmsController::class, 'resetTemplate'])->name('sms.templates.reset');
 
     // Print form
-    Route::get('/requests/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\DocumentPageController::remember($request, 'print-form', $id)); })->name('requests.print');
+    Route::get('/requests/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'print-form', $id)); })->name('requests.print');
     Route::get('/export/requests', [\App\Http\Controllers\AdminController::class, 'exportRequests'])->name('export.requests');
     Route::get('/export/users', [\App\Http\Controllers\AdminController::class, 'exportUsers'])->name('export.users');
     Route::get('/export/payments', [\App\Http\Controllers\AdminController::class, 'exportPayments'])->name('export.payments');
@@ -174,11 +183,11 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::get('/audit-logs/export', [\App\Http\Controllers\AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
 
     // Payment Management Routes - Unified Page
-    Route::get('/payments', [\App\Http\Controllers\SuperAdminController::class, 'payments'])->name('payments');
+    Route::get('/payments', function () { return redirect('/payments'); })->name('payments');
     Route::post('/payments/record', [PaymentController::class, 'recordPayment'])->name('payments.record');
     Route::post('/payments/check-duplicate', [PaymentController::class, 'checkDuplicate'])->name('payments.check-duplicate');
     Route::post('/payments/upload-receipt', [\App\Http\Controllers\SuperAdminController::class, 'uploadReceipt'])->name('payments.upload-receipt');
-    Route::get('/payments/{id}/show', [PaymentController::class, 'show'])->name('payments.show');
+    Route::get('/payments/{id}/show', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'payment-details', $id)); })->name('payments.show');
     Route::put('/payments/{payment}', [\App\Http\Controllers\SuperAdminController::class, 'updatePayment'])->name('payments.update');
     Route::post('/payments/{payment}/verify', [\App\Http\Controllers\SuperAdminController::class, 'verifyPayment'])->name('payments.verify');
     Route::post('/payments/{payment}/reject', [\App\Http\Controllers\SuperAdminController::class, 'rejectPayment'])->name('payments.reject');
@@ -191,20 +200,20 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
 
 // Admin routes
 Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/dashboard', function () { return redirect('/dashboard-panel'); })->name('dashboard');
     Route::get('/search', [AdminController::class, 'search'])->name('search');
-    Route::get('/requests', [AdminController::class, 'requests'])->name('requests');
+    Route::get('/requests', function () { return redirect('/applications'); })->name('requests');
     Route::get('/requests/{id}', [AdminController::class, 'viewRequest'])->name('requests.view');
-    Route::get('/requests/{id}/review', [AdminController::class, 'reviewRequest'])->name('requests.review');
+    Route::get('/requests/{id}/review', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'review-application', $id)); })->name('requests.review');
     
     // NEW: Split Review Pages
-    Route::get('/requests/{id}/view-application', [AdminController::class, 'viewApplication'])->name('requests.view-application');
-    Route::get('/requests/{id}/document-verification', [AdminController::class, 'documentVerification'])->name('requests.document-verification');
+    Route::get('/requests/{id}/view-application', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'view-application', $id)); })->name('requests.view-application');
+    Route::get('/requests/{id}/document-verification', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'document-verification', $id)); })->name('requests.document-verification');
     
     Route::get('/reports', function () {
         return Inertia::render('Admin/Reports');
     })->name('reports');
-    Route::get('/users', [AdminController::class, 'users'])->name('users');
+    Route::get('/users', function () { return redirect('/users'); })->name('users');
     Route::put('/users/{userId}', [AdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{userId}', [AdminController::class, 'deleteUser'])->name('users.delete');
     Route::post('/update-evaluation/{reportId}', [AdminController::class, 'updateEvaluation'])->name('update-evaluation');
@@ -224,17 +233,17 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::post('/upload-requirement-document', [AdminController::class, 'uploadRequirementDocument'])->name('upload-requirement-document');
     
     // Payment Management Routes - Unified Page
-    Route::get('/payments', [AdminController::class, 'payments'])->name('payments');
+    Route::get('/payments', function () { return redirect('/payments'); })->name('payments');
     Route::post('/payments/record', [PaymentController::class, 'recordPayment'])->name('payments.record');
     Route::post('/payments/check-duplicate', [PaymentController::class, 'checkDuplicate'])->name('payments.check-duplicate');
     Route::post('/payments/upload-receipt', [AdminController::class, 'uploadReceipt'])->name('payments.upload-receipt');
-    Route::get('/payments/{id}/show', [PaymentController::class, 'show'])->name('payments.show');
+    Route::get('/payments/{id}/show', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'payment-details', $id)); })->name('payments.show');
     Route::post('/payments/{payment}/verify', [AdminController::class, 'verifyPayment'])->name('payments.verify');
     Route::post('/payments/{payment}/reject', [AdminController::class, 'rejectPayment'])->name('payments.reject');
     
     // Certificate Management Routes (NEW: Using CertificateController with PDF generation)
     Route::prefix('certificates')->name('certificates.')->group(function () {
-        Route::get('/', [CertificateController::class, 'index'])->name('index');
+        Route::get('/', function () { return redirect('/certificates'); })->name('index');
         Route::get('/{certificate}', [CertificateController::class, 'show'])->name('show');
         Route::get('/{certificate}/download', [CertificateController::class, 'download'])->name('download');
         Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
@@ -257,17 +266,17 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::get('/export/payments', [AdminController::class, 'exportPayments'])->name('export.payments');
 
     // SMS Broadcast only (admins can broadcast but NOT edit templates)
-    Route::get('/sms', [\App\Http\Controllers\SmsController::class, 'index'])->name('sms.index');
+    Route::get('/sms', function () { return redirect('/sms-broadcast'); })->name('sms.index');
     Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
 
     // Print form
-    Route::get('/requests/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\DocumentPageController::remember($request, 'print-form', $id)); })->name('requests.print');
+    Route::get('/requests/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'print-form', $id)); })->name('requests.print');
     
     // Generate documents routes
-    Route::get('/requests/{id}/generate-certificate', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\DocumentPageController::remember($request, 'generate-certificate', $id)); })->name('generate-certificate');
+    Route::get('/requests/{id}/generate-certificate', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'generate-certificate', $id)); })->name('generate-certificate');
     Route::post('/requests/{id}/certificate-details', [AdminController::class, 'saveCertificateDetails'])->name('certificate-details');
-    Route::get('/requests/{id}/generate-clearance', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\DocumentPageController::remember($request, 'generate-clearance', $id)); })->name('generate-clearance');
-    Route::get('/requests/{id}/generate-order-of-payment', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\DocumentPageController::remember($request, 'order-of-payment', $id)); })->name('generate-order-of-payment');
+    Route::get('/requests/{id}/generate-clearance', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'generate-clearance', $id)); })->name('generate-clearance');
+    Route::get('/requests/{id}/generate-order-of-payment', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'order-of-payment', $id)); })->name('generate-order-of-payment');
     
     // Bulk action routes
     Route::post('/bulk/approve', [AdminController::class, 'bulkApprove'])->name('bulk.approve');
@@ -275,7 +284,7 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::delete('/bulk/delete', [AdminController::class, 'bulkDelete'])->name('bulk.delete');
     
     // Audit log routes
-    Route::get('/audit-logs', [AdminController::class, 'auditLogs'])->name('audit-logs');
+    Route::get('/audit-logs', function () { return redirect('/audit-logs'); })->name('audit-logs');
     Route::get('/audit-logs/export', [AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
     Route::get('/audit-logs/{id}', [AdminController::class, 'viewAuditLog'])->name('audit-logs.view');
     
