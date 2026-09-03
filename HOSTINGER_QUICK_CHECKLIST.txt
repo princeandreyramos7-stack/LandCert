@@ -1,0 +1,228 @@
+╔═══════════════════════════════════════════════════════════════════╗
+║         CPDO LC - HOSTINGER DEPLOYMENT CHECKLIST                  ║
+║                    Quick Reference Guide                          ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+📋 PRE-DEPLOYMENT (Do on Local Computer)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Run: npm run build
+☐ Run: composer install --optimize-autoloader --no-dev
+☐ Clear storage/logs/*.log
+☐ Clear storage/framework/cache/*
+☐ Clear storage/framework/sessions/*
+☐ Clear storage/framework/views/*
+☐ Copy .env.example to .env.production (for reference)
+☐ Create ZIP of entire project (or prepare for FTP upload)
+
+
+🗄️ HOSTINGER - DATABASE SETUP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Login to Hostinger hPanel
+☐ Go to: Databases → MySQL Databases
+☐ Click: Create New Database
+   Database Name: _________________ (note this down!)
+☐ Click: Create Database User
+   Username: _____________________ (note this down!)
+   Password: _____________________ (note this down! - use strong password)
+☐ Assign user to database with ALL PRIVILEGES
+☐ Note down connection details:
+   DB_HOST: localhost
+   DB_PORT: 3306
+   DB_DATABASE: _____________________
+   DB_USERNAME: _____________________
+   DB_PASSWORD: _____________________
+
+
+📤 HOSTINGER - FILE UPLOAD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Go to: Files → File Manager
+☐ Navigate to: public_html
+☐ Upload ZIP file (or use FTP)
+☐ Extract ZIP if uploaded
+☐ Verify all files uploaded correctly
+☐ Note: Do NOT upload node_modules folder (227 MB)
+
+
+⚙️ HOSTINGER - CONFIGURATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Copy .env.example to .env
+☐ Edit .env file and update:
+   ☐ APP_ENV=production
+   ☐ APP_DEBUG=false
+   ☐ APP_URL=https://yourdomain.com
+   ☐ DB_HOST=localhost
+   ☐ DB_DATABASE=(your database name)
+   ☐ DB_USERNAME=(your database user)
+   ☐ DB_PASSWORD=(your database password)
+   ☐ MAIL_HOST=smtp.hostinger.com
+   ☐ MAIL_USERNAME=(your email)
+   ☐ MAIL_PASSWORD=(your email password)
+   ☐ SEMAPHORE_API_KEY=(your SMS API key)
+
+
+🔐 HOSTINGER - PERMISSIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Set permissions (via File Manager or SSH):
+   ☐ storage/ → 755
+   ☐ bootstrap/cache/ → 755
+   ☐ .env → 644
+
+
+🔑 HOSTINGER - GENERATE APP KEY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Option 1 (SSH): php artisan key:generate
+☐ Option 2 (Manual):
+   - Visit: https://generate-random.org/laravel-key-generator
+   - Copy generated key
+   - Add to .env: APP_KEY=base64:your_key_here
+
+
+💾 HOSTINGER - DATABASE MIGRATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Via SSH (if available):
+   php artisan migrate --force
+   php artisan db:seed --class=RoleSeeder
+   php artisan db:seed --class=AdminUserSeeder
+
+☐ Without SSH:
+   Create public/migrate.php with migration script
+   Visit: https://yourdomain.com/migrate.php
+   DELETE migrate.php after use!
+
+☐ Verify in phpMyAdmin:
+   Check tables exist: users, requests, payments, certificates
+
+
+🔗 HOSTINGER - STORAGE LINK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Via SSH: php artisan storage:link
+☐ Without SSH: Create symlink via File Manager
+☐ Verify: public/storage folder exists
+
+
+🧹 HOSTINGER - CACHE & OPTIMIZE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Clear caches:
+   php artisan cache:clear
+   php artisan config:clear
+   php artisan route:clear
+   php artisan view:clear
+
+☐ Cache for production:
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+
+
+🌐 HOSTINGER - SSL & DOMAIN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Go to: SSL → Manage SSL
+☐ Install Free SSL (Let's Encrypt)
+☐ Wait 5-15 minutes for activation
+☐ Force HTTPS in .htaccess
+
+
+⏰ HOSTINGER - CRON JOBS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Go to: Advanced → Cron Jobs
+☐ Add cron job:
+   * * * * * cd /home/username/public_html/cpdo_project && php artisan schedule:run >> /dev/null 2>&1
+☐ Save and activate
+
+
+✅ POST-DEPLOYMENT TESTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Visit: https://yourdomain.com
+☐ Verify homepage loads
+☐ Check "Login" button shows (no "Sign Up" button)
+☐ Click "Login" and test login page
+☐ Login as super admin:
+   Email: crisanta@cpdo.com
+   Password: password123
+☐ CHANGE ADMIN PASSWORD immediately!
+☐ Test dashboard loads
+☐ Test creating application
+☐ Test payment recording
+☐ Test certificate generation
+☐ Test file uploads
+☐ Test email notifications
+☐ Test SMS notifications
+☐ Check storage/logs/laravel.log for errors
+
+
+🔒 SECURITY CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ APP_DEBUG=false in .env
+☐ APP_ENV=production in .env
+☐ Strong database password set
+☐ Admin password changed from default
+☐ .env file permissions: 644
+☐ Remove any test/migration scripts (migrate.php)
+☐ SSL certificate active
+☐ HTTPS forced via .htaccess
+☐ Directory listing disabled
+
+
+💾 BACKUP SETUP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Enable Hostinger automatic backups
+☐ Manual backup database via phpMyAdmin
+☐ Download backup of entire project
+☐ Schedule weekly backups
+☐ Test backup restoration
+
+
+📝 DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☐ Save all credentials in secure location:
+   - Database name, user, password
+   - Admin login credentials
+   - Email settings
+   - SMS API keys
+   - Domain registrar login
+   - Hostinger login
+☐ Document any custom configurations
+☐ Note down server paths
+
+
+🎉 DEPLOYMENT COMPLETE!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Your CPDO LC system should now be live at: https://yourdomain.com
+
+Default Super Admin Login:
+Email: crisanta@cpdo.com
+Password: password123
+⚠️ CHANGE THIS PASSWORD IMMEDIATELY!
+
+
+📞 SUPPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Hostinger Support: 24/7 Live Chat
+System Logs: storage/logs/laravel.log
+Full Guide: HOSTINGER_DEPLOYMENT_GUIDE.md
+
+
+⚡ QUICK COMMANDS (via SSH)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cd /home/username/public_html/cpdo_project
+
+Clear all caches:
+php artisan cache:clear && php artisan config:clear && php artisan view:clear
+
+Cache for production:
+php artisan config:cache && php artisan route:cache
+
+Reset admin password:
+php artisan admin:reset-password
+
+Test email:
+php artisan test:email
+
+View logs:
+tail -f storage/logs/laravel.log
+
+
+═══════════════════════════════════════════════════════════════════
+Good luck with your deployment! 🚀
+═══════════════════════════════════════════════════════════════════

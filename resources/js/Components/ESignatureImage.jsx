@@ -17,6 +17,40 @@ export default function ESignatureImage({ src, maxHeight = '38pt', maxWidth = '8
         return null;
     }
 
+    // Normalize the signature path
+    // Handle both relative paths (/images/...) and full URLs
+    const getSignaturePath = (path) => {
+        if (!path) return null;
+        
+        // If it's already a full URL, return as is
+        if (path.startsWith('http://') || path.startsWith('https://')) {
+            return path;
+        }
+        
+        // If it starts with /storage/, prepend APP_URL
+        if (path.startsWith('/storage/')) {
+            return path;
+        }
+        
+        // If it's a relative path starting with /images/, use it as is
+        if (path.startsWith('/images/')) {
+            return path;
+        }
+        
+        // If it's just a filename or relative path, prepend /images/
+        if (!path.startsWith('/')) {
+            return `/images/${path}`;
+        }
+        
+        return path;
+    };
+
+    const signaturePath = getSignaturePath(src);
+
+    if (!signaturePath) {
+        return null;
+    }
+
     return (
         <>
             <span
@@ -41,9 +75,14 @@ export default function ESignatureImage({ src, maxHeight = '38pt', maxWidth = '8
                 Electronic Signature · Verified
             </span>
             <img
-                src={src}
+                src={signaturePath}
                 alt=""
                 crossOrigin="anonymous"
+                onError={(e) => {
+                    // Hide broken image icon, just show empty space
+                    e.target.style.display = 'none';
+                    console.warn('Signature image failed to load:', signaturePath);
+                }}
                 style={{
                     position: 'relative',
                     maxHeight,
