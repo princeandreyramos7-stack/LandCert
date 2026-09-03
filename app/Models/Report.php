@@ -73,7 +73,56 @@ class Report extends Model
             ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($name)])
             ->first();
 
-        return $match ?: (object) ['name' => $name, 'signature_url' => null];
+        return $match
+            ?: $this->matchStaffLoosely($name)
+            ?: (object) ['name' => $name, 'signature_url' => null];
+    }
+
+    /**
+     * Find the staff account a legacy issued_by name refers to, allowing for the
+     * ways the same person gets written down.
+     *
+     * The exact comparison above only survives an identical string. "Kay B
+     * Aggarao" without the full stop, "Engr. Kay B. Aggarao" with the title, or
+     * "Kay Aggarao" without the middle initial all failed it — and the failure
+     * is quiet and misleading, because the certificate still prints the name and
+     * simply omits the signature, so the document looks unsigned rather than
+     * broken.
+     *
+     * Only an unambiguous match counts: signing a certificate as the wrong
+     * officer is far worse than leaving it unsigned.
+     */
+    private function matchStaffLoosely(string $name): ?User
+    {
+        $letters = fn (string $value) => preg_replace('/[^a-z]/', '', mb_strtolower($value));
+
+        // Honorifics attach to the name in some records but never in the
+        // accounts, so they cannot help identify anyone.
+        $stripTitles = fn (string $value) => trim(preg_replace(
+            '/\b(engr|arch|atty|hon|mr|mrs|ms|dr|enp)\b\.?/iu',
+            '',
+            $value
+        ));
+
+        // Comparing without middle initials lets "Kay Aggarao" reach
+        // "Kay B. Aggarao" without letting two different people collide.
+        $collapse = function (string $value) use ($letters, $stripTitles) {
+            $parts = preg_split('/\s+/', trim($stripTitles($value))) ?: [];
+            $kept = array_filter($parts, fn ($part) => mb_strlen($letters($part)) > 1);
+
+            return $letters(implode('', $kept));
+        };
+
+        $target = $collapse($name);
+        if ($target === '') {
+            return null;
+        }
+
+        $candidates = User::whereIn('user_type', ['admin', 'super_admin'])
+            ->get()
+            ->filter(fn (User $user) => $collapse($user->name) === $target);
+
+        return $candidates->count() === 1 ? $candidates->first() : null;
     }
 
     /**
