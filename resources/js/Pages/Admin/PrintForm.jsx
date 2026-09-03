@@ -406,6 +406,15 @@ export default function PrintForm({ application: a, auth }) {
     };
 
 
+    /* item 8 — project nature. Mirrors the form's own rule: the column holds
+       either one of the two fixed choices or the applicant's written-in text,
+       so anything unrecognised is an "Others" entry. */
+    const natureRaw = v(a.project_nature);
+    const nature = natureRaw.toLowerCase().replace(/\.$/, "");
+    const natureIsNewConst = nature === "new const" || nature === "new construction";
+    const natureIsImprovement = nature === "improvement";
+    const natureIsOther = Boolean(natureRaw) && !natureIsNewConst && !natureIsImprovement;
+
     /* land-use checks */
     const lu = v(a.existing_land_use).toLowerCase();
     const knownLU = [
@@ -614,12 +623,29 @@ export default function PrintForm({ application: a, auth }) {
                     <tbody>
                         <tr>
                             <td className="nb-t" style={{ height: "22pt" }}>
-                                <span className="lbl">7. Locational Clearance</span>
+                                <span className="lbl">7. Project Type</span>
                                 <span className="val">{v(a.project_type) || nb}</span>
                             </td>
                             <td className="nb-t nb-l" style={{ height: "22pt" }}>
-                                <span className="lbl">8. Classification</span>
-                                <span className="val">{v(a.project_nature) || nb}</span>
+                                <span className="lbl">8. Project Nature</span>
+                                {/* The paper form ticks one of three; anything
+                                    other than the two fixed choices is the
+                                    written-in "Others" value. */}
+                                <div style={{ marginTop: "3pt" }}>
+                                    <span className="opt">
+                                        <Chk on={natureIsNewConst} />
+                                        {" "}New Const.
+                                    </span>
+                                    <span className="opt">
+                                        <Chk on={natureIsImprovement} />
+                                        {" "}Improvement
+                                    </span>
+                                    <span className="opt">
+                                        <Chk on={natureIsOther} />
+                                        {" "}Others:{" "}
+                                        <Uline val={natureIsOther ? a.project_nature : ""} w="60pt" />
+                                    </span>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
@@ -727,7 +753,7 @@ export default function PrintForm({ application: a, auth }) {
                         <tr>
                             <td className="nb-t nb-b" colSpan={4} style={{ paddingBottom: "1pt" }}>
                                 <span className="lbl" style={{ marginBottom: 0 }}>
-                                    10. Project Area
+                                    10. Project Area (in square meters)
                                 </span>
                             </td>
                         </tr>
@@ -737,7 +763,7 @@ export default function PrintForm({ application: a, auth }) {
                                 className="nb-t nb-l nb-r"
                                 style={{ border: "none", width: "5%", fontSize: "6pt", paddingTop: "2pt", paddingRight: "2pt", verticalAlign: "bottom" }}
                             >
-                                Project Area:
+                                Lot:
                             </td>
                             <td
                                 className="nb-t nb-l"
@@ -793,7 +819,7 @@ export default function PrintForm({ application: a, auth }) {
                             </td>
                             {/* 12 — project nature/status */}
                             <td className="nb-t nb-l" style={{ height: "26pt", verticalAlign: "top" }}>
-                                <span className="lbl">12. Project Classification</span>
+                                <span className="lbl">12. Project Tenure</span>
                                 <div style={{ marginTop: "3pt" }}>
                                     <span className="opt">
                                         <Chk on={v(a.project_nature_duration).toLowerCase() === "permanent"} />
@@ -817,7 +843,7 @@ export default function PrintForm({ application: a, auth }) {
                     <tbody>
                         <tr>
                             <td className="nb-t" style={{ paddingBottom: "4pt" }}>
-                                <span className="lbl">13. Existing Land Uses of Project Use</span>
+                                <span className="lbl">13. Existing Land Uses of Project Site</span>
                                 {/* Line 1 */}
                                 <div style={{ marginTop: "3pt", display: "flex", flexWrap: "nowrap", gap: "0 4pt", alignItems: "center" }}>
                                     {[
@@ -863,7 +889,7 @@ export default function PrintForm({ application: a, auth }) {
                     <tbody>
                         <tr>
                             <td className="nb-t" style={{ padding: "3pt 4pt" }}>
-                                <span className="lbl">14. Project Cost / Capitalization (in Pesos)</span>
+                                <span className="lbl">14. Project Cost / Capitalization (in pesos, write in words and figure)</span>
                                 <div style={{ marginTop: "2pt", display: "flex", alignItems: "baseline", gap: "6pt" }}>
                                     <span style={{ fontSize: "9pt", fontWeight: 700 }}>
                                         {costFmt || nb}

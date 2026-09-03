@@ -543,7 +543,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
                 <div className="pt-4 border-t">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InfoField
-                            label="Project Area (sqm)"
+                            label="Project Area — Lot (sqm)"
                             value={
                                 request.lot_area_sqm
                                     ? `${parseFloat(request.lot_area_sqm).toLocaleString()} sqm`
@@ -551,7 +551,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
                             }
                         />
                         <InfoField
-                            label="Bldg. Improvement (sqm)"
+                            label="Project Area — Bldg. Improvement (sqm)"
                             value={
                                 request.bldg_improvement_sqm
                                     ? `${parseFloat(request.bldg_improvement_sqm).toLocaleString()} sqm`
@@ -581,12 +581,12 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
                     <h4 className="text-sm font-semibold text-gray-700 mb-4">Project Nature & Cost</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InfoField
-                            label="Project Duration"
+                            label="Project Tenure"
                             value={request.project_nature_duration}
                         />
                         {request.project_nature_years && (
                             <InfoField
-                                label="Specify Years"
+                                label="Tenure — Specify Years"
                                 value={`${request.project_nature_years} ${Number(request.project_nature_years) === 1 ? "year" : "years"}`}
                             />
                         )}
@@ -680,7 +680,7 @@ function Step3Content({ request }) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InfoField
-                    label="Existing Land Uses of Project Use"
+                    label="Existing Land Uses of Project Site"
                     value={request.existing_land_use}
                 />
             </div>
@@ -743,6 +743,11 @@ function Step3Content({ request }) {
                     <InfoField
                         label="Preferred Release Mode"
                         value={RELEASE_MODE_LABELS[request.preferred_release_mode] || request.preferred_release_mode}
+                    />
+                    {/* Item 17 on the paper form: "By mail, address to". */}
+                    <InfoField
+                        label="Release Address"
+                        value={request.release_address}
                     />
                 </div>
             </div>

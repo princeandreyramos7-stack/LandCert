@@ -360,7 +360,7 @@ export default function ApplicationDetails({ application, requirements = [], doc
                     {/* Project */}
                     <Section icon={Building2} title="Project Details">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <Field label="Locational Clearance" value={application.project_type} />
+                            <Field label="Project Type" value={application.project_type} />
                             {!isZC && (
                                 <>
                                     <Field label="Project Nature" value={application.project_nature} />
@@ -394,13 +394,13 @@ export default function ApplicationDetails({ application, requirements = [], doc
                         {/* Property & Land Use */}
                         <Section icon={Home} title="Property &amp; Land Use">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <Field label="Lot Area" value={formatSqm(application.lot_area_sqm)} />
-                                <Field label="Building / Improvement" value={formatSqm(application.bldg_improvement_sqm)} />
+                                <Field label="Project Area — Lot" value={formatSqm(application.lot_area_sqm)} />
+                                <Field label="Project Area — Bldg. Improvement" value={formatSqm(application.bldg_improvement_sqm)} />
                                 <Field label="Title Number" value={application.title_number} />
                                 <Field label="Tax Declaration No." value={application.tax_declaration_no} />
                                 <Field label="Zone Classification" value={application.zone_classification} />
                                 <Field label="Right Over Land" value={application.right_over_land} />
-                                <Field label="Existing Land Use" value={application.existing_land_use} />
+                                <Field label="Existing Land Uses of Project Site" value={application.existing_land_use} />
                             </div>
     
                             <div className="mt-6 pt-5 border-t grid grid-cols-1 md:grid-cols-2 gap-5">
