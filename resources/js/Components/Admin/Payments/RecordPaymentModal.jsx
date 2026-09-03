@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { csrfHeaders } from "@/lib/csrf";
 import {
     Dialog,
     DialogContent,
@@ -169,9 +170,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": document
-                            .querySelector('meta[name="csrf-token"]')
-                            .getAttribute("content"),
+                        ...csrfHeaders(),
                     },
                     body: JSON.stringify({ receipt_number: receiptNumber }),
                 }

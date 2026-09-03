@@ -16,6 +16,7 @@ import { Step4Requirements } from "./Step4Requirements";
 import { FormNavigation } from "./FormNavigation";
 import { ApplicationSummaryModal } from "./ApplicationSummaryModal";
 import { validateStep1, validateStep2, validateStep3, validateStep4 } from "./utils";
+import { csrfHeaders, hasCsrfToken, appendCsrfField } from "@/lib/csrf";
 
 export default function RequestForm({ isEditing = false, existingApplication = null }) {
     // Welcome/requirements board is shown first; applicants proceed to Step 1 when ready
@@ -348,7 +349,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             // Create FormData
             const formData = new FormData();
             formData.append('_method', 'PUT');
-            formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+            appendCsrfField(formData);
             
             // Add all text fields
             Object.keys(data).forEach(key => {
@@ -462,8 +463,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             // error body are visible - the caller needs to know whether a failure
             // is a form/validation problem (422) or a server problem (500).
             try {
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                if (!csrfToken) {
+                if (!hasCsrfToken()) {
                     throw new Error('Your session has expired. Please refresh the page and try again.');
                 }
 
@@ -471,7 +471,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                     method: 'POST',
                     body: formData,
                     headers: {
-                        'X-CSRF-TOKEN': csrfToken,
+                        ...csrfHeaders(),
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json',
                     },

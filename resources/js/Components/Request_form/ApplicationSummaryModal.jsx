@@ -94,11 +94,11 @@ export function ApplicationSummaryModal({
                             <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Project Details</h3>
                             <div className="space-y-2 text-sm">
                                 <SummaryItem label="Locational Clearance" value={data.project_type} />
-                                <SummaryItem label="Classification" value={data.project_nature} />
-                                <SummaryItem label="Project Area (sqm)" value={data.lot_area_sqm} />
-                                <SummaryItem label="Bldg. Improvement (sqm)" value={data.bldg_improvement_sqm} />
+                                <SummaryItem label="Project Nature" value={data.project_nature} />
+                                <SummaryItem label="Project Area - Lot (sqm)" value={data.lot_area_sqm} />
+                                <SummaryItem label="Project Area - Bldg. Improvement (sqm)" value={data.bldg_improvement_sqm} />
                                 <SummaryItem label="Right Over Land" value={data.right_over_land} />
-                                <SummaryItem label="Project Duration" value={
+                                <SummaryItem label="Project Tenure" value={
                                     String(data.project_nature_duration || '').toLowerCase() === 'temporary'
                                         ? `Temporary${data.project_nature_years ? ` (${data.project_nature_years} year${Number(data.project_nature_years) === 1 ? '' : 's'})` : ''}`
                                         : (data.project_nature_duration || null)

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { csrfHeaders, hasCsrfToken } from '@/lib/csrf';
 import { Head, router } from '@inertiajs/react';
 import { AppSidebar } from '@/Components/app-sidebar';
 import {
@@ -194,17 +195,14 @@ export default function UploadReceipt({ application, existingPayment }) {
         formData.append('payment_date', paymentDate);
 
         try {
-            // Get CSRF token
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
-            if (!csrfToken) {
+            if (!hasCsrfToken()) {
                 throw new Error('CSRF token not found. Please refresh the page.');
             }
 
             const response = await fetch('/payments', {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': csrfToken,
+                    ...csrfHeaders(),
                 },
                 body: formData,
             });

@@ -503,7 +503,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
 
                 {!isZC && (
                     <InfoField
-                        label="Project Classification"
+                        label="Project Nature"
                         value={request.project_nature}
                     />
                 )}

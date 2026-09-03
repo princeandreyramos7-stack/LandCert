@@ -53,19 +53,55 @@ const parseCostInput = (displayValue) => {
     return cleaned;
 };
 
+/**
+ * Item 8 on the paper form offers New Const., Improvement or Others, where
+ * Others is written in by hand. There is no separate column for that write-in:
+ * `project_nature` holds either one of the two fixed choices or whatever the
+ * applicant typed. Anything else on file therefore *is* an "Others" value,
+ * which is how an existing application reopens on the right option.
+ */
+const PROJECT_NATURE_OPTIONS = ["New Const.", "Improvement"];
+
 export function Step2ProjectDetails({ data, errors, onDataChange }) {
+    const [natureChoice, setNatureChoice] = React.useState(() => {
+        const current = String(data.project_nature || "");
+        if (!current) return "";
+        return PROJECT_NATURE_OPTIONS.includes(current) ? current : "Others";
+    });
+
+    const handleNatureChange = (value) => {
+        setNatureChoice(value);
+        // Others starts blank so the applicant writes it in; the two fixed
+        // choices are stored as-is.
+        onDataChange("project_nature", value === "Others" ? "" : value);
+    };
+
     return (
         <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="project_nature">8. Classification</Label>
-                <Input
-                    id="project_nature"
-                    value={data.project_nature}
-                    onChange={(e) =>
-                        onDataChange("project_nature", e.target.value)
-                    }
-                    placeholder="Enter classification"
-                />
+                <Label htmlFor="project_nature">8. Project Nature</Label>
+                <Select value={natureChoice} onValueChange={handleNatureChange}>
+                    <SelectTrigger id="project_nature">
+                        <SelectValue placeholder="Select project nature" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="New Const.">New Const.</SelectItem>
+                        <SelectItem value="Improvement">Improvement</SelectItem>
+                        <SelectItem value="Others">Others</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                {natureChoice === "Others" && (
+                    <Input
+                        id="project_nature_other"
+                        value={data.project_nature}
+                        onChange={(e) =>
+                            onDataChange("project_nature", e.target.value)
+                        }
+                        placeholder="Please specify the project nature"
+                    />
+                )}
+
                 {errors.project_nature && (
                     <p className="text-sm text-red-500">
                         {errors.project_nature}
@@ -354,12 +390,14 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
             </div>
 
             <div className="space-y-2 md:col-span-2">
-                <Label className="text-base font-semibold">10. Project Area</Label>
+                <Label className="text-base font-semibold">
+                    10. Project Area (in square meters)
+                </Label>
             </div>
 
             <div className="space-y-2">
                 <Label htmlFor="lot_area_sqm">
-                    Project Area (sqm) <span className="text-red-500">*</span>
+                    Lot <span className="text-red-500">*</span>
                 </Label>
                 <Input
                     id="lot_area_sqm"
@@ -379,9 +417,7 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="bldg_improvement_sqm">
-                    Bldg. Improvement (sqm)
-                </Label>
+                <Label htmlFor="bldg_improvement_sqm">Bldg. Improvement</Label>
                 <Input
                     id="bldg_improvement_sqm"
                     type="number"
@@ -426,7 +462,7 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
 
             <div className="space-y-2">
                 <Label htmlFor="project_nature_duration">
-                    8. Project Classification <span className="text-red-500">*</span>
+                    12. Project Tenure <span className="text-red-500">*</span>
                 </Label>
                 <Select
                     value={data.project_nature_duration}
@@ -435,11 +471,13 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
                     }
                 >
                     <SelectTrigger>
-                        <SelectValue placeholder="Select duration" />
+                        <SelectValue placeholder="Select tenure" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="Permanent">Permanent</SelectItem>
-                        <SelectItem value="Temporary">Temporary</SelectItem>
+                        <SelectItem value="Temporary">
+                            Temporary (Specify Years)
+                        </SelectItem>
                     </SelectContent>
                 </Select>
                 {errors.project_nature_duration && (

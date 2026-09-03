@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { csrfHeaders, hasCsrfToken } from "@/lib/csrf";
 import { router } from "@inertiajs/react";
 import { useToast } from "@/Components/ui/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
@@ -233,17 +234,14 @@ export function MyApplicationsList({ applications }) {
         formData.append('payment_date', new Date().toISOString().split('T')[0]);
 
         try {
-            // Get CSRF token safely
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
-            if (!csrfToken) {
+            if (!hasCsrfToken()) {
                 throw new Error('CSRF token not found. Please refresh the page.');
             }
 
             const response = await fetch('/payments', {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': csrfToken,
+                    ...csrfHeaders(),
                 },
                 body: formData,
             });
