@@ -44,7 +44,7 @@ const VISION =
     "City of Ilagan, the Corn Capital of the Philippines, with empowered citizenry " +
     "and committed leadership advancing towards a liveable city.";
 
-export default function Welcome({ auth }) {
+export default function Welcome() {
     const [in_, setIn] = useState(false);
     useEffect(() => { setIn(true); }, []);
 
@@ -75,22 +75,26 @@ export default function Welcome({ auth }) {
                         <a href="#how" className="text-blue-200 hover:text-white transition-colors">How It Works</a>
                         <a href="#mission" className="text-blue-200 hover:text-white transition-colors">Mission & Vision</a>
                         <a href="#contact" className="text-blue-200 hover:text-white transition-colors">Contact</a>
-                        {auth.user
-                            ? <Link href={route("dashboard")} className="px-5 py-2 rounded-md bg-[#d4a017] hover:bg-[#b8880d] text-white font-bold transition-colors text-sm shadow">
-                                Dashboard
-                              </Link>
-                            : <Link href={route("login")} className="px-5 py-2 rounded-md bg-[#d4a017] hover:bg-[#b8880d] text-white font-bold transition-colors text-sm shadow">
-                                Login
-                              </Link>
-                        }
+                        {/* Sign Up / Sign In only. The public page never offers a
+                            way straight back into the panel, so a signed-in
+                            session left behind on a shared machine is not handed
+                            to whoever opens the browser next. */}
+                        <Link href={route("register")} className="rounded-md border border-blue-400/40 px-5 py-2 text-sm font-bold text-blue-200 transition-colors hover:border-blue-300 hover:bg-white/5 hover:text-white">
+                            Sign Up
+                        </Link>
+                        <Link href={route("login")} className="rounded-md bg-[#d4a017] px-5 py-2 text-sm font-bold text-white shadow transition-colors hover:bg-[#b8880d]">
+                            Sign In
+                        </Link>
                     </div>
 
-                    {/* Mobile login */}
-                    <div className="md:hidden">
-                        {auth.user
-                            ? <Link href={route("dashboard")} className="px-4 py-2 rounded-md bg-[#d4a017] text-white font-bold text-sm">Dashboard</Link>
-                            : <Link href={route("login")} className="px-4 py-2 rounded-md bg-[#d4a017] text-white font-bold text-sm">Login</Link>
-                        }
+                    {/* Mobile */}
+                    <div className="flex items-center gap-2 md:hidden">
+                        <Link href={route("register")} className="rounded-md border border-blue-400/40 px-3 py-2 text-sm font-bold text-blue-200">
+                            Sign Up
+                        </Link>
+                        <Link href={route("login")} className="rounded-md bg-[#d4a017] px-3 py-2 text-sm font-bold text-white">
+                            Sign In
+                        </Link>
                     </div>
                 </div>
             </nav>
@@ -144,21 +148,14 @@ export default function Welcome({ auth }) {
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 pt-2">
-                            {!auth.user ? (<>
-                                <Link href={route("register")}
-                                    className="px-8 py-3.5 rounded-md bg-[#d4a017] hover:bg-[#b8880d] text-white font-bold text-base shadow-lg transition-colors text-center">
-                                    APPLY ONLINE NOW
-                                </Link>
-                                <Link href={route("login")}
-                                    className="px-8 py-3.5 rounded-md border border-blue-400/40 text-blue-200 hover:text-white hover:border-blue-300 hover:bg-white/5 font-bold text-base transition-all text-center">
-                                    Already Registered?
-                                </Link>
-                            </>) : (
-                                <Link href={route("dashboard")}
-                                    className="px-8 py-3.5 rounded-md bg-[#d4a017] hover:bg-[#b8880d] text-white font-bold text-base shadow-lg transition-colors text-center">
-                                    OPEN DASHBOARD
-                                </Link>
-                            )}
+                            <Link href={route("register")}
+                                className="px-8 py-3.5 rounded-md bg-[#d4a017] hover:bg-[#b8880d] text-white font-bold text-base shadow-lg transition-colors text-center">
+                                APPLY ONLINE NOW
+                            </Link>
+                            <Link href={route("login")}
+                                className="px-8 py-3.5 rounded-md border border-blue-400/40 text-blue-200 hover:text-white hover:border-blue-300 hover:bg-white/5 font-bold text-base transition-all text-center">
+                                Already Registered?
+                            </Link>
                         </div>
                     </div>
 
@@ -304,17 +301,10 @@ export default function Welcome({ auth }) {
 
                     {/* CTA button */}
                     <Reveal delay={200} className="mt-14 flex justify-center">
-                        {!auth.user ? (
-                            <Link href={route("register")}
-                                className="px-12 py-4 rounded-full bg-white text-[#0d1f5c] font-black text-base tracking-wide hover:bg-[#f0f4ff] shadow-xl transition-colors uppercase">
-                                APPLY FOR A PERMIT NOW!
-                            </Link>
-                        ) : (
-                            <Link href={route("dashboard")}
-                                className="px-12 py-4 rounded-full bg-white text-[#0d1f5c] font-black text-base tracking-wide hover:bg-[#f0f4ff] shadow-xl transition-colors uppercase">
-                                OPEN DASHBOARD
-                            </Link>
-                        )}
+                        <Link href={route("register")}
+                            className="px-12 py-4 rounded-full bg-white text-[#0d1f5c] font-black text-base tracking-wide hover:bg-[#f0f4ff] shadow-xl transition-colors uppercase">
+                            APPLY FOR A PERMIT NOW!
+                        </Link>
                     </Reveal>
                 </div>
             </section>
@@ -394,10 +384,7 @@ export default function Welcome({ auth }) {
                                 <li><a href="#why" className="hover:text-[#d4a017] transition-colors">About CPDO LC</a></li>
                                 <li><a href="#how" className="hover:text-[#d4a017] transition-colors">How It Works</a></li>
                                 <li>
-                                    {!auth.user
-                                        ? <Link href={route("register")} className="hover:text-[#d4a017] transition-colors">Create Account</Link>
-                                        : <Link href={route("dashboard")} className="hover:text-[#d4a017] transition-colors">Dashboard</Link>
-                                    }
+                                    <Link href={route("register")} className="hover:text-[#d4a017] transition-colors">Create Account</Link>
                                 </li>
                                 <li><Link href={route("login")} className="hover:text-[#d4a017] transition-colors">Login</Link></li>
                             </ul>
