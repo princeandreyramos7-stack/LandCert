@@ -32,7 +32,11 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    // 15 minutes, not Laravel's 120. The browser signs an idle user out at
+    // 10 (see Components/IdleLogout), and an active one pings the server every
+    // 4, so this only ever bites a session nobody is using — including one
+    // whose cookie a browser restored after a restart.
+    'lifetime' => (int) env('SESSION_LIFETIME', 15),
 
     /*
      | Defaulted to true rather than Laravel's false: this portal holds
