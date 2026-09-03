@@ -75,25 +75,16 @@ export default function Welcome() {
                         <a href="#how" className="text-blue-200 hover:text-white transition-colors">How It Works</a>
                         <a href="#mission" className="text-blue-200 hover:text-white transition-colors">Mission & Vision</a>
                         <a href="#contact" className="text-blue-200 hover:text-white transition-colors">Contact</a>
-                        {/* Sign Up / Sign In only. The public page never offers a
-                            way straight back into the panel, so a signed-in
-                            session left behind on a shared machine is not handed
-                            to whoever opens the browser next. */}
-                        <Link href={route("register")} className="rounded-md border border-blue-400/40 px-5 py-2 text-sm font-bold text-blue-200 transition-colors hover:border-blue-300 hover:bg-white/5 hover:text-white">
-                            Sign Up
-                        </Link>
+                        {/* Login only - registration is disabled for public access */}
                         <Link href={route("login")} className="rounded-md bg-[#d4a017] px-5 py-2 text-sm font-bold text-white shadow transition-colors hover:bg-[#b8880d]">
-                            Sign In
+                            Login
                         </Link>
                     </div>
 
                     {/* Mobile */}
                     <div className="flex items-center gap-2 md:hidden">
-                        <Link href={route("register")} className="rounded-md border border-blue-400/40 px-3 py-2 text-sm font-bold text-blue-200">
-                            Sign Up
-                        </Link>
                         <Link href={route("login")} className="rounded-md bg-[#d4a017] px-3 py-2 text-sm font-bold text-white">
-                            Sign In
+                            Login
                         </Link>
                     </div>
                 </div>
