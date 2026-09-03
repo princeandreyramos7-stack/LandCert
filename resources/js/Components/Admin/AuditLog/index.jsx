@@ -18,8 +18,15 @@ export function AuditLogComponent({
 }) {
     const [selectedLog, setSelectedLog] = useState(null);
     const [showDetails, setShowDetails] = useState(false);
-    const [showFilters, setShowFilters] = useState(false);
     const [localFilters, setLocalFilters] = useState(filters || {});
+
+    // Open the panel when a filter is already in force. Collapsed by default it
+    // looked as though the full history was on screen, with no hint that the
+    // list had been narrowed.
+    const activeFilterCount = Object.values(filters || {}).filter(
+        (value) => value !== null && value !== undefined && value !== ""
+    ).length;
+    const [showFilters, setShowFilters] = useState(activeFilterCount > 0);
 
     const auditLogsRoute = routePrefix === "super-admin" ? "super-admin.audit-logs" : "admin.audit-logs";
     const exportRoute    = routePrefix === "super-admin" ? "super-admin.audit-logs.export" : "admin.audit-logs.export";
@@ -67,6 +74,7 @@ export function AuditLogComponent({
                 users={users}
                 actions={actions}
                 modelTypes={modelTypes}
+                activeFilterCount={activeFilterCount}
                 onApplyFilters={handleFilter}
                 onClearFilters={handleClearFilters}
             />

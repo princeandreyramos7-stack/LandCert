@@ -12,19 +12,37 @@ const CARDS = [
 export function RequestStats({ stats, onFilterChange }) {
     const values = { all: stats.total, pending: stats.pending, approved: stats.approved, rejected: stats.rejected };
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        // Two across on a phone rather than one: these are four short counts,
+        // and a single column pushed the table below the fold on every load.
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {CARDS.map(c => (
-                <Card key={c.key} className={`cursor-pointer ${c.bg} border-0 hover:shadow-md transition-shadow`}
-                    onClick={() => onFilterChange(c.key)}>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className={`text-xs font-bold mb-1 ${c.text} opacity-70 uppercase tracking-wide`}>{c.label}</p>
-                                <p className={`text-2xl font-black ${c.text}`}>{values[c.key]}</p>
-                                <p className={`text-xs mt-0.5 ${c.text} opacity-60`}>{c.sub}</p>
+                <Card
+                    key={c.key}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Filter by ${c.label}`}
+                    className={`cursor-pointer ${c.bg} border-0 transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0d1f5c] focus-visible:ring-offset-2`}
+                    onClick={() => onFilterChange(c.key)}
+                    onKeyDown={(e) => {
+                        // The card filters the table, so it has to be reachable
+                        // without a mouse.
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onFilterChange(c.key);
+                        }
+                    }}
+                >
+                    <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                                <p className={`mb-1 text-[10px] font-bold uppercase tracking-wide sm:text-xs ${c.text} opacity-70`}>
+                                    {c.label}
+                                </p>
+                                <p className={`text-xl font-black sm:text-2xl ${c.text}`}>{values[c.key]}</p>
+                                <p className={`mt-0.5 hidden text-xs sm:block ${c.text} opacity-60`}>{c.sub}</p>
                             </div>
-                            <div className={`p-2 ${c.iconBg} rounded-lg`}>
-                                <c.icon className="h-5 w-5 text-white"/>
+                            <div className={`shrink-0 rounded-lg p-1.5 sm:p-2 ${c.iconBg}`}>
+                                <c.icon className="h-4 w-4 text-white sm:h-5 sm:w-5"/>
                             </div>
                         </div>
                     </CardContent>

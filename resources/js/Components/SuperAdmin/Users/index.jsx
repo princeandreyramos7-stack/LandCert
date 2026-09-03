@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { TablePagination } from "@/Components/ui/table-pagination";
 import { router } from "@inertiajs/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,8 @@ import {
 export function SuperAdminUserManagement({ users }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterUserType, setFilterUserType] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const USERS_PER_PAGE = 10;
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState(null);
     const { toast } = useToast();
@@ -82,6 +85,17 @@ export function SuperAdminUserManagement({ users }) {
 
         return filtered;
     }, [usersData, filterUserType, searchTerm]);
+
+    // Filtering can leave the viewer on a page that no longer exists
+    // (page 4 of a list that just shrank to 6 rows), which renders empty.
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterUserType, searchTerm]);
+
+    const paginatedUsers = useMemo(() => {
+        const start = (currentPage - 1) * USERS_PER_PAGE;
+        return filteredUsers.slice(start, start + USERS_PER_PAGE);
+    }, [filteredUsers, currentPage]);
 
     const stats = useMemo(() => {
         return {
@@ -260,7 +274,7 @@ export function SuperAdminUserManagement({ users }) {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    filteredUsers.map((user) => (
+                                    paginatedUsers.map((user) => (
                                         <TableRow
                                             key={user.id}
                                             className="hover:bg-[#0d1f5c]/[0.02] transition-colors"
@@ -303,6 +317,14 @@ export function SuperAdminUserManagement({ users }) {
                                 )}
                             </TableBody>
                         </Table>
+
+                        <TablePagination
+                            currentPage={currentPage}
+                            totalItems={filteredUsers.length}
+                            perPage={USERS_PER_PAGE}
+                            onPageChange={setCurrentPage}
+                            label="users"
+                        />
                     </div>
                 </CardContent>
             </Card>

@@ -22,6 +22,7 @@ export function FilterCard({
     modelTypes = [],
     onApplyFilters,
     onClearFilters,
+    activeFilterCount = 0,
 }) {
     return (
         <Card className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-4">
@@ -35,6 +36,11 @@ export function FilterCard({
                             <Filter className="h-4 w-4 text-[#0d1f5c]" />
                         </div>
                         Filters
+                        {activeFilterCount > 0 && (
+                            <span className="rounded-full bg-[#0d1f5c] px-2 py-0.5 text-xs font-bold text-white">
+                                {activeFilterCount} active
+                            </span>
+                        )}
                     </div>
                     {showFilters ? (
                         <ChevronUp className="h-5 w-5 text-gray-400" />

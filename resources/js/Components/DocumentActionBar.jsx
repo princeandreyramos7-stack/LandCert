@@ -52,22 +52,28 @@ export default function DocumentActionBar({
                         )}
                     </div>
                 </div>
-                {/* Side by side and equal width on a phone, natural width once
-                    there is room to sit beside the title. */}
+                {/* Icons alone on a phone: labels like "Print Certificate" and
+                    "Download PDF" cannot both fit beside each other on a narrow
+                    screen without wrapping or clipping. Each keeps a title and
+                    aria-label so it stays identifiable without its text. */}
                 <div className="flex shrink-0 gap-2 sm:gap-3">
                     <Button
                         onClick={onPrint}
-                        className="flex-1 bg-[#d4a017] text-white hover:bg-[#b8910f] sm:flex-none"
+                        title={printLabel}
+                        aria-label={printLabel}
+                        className="flex-1 bg-[#d4a017] px-3 text-white hover:bg-[#b8910f] sm:flex-none sm:px-4"
                     >
-                        <Printer className="mr-2 h-4 w-4 shrink-0" />
-                        {printLabel}
+                        <Printer className="h-4 w-4 shrink-0 sm:mr-2" />
+                        <span className="hidden sm:inline">{printLabel}</span>
                     </Button>
                     <Button
                         onClick={onDownload}
-                        className="flex-1 border-white bg-white text-[#0d1f5c] hover:bg-gray-100 sm:flex-none"
+                        title="Download PDF"
+                        aria-label="Download PDF"
+                        className="flex-1 border-white bg-white px-3 text-[#0d1f5c] hover:bg-gray-100 sm:flex-none sm:px-4"
                     >
-                        <Download className="mr-2 h-4 w-4 shrink-0" />
-                        <span className="truncate">Download PDF</span>
+                        <Download className="h-4 w-4 shrink-0 sm:mr-2" />
+                        <span className="hidden sm:inline">Download PDF</span>
                     </Button>
                 </div>
             </div>

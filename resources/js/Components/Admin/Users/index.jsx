@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { TablePagination } from "@/Components/ui/table-pagination";
 import { router } from "@inertiajs/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Input } from "@/Components/ui/input";
@@ -19,6 +20,8 @@ import {
 export function AdminUserManagement({ users }) {
     const [searchTerm, setSearchTerm]       = useState("");
     const [filterUserType, setFilterUserType] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const USERS_PER_PAGE = 10;
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen]     = useState(false);
     const [userToDelete, setUserToDelete]   = useState(null);
@@ -41,6 +44,17 @@ export function AdminUserManagement({ users }) {
         }
         return filtered;
     }, [usersData, filterUserType, searchTerm]);
+
+    // Filtering can leave the viewer on a page that no longer exists
+    // (page 4 of a list that just shrank to 6 rows), which renders empty.
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterUserType, searchTerm]);
+
+    const paginatedUsers = useMemo(() => {
+        const start = (currentPage - 1) * USERS_PER_PAGE;
+        return filteredUsers.slice(start, start + USERS_PER_PAGE);
+    }, [filteredUsers, currentPage]);
 
     const stats = useMemo(() => ({
         total:      usersData.length,
@@ -167,7 +181,7 @@ export function AdminUserManagement({ users }) {
                                             {searchTerm || filterUserType !== "all" ? "No users match your filters" : "No users found"}
                                         </TableCell>
                                     </TableRow>
-                                ) : filteredUsers.map(user => (
+                                ) : paginatedUsers.map(user => (
                                     <TableRow key={user.id} className="hover:bg-[#0d1f5c]/[0.02] transition-colors border-b border-gray-50">
                                         <TableCell className="font-semibold text-[#0d1f5c] px-4 py-3">{user.name}</TableCell>
                                         <TableCell className="text-sm text-gray-600 px-4 py-3">{user.email}</TableCell>
@@ -200,6 +214,14 @@ export function AdminUserManagement({ users }) {
                                 ))}
                             </TableBody>
                         </Table>
+
+                        <TablePagination
+                            currentPage={currentPage}
+                            totalItems={filteredUsers.length}
+                            perPage={USERS_PER_PAGE}
+                            onPageChange={setCurrentPage}
+                            label="users"
+                        />
                     </div>
                 </CardContent>
             </Card>

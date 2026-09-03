@@ -5,6 +5,7 @@ import { router } from "@inertiajs/react";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RequestStats } from "@/Components/Admin/Request/RequestStats";
 import {
     Table,
     TableBody,
@@ -116,53 +117,12 @@ export function SuperAdminRequestList({ requests }) {
                         className="justify-end mb-3"
                     />
 
-                    {/* Statistics Cards at the top */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-                        <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-medium text-blue-600 uppercase mb-1">Total Requests</p>
-                                    <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
-                                    <p className="text-xs text-blue-600 mt-1">All submissions</p>
-                                </div>
-                                <FileText className="h-8 w-8 text-blue-500" />
-                            </div>
-                        </div>
-
-                        <div className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-500">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-medium text-yellow-600 uppercase mb-1">For Verification</p>
-                                    <p className="text-2xl font-bold text-yellow-900">{stats.pending}</p>
-                                    <p className="text-xs text-yellow-600 mt-1">Awaiting document check</p>
-                                </div>
-                                <Clock className="h-8 w-8 text-yellow-500" />
-                            </div>
-                        </div>
-
-                        <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-medium text-green-600 uppercase mb-1">Application Approved</p>
-                                    <p className="text-2xl font-bold text-green-900">{stats.approved}</p>
-                                    <p className="text-xs text-green-600 mt-1">Successfully processed</p>
-                                </div>
-                                <CheckCircle className="h-8 w-8 text-green-500" />
-                            </div>
-                        </div>
-
-                        <div className="bg-red-50 rounded-lg p-4 border-l-4 border-red-500">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-medium text-red-600 uppercase mb-1">Application Denied</p>
-                                    <p className="text-2xl font-bold text-red-900">{stats.rejected}</p>
-                                    <p className="text-xs text-red-600 mt-1">Needs attention</p>
-                                </div>
-                                <XCircle className="h-8 w-8 text-red-500" />
-                            </div>
-                        </div>
+                    {/* Same four counts the admin page shows, and clickable
+                       filters here too - this page used to hand-roll its own
+                       static copy of them. */}
+                    <div className="mb-6">
+                        <RequestStats stats={stats} onFilterChange={setFilterStatus} />
                     </div>
-
                     {/* Divider */}
                     <div className="border-t border-gray-200 my-6"></div>
 

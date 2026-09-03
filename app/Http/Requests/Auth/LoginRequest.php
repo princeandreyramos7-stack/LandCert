@@ -34,6 +34,18 @@ class LoginRequest extends FormRequest
     }
 
     /**
+     * Addresses are stored folded to lowercase, so fold what is typed here too.
+     * Otherwise signing in as "Juan@Gmail.com" would depend on the database
+     * collation happening to be case-insensitive.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('email'))) {
+            $this->merge(['email' => mb_strtolower(trim($this->input('email')))]);
+        }
+    }
+
+    /**
      * Attempt to authenticate the request's credentials.
      *
      * @throws \Illuminate\Validation\ValidationException
