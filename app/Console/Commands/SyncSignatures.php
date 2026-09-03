@@ -118,6 +118,27 @@ class SyncSignatures extends Command
             return $exact;
         }
 
+        // Same, ignoring middle initials, so a file named without spaces or a
+        // middle initial still resolves: "JeffreyPauig" == "Jeffrey C. Pauig".
+        // Without this the surname rule below cannot help either, because a
+        // run-together name has no last word to compare.
+        $withoutInitials = function (string $name) use ($letters) {
+            $parts = preg_split('/\s+/', trim($name));
+            $kept = array_filter(
+                $parts,
+                fn ($part) => mb_strlen($letters($part)) > 1
+            );
+
+            return $letters(implode('', $kept));
+        };
+
+        $collapsed = $staff->filter(
+            fn ($user) => $withoutInitials($user->name) === $withoutInitials($stem)
+        );
+        if ($collapsed->count() === 1) {
+            return $collapsed->first();
+        }
+
         // Otherwise the surname has to match and the first initial has to agree,
         // which separates "April Cuntapay" from "Anna Cuntapay" without demanding
         // the middle initial be spelled the same way.
