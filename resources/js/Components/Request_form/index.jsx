@@ -25,6 +25,10 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     const [completedSteps, setCompletedSteps] = useState([]);
     const [hasRepresentative, setHasRepresentative] = useState(false);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+    // The submit goes out through fetch(), not Inertia, so useForm's `processing`
+    // never flips and the spinner it drives never appeared. This tracks the real
+    // request.
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitErrors, setSubmitErrors] = useState([]);
     // 'form'   -> the messages are validation problems the applicant can fix
     // 'system' -> the message is a server/system failure, nothing to fix in the form
@@ -338,7 +342,11 @@ export default function RequestForm({ isEditing = false, existingApplication = n
 
     // Confirm and submit - USING FETCH API TO BYPASS INERTIA
     const confirmSubmit = async () => {
-        setIsConfirmDialogOpen(false);
+        // The dialog deliberately stays open while the request is in flight, so
+        // the button can show its spinner. Closing it first left the applicant
+        // looking at an unchanged form with no sign anything was happening —
+        // which is what led to pressing Submit again.
+        setIsSubmitting(true);
         setSubmitErrors([]);
         setSubmitErrorKind(null);
 
@@ -530,6 +538,12 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                 });
             }
         }
+
+        // Whatever happened, the request is over: stop the spinner and put the
+        // applicant back on the form. On success the page has already been sent
+        // to My Applications, so this only matters for the failure paths.
+        setIsSubmitting(false);
+        setIsConfirmDialogOpen(false);
     };
 
     if (showWelcome) {
@@ -696,7 +710,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                                 <FormNavigation
                                     currentStep={stepPosition}
                                     totalSteps={activeSteps.length}
-                                    processing={processing}
+                                    processing={processing || isSubmitting}
                                     onPrevious={handlePrevious}
                                     onNext={handleNext}
                                     onSubmit={handleSubmit}
@@ -712,7 +726,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                 isOpen={isConfirmDialogOpen}
                 onClose={() => setIsConfirmDialogOpen(false)}
                 onConfirm={confirmSubmit}
-                processing={processing}
+                processing={processing || isSubmitting}
                 data={data}
                 isEditing={isEditing}
                 requirementFiles={requirementFiles}

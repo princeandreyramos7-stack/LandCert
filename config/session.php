@@ -34,7 +34,18 @@ return [
 
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
-    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
+    /*
+     | Defaulted to true rather than Laravel's false: this portal holds
+     | applicants' personal details and staff approval powers, and it is used on
+     | shared and public machines. Leaving it false issued a cookie with an
+     | 8-hour Max-Age, so closing the browser — or shutting the machine down —
+     | left the session alive and the next person to open the browser walked
+     | straight into the panel. As a session cookie it is discarded when the
+     | browser closes and a fresh sign-in is required.
+     |
+     | Still overridable per-environment via SESSION_EXPIRE_ON_CLOSE.
+     */
+    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', true),
 
     /*
     |--------------------------------------------------------------------------

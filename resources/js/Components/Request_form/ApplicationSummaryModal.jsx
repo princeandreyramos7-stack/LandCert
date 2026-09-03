@@ -42,8 +42,16 @@ export function ApplicationSummaryModal({
     );
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        // While the submit is in flight the dialog cannot be dismissed — by the
+        // close button, Escape, or a click outside. Losing the spinner mid-request
+        // is what makes it look as though nothing happened.
+        <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !processing) onClose(); }}>
+            <DialogContent
+                className="max-w-4xl max-h-[90vh] overflow-y-auto"
+                onEscapeKeyDown={(e) => processing && e.preventDefault()}
+                onPointerDownOutside={(e) => processing && e.preventDefault()}
+                onInteractOutside={(e) => processing && e.preventDefault()}
+            >
                 {/* Header */}
                 <DialogHeader>
                     <DialogTitle className="text-xl font-semibold text-gray-900">

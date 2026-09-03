@@ -1,1 +1,0 @@
-import"./app-CFgWr9lf.js";const e=r=>r?new Date(r).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"}):"N/A",n=r=>r?`₱${parseFloat(r).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`:"₱0.00";export{e as a,n as f};
