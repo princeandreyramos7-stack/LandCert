@@ -1545,7 +1545,7 @@ class SuperAdminController extends Controller
     public function payments(Request $request): Response
     {
         // Get ALL approved requests (by Super Admin) - these are requests awaiting payment
-        $approvedRequests = RequestModel::with(['applicant', 'project', 'location', 'user', 'payments'])
+        $approvedRequests = RequestModel::with(['applicant', 'project', 'location', 'user', 'payments', 'report'])
             ->whereIn('status', ['approved', 'payment_confirmed'])
             ->orderBy('updated_at', 'desc')
             ->get()
@@ -1560,7 +1560,7 @@ class SuperAdminController extends Controller
                     'request_id' => $request->id,
                     'application_number' => $request->application_number ?? '#' . $request->id,
                     'applicant_name' => $request->applicant->applicant_name ?? 'Unknown',
-                    'expected_amount' => $this->getExpectedAmount($request->project_type),
+                    'expected_amount' => $this->getExpectedAmount($request),
                     'approved_at' => $request->updated_at->format('Y-m-d'),
                     'days_waiting' => $daysWaiting,
                     'project_type' => $request->project->project_type ?? 'N/A',
@@ -1913,10 +1913,26 @@ class SuperAdminController extends Controller
     }
 
     /**
-     * Get expected payment amount based on project type
+     * The fee this application is actually due to pay.
+     *
+     * The Zoning Officer sets the amount on the report during review, and that
+     * figure is what goes on the Order of Payment the applicant is handed - so
+     * it is the only correct "expected amount" to show the cashier. The
+     * project-type table below is a fallback for applications approved before
+     * an amount was entered; it is a default, not the fee.
+     *
+     * Note reports.amount is the project cost/capitalization, NOT the fee.
      */
-    private function getExpectedAmount(?string $projectType): float
+    private function getExpectedAmount(\App\Models\Request $request): float
     {
+        $officerSetAmount = $request->report?->payment_amount;
+
+        if ($officerSetAmount !== null && $officerSetAmount !== "") {
+            return (float) $officerSetAmount;
+        }
+
+        $projectType = $request->project?->project_type;
+
         if (!$projectType) {
             return 500.00; // Default amount
         }

@@ -1,0 +1,1 @@
+import{j as n,r as e}from"./app-B3uAVe_F.js";const t=e.createContext(null);function a(){return e.useContext(t)}function u({slot:r,children:o}){return n.jsx(t.Provider,{value:r,children:o})}export{u as H,a as u};

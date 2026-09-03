@@ -24,7 +24,10 @@ class PaymentService
             'applicant',
             'project',
             'location',
-            'user'
+            'user',
+            // The officer-set fee lives here; without it getExpectedAmount()
+            // would lazy-load one report per row.
+            'report',
         ])
         ->where('status', 'approved')
         ->whereDoesntHave('payments', function($query) {
@@ -40,7 +43,7 @@ class PaymentService
                 'request_id' => $request->id,
                 'application_number' => $request->application_number ?? 'N/A',
                 'applicant_name' => $request->applicant->applicant_name ?? 'Unknown',
-                'expected_amount' => $this->getExpectedAmount($request->project_type),
+                'expected_amount' => $this->getExpectedAmount($request),
                 'approved_at' => $request->updated_at->format('Y-m-d'),
                 'days_waiting' => $daysWaiting,
                 'project_type' => $request->project->project_type ?? 'N/A',
@@ -217,9 +220,31 @@ class PaymentService
     }
 
     /**
-     * Get expected payment amount based on project type
+     * The fee this application is actually due to pay.
+     *
+     * The Zoning Officer sets the amount on the report during review, and that
+     * figure is what goes on the Order of Payment the applicant is handed — so
+     * it is the only correct "expected amount" to show the cashier. The
+     * project-type table below is a fallback for applications approved before
+     * an amount was entered; it is a default, not the fee.
+     *
+     * Note `reports.amount` is the project cost/capitalization, NOT the fee.
      */
-    private function getExpectedAmount(?string $projectType): float
+    private function getExpectedAmount(RequestModel $request): float
+    {
+        $officerSetAmount = $request->report?->payment_amount;
+
+        if ($officerSetAmount !== null && $officerSetAmount !== '') {
+            return (float) $officerSetAmount;
+        }
+
+        return $this->getDefaultAmountForProjectType($request->project?->project_type);
+    }
+
+    /**
+     * Fallback fee by project type, used only when no amount has been set yet.
+     */
+    private function getDefaultAmountForProjectType(?string $projectType): float
     {
         if (!$projectType) {
             return 500.00; // Default amount

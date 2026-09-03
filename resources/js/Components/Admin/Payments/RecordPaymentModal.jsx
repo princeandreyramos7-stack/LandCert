@@ -36,6 +36,17 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
+/**
+ * The expected amount comes off a decimal column, so it can arrive as either a
+ * number or a numeric string depending on the serialiser. Calling .toFixed()
+ * straight on it turned a string into "0.00" without a word — worse than an
+ * obvious error, because ₱0.00 reads as a real figure.
+ */
+function formatPeso(value) {
+    const amount = Number(value);
+    return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
+}
+
 export function RecordPaymentModal({ isOpen, onClose, requestData }) {
     const { toast } = useToast();
     const [isProcessing, setIsProcessing] = useState(false);
@@ -410,7 +421,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
                             </div>
                             <div>
                                 <DialogTitle>
-                                    Record Payment - Request #{requestData.id}
+                                    Record Payment - Request #{requestData.request_id || requestData.id}
                                 </DialogTitle>
                                 <DialogDescription>
                                     Verify and record payment received from the Treasury Office
@@ -442,7 +453,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
                                                 Request ID
                                             </p>
                                             <p className="font-semibold text-gray-900">
-                                                #{requestData.id}
+                                                #{requestData.request_id || requestData.id}
                                             </p>
                                         </div>
                                     </div>
@@ -453,7 +464,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
                                                 Expected Amount
                                             </p>
                                             <p className="font-semibold text-gray-900">
-                                                ₱{requestData.expected_amount?.toFixed(2) || "0.00"}
+                                                ₱{formatPeso(requestData.expected_amount)}
                                             </p>
                                         </div>
                                     </div>
@@ -553,7 +564,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
                                     />
                                 </div>
                                 <p id="amount_help" className="text-xs text-gray-500 mt-1">
-                                    Expected amount: ₱{requestData?.expected_amount?.toFixed(2) || "0.00"}
+                                    Expected amount: ₱{formatPeso(requestData?.expected_amount)}
                                 </p>
                                 {warnings.amountMismatch && (
                                     <div className="flex items-start gap-2 mt-2 p-3 bg-yellow-50 border-2 border-yellow-400 rounded-md">
@@ -563,7 +574,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
                                                 ⚠️ Amount Mismatch
                                             </p>
                                             <p className="text-yellow-800 mt-1">
-                                                Payment amount (₱{parseFloat(formData.amount).toFixed(2)}) differs from expected amount (₱{requestData?.expected_amount?.toFixed(2)}).
+                                                Payment amount (₱{parseFloat(formData.amount).toFixed(2)}) differs from expected amount (₱{formatPeso(requestData?.expected_amount)}).
                                             </p>
                                             <p className="text-yellow-700 mt-1 font-medium">
                                                 Action: Verify the amount is correct and add a note explaining the difference
