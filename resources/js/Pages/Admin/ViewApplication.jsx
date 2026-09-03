@@ -355,9 +355,13 @@ function Step1Content({ request, isZC = false }) {
     // A Zoning Certification is not filed on the CPD-001-0 sheet — it asks for
     // far less — so it gets its own short sequence rather than the paper form's
     // numbering with most of the items missing from it.
+    //
+    // Contact number and email are collected by the system but are not items on
+    // the paper form, so on a CZC/TUP/SUP they hang off item 3 rather than
+    // taking 18 and 19 — the sheet already uses 18 for the signatures.
     const n = isZC
         ? { name: "1", address: "2", contact: "3", email: "4" }
-        : { name: "1", address: "3", contact: null, email: null };
+        : { name: "1", address: "3", contact: "3a", email: "3b" };
 
     return (
         <div className="space-y-6">
