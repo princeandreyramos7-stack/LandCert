@@ -232,7 +232,7 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
                         {/* Step Content */}
                         <div className="mt-8">
                             {currentStep === 1 && (
-                                <Step1Content request={request} />
+                                <Step1Content request={request} isZC={isZC} />
                             )}
                             {currentStep === 2 && (
                                 <Step2Content 
@@ -351,27 +351,36 @@ function StepIndicator({ steps, currentStep, onStepClick }) {
 }
 
 // Step 1: Applicant Information
-function Step1Content({ request }) {
+function Step1Content({ request, isZC = false }) {
+    // A Zoning Certification is not filed on the CPD-001-0 sheet — it asks for
+    // far less — so it gets its own short sequence rather than the paper form's
+    // numbering with most of the items missing from it.
+    const n = isZC
+        ? { name: "1", address: "2", contact: "3", email: "4" }
+        : { name: "1", address: "3", contact: null, email: null };
+
     return (
         <div className="space-y-6">
             <SectionTitle icon={User} title="Applicant Information" />
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InfoField
-                    num="1"
+                    num={n.name}
                     label="Name of Applicant"
                     value={request.applicant_name}
                 />
                 <InfoField
-                    num="3"
+                    num={n.address}
                     label="Address of Applicant"
                     value={request.applicant_address}
                 />
                 <InfoField
+                    num={n.contact}
                     label="Contact Number"
                     value={request.applicant_contact}
                 />
                 <InfoField
+                    num={n.email}
                     label="Email Address"
                     value={request.user_email}
                 />
@@ -383,12 +392,12 @@ function Step1Content({ request }) {
                         <h4 className="text-sm font-semibold text-gray-700 mb-4">Corporation Details</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <InfoField
-                                num="2"
+                                num={isZC ? null : "2"}
                                 label="Name of Corporation"
                                 value={request.corporation_name}
                             />
                             <InfoField
-                                num="4"
+                                num={isZC ? null : "4"}
                                 label="Address of Corporation"
                                 value={request.corporation_address}
                             />
@@ -403,12 +412,12 @@ function Step1Content({ request }) {
                         <h4 className="text-sm font-semibold text-gray-700 mb-4">Authorized Representative</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <InfoField
-                                num="5"
+                                num={isZC ? null : "5"}
                                 label="Name of Authorized Representative"
                                 value={request.authorized_representative_name}
                             />
                             <InfoField
-                                num="6"
+                                num={isZC ? null : "6"}
                                 label="Address of Authorized Representative"
                                 value={request.authorized_representative_address}
                             />
@@ -451,7 +460,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
                 <div className="group">
                     <div className="flex items-center justify-between mb-1.5">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 font-bold tabular-nums text-gray-600">7</span>
+                            <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 font-bold tabular-nums text-gray-600">{isZC ? "5" : "7"}</span>
                             Project Type
                         </p>
                         {!editingProjectType ? (
@@ -881,7 +890,12 @@ function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = []
     return (
         <div className="pt-4 border-t">
             <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-semibold text-gray-700">Property Details</h4>
+                <h4 className="text-sm font-semibold text-gray-700">
+                    {isZC && (
+                        <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-bold tabular-nums text-gray-600">6</span>
+                    )}
+                    Property Details
+                </h4>
                 {!editing ? (
                     <button
                         onClick={() => setEditing(true)}
