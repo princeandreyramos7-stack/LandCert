@@ -59,6 +59,61 @@ export function hasCsrfToken() {
 }
 
 /**
+ * Asks the server for a fresh token. Responding also rewrites the XSRF-TOKEN
+ * cookie, so the next csrfHeaders() picks the new value up on its own.
+ */
+async function refreshCsrfToken() {
+    try {
+        const response = await fetch("/csrf-token", {
+            headers: { Accept: "application/json" },
+            credentials: "same-origin",
+            cache: "no-store",
+        });
+        if (!response.ok) return null;
+
+        const body = await response.json();
+        return body?.token || null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * fetch() with the CSRF check handled, including one automatic retry.
+ *
+ * A form left open long enough can outlive its token — the session gets
+ * regenerated or expires underneath it — and the request comes back 419. That
+ * used to mean the applicant pressed Submit, saw nothing happen, and pressed it
+ * again. Here the token is refreshed and the request replayed once, so the
+ * first press is the only one needed.
+ *
+ * Retrying is safe: a 419 is rejected by middleware before it reaches a
+ * controller, so nothing was written the first time round.
+ */
+export async function fetchWithCsrf(url, options = {}) {
+    const send = () =>
+        fetch(url, {
+            ...options,
+            credentials: "same-origin",
+            headers: { ...(options.headers || {}), ...csrfHeaders() },
+        });
+
+    const response = await send();
+    if (response.status !== 419) return response;
+
+    const refreshed = await refreshCsrfToken();
+    if (!refreshed) return response;
+
+    // A `_token` field in the body outranks every header, so a stale one left
+    // over from the first attempt would defeat the retry.
+    if (options.body instanceof FormData && options.body.has("_token")) {
+        options.body.set("_token", refreshed);
+    }
+
+    return send();
+}
+
+/**
  * Laravel reads `_token` from the request body *before* it looks at any header,
  * so a stale `_token` field silently overrides a correct header. Only the raw
  * session token is valid there — the cookie's value is encrypted — so when the

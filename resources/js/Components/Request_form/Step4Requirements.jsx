@@ -119,12 +119,17 @@ export function Step4Requirements({
         const isSupplied = hasFiles || hasExistingDocs;
 
         return (
-            <Card key={requirement.id} className="p-4">
+            <Card key={requirement.id} className="overflow-hidden p-3 sm:p-4">
                 <div className="space-y-3">
                     {/* Header with title, status and view button */}
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                            <Label className="text-base font-semibold text-gray-900">
+                    {/* Wraps rather than overflowing: a flex-1 column with no
+                        min-w-0 refuses to shrink past its longest word, which
+                        pushed the View button and the Uploaded badge outside
+                        the card on narrow screens — worst in the indented
+                        Right Over Land children like Tax Declaration. */}
+                    <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+                        <div className="min-w-0 flex-1 basis-full sm:basis-0">
+                            <Label className="block break-words text-base font-semibold text-gray-900">
                                 {requirement.name}
                                 {requirement.required && <span className="text-red-500 ml-1">*</span>}
                                 {!requirement.required && (
@@ -139,7 +144,7 @@ export function Step4Requirements({
                                 </p>
                             )}
                         </div>
-                        <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="flex shrink-0 items-center gap-2">
                             {/* View Button - only show if has existing docs */}
                             {hasExistingDocs && (
                                 <Button
@@ -154,8 +159,8 @@ export function Step4Requirements({
                                 </Button>
                             )}
                             {isSupplied && (
-                                <span className="flex items-center gap-1 text-xs font-medium text-green-700">
-                                    <CheckCircle2 className="h-4 w-4" />
+                                <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-medium text-green-700">
+                                    <CheckCircle2 className="h-4 w-4 shrink-0" />
                                     Uploaded
                                 </span>
                             )}
@@ -259,7 +264,7 @@ export function Step4Requirements({
             (existingDocuments[requirement.id] || []).length > 0;
 
         return (
-            <div key={requirement.id} className="rounded-lg border border-gray-200 bg-gray-50/60 p-4 space-y-3">
+            <div key={requirement.id} className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 space-y-3 sm:p-4">
                 {hasOwnFiles ? (
                     renderRequirement(requirement)
                 ) : (

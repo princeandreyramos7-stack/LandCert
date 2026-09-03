@@ -9,6 +9,19 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+/**
+ * Hands back a current CSRF token, and refreshes the XSRF-TOKEN cookie as a
+ * side effect of responding.
+ *
+ * A long form can sit open past the point where its token is still good — the
+ * session may have been regenerated or expired underneath it. Rather than
+ * making the applicant hit Submit a second time, the client fetches this on a
+ * 419 and retries once. Deliberately outside the auth group: a guest whose
+ * session lapsed still needs a token to post the login form.
+ */
+Route::get('/csrf-token', fn () => response()->json(['token' => csrf_token()]))
+    ->name('csrf-token');
+
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),

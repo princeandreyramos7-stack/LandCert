@@ -16,7 +16,7 @@ import { Step4Requirements } from "./Step4Requirements";
 import { FormNavigation } from "./FormNavigation";
 import { ApplicationSummaryModal } from "./ApplicationSummaryModal";
 import { validateStep1, validateStep2, validateStep3, validateStep4 } from "./utils";
-import { csrfHeaders, hasCsrfToken, appendCsrfField } from "@/lib/csrf";
+import { fetchWithCsrf, hasCsrfToken, appendCsrfField } from "@/lib/csrf";
 
 export default function RequestForm({ isEditing = false, existingApplication = null }) {
     // Welcome/requirements board is shown first; applicants proceed to Step 1 when ready
@@ -385,7 +385,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             console.log('Submitting via fetch...');
             
             try {
-                const response = await fetch(route('requests.update', existingApplication.id), {
+                const response = await fetchWithCsrf(route('requests.update', existingApplication.id), {
                     method: 'POST',
                     body: formData,
                     headers: {
@@ -467,11 +467,10 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                     throw new Error('Your session has expired. Please refresh the page and try again.');
                 }
 
-                const response = await fetch("/request", {
+                const response = await fetchWithCsrf("/request", {
                     method: 'POST',
                     body: formData,
                     headers: {
-                        ...csrfHeaders(),
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json',
                     },
