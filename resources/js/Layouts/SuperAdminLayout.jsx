@@ -14,7 +14,6 @@ import {
     SidebarTrigger,
 } from "@/Components/ui/sidebar";
 import { Toaster } from "@/Components/ui/toaster";
-import IdleLogout from "@/Components/IdleLogout";
 import NotificationBell from "@/Components/NotificationBell";
 
 export default function SuperAdminLayout({
@@ -77,8 +76,6 @@ export default function SuperAdminLayout({
                 </div>
             </SidebarInset>
             <Toaster />
-            {/* Signs out after 10 minutes with no input. */}
-            <IdleLogout />
         </SidebarProvider>
     );
 }

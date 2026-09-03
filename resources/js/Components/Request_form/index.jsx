@@ -515,8 +515,23 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                                 : messages[0])
                             : (payload?.message || 'Some fields need attention.'),
                     });
+                } else if (response.status === 401 || response.status === 419) {
+                    // The session went while the form was being filled in.
+                    // "System error — HTTP 401 — Unauthenticated" tells an
+                    // applicant nothing they can act on, so say what actually
+                    // happened and send them somewhere useful.
+                    console.warn('Application submission rejected: session expired', response.status);
+                    setSubmitErrors([
+                        'Your session has expired. Please sign in again — your answers are still on this page, so keep this tab open, sign in from another tab, then press Submit again.',
+                    ]);
+                    setSubmitErrorKind('system');
+                    toast({
+                        variant: "destructive",
+                        title: "Session expired",
+                        description: "Please sign in again to submit your application.",
+                    });
                 } else {
-                    // 500 / 419 / anything else - a SYSTEM problem, not the form.
+                    // 500 / anything else - a SYSTEM problem, not the form.
                     const serverMessage = payload?.message || response.statusText || 'Unknown server error';
                     console.error('Application submission server error:', response.status, payload);
                     setSubmitErrors(['HTTP ' + response.status + ' — ' + serverMessage]);

@@ -11,8 +11,17 @@ use App\Observers\ReportObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /** Longest idle window a session may have, whatever the environment says. */
-    private const MAX_SESSION_LIFETIME_MINUTES = 15;
+    /**
+     * Longest idle window a session may have, whatever the environment says.
+     *
+     * The real control is the browser signing an idle user out at 10 minutes;
+     * this only reaps sessions nobody is using, including one whose cookie a
+     * browser restored after a restart. Kept above that figure on purpose:
+     * at 15 there was no margin, and a missed keep-alive ping while someone
+     * filled in the application form expired their session and lost the lot
+     * to a 401 on submit.
+     */
+    private const MAX_SESSION_LIFETIME_MINUTES = 30;
 
     /**
      * Register any application services.

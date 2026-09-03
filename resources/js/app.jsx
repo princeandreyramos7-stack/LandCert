@@ -5,13 +5,29 @@ import 'leaflet/dist/leaflet.css';
 import { createInertiaApp, router as inertiaRouter } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { router } from '@inertiajs/react';
+import IdleLogout from '@/Components/IdleLogout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 // Global component to handle auth state and browser navigation
-function AppWrapper({ children, auth }) {
+function AppWrapper({ children, auth: initialAuth }) {
+    // `initialPage` is captured once at setup, so signing in through Inertia —
+    // which never reloads the document — would leave this reading the guest
+    // value and the idle watcher would never mount. Track it per navigation.
+    const [auth, setAuth] = useState(initialAuth);
+
+    useEffect(() => {
+        const stopListening = inertiaRouter.on('navigate', (event) => {
+            setAuth(event.detail.page?.props?.auth ?? null);
+        });
+
+        return () => {
+            if (typeof stopListening === 'function') stopListening();
+        };
+    }, []);
+
     useEffect(() => {
         // Function to check auth and redirect if needed
         const checkAuth = () => {
@@ -55,7 +71,19 @@ function AppWrapper({ children, auth }) {
         };
     }, [auth]);
 
-    return children;
+    return (
+        <>
+            {children}
+            {/* Mounted here rather than in the layouts. It was in all three of
+                them, but the application form builds its own chrome from
+                SidebarProvider instead of using ApplicantLayout, so it never
+                got the keep-alive ping — and an applicant who spent longer than
+                the session lifetime filling the form had it expire underneath
+                them and lost everything to a 401 on submit. At the root, no
+                page can miss it. */}
+            {auth?.user && <IdleLogout />}
+        </>
+    );
 }
 
 // Set up Inertia event listeners for auth checking
