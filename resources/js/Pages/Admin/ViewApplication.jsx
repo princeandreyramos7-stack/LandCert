@@ -358,10 +358,12 @@ function Step1Content({ request }) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InfoField
+                    num="1"
                     label="Name of Applicant"
                     value={request.applicant_name}
                 />
                 <InfoField
+                    num="3"
                     label="Address of Applicant"
                     value={request.applicant_address}
                 />
@@ -381,10 +383,12 @@ function Step1Content({ request }) {
                         <h4 className="text-sm font-semibold text-gray-700 mb-4">Corporation Details</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <InfoField
+                                num="2"
                                 label="Name of Corporation"
                                 value={request.corporation_name}
                             />
                             <InfoField
+                                num="4"
                                 label="Address of Corporation"
                                 value={request.corporation_address}
                             />
@@ -399,10 +403,12 @@ function Step1Content({ request }) {
                         <h4 className="text-sm font-semibold text-gray-700 mb-4">Authorized Representative</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <InfoField
+                                num="5"
                                 label="Name of Authorized Representative"
                                 value={request.authorized_representative_name}
                             />
                             <InfoField
+                                num="6"
                                 label="Address of Authorized Representative"
                                 value={request.authorized_representative_address}
                             />
@@ -445,7 +451,8 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
                 <div className="group">
                     <div className="flex items-center justify-between mb-1.5">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            Locational Clearance
+                            <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 font-bold tabular-nums text-gray-600">7</span>
+                            Project Type
                         </p>
                         {!editingProjectType ? (
                             <button
@@ -503,6 +510,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
 
                 {!isZC && (
                     <InfoField
+                        num="8"
                         label="Project Nature"
                         value={request.project_nature}
                     />
@@ -514,6 +522,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
             <div className="pt-4 border-t">
                     <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-bold tabular-nums text-gray-600">9</span>
                         Project Location
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -543,6 +552,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
                 <div className="pt-4 border-t">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InfoField
+                            num="10"
                             label="Project Area — Lot (sqm)"
                             value={
                                 request.lot_area_sqm
@@ -551,6 +561,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
                             }
                         />
                         <InfoField
+                            num="10"
                             label="Project Area — Bldg. Improvement (sqm)"
                             value={
                                 request.bldg_improvement_sqm
@@ -559,6 +570,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
                             }
                         />
                         <InfoField
+                            num="11"
                             label="Right Over Land"
                             value={request.right_over_land}
                         />
@@ -581,11 +593,13 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
                     <h4 className="text-sm font-semibold text-gray-700 mb-4">Project Nature & Cost</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InfoField
+                            num="12"
                             label="Project Tenure"
                             value={request.project_nature_duration}
                         />
                         {request.project_nature_years && (
                             <InfoField
+                                num="12"
                                 label="Tenure — Specify Years"
                                 value={`${request.project_nature_years} ${Number(request.project_nature_years) === 1 ? "year" : "years"}`}
                             />
@@ -593,7 +607,8 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
                         <div className="group">
                             <div className="flex items-center justify-between mb-1.5">
                                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                    Project Cost/Capitalization (in Pesos)
+                                    <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 font-bold tabular-nums text-gray-600">14</span>
+                                    Project Cost/Capitalization (in pesos)
                                 </p>
                                 {!editingProjectCost ? (
                                     <button
@@ -680,15 +695,17 @@ function Step3Content({ request }) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InfoField
+                    num="13"
                     label="Existing Land Uses of Project Site"
                     value={request.existing_land_use}
                 />
             </div>
 
             <div className="pt-4 border-t">
-                <h4 className="text-sm font-semibold text-gray-700 mb-4">Written Notice from Office/Zoning Administrator</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-4"><span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-bold tabular-nums text-gray-600">15</span>Written Notice from Office/Zoning Administrator</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InfoField
+                        num="15"
                         label="Has Written Notice"
                         value={
                             request.has_written_notice
@@ -699,10 +716,12 @@ function Step3Content({ request }) {
                     {request.has_written_notice === "yes" && (
                         <>
                             <InfoField
+                                num="15a"
                                 label="Name of HSRC Officer/Zoning Administrator"
                                 value={request.notice_officer_name}
                             />
                             <InfoField
+                                num="15b"
                                 label="Date(s) of Notice(s)"
                                 value={request.notice_dates}
                             />
@@ -712,9 +731,10 @@ function Step3Content({ request }) {
             </div>
 
             <div className="pt-4 border-t">
-                <h4 className="text-sm font-semibold text-gray-700 mb-4">Similar Application with Other Offices</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-4"><span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-bold tabular-nums text-gray-600">16</span>Similar Application with Other Offices</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InfoField
+                        num="16"
                         label="Has Similar Application"
                         value={
                             request.has_similar_application
@@ -725,10 +745,12 @@ function Step3Content({ request }) {
                     {request.has_similar_application === "yes" && (
                         <>
                             <InfoField
+                                num="16a"
                                 label="Other HSRC Office(s) Where Filed"
                                 value={request.similar_application_offices}
                             />
                             <InfoField
+                                num="16b"
                                 label="Date(s) Filed"
                                 value={request.similar_application_dates}
                             />
@@ -738,14 +760,16 @@ function Step3Content({ request }) {
             </div>
 
             <div className="pt-4 border-t">
-                <h4 className="text-sm font-semibold text-gray-700 mb-4">Release of Certificate</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-4"><span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-bold tabular-nums text-gray-600">17</span>Release of Certificate</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InfoField
+                        num="17"
                         label="Preferred Release Mode"
                         value={RELEASE_MODE_LABELS[request.preferred_release_mode] || request.preferred_release_mode}
                     />
                     {/* Item 17 on the paper form: "By mail, address to". */}
                     <InfoField
+                        num="17"
                         label="Release Address"
                         value={request.release_address}
                     />
@@ -774,11 +798,22 @@ function SectionTitle({ icon: Icon, title }) {
     );
 }
 
-function InfoField({ label, value }) {
+/**
+ * `num` is the item's number on the printed CPD-001-0 application form, shown
+ * so a reviewer can read this screen against the paper the applicant filled in.
+ * Fields the paper form does not have (contact number, email, description) carry
+ * no number rather than being renumbered into a sequence of their own.
+ */
+function InfoField({ label, value, num }) {
     return (
         <div className="group">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                {label}
+            <p className="mb-1.5 flex items-baseline gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {num && (
+                    <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-bold tabular-nums text-gray-600">
+                        {num}
+                    </span>
+                )}
+                <span>{label}</span>
             </p>
             <p className="text-sm text-gray-900 font-medium">
                 {value || <span className="text-gray-400 italic">Not provided</span>}
