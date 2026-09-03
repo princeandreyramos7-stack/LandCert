@@ -13,7 +13,18 @@ import React from "react";
  * verified.
  */
 export default function ESignatureImage({ src, maxHeight = '38pt', maxWidth = '85%', marginBottom = '-4pt' }) {
-    if (!src) {
+    // A path that 404s used to hide only the image, leaving the "Electronic
+    // Signature · Verified" watermark on its own. On a certificate that is worse
+    // than showing nothing: it asserts the document was signed electronically
+    // when no signature rendered at all. A slot that cannot show the ink shows
+    // no verification either, and reverts to a blank line for a wet signature.
+    const [failed, setFailed] = React.useState(false);
+
+    React.useEffect(() => {
+        setFailed(false);
+    }, [src]);
+
+    if (!src || failed) {
         return null;
     }
 
@@ -78,10 +89,9 @@ export default function ESignatureImage({ src, maxHeight = '38pt', maxWidth = '8
                 src={signaturePath}
                 alt=""
                 crossOrigin="anonymous"
-                onError={(e) => {
-                    // Hide broken image icon, just show empty space
-                    e.target.style.display = 'none';
+                onError={() => {
                     console.warn('Signature image failed to load:', signaturePath);
+                    setFailed(true);
                 }}
                 style={{
                     position: 'relative',

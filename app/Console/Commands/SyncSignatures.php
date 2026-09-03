@@ -57,6 +57,19 @@ class SyncSignatures extends Command
                 continue;
             }
 
+            // A signature already on file, whose image is actually there, is
+            // left alone. Two files can resolve to the same person — the
+            // Zoning Administrator has one named for her and one named for the
+            // office — and whichever happened to sort last would otherwise
+            // silently replace a working signature with a different image.
+            // Repointing someone's signature is a deliberate act, not a side
+            // effect of running a repair command.
+            if ($user->signature_path && file_exists(public_path($user->signature_path))) {
+                $this->line("  {$user->name} already has a signature on file — left as is");
+                $matched++;
+                continue;
+            }
+
             $this->info("  {$stem} -> {$user->name}");
 
             if (!$dryRun) {
