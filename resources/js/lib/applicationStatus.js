@@ -118,3 +118,49 @@ export function getStatusConfig(status) {
             : "Pending Review",
     };
 }
+
+/**
+ * The options offered by the All Applications status filter.
+ *
+ * Several stages of the lifecycle share one meaning to an officer scanning the
+ * list — "For Payment" is stored as either for_payment or pending_payment, and
+ * everything after the payment clears reads as "Application Approved" — so each
+ * option carries the set of stored statuses it covers rather than a single
+ * value. Keeping the list and the matching in one place is what stops the
+ * dropdown drifting from the statuses the application can actually be in, which
+ * is how "For Payment" and "Returned to Applicant" came to be unfilterable.
+ */
+export const STATUS_FILTERS = [
+    { value: "all", label: "All Status of Application", matches: [] },
+    { value: "pending", label: "For Verification", matches: ["pending", "for_verification"] },
+    { value: "reviewed", label: "For Approval", matches: ["reviewed", "pending_superadmin_approval"] },
+    { value: "in_applicant", label: "Returned to Applicant", matches: ["in_applicant", "returned"] },
+    { value: "approved", label: "Approved — For Payment", matches: ["approved"] },
+    { value: "for_payment", label: "For Payment", matches: ["for_payment", "pending_payment"] },
+    {
+        value: "application_approved",
+        label: "Application Approved (paid)",
+        matches: [
+            "payment_confirmed",
+            "approved_with_payment",
+            "certificate_preparing",
+            "certificate_ready",
+            "released",
+            "collected",
+            "completed",
+        ],
+    },
+    { value: "rejected", label: "Application Denied", matches: ["rejected"] },
+];
+
+/**
+ * Does an application's stored status belong under the chosen filter?
+ */
+export function matchesStatusFilter(status, filterValue) {
+    if (!filterValue || filterValue === "all") return true;
+
+    const option = STATUS_FILTERS.find((entry) => entry.value === filterValue);
+    if (!option) return false;
+
+    return option.matches.includes(String(status ?? "").toLowerCase());
+}

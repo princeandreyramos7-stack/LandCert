@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { matchesStatusFilter } from "@/lib/applicationStatus";
 import { Card, CardContent } from "@/Components/ui/card";
 import { Input } from "@/Components/ui/input";
 import BulkActions from "@/Components/ui/bulk-actions";
@@ -81,13 +82,9 @@ export function AdminRequestList({ requests, flash = {} }) {
         let filtered = requestsData;
 
         if (filterStatus !== "all") {
-            // "application_approved" groups every post-payment lifecycle status.
-            const paidStatuses = ["payment_confirmed", "certificate_preparing", "certificate_ready", "released", "approved_with_payment"];
-            filtered = filtered.filter((r) =>
-                filterStatus === "application_approved"
-                    ? paidStatuses.includes(r.status)
-                    : r.status === filterStatus
-            );
+            // Which stored statuses each option covers lives with the option
+            // list itself, so the two cannot drift apart.
+            filtered = filtered.filter((r) => matchesStatusFilter(r.status, filterStatus));
         }
 
         if (searchTerm) {

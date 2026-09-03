@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\SignatureLocator;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -63,11 +64,18 @@ class User extends Authenticatable
      */
     public function getSignatureUrlAttribute(): ?string
     {
-        if (empty($this->signature_path)) {
-            return null;
+        // The stored path is the fast answer, but only while it still points at
+        // a real file. An account whose path signatures:sync never set — or that
+        // points at a file since renamed — would otherwise print an unsigned
+        // certificate with the image sitting right there on disk, and fixing it
+        // would mean shell access to every environment.
+        if (!empty($this->signature_path) && file_exists(public_path($this->signature_path))) {
+            return '/' . ltrim($this->signature_path, '/');
         }
 
-        return '/' . ltrim($this->signature_path, '/');
+        $located = SignatureLocator::forName($this->name);
+
+        return $located ? '/' . $located : null;
     }
 
     /**

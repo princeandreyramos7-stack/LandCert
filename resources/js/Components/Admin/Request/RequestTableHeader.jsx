@@ -1,4 +1,5 @@
 import React from "react";
+import { STATUS_FILTERS } from "@/lib/applicationStatus";
 import { Card, CardContent } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
@@ -46,12 +47,11 @@ export function RequestTableHeader({
                             onChange={(e) => onFilterChange(e.target.value)}
                             className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[220px] sm:flex-none"
                         >
-                            <option value="all">All Status of Application</option>
-                            <option value="pending">For Verification</option>
-                            <option value="reviewed">For Approval</option>
-                            <option value="approved">Approved — For Payment</option>
-                            <option value="application_approved">Application Approved (paid)</option>
-                            <option value="rejected">Application Denied</option>
+                            {STATUS_FILTERS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
                         </select>
 
                         <div className="relative min-w-0 flex-1 sm:flex-none">
