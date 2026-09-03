@@ -1,5 +1,5 @@
 import { Head, Link } from "@inertiajs/react";
-import { LayoutDashboard, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, MapPin, Phone, Mail, Clock, MonitorSmartphone, ClipboardList, Landmark } from "lucide-react";
+import { LayoutDashboard, CheckCircle2, ChevronDown, MapPin, Phone, Mail, Clock, MonitorSmartphone, ClipboardList, Landmark, Eye } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 /* ── Scroll-reveal wrapper ────────────────────────────────────────────────── */
@@ -31,24 +31,22 @@ function Step({ n, label }) {
     );
 }
 
-/* ── Review card ─────────────────────────────────────────────────────────── */
-const reviews = [
-    { text: "Very convenient! I submitted my zoning compliance/clearance request from home and received my certificate within days. No more long queues.", author: "M. Santos" },
-    { text: "The online tracking feature is great. I always knew the status of my application. Highly recommend to all property owners.", author: "R. Dela Cruz" },
-    { text: "The CPDO portal made the process so much easier. The staff also respond quickly through the system. Excellent service!", author: "A. Reyes" },
-    { text: "Smooth and fast. I got my Special Use Permit without hassle. This is the future of government services.", author: "J. Garcia" },
-];
+/* ── Mission & Vision ────────────────────────────────────────────────────
+   Transcribed from the plaques mounted in the CPDO office. The wording is the
+   office's own and should not be paraphrased. */
+const MISSION =
+    "To operate and sustain an autonomous local government with responsive and " +
+    "accountable public servants, self-reliant, capable of planning and execution " +
+    "of fiscal and administrative development, at the forefront in the realization " +
+    "of the vision of development thus contribute to the attainment of national goals.";
+
+const VISION =
+    "City of Ilagan, the Corn Capital of the Philippines, with empowered citizenry " +
+    "and committed leadership advancing towards a liveable city.";
 
 export default function Welcome({ auth }) {
     const [in_, setIn] = useState(false);
-    const [reviewIdx, setReviewIdx] = useState(0);
     useEffect(() => { setIn(true); }, []);
-
-    const prevReview = () => setReviewIdx(i => (i - 1 + reviews.length) % reviews.length);
-    const nextReview = () => setReviewIdx(i => (i + 1) % reviews.length);
-
-    /* visible 3 reviews (wrap-around) */
-    const visible = [0, 1, 2].map(o => reviews[(reviewIdx + o) % reviews.length]);
 
     return (
         <>
@@ -75,7 +73,7 @@ export default function Welcome({ auth }) {
                         style={{ opacity: in_ ? 1 : 0, transition: "opacity .7s ease .2s" }}>
                         <a href="#why" className="text-blue-200 hover:text-white transition-colors">About</a>
                         <a href="#how" className="text-blue-200 hover:text-white transition-colors">How It Works</a>
-                        <a href="#reviews" className="text-blue-200 hover:text-white transition-colors">Reviews</a>
+                        <a href="#mission" className="text-blue-200 hover:text-white transition-colors">Mission & Vision</a>
                         <a href="#contact" className="text-blue-200 hover:text-white transition-colors">Contact</a>
                         {auth.user
                             ? <Link href={route("dashboard")} className="px-5 py-2 rounded-md bg-[#d4a017] hover:bg-[#b8880d] text-white font-bold transition-colors text-sm shadow">
@@ -321,36 +319,50 @@ export default function Welcome({ auth }) {
                 </div>
             </section>
 
-            {/* ═══════════════════════ REVIEWS ════════════════════════════ */}
-            <section id="reviews" className="py-24 bg-white">
-                <div className="max-w-6xl mx-auto px-6 lg:px-12">
-                    <Reveal className="text-center mb-12">
-                        <h2 className="text-3xl lg:text-4xl font-black text-[#0d1f5c]">Reviews</h2>
+            {/* ═══════════════════ MISSION & VISION ═══════════════════════ */}
+            <section id="mission" className="bg-white py-24">
+                <div className="mx-auto max-w-6xl px-6 lg:px-12">
+                    <Reveal className="mb-12 text-center">
+                        <h2 className="text-3xl font-black text-[#0d1f5c] lg:text-4xl">
+                            Mission &amp; Vision
+                        </h2>
+                        <p className="mt-3 text-sm font-semibold uppercase tracking-widest text-[#d4a017]">
+                            City Planning and Development Office
+                        </p>
                     </Reveal>
 
-                    <div className="relative flex items-center gap-4">
-                        {/* Prev */}
-                        <button onClick={prevReview}
-                            className="shrink-0 w-10 h-10 rounded-full border-2 border-[#1a3a8f]/30 text-[#1a3a8f] hover:bg-[#0d1f5c] hover:text-white hover:border-[#0d1f5c] transition-all flex items-center justify-center shadow">
-                            <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
-                        </button>
-
-                        {/* Cards */}
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-5 overflow-hidden">
-                            {visible.map((r, i) => (
-                                <div key={i} className="bg-[#e8eef8] rounded-xl p-6 flex flex-col gap-3 min-h-[160px]">
-                                    <div className="text-[#1a3a8f] text-3xl font-serif leading-none">"</div>
-                                    <p className="text-[#1a3a8f] text-sm leading-relaxed flex-1">{r.text} <span className="text-[#1a3a8f]">"</span></p>
-                                    <p className="text-[#0d1f5c] font-bold text-sm">— {r.author}</p>
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        <Reveal>
+                            <div className="flex h-full flex-col gap-4 rounded-2xl border-t-4 border-[#0d1f5c] bg-[#e8eef8] p-8">
+                                <div className="flex items-center gap-3">
+                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0d1f5c]">
+                                        <Landmark className="h-5 w-5 text-white" />
+                                    </span>
+                                    <h3 className="text-xl font-black tracking-wide text-[#0d1f5c]">
+                                        Mission
+                                    </h3>
                                 </div>
-                            ))}
-                        </div>
+                                <p className="text-sm leading-relaxed text-[#1a3a8f]">
+                                    {MISSION}
+                                </p>
+                            </div>
+                        </Reveal>
 
-                        {/* Next */}
-                        <button onClick={nextReview}
-                            className="shrink-0 w-10 h-10 rounded-full border-2 border-[#1a3a8f]/30 text-[#1a3a8f] hover:bg-[#0d1f5c] hover:text-white hover:border-[#0d1f5c] transition-all flex items-center justify-center shadow">
-                            <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
-                        </button>
+                        <Reveal>
+                            <div className="flex h-full flex-col gap-4 rounded-2xl border-t-4 border-[#d4a017] bg-[#e8eef8] p-8">
+                                <div className="flex items-center gap-3">
+                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#d4a017]">
+                                        <Eye className="h-5 w-5 text-white" />
+                                    </span>
+                                    <h3 className="text-xl font-black tracking-wide text-[#0d1f5c]">
+                                        Vision
+                                    </h3>
+                                </div>
+                                <p className="text-sm font-medium italic leading-relaxed text-[#1a3a8f]">
+                                    &ldquo;{VISION}&rdquo;
+                                </p>
+                            </div>
+                        </Reveal>
                     </div>
                 </div>
             </section>
