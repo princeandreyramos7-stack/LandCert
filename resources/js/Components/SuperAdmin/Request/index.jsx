@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { router } from "@inertiajs/react";
@@ -6,6 +6,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RequestStats } from "@/Components/Admin/Request/RequestStats";
+import { STATUS_FILTERS, matchesStatusFilter } from "@/lib/applicationStatus";
+import { CLEARANCE_TYPE_FILTERS, matchesClearanceType } from "@/lib/clearanceTypes";
+import { TablePagination } from "@/Components/ui/table-pagination";
 import {
     Table,
     TableBody,
@@ -42,6 +45,9 @@ const LIVE_PROPS = ["requests"];
 export function SuperAdminRequestList({ requests }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
+    const [filterType, setFilterType] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const PER_PAGE = 10;
     const { toast } = useToast();
 
     const requestsData = requests?.data || requests || [];
@@ -53,15 +59,10 @@ export function SuperAdminRequestList({ requests }) {
     const filteredRequests = useMemo(() => {
         let filtered = requestsData;
 
-        if (filterStatus !== "all") {
-            // "application_approved" groups every post-payment lifecycle status.
-            const paidStatuses = ["payment_confirmed", "certificate_preparing", "certificate_ready", "released", "approved_with_payment"];
-            filtered = filtered.filter((r) =>
-                filterStatus === "application_approved"
-                    ? paidStatuses.includes(r.status)
-                    : r.status === filterStatus
-            );
-        }
+        // Same matchers the admin list uses, so the two panels agree on what a
+        // filter means instead of each keeping its own copy of the rules.
+        filtered = filtered.filter((r) => matchesStatusFilter(r.status, filterStatus));
+        filtered = filtered.filter((r) => matchesClearanceType(r.project_type, filterType));
 
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
@@ -76,7 +77,16 @@ export function SuperAdminRequestList({ requests }) {
         }
 
         return filtered;
-    }, [requestsData, filterStatus, searchTerm]);
+    }, [requestsData, filterStatus, filterType, searchTerm]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterStatus, filterType, searchTerm]);
+
+    const paginatedRequests = useMemo(() => {
+        const start = (currentPage - 1) * PER_PAGE;
+        return filteredRequests.slice(start, start + PER_PAGE);
+    }, [filteredRequests, currentPage]);
 
     const stats = useMemo(() => {
         return {
@@ -153,12 +163,24 @@ export function SuperAdminRequestList({ requests }) {
                                 onChange={(e) => setFilterStatus(e.target.value)}
                                 className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[220px] sm:flex-none"
                             >
-                                <option value="all">All Status of Application</option>
-                                <option value="pending">For Verification</option>
-                                <option value="reviewed">For Payment</option>
-                                <option value="approved">Approved — For Payment</option>
-                                <option value="application_approved">Application Approved (paid)</option>
-                                <option value="rejected">Application Denied</option>
+                                {STATUS_FILTERS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <select
+                                value={filterType}
+                                onChange={(e) => setFilterType(e.target.value)}
+                                aria-label="Filter by locational clearance type"
+                                className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[200px] sm:flex-none"
+                            >
+                                {CLEARANCE_TYPE_FILTERS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
                             </select>
 
                             <div className="relative min-w-0 flex-1 sm:flex-none">
@@ -197,7 +219,7 @@ export function SuperAdminRequestList({ requests }) {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    filteredRequests.map((request) => (
+                                    paginatedRequests.map((request) => (
                                         <TableRow
                                             key={request.id}
                                             className="hover:bg-gray-50 transition-colors"
@@ -261,6 +283,14 @@ export function SuperAdminRequestList({ requests }) {
                                 )}
                             </TableBody>
                         </Table>
+
+                        <TablePagination
+                            currentPage={currentPage}
+                            totalItems={filteredRequests.length}
+                            perPage={PER_PAGE}
+                            onPageChange={setCurrentPage}
+                            label="applications"
+                        />
                     </div>
                 </CardContent>
             </Card>
