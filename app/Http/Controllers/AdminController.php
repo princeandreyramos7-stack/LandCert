@@ -1064,11 +1064,15 @@ class AdminController extends Controller
      */
     public function users(Request $request): Response
     {
-        $perPage = $request->input('per_page', 25); // Increased default pagination
-        
-        $users = \App\Models\User::where('user_type', 'applicant')
+        // Applicants only — staff accounts are the super-admin's to manage — but
+        // the whole list rather than a page of it. The screen counts, filters and
+        // searches in the browser, so a server-side page of 25 made the summary
+        // cards report 25 users however many were actually registered.
+        $users = \App\Models\User::query()
+            ->select(['id', 'name', 'email', 'contact_number', 'address', 'user_type', 'created_at'])
+            ->where('user_type', 'applicant')
             ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+            ->get();
 
         return Inertia::render('Admin/Users', [
             'users' => $users,

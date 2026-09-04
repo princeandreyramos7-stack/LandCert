@@ -1201,9 +1201,16 @@ class SuperAdminController extends Controller
      */
     public function users(Request $request): Response
     {
-        $perPage = $request->input('per_page', 25);
-        
-        $users = User::orderBy('created_at', 'desc')->paginate($perPage);
+        // The whole list, not a page of it. The screen counts user types, filters
+        // and searches in the browser, so a server-side page of 25 left the
+        // summary cards reporting 25 users with no admins at all — they were
+        // counting the rows that happened to arrive rather than the system.
+        // Only the columns the table shows are selected, to keep that honest
+        // without sending more than the page needs.
+        $users = User::query()
+            ->select(['id', 'name', 'email', 'contact_number', 'address', 'user_type', 'created_at'])
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return Inertia::render('SuperAdmin/Users', [
             'users' => $users,
