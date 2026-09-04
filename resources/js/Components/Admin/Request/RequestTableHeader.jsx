@@ -1,5 +1,6 @@
 import React from "react";
 import { STATUS_FILTERS } from "@/lib/applicationStatus";
+import { CLEARANCE_TYPE_FILTERS } from "@/lib/clearanceTypes";
 import { Card, CardContent } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
@@ -11,6 +12,8 @@ export function RequestTableHeader({
     onSearchChange,
     filterStatus,
     onFilterChange,
+    filterType = "all",
+    onTypeChange,
     onClearFilter,
     onExport,
 }) {
@@ -48,6 +51,19 @@ export function RequestTableHeader({
                             className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[220px] sm:flex-none"
                         >
                             {STATUS_FILTERS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={filterType}
+                            onChange={(e) => onTypeChange?.(e.target.value)}
+                            aria-label="Filter by locational clearance type"
+                            className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[200px] sm:flex-none"
+                        >
+                            {CLEARANCE_TYPE_FILTERS.map((option) => (
                                 <option key={option.value} value={option.value}>
                                     {option.label}
                                 </option>

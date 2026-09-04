@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { matchesStatusFilter } from "@/lib/applicationStatus";
+import { matchesClearanceType } from "@/lib/clearanceTypes";
 import { Card, CardContent } from "@/Components/ui/card";
 import { Input } from "@/Components/ui/input";
 import BulkActions from "@/Components/ui/bulk-actions";
@@ -27,6 +28,7 @@ export function AdminRequestList({ requests, flash = {} }) {
     // State Management
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
+    const [filterType, setFilterType] = useState("all");
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [selectedItems, setSelectedItems] = useState([]);
     const [bulkLoading, setBulkLoading] = useState(false);
@@ -87,6 +89,9 @@ export function AdminRequestList({ requests, flash = {} }) {
             filtered = filtered.filter((r) => matchesStatusFilter(r.status, filterStatus));
         }
 
+        // Item 7 on the form: which clearance the application was filed under.
+        filtered = filtered.filter((r) => matchesClearanceType(r.project_type, filterType));
+
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             filtered = filtered.filter(
@@ -100,7 +105,7 @@ export function AdminRequestList({ requests, flash = {} }) {
         }
 
         return filtered;
-    }, [requestsData, filterStatus, searchTerm]);
+    }, [requestsData, filterStatus, filterType, searchTerm]);
 
     // The controller sends the whole list, not a paginator, so RequestPagination
     // never had any links to draw and the table simply ran to whatever length
@@ -111,7 +116,7 @@ export function AdminRequestList({ requests, flash = {} }) {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [filterStatus, searchTerm]);
+    }, [filterStatus, filterType, searchTerm]);
 
     const paginatedRequests = useMemo(() => {
         const start = (currentPage - 1) * PER_PAGE;
@@ -445,7 +450,12 @@ export function AdminRequestList({ requests, flash = {} }) {
                 onSearchChange={setSearchTerm}
                 filterStatus={filterStatus}
                 onFilterChange={setFilterStatus}
-                onClearFilter={() => setFilterStatus("all")}
+                filterType={filterType}
+                onTypeChange={setFilterType}
+                onClearFilter={() => {
+                    setFilterStatus("all");
+                    setFilterType("all");
+                }}
                 onExport={handleExport}
             />
 
