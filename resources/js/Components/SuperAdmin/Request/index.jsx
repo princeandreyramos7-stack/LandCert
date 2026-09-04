@@ -146,17 +146,17 @@ export function SuperAdminRequestList({ requests }) {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                title="Export Excel"
-                                aria-label="Export Excel"
-                                className="shrink-0 gap-2 border-gray-200 px-2.5 text-gray-700 hover:bg-gray-50 sm:px-4"
-                                onClick={handleExport}
-                            >
-                                <Download className="h-4 w-4 shrink-0" />
-                                <span className="hidden sm:inline">Export Excel</span>
-                            </Button>
+
+                            <div className="relative min-w-0 flex-1 sm:flex-none">
+                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                <Input
+                                    placeholder="Search requests..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full border-gray-200 bg-white py-2 pl-9 pr-4 text-sm focus:border-[#0d1f5c] sm:w-56"
+                                />
+                            </div>
+
                             
                             <select
                                 value={filterStatus}
@@ -169,6 +169,7 @@ export function SuperAdminRequestList({ requests }) {
                                     </option>
                                 ))}
                             </select>
+
 
                             <select
                                 value={filterType}
@@ -183,15 +184,17 @@ export function SuperAdminRequestList({ requests }) {
                                 ))}
                             </select>
 
-                            <div className="relative min-w-0 flex-1 sm:flex-none">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                                <Input
-                                    placeholder="Search requests..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full border-gray-200 bg-white py-2 pl-9 pr-4 text-sm focus:border-[#0d1f5c] sm:w-56"
-                                />
-                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                title="Export Excel"
+                                aria-label="Export Excel"
+                                className="shrink-0 gap-2 border-gray-200 px-2.5 text-gray-700 hover:bg-gray-50 sm:px-4"
+                                onClick={handleExport}
+                            >
+                                <Download className="h-4 w-4 shrink-0" />
+                                <span className="hidden sm:inline">Export Excel</span>
+                            </Button>
                         </div>
                     </div>
 

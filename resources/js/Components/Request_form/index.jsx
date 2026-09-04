@@ -17,6 +17,7 @@ import { FormNavigation } from "./FormNavigation";
 import { ApplicationSummaryModal } from "./ApplicationSummaryModal";
 import { validateStep1, validateStep2, validateStep3, validateStep4 } from "./utils";
 import { fetchWithCsrf, hasCsrfToken, appendCsrfField } from "@/lib/csrf";
+import { describeOversizedUpload } from "./uploadLimits";
 
 export default function RequestForm({ isEditing = false, existingApplication = null }) {
     // Welcome/requirements board is shown first; applicants proceed to Step 1 when ready
@@ -36,6 +37,8 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     const { toast } = useToast();
     const page = usePage();
     const flash = page.props.flash || {};
+    // What the server will accept in one POST, shared from php.ini.
+    const uploadLimits = page.props.uploadLimits || {};
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
         // Step 1: Applicant Information
@@ -470,6 +473,25 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             // Submit via fetch (not router.post) so the real HTTP status and
             // error body are visible - the caller needs to know whether a failure
             // is a form/validation problem (422) or a server problem (500).
+            // A POST bigger than the server's post_max_size is discarded before
+            // PHP runs, and this host resets the connection rather than
+            // answering — the browser then reports only "Failed to fetch" and a
+            // completed application is lost with no usable explanation. Checking
+            // here turns that into a message naming the file to fix.
+            const tooLarge = describeOversizedUpload(requirementFiles, data.authorization_letter, uploadLimits);
+            if (tooLarge) {
+                setIsSubmitting(false);
+                setIsConfirmDialogOpen(false);
+                setSubmitErrors([tooLarge]);
+                setSubmitErrorKind('form');
+                toast({
+                    variant: "destructive",
+                    title: "Files are too large to send",
+                    description: tooLarge,
+                });
+                return;
+            }
+
             try {
                 if (!hasCsrfToken()) {
                     throw new Error('Your session has expired. Please refresh the page and try again.');
