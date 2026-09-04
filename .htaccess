@@ -1,21 +1,4 @@
-# ---------------------------------------------------------------------
-# Root .htaccess for shared hosting (Hostinger) where the domain's
-# document root points at the Laravel project root instead of public/.
-# It forwards every request into public/, where the real front
-# controller (public/index.php) and public/.htaccess live.
-# ---------------------------------------------------------------------
-
 <IfModule mod_rewrite.c>
     RewriteEngine On
-
-    # Don't rewrite requests that are already inside public/
-    RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
-
-DirectoryIndex public/index.php
-
-# Never serve dotfiles or the environment file
-<FilesMatch "^\.">
-    Require all denied
-</FilesMatch>

@@ -93,3 +93,26 @@
         max-width: 100vw;
     }
 }
+
+/* Every password field carries its own show/hide button, so the browser's
+   built-in reveal control is a second eye sitting beside ours — Edge draws
+   ::-ms-reveal, and Safari/Chrome add their own password and contact buttons.
+   Hiding them leaves exactly one control, the one the app draws and styles. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
+input[type="password"]::-webkit-textfield-decoration-container {
+    /* Keeps the native decorations from reserving space next to our button. */
+    margin-right: 0;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-strong-password-auto-fill-button,
+input[type="password"]::-webkit-caps-lock-indicator {
+    visibility: hidden;
+    pointer-events: none;
+    margin: 0;
+    width: 0;
+}
