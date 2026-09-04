@@ -49,7 +49,7 @@ export function RequestTableHeader({
                         <select
                             value={filterStatus}
                             onChange={(e) => onFilterChange(e.target.value)}
-                            className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[220px] sm:flex-none"
+                            className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[180px] sm:flex-none"
                         >
                             {STATUS_FILTERS.map((option) => (
                                 <option key={option.value} value={option.value}>
@@ -62,7 +62,7 @@ export function RequestTableHeader({
                             value={filterType}
                             onChange={(e) => onTypeChange?.(e.target.value)}
                             aria-label="Filter by locational clearance type"
-                            className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[200px] sm:flex-none"
+                            className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[170px] sm:flex-none"
                         >
                             {CLEARANCE_TYPE_FILTERS.map((option) => (
                                 <option key={option.value} value={option.value}>
@@ -77,7 +77,7 @@ export function RequestTableHeader({
                                 placeholder="Search requests..."
                                 value={searchTerm}
                                 onChange={(e) => onSearchChange(e.target.value)}
-                                className="w-full border-gray-200 bg-white py-2 pl-9 pr-4 text-sm focus:border-[#0d1f5c] sm:w-64"
+                                className="w-full border-gray-200 bg-white py-2 pl-9 pr-4 text-sm focus:border-[#0d1f5c] sm:w-56"
                             />
                         </div>
                     </div>
