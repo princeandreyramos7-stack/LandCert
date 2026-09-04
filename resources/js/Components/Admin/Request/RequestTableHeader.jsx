@@ -20,8 +20,10 @@ export function RequestTableHeader({
     return (
         <Card className="bg-white border border-gray-100 shadow-sm rounded-lg overflow-hidden">
             <CardContent className="p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    {/* Left: Title with icon and count */}
+                <div className="flex flex-col gap-4">
+                    {/* One column: the title had to share a row with four
+                       controls and was being squeezed to "All Applications (…".
+                       It now gets its own line and the controls get theirs. */}
                     <div className="flex min-w-0 items-center gap-3">
                         <FileText className="h-5 w-5 shrink-0 text-[#0d1f5c]" />
                         <h2 className="truncate text-base font-semibold text-[#0d1f5c] sm:text-lg">
@@ -29,7 +31,6 @@ export function RequestTableHeader({
                         </h2>
                     </div>
 
-                    {/* Right: Export, Filter, Search */}
                     <div className="flex flex-wrap items-center gap-3">
                         <Button
                             variant="outline"

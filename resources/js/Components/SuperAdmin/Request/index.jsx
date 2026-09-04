@@ -137,7 +137,7 @@ export function SuperAdminRequestList({ requests }) {
                     <div className="border-t border-gray-200 my-6"></div>
 
                     {/* Header with Title, Export, Filter, Search */}
-                    <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="mb-6 flex flex-col gap-4">
                         <div className="flex min-w-0 items-center gap-3">
                             <FileText className="h-5 w-5 shrink-0 text-[#0d1f5c]" />
                             <h2 className="truncate text-base font-semibold text-[#0d1f5c] sm:text-lg">
