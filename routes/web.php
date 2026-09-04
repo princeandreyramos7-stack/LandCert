@@ -102,8 +102,8 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
 
 // Super Admin routes (highest privilege)
 Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-admin')->name('super-admin.')->group(function () {
-    Route::get('/dashboard', function () { return redirect('/dashboard-panel'); })->name('dashboard');
-    Route::get('/requests', function () { return redirect('/applications'); })->name('requests');
+    Route::get('/dashboard', function (\Illuminate\Http\Request $request) { return redirect('/dashboard-panel' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('dashboard');
+    Route::get('/requests', function (\Illuminate\Http\Request $request) { return redirect('/applications' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('requests');
     Route::get('/requests/{id}/review', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'review-application', $id)); })->name('requests.review');
     
     // NEW: Split Review Pages
@@ -121,12 +121,12 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::get('/export/requests', [\App\Http\Controllers\SuperAdminController::class, 'exportRequests'])->name('export.requests');
     
     // Management
-    Route::get('/users', function () { return redirect('/users'); })->name('users');
+    Route::get('/users', function (\Illuminate\Http\Request $request) { return redirect('/users' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('users');
     Route::get('/users/create', function () {
         return Inertia::render('SuperAdmin/CreateUser');
     })->name('users.create');
     Route::get('/users/{userId}/edit', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'edit-user', $id)); })->name('users.edit');
-    Route::get('/audit-logs', function () { return redirect('/audit-logs'); })->name('audit-logs');
+    Route::get('/audit-logs', function (\Illuminate\Http\Request $request) { return redirect('/audit-logs' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('audit-logs');
     Route::get('/settings', [\App\Http\Controllers\SuperAdminController::class, 'settings'])->name('settings');
     
     // Super Admin specific actions
@@ -149,7 +149,7 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     
     // Certificate Management Routes (NEW: Using CertificateController with PDF generation)
     Route::prefix('certificates')->name('certificates.')->group(function () {
-        Route::get('/', function () { return redirect('/certificates'); })->name('index');
+        Route::get('/', function (\Illuminate\Http\Request $request) { return redirect('/certificates' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('index');
         Route::get('/{certificate}', [CertificateController::class, 'show'])->name('show');
         Route::get('/{certificate}/download', [CertificateController::class, 'download'])->name('download');
         Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
@@ -168,7 +168,7 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::post('/certificates-old/{certificate}/release', [\App\Http\Controllers\SuperAdminController::class, 'releaseCertificate'])->name('certificates-old.release');
     
     // SMS Broadcast + Auto-Templates
-    Route::get('/sms', function () { return redirect('/sms-broadcast'); })->name('sms.index');
+    Route::get('/sms', function (\Illuminate\Http\Request $request) { return redirect('/sms-broadcast' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('sms.index');
     Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
     Route::put('/sms/templates/{id}', [\App\Http\Controllers\SmsController::class, 'updateTemplate'])->name('sms.templates.update');
     Route::post('/sms/templates/{id}/reset', [\App\Http\Controllers\SmsController::class, 'resetTemplate'])->name('sms.templates.reset');
@@ -183,7 +183,7 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::get('/audit-logs/export', [\App\Http\Controllers\AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
 
     // Payment Management Routes - Unified Page
-    Route::get('/payments', function () { return redirect('/payments'); })->name('payments');
+    Route::get('/payments', function (\Illuminate\Http\Request $request) { return redirect('/payments' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('payments');
     Route::post('/payments/record', [PaymentController::class, 'recordPayment'])->name('payments.record');
     Route::post('/payments/check-duplicate', [PaymentController::class, 'checkDuplicate'])->name('payments.check-duplicate');
     Route::post('/payments/upload-receipt', [\App\Http\Controllers\SuperAdminController::class, 'uploadReceipt'])->name('payments.upload-receipt');
@@ -200,9 +200,9 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
 
 // Admin routes
 Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', function () { return redirect('/dashboard-panel'); })->name('dashboard');
+    Route::get('/dashboard', function (\Illuminate\Http\Request $request) { return redirect('/dashboard-panel' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('dashboard');
     Route::get('/search', [AdminController::class, 'search'])->name('search');
-    Route::get('/requests', function () { return redirect('/applications'); })->name('requests');
+    Route::get('/requests', function (\Illuminate\Http\Request $request) { return redirect('/applications' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('requests');
     Route::get('/requests/{id}', [AdminController::class, 'viewRequest'])->name('requests.view');
     Route::get('/requests/{id}/review', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'review-application', $id)); })->name('requests.review');
     
@@ -213,7 +213,7 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::get('/reports', function () {
         return Inertia::render('Admin/Reports');
     })->name('reports');
-    Route::get('/users', function () { return redirect('/users'); })->name('users');
+    Route::get('/users', function (\Illuminate\Http\Request $request) { return redirect('/users' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('users');
     Route::put('/users/{userId}', [AdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{userId}', [AdminController::class, 'deleteUser'])->name('users.delete');
     Route::post('/update-evaluation/{reportId}', [AdminController::class, 'updateEvaluation'])->name('update-evaluation');
@@ -233,7 +233,7 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::post('/upload-requirement-document', [AdminController::class, 'uploadRequirementDocument'])->name('upload-requirement-document');
     
     // Payment Management Routes - Unified Page
-    Route::get('/payments', function () { return redirect('/payments'); })->name('payments');
+    Route::get('/payments', function (\Illuminate\Http\Request $request) { return redirect('/payments' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('payments');
     Route::post('/payments/record', [PaymentController::class, 'recordPayment'])->name('payments.record');
     Route::post('/payments/check-duplicate', [PaymentController::class, 'checkDuplicate'])->name('payments.check-duplicate');
     Route::post('/payments/upload-receipt', [AdminController::class, 'uploadReceipt'])->name('payments.upload-receipt');
@@ -243,7 +243,7 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     
     // Certificate Management Routes (NEW: Using CertificateController with PDF generation)
     Route::prefix('certificates')->name('certificates.')->group(function () {
-        Route::get('/', function () { return redirect('/certificates'); })->name('index');
+        Route::get('/', function (\Illuminate\Http\Request $request) { return redirect('/certificates' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('index');
         Route::get('/{certificate}', [CertificateController::class, 'show'])->name('show');
         Route::get('/{certificate}/download', [CertificateController::class, 'download'])->name('download');
         Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
@@ -266,7 +266,7 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::get('/export/payments', [AdminController::class, 'exportPayments'])->name('export.payments');
 
     // SMS Broadcast only (admins can broadcast but NOT edit templates)
-    Route::get('/sms', function () { return redirect('/sms-broadcast'); })->name('sms.index');
+    Route::get('/sms', function (\Illuminate\Http\Request $request) { return redirect('/sms-broadcast' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('sms.index');
     Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
 
     // Print form
@@ -284,7 +284,7 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::delete('/bulk/delete', [AdminController::class, 'bulkDelete'])->name('bulk.delete');
     
     // Audit log routes
-    Route::get('/audit-logs', function () { return redirect('/audit-logs'); })->name('audit-logs');
+    Route::get('/audit-logs', function (\Illuminate\Http\Request $request) { return redirect('/audit-logs' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('audit-logs');
     Route::get('/audit-logs/export', [AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
     Route::get('/audit-logs/{id}', [AdminController::class, 'viewAuditLog'])->name('audit-logs.view');
     

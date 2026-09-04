@@ -245,14 +245,16 @@ class CertificateService
             })
             ->orderBy('issued_at', 'desc');
 
-        // Filter by status based on certificate_file_path
+        // Released means handed to the applicant, which is what the badge in the
+        // list shows and what the release dialog records. This used to filter on
+        // whether a softcopy had been uploaded instead — a different thing
+        // entirely — so choosing "Released" returned a set that disagreed with
+        // the Released badges on screen.
         if (isset($filters['status']) && $filters['status'] !== 'all') {
             if ($filters['status'] === 'preparing') {
-                // No softcopy uploaded yet
-                $query->whereNull('certificate_file_path');
+                $query->whereHas('request', fn ($q) => $q->whereNull('released_to_applicant_at'));
             } elseif ($filters['status'] === 'released') {
-                // Has softcopy uploaded
-                $query->whereNotNull('certificate_file_path');
+                $query->whereHas('request', fn ($q) => $q->whereNotNull('released_to_applicant_at'));
             }
         }
 

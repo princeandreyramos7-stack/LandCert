@@ -2,6 +2,7 @@ import { Head, router } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import { CertificatesTable } from "@/Components/Admin/Certificates/CertificatesTable";
+import { CertificateStats } from "@/Components/Admin/Certificates/CertificateStats";
 import { MarkReadyDialog } from "@/Components/Admin/Certificates/MarkReadyDialog";
 import { RecordReleaseDialog } from "@/Components/Admin/Certificates/RecordReleaseDialog";
 import { UploadCertificateModal } from "@/Components/Admin/Certificates/UploadCertificateModal";
@@ -62,6 +63,18 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
                         </div>
                     </div>
                 </div>
+
+                {/* Summary counts — clicking one filters the list below. */}
+                <CertificateStats
+                    certificates={certificates?.data || []}
+                    onFilterChange={(status) =>
+                        router.get(
+                            route(`${routePrefix}.certificates.index`),
+                            { ...filters, status },
+                            { preserveState: true, replace: true }
+                        )
+                    }
+                />
 
                 {/* Certificates Table */}
                 <CertificatesTable

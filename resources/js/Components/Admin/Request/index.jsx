@@ -10,7 +10,7 @@ import { useToast } from "@/Components/ui/use-toast";
 import { RequestStats } from "./RequestStats";
 import { RequestTable } from "./RequestTable";
 import { RequestTableHeader } from "./RequestTableHeader";
-import { RequestPagination } from "./RequestPagination";
+import { TablePagination } from "@/Components/ui/table-pagination";
 import { EditRequestModal } from "./EditRequestModal";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { ApproveConfirmDialog } from "./ApproveConfirmDialog";
@@ -101,6 +101,22 @@ export function AdminRequestList({ requests, flash = {} }) {
 
         return filtered;
     }, [requestsData, filterStatus, searchTerm]);
+
+    // The controller sends the whole list, not a paginator, so RequestPagination
+    // never had any links to draw and the table simply ran to whatever length
+    // the office had reached. Paging here also keeps the summary counts honest:
+    // they are still computed from every application, not just this page.
+    const [currentPage, setCurrentPage] = useState(1);
+    const PER_PAGE = 10;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterStatus, searchTerm]);
+
+    const paginatedRequests = useMemo(() => {
+        const start = (currentPage - 1) * PER_PAGE;
+        return filteredRequests.slice(start, start + PER_PAGE);
+    }, [filteredRequests, currentPage]);
 
     const stats = useMemo(() => {
         return {
@@ -304,7 +320,9 @@ export function AdminRequestList({ requests, flash = {} }) {
     // Selection Handlers
     const handleSelectAll = (checked) => {
         if (checked) {
-            setSelectedItems(filteredRequests.map((request) => request.id));
+            // The rows on screen, not every filtered row — ticking the header
+            // box should not quietly select applications the officer cannot see.
+            setSelectedItems(paginatedRequests.map((request) => request.id));
         } else {
             setSelectedItems([]);
         }
@@ -447,7 +465,7 @@ export function AdminRequestList({ requests, flash = {} }) {
 
                     {/* Table */}
                     <RequestTable
-                        requests={filteredRequests}
+                        requests={paginatedRequests}
                         selectedItems={selectedItems}
                         onSelectAll={handleSelectAll}
                         onSelectItem={handleSelectItem}
@@ -455,10 +473,12 @@ export function AdminRequestList({ requests, flash = {} }) {
                         onDelete={handleDelete}
                     />
 
-                    {/* Pagination */}
-                    <RequestPagination
-                        paginationData={requests}
-                        onPageChange={handlePageChange}
+                    <TablePagination
+                        currentPage={currentPage}
+                        totalItems={filteredRequests.length}
+                        perPage={PER_PAGE}
+                        onPageChange={setCurrentPage}
+                        label="applications"
                     />
                 </CardContent>
             </Card>
