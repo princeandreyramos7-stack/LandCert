@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Application;
-use App\Models\Corporation;
-use App\Models\Project;
 use App\Models\Report;
 use App\Models\Request as RequestModel;
 use Illuminate\Http\Request;

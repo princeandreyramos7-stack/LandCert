@@ -6,7 +6,6 @@ use App\Models\Applicant;
 use App\Models\Location;
 use App\Models\Notification;
 use App\Models\Payment;
-use App\Models\Project;
 use App\Models\Request as RequestModel;
 use App\Models\User;
 use App\Services\NotificationService;

@@ -36,7 +36,7 @@ class FixSignaturePaths extends Command
                 continue;
             }
 
-            $oldPath = $user->signature_url;
+            $oldPath = $user->signature_path;
             
             // Check if signature file exists
             $fullPath = public_path($signaturePath);
@@ -48,7 +48,7 @@ class FixSignaturePaths extends Command
 
             // Update if different
             if ($oldPath !== $signaturePath) {
-                $user->signature_url = $signaturePath;
+                $user->signature_path = $signaturePath;
                 $user->save();
                 
                 $this->info("✓ Updated {$user->name}");

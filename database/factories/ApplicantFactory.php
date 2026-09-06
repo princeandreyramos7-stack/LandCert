@@ -15,10 +15,18 @@ class ApplicantFactory extends Factory
         return [
             'user_id' => User::factory(),
             'applicant_name' => fake()->name(),
-            'applicant_type' => fake()->randomElement(['individual', 'corporation']),
-            'address' => fake()->address(),
-            'phone' => fake()->phoneNumber(),
-            'email' => fake()->safeEmail(),
+            'applicant_address' => fake()->streetAddress() . ', City of Ilagan, Isabela',
+            'applicant_contact' => '09' . fake()->numerify('#########'),
+            'applicant_type' => 'individual',
         ];
+    }
+
+    /**
+     * A corporate applicant — the enum value is "corporate", and a corporation
+     * record is expected alongside it.
+     */
+    public function corporate(): static
+    {
+        return $this->state(fn () => ['applicant_type' => 'corporate']);
     }
 }
