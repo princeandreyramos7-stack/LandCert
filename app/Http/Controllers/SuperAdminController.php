@@ -6,7 +6,6 @@ use App\Models\Report;
 use App\Models\Request as RequestModel;
 use App\Models\User;
 use App\Models\Certificate;
-use App\Models\CertificateRelease;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -1465,7 +1464,7 @@ class SuperAdminController extends Controller
     public function updateCertificate(Request $request, $certificateId)
     {
         $validated = $request->validate([
-            'status' => 'required|in:generated,ready_for_collection,collected',
+            'status' => 'required|in:preparing,ready_for_pickup,released,cancelled',
             'certificate_number' => 'required|string|max:255',
             'issued_by' => 'nullable|exists:users,id',
             'valid_until' => 'nullable|date',
@@ -1496,16 +1495,19 @@ class SuperAdminController extends Controller
         ]);
 
         $certificate = Certificate::findOrFail($certificateId);
-        
+
         $certificate->update([
-            'status' => 'ready_for_collection',
             'certificate_number' => $validated['certificate_number'],
             'issued_by' => auth()->id(),
             'issued_at' => now(),
-            'notes' => $validated['notes'] ?? null,
         ]);
 
-        return back()->with('success', 'Certificate marked as ready for collection!');
+        // CertificateService owns the transition — see the matching note in
+        // AdminController::markCertificateReady().
+        app(\App\Services\CertificateService::class)
+            ->markReady($certificate, $validated['notes'] ?? null);
+
+        return back()->with('success', 'Certificate marked as ready for pickup!');
     }
 
     /**
@@ -1524,23 +1526,24 @@ class SuperAdminController extends Controller
         ]);
 
         $certificate = Certificate::findOrFail($certificateId);
-        
-        // Create release record
-        CertificateRelease::create([
-            'certificate_id' => $certificate->id,
-            'released_by' => auth()->id(),
-            'collected_by_name' => $validated['collected_by_name'],
-            'release_date' => $validated['release_date'],
-            'release_time' => $validated['release_time'],
-            'valid_id_type' => $validated['valid_id_type'],
-            'valid_id_number' => $validated['valid_id_number'],
-            'relationship_to_applicant' => $validated['relationship_to_applicant'],
-            'remarks' => $validated['remarks'] ?? null,
+
+        // Release details live on the certificate itself — see the matching note
+        // in AdminController::releaseCertificate().
+        $certificate = app(\App\Services\CertificateService::class)->recordRelease($certificate, [
+            'released_to_name'      => $validated['collected_by_name'],
+            'released_to_id_type'   => $validated['valid_id_type'],
+            'released_to_id_number' => $validated['valid_id_number'],
         ]);
 
-        // Update certificate status
         $certificate->update([
-            'status' => 'collected',
+            'collection_notes' => trim(sprintf(
+                "Released %s %s to %s (%s). %s",
+                $validated['release_date'],
+                $validated['release_time'],
+                $validated['collected_by_name'],
+                $validated['relationship_to_applicant'],
+                $validated['remarks'] ?? ''
+            )),
         ]);
 
         return back()->with('success', 'Certificate collection recorded successfully!');

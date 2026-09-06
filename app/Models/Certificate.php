@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Certificate extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'request_id',
         'payment_id',
@@ -26,6 +28,7 @@ class Certificate extends Model
         'released_to_id_type',
         'released_to_id_number',
         'release_signature_path',
+        'collection_notes',
     ];
 
     protected $casts = [
@@ -90,11 +93,4 @@ class Certificate extends Model
         return $this->belongsTo(User::class, 'released_by');
     }
 
-    /**
-     * Get the release record for this certificate.
-     */
-    public function release(): HasOne
-    {
-        return $this->hasOne(CertificateRelease::class);
-    }
 }

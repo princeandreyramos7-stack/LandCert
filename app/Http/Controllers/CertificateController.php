@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Certificate;
-use App\Models\CertificateRelease;
 use App\Models\Request as ApplicationRequest;
 use App\Services\CertificateService;
 use App\Services\CertificatePDFService;

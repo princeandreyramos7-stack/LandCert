@@ -101,133 +101,6 @@ class AdminController extends Controller
         ]);
     }
     
-    /**
-     * Get dashboard analytics
-     */
-    private function getDashboardAnalytics()
-    {
-        // Monthly submissions trend (last 6 months)
-        $monthlyData = RequestModel::select(
-            DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
-            DB::raw('COUNT(*) as count')
-        )
-        ->where('created_at', '>=', now()->subMonths(6))
-        ->groupBy('month')
-        ->orderBy('month')
-        ->get();
-        
-        // Payment statistics
-        $paymentStats = [
-            'total_revenue' => \App\Models\Payment::where('payment_status', 'verified')->sum('amount'),
-            'pending_payments' => \App\Models\Payment::where('payment_status', 'pending')->count(),
-            'verified_payments' => \App\Models\Payment::where('payment_status', 'verified')->count(),
-            'denied_payments' => \App\Models\Payment::where('payment_status', 'rejected')->count(),
-            'average_payment' => \App\Models\Payment::where('payment_status', 'verified')->avg('amount'),
-        ];
-        
-        // Monthly payment revenue (last 6 months)
-        $monthlyRevenue = \App\Models\Payment::select(
-            DB::raw('DATE_FORMAT(payment_date, "%Y-%m") as month'),
-            DB::raw('SUM(amount) as revenue'),
-            DB::raw('COUNT(*) as count')
-        )
-        ->where('payment_status', 'verified')
-        ->where('payment_date', '>=', now()->subMonths(6))
-        ->groupBy('month')
-        ->orderBy('month')
-        ->get();
-        
-        // Payment methods distribution
-        $paymentMethods = \App\Models\Payment::select('payment_method', DB::raw('COUNT(*) as count'))
-            ->where('payment_status', 'verified')
-            ->groupBy('payment_method')
-            ->get();
-        
-        // Certificate statistics
-        $certificateStats = [
-            'total_issued' => \App\Models\Certificate::count(),
-            'issued_this_month' => \App\Models\Certificate::whereMonth('issued_at', now()->month)->count(),
-            'collected' => \App\Models\Certificate::where('status', 'collected')->count(),
-            'sent' => \App\Models\Certificate::where('status', 'sent')->count(),
-        ];
-        
-        // Application status breakdown
-        $statusBreakdown = Report::select('evaluation', DB::raw('COUNT(*) as count'))
-            ->groupBy('evaluation')
-            ->get();
-        
-        // Average processing time (from submission to approval)
-        $avgProcessingTime = Report::where('evaluation', 'approved')
-            ->whereNotNull('date_reported')
-            ->join('requests', 'reports.request_id', '=', 'requests.id')
-            ->selectRaw('AVG(DATEDIFF(reports.date_reported, requests.created_at)) as avg_days')
-            ->value('avg_days');
-        
-        // Recent activity
-        $recentActivity = \App\Models\StatusHistory::with('user')
-            ->latest()
-            ->take(10)
-            ->get()
-            ->map(function($history) {
-                return [
-                    'id' => $history->id,
-                    'request_id' => $history->request_id,
-                    'entity_type' => $history->entity_type,
-                    'old_status' => $history->old_status,
-                    'new_status' => $history->new_status,
-                    'changed_by' => $history->user?->name ?? 'System',
-                    'notes' => $history->notes,
-                    'created_at' => $history->created_at,
-                ];
-            });
-        
-        // Locational Clearance distribution
-        $projectTypes = RequestModel::join('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
-            ->select('normalized_projects.project_type', DB::raw('COUNT(*) as count'))
-            ->whereNotNull('normalized_projects.project_type')
-            ->groupBy('normalized_projects.project_type')
-            ->get();
-        
-        // Top users by submissions
-        $topUsers = RequestModel::select('user_id', DB::raw('COUNT(*) as count'))
-            ->whereNotNull('user_id')
-            ->groupBy('user_id')
-            ->orderByDesc('count')
-            ->take(5)
-            ->with('user')
-            ->get()
-            ->map(function($item) {
-                return [
-                    'name' => $item->user?->name ?? 'Unknown',
-                    'email' => $item->user?->email ?? '',
-                    'count' => $item->count,
-                ];
-            });
-        
-        // Weekly activity (last 4 weeks)
-        $weeklyActivity = RequestModel::select(
-            DB::raw('YEARWEEK(created_at) as week'),
-            DB::raw('COUNT(*) as count')
-        )
-        ->where('created_at', '>=', now()->subWeeks(4))
-        ->groupBy('week')
-        ->orderBy('week')
-        ->get();
-        
-        return [
-            'monthly_submissions' => $monthlyData,
-            'monthly_revenue' => $monthlyRevenue,
-            'payment_stats' => $paymentStats,
-            'payment_methods' => $paymentMethods,
-            'certificate_stats' => $certificateStats,
-            'status_breakdown' => $statusBreakdown,
-            'avg_processing_time' => round($avgProcessingTime ?? 0, 1),
-            'recent_activity' => $recentActivity,
-            'project_types' => $projectTypes,
-            'top_users' => $topUsers,
-            'weekly_activity' => $weeklyActivity,
-        ];
-    }
 
     /**
      * Display all requests for admin
@@ -1513,20 +1386,17 @@ class AdminController extends Controller
         ]);
 
         $certificate = \App\Models\Certificate::findOrFail($certificateId);
-        
-        $certificate->update([
-            'status' => 'ready_for_collection',
-            'certificate_number' => $validated['certificate_number'],
-        ]);
 
-        // Log audit
-        AuditLogService::logUpdate(
-            'Certificate',
-            $certificate->id,
-            ['status' => $certificate->getOriginal('status')],
-            ['status' => 'ready_for_collection'],
-            'Certificate marked as ready for collection by admin'
-        );
+        // The certificate number is the one thing this screen sets that the
+        // service does not, so it is applied first.
+        $certificate->update(['certificate_number' => $validated['certificate_number']]);
+
+        // CertificateService owns the transition: it writes the status value the
+        // enum actually allows, stamps ready_at, moves the request to
+        // certificate_ready, and writes the audit log. Duplicating that here is
+        // what let this method drift onto a status the column rejects.
+        $certificate = app(\App\Services\CertificateService::class)
+            ->markReady($certificate, $validated['notes'] ?? null);
 
         // Notify applicant certificate is ready for pickup
         try {
@@ -1563,33 +1433,26 @@ class AdminController extends Controller
         ]);
 
         $certificate = \App\Models\Certificate::findOrFail($certificateId);
-        
-        // Create release record
-        \App\Models\CertificateRelease::create([
-            'certificate_id' => $certificate->id,
-            'collected_by_name' => $validated['collected_by_name'],
-            'relationship_to_applicant' => $validated['relationship_to_applicant'],
-            'valid_id_type' => $validated['valid_id_type'],
-            'valid_id_number' => $validated['valid_id_number'],
-            'release_date' => $validated['release_date'],
-            'release_time' => $validated['release_time'],
-            'released_by' => auth()->id(),
-            'remarks' => $validated['remarks'] ?? null,
+
+        // The release details live on the certificate itself — the separate
+        // certificate_releases table this used to write to was dropped, taking
+        // its model with it, so every call here was fatal.
+        $certificate = app(\App\Services\CertificateService::class)->recordRelease($certificate, [
+            'released_to_name'      => $validated['collected_by_name'],
+            'released_to_id_type'   => $validated['valid_id_type'],
+            'released_to_id_number' => $validated['valid_id_number'],
         ]);
 
-        // Update certificate status
         $certificate->update([
-            'status' => 'collected',
+            'collection_notes' => trim(sprintf(
+                "Released %s %s to %s (%s). %s",
+                $validated['release_date'],
+                $validated['release_time'],
+                $validated['collected_by_name'],
+                $validated['relationship_to_applicant'],
+                $validated['remarks'] ?? ''
+            )),
         ]);
-
-        // Log audit
-        AuditLogService::logUpdate(
-            'Certificate',
-            $certificate->id,
-            ['status' => 'ready_for_collection'],
-            ['status' => 'collected'],
-            'Certificate collection recorded by admin'
-        );
 
         // Notify applicant certificate has been released
         try {
