@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Request extends Model
 {
+    use HasFactory, SoftDeletes;
+
     protected $fillable = [
         // Core request fields
         'application_number',
@@ -88,15 +92,6 @@ class Request extends Model
     public function releaser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'released_by');
-    }
-
-    /**
-     * Get the application for this request.
-     */
-    public function application()
-    {
-        return $this->hasOne(Application::class, 'applicant_name', 'applicant_name')
-            ->where('applicant_address', $this->applicant_address);
     }
 
     /**
