@@ -94,6 +94,8 @@ class CertificateReady extends Mailable
             'other' => 'Other Permit',
         ];
 
-        return $types[$projectType] ?? ucwords(str_replace('_', ' ', $projectType));
+        // A request whose project type was never set arrives here as null,
+        // which str_replace() no longer accepts.
+        return $types[$projectType] ?? ucwords(str_replace('_', ' ', (string) $projectType));
     }
 }

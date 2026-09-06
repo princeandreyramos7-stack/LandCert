@@ -198,7 +198,7 @@ class PaymentController extends Controller
         // Task 11.1: Eager load only needed relationships and columns
         $payment = Payment::with([
             'request:id,applicant_id,application_number,decision_number',
-            'request.applicant:id,applicant_name,applicant_address,contact_number',
+            'request.applicant:id,applicant_name,applicant_address,applicant_contact',
             'request.project:id,request_id,project_type,project_description',
             'verifiedByUser:id,name,email'
         ])->findOrFail($id);

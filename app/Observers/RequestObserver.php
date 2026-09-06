@@ -51,6 +51,9 @@ class RequestObserver
                             'applicant_address' => $request->applicant->applicant_address ?? 'N/A',
                             'project_type' => $request->project->project_type ?? 'N/A',
                             'project_nature' => $request->project->project_nature ?? 'N/A',
+                            // The template prints a submission date; without
+                            // this the email rendered with a warning and no date.
+                            'created_at' => $request->created_at ?? now(),
                         ],
                         $request->user->name
                     )
