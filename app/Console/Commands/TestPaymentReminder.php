@@ -4,8 +4,6 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Request as RequestModel;
-use App\Models\Application;
-use App\Models\Report;
 use App\Services\ReminderService;
 
 class TestPaymentReminder extends Command
@@ -21,23 +19,11 @@ class TestPaymentReminder extends Command
         $requestId = $this->argument('request_id');
         
         if (!$requestId) {
-            // Find an approved request
+            // Find an approved request. Reports link straight to the request
+            // now, so this no longer has to match applicants by name.
             $request = RequestModel::whereNotNull('user_id')
+                ->whereHas('report', fn ($q) => $q->where('evaluation', 'approved'))
                 ->with('user')
-                ->get()
-                ->filter(function($req) {
-                    $application = \App\Models\Application::where('applicant_name', $req->applicant_name)
-                        ->where('applicant_address', $req->applicant_address)
-                        ->first();
-                    
-                    if (!$application) return false;
-                    
-                    $report = \App\Models\Report::where('app_id', $application->id)
-                        ->where('evaluation', 'approved')
-                        ->first();
-                    
-                    return $report !== null;
-                })
                 ->first();
                 
             if (!$request) {
