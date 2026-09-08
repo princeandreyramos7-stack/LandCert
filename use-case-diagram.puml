@@ -1,0 +1,238 @@
+@startuml CPDO_LC_Use_Case_Diagram
+
+title CPDO Locational Clearance System - Complete Use Case Diagram
+subtitle City Planning and Development Office - Locational Clearance Management
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam shadowing false
+skinparam backgroundColor #FAFAFA
+
+actor "Applicant\n(Citizen/Business)" as applicant #E3F2FD
+actor "Admin\n(Zoning Officer IV)" as admin #C8E6C9
+actor "Super Admin\n(Zoning Administrator)" as superadmin #FFE0B2
+actor "System\n(Automated Tasks)" as system #ECEFF1
+
+rectangle "CPDO LC System" {
+  
+  ' ===== APPLICANT USE CASES =====
+  package "Application Management" #AliceBlue {
+    usecase (Login/Logout) as UC2
+    usecase (Submit New\nApplication) as UC3
+    usecase (View My\nApplications) as UC4
+    usecase (Edit Application) as UC5
+    usecase (Track Status) as UC6
+    usecase (Download\nApplication Form) as UC7
+  }
+  
+  package "Payment & Documents" #LightYellow {
+    usecase (View Order\nof Payment) as UC8
+    usecase (Upload Payment\nReceipt) as UC9
+    usecase (Upload Required\nDocuments) as UC10
+    usecase (View Payment\nStatus) as UC11
+  }
+  
+  package "Certificates" #LightCyan {
+    usecase (Download\nCertificate) as UC12
+    usecase (Print\nCertificate) as UC13
+    usecase (View Certificate\nStatus) as UC14
+  }
+  
+  package "Profile" #Lavender {
+    usecase (Update Profile) as UC15
+    usecase (Change Password) as UC16
+  }
+  
+  package "Notifications" #MistyRose {
+    usecase (Receive Email\nNotifications) as UC17
+    usecase (Receive SMS\nNotifications) as UC18
+    usecase (View Notifications) as UC19
+  }
+  
+  ' ===== ADMIN USE CASES =====
+  package "Application Review" #LightGreen {
+    usecase (View All\nApplications) as UC20
+    usecase (Search/Filter\nApplications) as UC21
+    usecase (Review Application\nDetails) as UC22
+    usecase (Verify\nDocuments) as UC23
+    usecase (Evaluate\nApplication) as UC24
+    usecase (Set Payment\nAmount) as UC25
+    usecase (Submit for\nApproval) as UC26
+  }
+  
+  package "Certificate Generation" #LightCoral {
+    usecase (Generate\nCertificate) as UC27
+    usecase (Generate\nClearance) as UC28
+    usecase (Fill Certificate\nDetails) as UC29
+    usecase (Preview\nCertificate) as UC30
+    usecase (Mark Certificate\nReady) as UC31
+    usecase (Record\nRelease) as UC32
+  }
+  
+  package "Payment Management" #LightSalmon {
+    usecase (View\nPayments) as UC33
+    usecase (Record\nPayment) as UC34
+    usecase (Verify Payment\nReceipt) as UC35
+  }
+  
+  package "Reports" #LightSteelBlue {
+    usecase (View Dashboard\nStatistics) as UC36
+    usecase (Export\nApplications) as UC37
+    usecase (Export\nPayments) as UC38
+    usecase (Generate\nReports) as UC39
+  }
+  
+  ' ===== SUPER ADMIN USE CASES =====
+  package "Final Approval" #Orange {
+    usecase (Review Submitted\nApplications) as UC40
+    usecase (Approve\nApplication) as UC41
+    usecase (Reject\nApplication) as UC42
+    usecase (Return to\nZoning Officer) as UC43
+    usecase (One-Step Review\n& Decide) as UC44
+  }
+  
+  package "User Management" #Gold {
+    usecase (View All\nUsers) as UC45
+    usecase (Create Admin\nAccount) as UC46
+    usecase (Edit User\nAccount) as UC47
+    usecase (Deactivate\nUser) as UC48
+  }
+  
+  package "SMS Management" #Khaki {
+    usecase (Send SMS\nBroadcast) as UC49
+    usecase (Manage SMS\nTemplates) as UC50
+    usecase (View SMS\nHistory) as UC51
+  }
+  
+  package "System Admin" #Wheat {
+    usecase (View Audit\nLogs) as UC52
+    usecase (Export Audit\nLogs) as UC53
+    usecase (Configure\nSettings) as UC54
+    usecase (Manage\nSignatures) as UC55
+  }
+  
+  ' ===== SYSTEM USE CASES =====
+  package "Automated Processes" #WhiteSmoke {
+    usecase (Send Auto Email\nNotifications) as UC56
+    usecase (Send Auto SMS\nNotifications) as UC57
+    usecase (Send Payment\nReminders) as UC58
+    usecase (Log System\nActivities) as UC59
+    usecase (Generate App\nNumbers) as UC60
+  }
+}
+
+' ===== APPLICANT RELATIONSHIPS =====
+applicant --> UC2
+applicant --> UC3
+applicant --> UC4
+applicant --> UC5
+applicant --> UC6
+applicant --> UC7
+applicant --> UC8
+applicant --> UC9
+applicant --> UC10
+applicant --> UC11
+applicant --> UC12
+applicant --> UC13
+applicant --> UC14
+applicant --> UC15
+applicant --> UC16
+applicant --> UC17
+applicant --> UC18
+applicant --> UC19
+
+' ===== ADMIN RELATIONSHIPS =====
+admin --> UC2
+admin --> UC20
+admin --> UC21
+admin --> UC22
+admin --> UC23
+admin --> UC24
+admin --> UC25
+admin --> UC26
+admin --> UC27
+admin --> UC28
+admin --> UC29
+admin --> UC30
+admin --> UC31
+admin --> UC32
+admin --> UC33
+admin --> UC34
+admin --> UC35
+admin --> UC36
+admin --> UC37
+admin --> UC38
+admin --> UC39
+admin --> UC15
+admin --> UC16
+
+' ===== SUPER ADMIN RELATIONSHIPS =====
+superadmin --|> admin : <<extends>>
+superadmin --> UC40
+superadmin --> UC41
+superadmin --> UC42
+superadmin --> UC43
+superadmin --> UC44
+superadmin --> UC45
+superadmin --> UC46
+superadmin --> UC47
+superadmin --> UC48
+superadmin --> UC49
+superadmin --> UC50
+superadmin --> UC51
+superadmin --> UC52
+superadmin --> UC53
+superadmin --> UC54
+superadmin --> UC55
+
+' ===== SYSTEM RELATIONSHIPS =====
+system --> UC56
+system --> UC57
+system --> UC58
+system --> UC59
+system --> UC60
+
+' ===== TRIGGER RELATIONSHIPS =====
+UC3 ..> UC60 : <<include>>
+UC26 ..> UC56 : <<trigger>>
+UC26 ..> UC57 : <<trigger>>
+UC41 ..> UC56 : <<trigger>>
+UC41 ..> UC57 : <<trigger>>
+UC42 ..> UC56 : <<trigger>>
+UC35 ..> UC56 : <<trigger>>
+UC31 ..> UC56 : <<trigger>>
+UC31 ..> UC57 : <<trigger>>
+UC59 ..> UC56 : <<include>>
+UC59 ..> UC57 : <<include>>
+
+note right of UC3
+  4-Step Application:
+  1. Applicant Info
+  2. Project Details
+  3. Land Use
+  4. Requirements Upload
+end note
+
+note right of UC28
+  Certificate Types:
+  • CZ - Zoning Certification
+  • CZC - Zoning Clearance
+  • TUP - Temporary Use Permit
+  • SUP - Special Use Permit
+end note
+
+note bottom of system
+  Automated processes run via
+  Laravel scheduler (cron jobs)
+end note
+
+legend right
+  |= Actor |= Role |
+  | Applicant | Citizens/Businesses |
+  | Admin | Zoning Officer IV |
+  | Super Admin | Zoning Administrator |
+  | System | Automated Processes |
+endlegend
+
+@enduml

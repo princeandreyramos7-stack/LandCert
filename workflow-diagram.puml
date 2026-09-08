@@ -1,0 +1,170 @@
+@startuml CPDO_LC_Workflow
+
+title CPDO Locational Clearance System - Complete Workflow Diagram
+
+|#LightBlue|Applicant|
+start
+:Register Account;
+:Login to System;
+:Fill Application Form
+(4-Step Process);
+note right
+  **Step 1:** Applicant Information
+  • Name, Contact, Address
+  • Applicant Type (Individual/Corporate)
+  
+  **Step 2:** Project Details
+  • Project Type & Nature
+  • Project Cost & Description
+  
+  **Step 3:** Land Use Information
+  • Lot Area, Location
+  • Zone Classification
+  • Existing Land Use
+  
+  **Step 4:** Requirements Upload
+  • Location Plan
+  • Tax Declaration
+  • Title/Other documents
+end note
+:Upload Required Documents;
+:Submit Application;
+
+|#Gray|System|
+:Generate Application Number;
+:Send Email Confirmation;
+:Send SMS Notification;
+:Create Application Record\nStatus: PENDING;
+
+|#LightGreen|Zoning Officer (Admin)|
+:View Pending Applications;
+:Review Application Details;
+:Verify Uploaded Documents;
+
+if (Documents Complete?) then (No)
+  :Request Additional Documents;
+  :Send Notification to Applicant;
+  |Applicant|
+  :Upload Missing Documents;
+  |Admin|
+else (Yes)
+  :Evaluate Application;
+  :Create Evaluation Report;
+  :Set Payment Amount;
+  :Submit for Approval\nStatus: FOR APPROVAL;
+  
+  |#Orange|Zoning Administrator (Super Admin)|
+  :Review Submitted Application;
+  :Verify Evaluation Report;
+  
+  if (Approve?) then (No - Reject)
+    :Reject Application;
+    :Provide Rejection Reason;
+    |System|
+    :Update Status: REJECTED;
+    :Send Rejection Email;
+    :Send Rejection SMS;
+    |Applicant|
+    :Receive Rejection Notice;
+    stop
+  elseif (Return to Officer?) then (Yes)
+    :Return to Zoning Officer;
+    :Add Review Comments;
+    |Admin|
+    :Review Comments;
+    :Revise Evaluation;
+    |Super Admin|
+  else (Yes - Approve)
+    :Approve Application;
+    :Assign Decision Number;
+    |System|
+    :Update Status: APPROVED;
+    :Generate Order of Payment;
+    :Send Approval Email;
+    :Send Approval SMS;
+    
+    |Applicant|
+    :Receive Approval Notice;
+    :View Order of Payment;
+    :Make Payment at Cashier;
+    :Upload Payment Receipt;
+    
+    |Admin|
+    :View Payment Submission;
+    :Verify Payment Receipt;
+    
+    if (Payment Valid?) then (No)
+      :Reject Payment;
+      :Specify Rejection Reason;
+      |System|
+      :Send Payment Rejection Email;
+      |Applicant|
+      :Resubmit Payment;
+      |Admin|
+    else (Yes)
+      :Verify Payment;
+      :Record Payment Details;
+      |System|
+      :Update Status: PAYMENT_CONFIRMED;
+      :Send Payment Confirmation;
+      
+      |Admin|
+      :Generate Certificate;
+      note right
+        **Certificate Types:**
+        • CZ - Certification of Zoning
+        • CZC - Zoning Clearance
+        • TUP - Temporary Use Permit
+        • SUP - Special Use Permit
+        
+        Certificate includes:
+        • Certificate Number
+        • Decision Number
+        • Property Details
+        • Zoning Classification
+        • E-Signature of Administrator
+        • Validity Period
+      end note
+      :Fill Certificate Details;
+      :Preview Certificate;
+      |System|
+      :Update Status: CERTIFICATE_PREPARING;
+      
+      |Admin|
+      :Mark Certificate Ready;
+      |System|
+      :Update Status: CERTIFICATE_READY;
+      :Send Ready for Pickup Email;
+      :Send Ready for Pickup SMS;
+      
+      |Applicant|
+      :Receive Pickup Notification;
+      if (Release Mode?) then (Pickup at Office)
+        :Go to CPDO Office;
+        :Present Valid ID;
+        |Admin|
+        :Verify Identity;
+        :Record Release Details;
+        :Capture Signature;
+        :Hand Over Certificate;
+      else (Mail Delivery)
+        |Admin|
+        :Prepare for Mailing;
+        :Record Delivery Details;
+        :Mail Certificate;
+      endif
+      
+      |System|
+      :Update Status: RELEASED;
+      :Send Release Confirmation;
+      :Log Complete Timeline;
+      
+      |Applicant|
+      :Receive Certificate;
+      :Download Digital Copy;
+      stop
+    endif
+  endif
+endif
+
+@enduml

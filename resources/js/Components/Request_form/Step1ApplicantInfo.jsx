@@ -152,16 +152,58 @@ export function Step1ApplicantInfo({
                         <Label htmlFor="authorization_letter">
                             Authorization Letter <span className="text-red-500">*</span>
                         </Label>
-                        <Input
+                        {/*
+                          The native file input is hidden behind its own label and
+                          the attached file is named from form state instead.
+                          A bare <input type="file"> is uncontrolled: Step 1 is
+                          unmounted when the applicant moves on, so coming back
+                          remounted an empty input reading "No file chosen" even
+                          though the File was still held in the form and still
+                          went out with the submission. Applicants read that as
+                          their upload having been lost and could not tell
+                          whether it had. Naming the file from state means the
+                          screen and the form agree on every visit.
+                        */}
+                        <input
                             id="authorization_letter"
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) =>
-                                onDataChange("authorization_letter", e.target.files[0])
-                            }
-                            className="cursor-pointer"
-                            required={hasRepresentative}
+                            className="sr-only"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) onDataChange("authorization_letter", file);
+                                // Let the same file be picked again after a
+                                // remove - the input would not fire change for a
+                                // value it thinks it already holds.
+                                e.target.value = "";
+                            }}
                         />
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Label
+                                htmlFor="authorization_letter"
+                                className="inline-flex cursor-pointer items-center rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                {data.authorization_letter ? "Replace file" : "Choose file"}
+                            </Label>
+                            {data.authorization_letter ? (
+                                <span className="flex min-w-0 items-center gap-2 text-sm text-gray-700">
+                                    <span className="truncate" title={data.authorization_letter.name}>
+                                        {data.authorization_letter.name}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            onDataChange("authorization_letter", null)
+                                        }
+                                        className="shrink-0 text-red-600 underline hover:text-red-700"
+                                    >
+                                        Remove
+                                    </button>
+                                </span>
+                            ) : (
+                                <span className="text-sm text-gray-500">No file chosen</span>
+                            )}
+                        </div>
                         <p className="text-xs text-gray-500">
                             Accepted formats: PDF, JPG, PNG (Max 5MB)
                         </p>

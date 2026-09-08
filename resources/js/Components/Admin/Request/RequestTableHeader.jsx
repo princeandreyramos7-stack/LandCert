@@ -19,7 +19,7 @@ export function RequestTableHeader({
 }) {
     return (
         <Card className="bg-white border border-gray-100 shadow-sm rounded-lg overflow-hidden">
-            <CardContent className="p-5">
+            <CardContent className="p-4 sm:p-5">
                 <div className="flex flex-col gap-4">
                     {/* One column: the title had to share a row with four
                        controls and was being squeezed to "All Applications (…".
@@ -31,57 +31,64 @@ export function RequestTableHeader({
                         </h2>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3">
+                    {/* On a phone the controls stack instead of wrapping.
+                       Wrapping gave each of them whatever width was left over,
+                       so the search box ended up a few characters wide and the
+                       status filter showed "Application Appro…". */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
 
-                        <div className="relative min-w-0 flex-1 sm:flex-none">
+                        <div className="relative w-full sm:w-56">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                             <Input
-                                placeholder="Search requests..."
+                                placeholder="Search applications..."
                                 value={searchTerm}
                                 onChange={(e) => onSearchChange(e.target.value)}
-                                className="w-full border-gray-200 bg-white py-2 pl-9 pr-4 text-sm focus:border-[#0d1f5c] sm:w-56"
+                                className="w-full border-gray-200 bg-white py-2 pl-9 pr-4 text-sm focus:border-[#0d1f5c]"
                             />
                         </div>
 
+                        {/* The two dropdowns share one row on a phone. From sm
+                           up `contents` drops this wrapper out of the layout so
+                           they sit directly in the flex row as before. */}
+                        <div className="grid grid-cols-2 gap-3 sm:contents">
+                            <select
+                                value={filterStatus}
+                                onChange={(e) => onFilterChange(e.target.value)}
+                                aria-label="Filter by status"
+                                className="w-full min-w-0 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:w-auto sm:min-w-[180px]"
+                            >
+                                {STATUS_FILTERS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
 
-                        <select
-                            value={filterStatus}
-                            onChange={(e) => onFilterChange(e.target.value)}
-                            className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[180px] sm:flex-none"
-                        >
-                            {STATUS_FILTERS.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-
-
-                        <select
-                            value={filterType}
-                            onChange={(e) => onTypeChange?.(e.target.value)}
-                            aria-label="Filter by locational clearance type"
-                            className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[170px] sm:flex-none"
-                        >
-                            {CLEARANCE_TYPE_FILTERS.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
+                            <select
+                                value={filterType}
+                                onChange={(e) => onTypeChange?.(e.target.value)}
+                                aria-label="Filter by locational clearance type"
+                                className="w-full min-w-0 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:w-auto sm:min-w-[170px]"
+                            >
+                                {CLEARANCE_TYPE_FILTERS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
                         <Button
                             variant="outline"
                             onClick={onExport}
-                            // Below sm the label is dropped and the button
-                            // collapses to its icon, so the filter and search
-                            // keep the width they need.
+                            // The button has a row to itself on a phone, so it
+                            // can keep its label there instead of collapsing to
+                            // a bare icon nobody could identify.
                             title="Export Excel"
-                            aria-label="Export Excel"
-                            className="shrink-0 gap-2 border-gray-200 px-2.5 text-gray-700 hover:bg-gray-50 sm:px-4"
+                            className="w-full shrink-0 justify-center gap-2 border-gray-200 text-gray-700 hover:bg-gray-50 sm:w-auto sm:px-4"
                         >
                             <Download className="h-4 w-4 shrink-0" />
-                            <span className="hidden sm:inline">Export Excel</span>
+                            <span>Export Excel</span>
                         </Button>
                     </div>
                 </div>

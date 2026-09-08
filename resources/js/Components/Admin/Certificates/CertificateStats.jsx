@@ -58,14 +58,18 @@ export function CertificateStats({ certificates = [], onFilterChange }) {
     }, [certificates]);
 
     return (
-        <div className="mb-5 grid grid-cols-3 gap-3 sm:gap-4">
+        // Three across only from sm up. On a phone that split the row into
+        // ~100px columns and "Total Certificates" came out one word per line,
+        // so the total takes the full width and the two states halve the row
+        // beneath it.
+        <div className="mb-5 grid grid-cols-2 items-stretch gap-3 sm:grid-cols-3 sm:gap-4">
             {CARDS.map((card) => (
                 <Card
                     key={card.key}
                     role="button"
                     tabIndex={0}
                     aria-label={`Filter by ${card.label}`}
-                    className={`cursor-pointer ${card.bg} border-0 transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0d1f5c] focus-visible:ring-offset-2`}
+                    className={`h-full ${card.key === "all" ? "col-span-2 sm:col-span-1" : ""} cursor-pointer ${card.bg} border-0 transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0d1f5c] focus-visible:ring-offset-2`}
                     onClick={() => onFilterChange?.(card.key)}
                     onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
@@ -77,7 +81,7 @@ export function CertificateStats({ certificates = [], onFilterChange }) {
                     <CardContent className="p-3 sm:p-4">
                         <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                                <p className={`mb-1 text-[10px] font-bold uppercase tracking-wide sm:text-xs ${card.text} opacity-70`}>
+                                <p className={`mb-1 break-words text-[10px] font-bold uppercase leading-tight tracking-wide sm:text-xs ${card.text} opacity-70`}>
                                     {card.label}
                                 </p>
                                 <p className={`text-xl font-black sm:text-2xl ${card.text}`}>

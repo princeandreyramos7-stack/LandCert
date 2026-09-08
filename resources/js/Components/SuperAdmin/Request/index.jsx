@@ -145,55 +145,63 @@ export function SuperAdminRequestList({ requests }) {
                             </h2>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
+                        {/* Stacked on a phone rather than wrapped: wrapping left
+                           each control whatever width the others did not take,
+                           squeezing the search box to a few characters and
+                           truncating the status labels. Mirrors the layout the
+                           admin page gets from RequestTableHeader. */}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
 
-                            <div className="relative min-w-0 flex-1 sm:flex-none">
+                            <div className="relative w-full sm:w-56">
                                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                                 <Input
-                                    placeholder="Search requests..."
+                                    placeholder="Search applications..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full border-gray-200 bg-white py-2 pl-9 pr-4 text-sm focus:border-[#0d1f5c] sm:w-56"
+                                    className="w-full border-gray-200 bg-white py-2 pl-9 pr-4 text-sm focus:border-[#0d1f5c]"
                                 />
                             </div>
 
-                            
-                            <select
-                                value={filterStatus}
-                                onChange={(e) => setFilterStatus(e.target.value)}
-                                className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[180px] sm:flex-none"
-                            >
-                                {STATUS_FILTERS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
+                            {/* The two dropdowns share one row on a phone; from
+                               sm up display:contents drops this wrapper so they
+                               sit directly in the flex row. */}
+                            <div className="grid grid-cols-2 gap-3 sm:contents">
+                                <select
+                                    value={filterStatus}
+                                    onChange={(e) => setFilterStatus(e.target.value)}
+                                    aria-label="Filter by status"
+                                    className="w-full min-w-0 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:w-auto sm:min-w-[180px]"
+                                >
+                                    {STATUS_FILTERS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
 
-
-                            <select
-                                value={filterType}
-                                onChange={(e) => setFilterType(e.target.value)}
-                                aria-label="Filter by locational clearance type"
-                                className="min-w-0 flex-1 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:min-w-[170px] sm:flex-none"
-                            >
-                                {CLEARANCE_TYPE_FILTERS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
+                                <select
+                                    value={filterType}
+                                    onChange={(e) => setFilterType(e.target.value)}
+                                    aria-label="Filter by locational clearance type"
+                                    className="w-full min-w-0 cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c] sm:w-auto sm:min-w-[170px]"
+                                >
+                                    {CLEARANCE_TYPE_FILTERS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
                             <Button
                                 variant="outline"
                                 size="sm"
                                 title="Export Excel"
-                                aria-label="Export Excel"
-                                className="shrink-0 gap-2 border-gray-200 px-2.5 text-gray-700 hover:bg-gray-50 sm:px-4"
+                                className="w-full shrink-0 justify-center gap-2 border-gray-200 text-gray-700 hover:bg-gray-50 sm:w-auto sm:px-4"
                                 onClick={handleExport}
                             >
                                 <Download className="h-4 w-4 shrink-0" />
-                                <span className="hidden sm:inline">Export Excel</span>
+                                <span>Export Excel</span>
                             </Button>
                         </div>
                     </div>

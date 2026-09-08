@@ -1,0 +1,175 @@
+@startuml CPDO_LC_Simple_Use_Case
+
+title CPDO Locational Clearance System\nSimplified Use Case Diagram
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam roundcorner 10
+skinparam backgroundColor #FFFFFF
+
+' Actors
+actor "Applicant" as APP #LightBlue
+actor "Zoning Officer\n(Admin)" as ADM #LightGreen
+actor "Zoning Administrator\n(Super Admin)" as SA #Orange
+actor "System" as SYS #Gray
+
+' System boundary
+rectangle "CPDO LC System" {
+  
+  ' Applicant Use Cases
+  package "Applicant Portal" #F0F8FF {
+    (Register Account) as UC1
+    (Login) as UC2
+    (Submit Application) as UC3
+    (Upload Documents) as UC4
+    (Upload Payment Receipt) as UC5
+    (Track Status) as UC6
+    (Download Certificate) as UC7
+    (View Notifications) as UC8
+  }
+  
+  ' Admin Use Cases
+  package "Admin Portal" #F0FFF0 {
+    (Review Applications) as UC10
+    (Verify Documents) as UC11
+    (Evaluate Application) as UC12
+    (Set Payment Amount) as UC13
+    (Verify Payment) as UC14
+    (Generate Certificate) as UC15
+    (Record Release) as UC16
+    (Generate Reports) as UC17
+  }
+  
+  ' Super Admin Use Cases
+  package "Super Admin Portal" #FFF5EE {
+    (Final Approval) as UC20
+    (Reject Application) as UC21
+    (Manage Users) as UC22
+    (Send SMS Broadcast) as UC23
+    (View Audit Logs) as UC24
+    (Configure System) as UC25
+  }
+  
+  ' System Use Cases
+  package "Automated" #F5F5F5 {
+    (Send Email Notification) as UC30
+    (Send SMS Notification) as UC31
+    (Generate App Number) as UC32
+    (Log Activities) as UC33
+    (Send Payment Reminder) as UC34
+  }
+}
+
+' Applicant relationships
+APP --> UC1
+APP --> UC2
+APP --> UC3
+APP --> UC4
+APP --> UC5
+APP --> UC6
+APP --> UC7
+APP --> UC8
+
+' Admin relationships
+ADM --> UC2
+ADM --> UC10
+ADM --> UC11
+ADM --> UC12
+ADM --> UC13
+ADM --> UC14
+ADM --> UC15
+ADM --> UC16
+ADM --> UC17
+
+' Super Admin relationships (inherits admin)
+SA --|> ADM : extends
+SA --> UC20
+SA --> UC21
+SA --> UC22
+SA --> UC23
+SA --> UC24
+SA --> UC25
+
+' System relationships
+SYS --> UC30
+SYS --> UC31
+SYS --> UC32
+SYS --> UC33
+SYS --> UC34
+
+' Include/Extend relationships
+UC3 ..> UC32 : <<include>>
+UC3 ..> UC30 : <<trigger>>
+UC20 ..> UC30 : <<trigger>>
+UC20 ..> UC31 : <<trigger>>
+UC21 ..> UC30 : <<trigger>>
+UC14 ..> UC30 : <<trigger>>
+UC15 ..> UC31 : <<trigger>>
+
+' Notes
+note right of UC3
+  **4-Step Application Process:**
+  1. Applicant Information
+  2. Project Details
+  3. Land Use Information
+  4. Requirements Upload
+  
+  Required Documents:
+  • Location Plan
+  • Tax Declaration
+  • Title (if applicable)
+  • Authorization Letter
+  • Other requirements based
+    on project type
+end note
+
+note right of UC15
+  **Certificate Types:**
+  • CZ - Certification of Zoning
+  • CZC - Zoning Clearance
+  • TUP - Temporary Use Permit
+  • SUP - Special Use Permit
+  
+  Includes e-signature of
+  Zoning Administrator
+end note
+
+note bottom of UC30
+  **Email Triggers:**
+  • Application submitted
+  • Application approved/rejected
+  • Payment verified
+  • Certificate ready
+  • Certificate released
+end note
+
+note bottom of UC31
+  **SMS Triggers:**
+  • Application status change
+  • Payment reminder
+  • Certificate ready for pickup
+  • Requirements submission
+  
+  Customizable templates
+end note
+
+note top of SA
+  Has all Admin
+  permissions plus
+  additional controls
+end note
+
+legend left
+  |= Symbol |= Meaning |
+  | --> | Association |
+  | --|> | Generalization (extends) |
+  | ..> | Dependency (include/trigger) |
+  
+  |= Actor |= Description |
+  | Applicant | Citizens/Business owners |
+  | Admin | Zoning Officer IV |
+  | Super Admin | Zoning Administrator |
+  | System | Automated processes |
+endlegend
+
+@enduml
