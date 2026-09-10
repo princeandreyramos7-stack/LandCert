@@ -3,8 +3,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { TrendingUp, Award, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
-export function PerformanceTab({ processing_time_by_status = [], certificate_stats = {}, statusData = [] }) {
+export function PerformanceTab({ processing_time_by_status = [], certificate_stats = {}, applicationStatusData = [] }) {
     const COLORS = ['#0d1f5c', '#2563eb', '#10b981', '#f59e0b', '#ef4444'];
+
+    // Review outcomes, counted over decided applications only. The full status
+    // distribution lives on the Overview tab; what belongs here is how those
+    // decisions went - an approval rate is a review metric, a lifecycle
+    // breakdown is not.
+    const bucket = (key) => applicationStatusData.find((entry) => entry.key === key)?.value || 0;
+    const approvedOutcome = bucket('approved') + bucket('for_payment') + bucket('application_approved');
+    const deniedOutcome = bucket('rejected');
+    const returnedOutcome = bucket('in_applicant');
+    const decidedTotal = approvedOutcome + deniedOutcome + returnedOutcome;
+    const approvalRate = decidedTotal > 0 ? Math.round((approvedOutcome / decidedTotal) * 100) : 0;
+
+    const outcomeData = [
+        { name: 'Approved', value: approvedOutcome, color: '#10b981' },
+        { name: 'Denied', value: deniedOutcome, color: '#ef4444' },
+        { name: 'Returned to Applicant', value: returnedOutcome, color: '#f97316' },
+    ].filter((entry) => entry.value > 0);
 
     // Calculate average processing time across all statuses
     const avgProcessingTime = processing_time_by_status.length > 0
@@ -125,36 +142,48 @@ export function PerformanceTab({ processing_time_by_status = [], certificate_sta
             </Card>
 
             <div className="grid gap-6 md:grid-cols-2">
-                {/* Application Status Distribution */}
+                {/* Review Outcome Rate */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Application Status Distribution</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            Review Outcome Rate
+                        </CardTitle>
+                        <p className="text-sm text-gray-500 mt-1">
+                            How decided applications were resolved
+                        </p>
                     </CardHeader>
                     <CardContent>
-                        {statusData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                                <PieChart>
-                                    <Pie
-                                        data={statusData}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                                        outerRadius={100}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {statusData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                    <Legend />
-                                </PieChart>
-                            </ResponsiveContainer>
+                        {decidedTotal > 0 ? (
+                            <div className="relative">
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <PieChart>
+                                        <Pie
+                                            data={outcomeData}
+                                            cx="50%"
+                                            cy="50%"
+                                            labelLine={false}
+                                            outerRadius={100}
+                                            innerRadius={64}
+                                            dataKey="value"
+                                        >
+                                            {outcomeData.map((entry) => (
+                                                <Cell key={entry.name} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip formatter={(value, name) => [`${value} application${value === 1 ? '' : 's'}`, name]} />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                {/* Centred on the donut, offset up by the legend's height */}
+                                <div className="pointer-events-none absolute inset-x-0 top-[38%] -translate-y-1/2 text-center">
+                                    <p className="text-3xl font-bold text-gray-900">{approvalRate}%</p>
+                                    <p className="text-xs text-gray-500">approved</p>
+                                </div>
+                            </div>
                         ) : (
                             <div className="flex items-center justify-center h-64 text-gray-500">
-                                No status data available
+                                No decided applications yet
                             </div>
                         )}
                     </CardContent>

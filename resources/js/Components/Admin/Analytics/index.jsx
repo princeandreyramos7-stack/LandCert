@@ -12,6 +12,7 @@ import {
     formatStatusData,
     formatProjectTypeData,
 } from './utils';
+import { groupStatusCounts } from '@/lib/applicationStatus';
 
 export function AnalyticsDashboard({ analytics }) {
     if (!analytics) return null;
@@ -22,6 +23,7 @@ export function AnalyticsDashboard({ analytics }) {
         hourly_pattern = [],
         day_of_week_pattern = [],
         status_breakdown = [],
+        application_status_breakdown = [],
         processing_time_by_status = [],
         processing_time_trend = [],
         certificate_stats = {},
@@ -39,6 +41,9 @@ export function AnalyticsDashboard({ analytics }) {
     // Format data for charts
     const monthlyChartData = formatMonthlyData(monthly_submissions);
     const statusData = formatStatusData(status_breakdown);
+    // Grouped into the same buckets the All Applications filter offers, so the
+    // distribution chart is labelled the way the office talks about a status.
+    const applicationStatusData = groupStatusCounts(application_status_breakdown);
     const projectTypeData = formatProjectTypeData(project_types);
 
     return (
@@ -65,7 +70,7 @@ export function AnalyticsDashboard({ analytics }) {
                 <TabsContent value="overview" className="space-y-4">
                     <OverviewTab
                         monthlyChartData={monthlyChartData}
-                        statusData={statusData}
+                        applicationStatusData={applicationStatusData}
                         projectTypeData={projectTypeData}
                     />
                 </TabsContent>
@@ -102,7 +107,7 @@ export function AnalyticsDashboard({ analytics }) {
                     <PerformanceTab
                         processing_time_by_status={processing_time_by_status}
                         certificate_stats={certificate_stats}
-                        statusData={statusData}
+                        applicationStatusData={applicationStatusData}
                     />
                 </TabsContent>
 

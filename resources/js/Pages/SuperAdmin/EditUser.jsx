@@ -27,6 +27,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { useState } from "react";
 import { UserPen, User, Mail, Phone, MapPin, Key, Shield } from "lucide-react";
+import SealWatermark from "@/Components/SealWatermark";
 
 export default function EditUser({ user }) {
     const { toast } = useToast();
@@ -101,7 +102,7 @@ export default function EditUser({ user }) {
                     </div>
                 </header>
                 <div
-                    className="flex flex-1 flex-col gap-6 p-6 pt-0 min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50"
+                    className="relative isolate flex flex-1 flex-col gap-6 p-6 pt-0 min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50"
                     style={{
                         backgroundImage: `
                             radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
@@ -110,6 +111,7 @@ export default function EditUser({ user }) {
                         `,
                     }}
                 >
+                    <SealWatermark />
                     {/* Header */}
                     <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-2xl">
                         <div className="flex items-center gap-4">

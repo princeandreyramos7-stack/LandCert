@@ -112,7 +112,7 @@ export default function Register() {
                         <div className={iconCls}><MapPin className="h-4 w-4 text-gray-400"/></div>
                         <input id="address" type="text" name="address" value={data.address}
                             autoComplete="address"
-                            placeholder="Complete address in Ilagan City"
+                            placeholder="Complete address"
                             className={inputCls(errors.address)}
                             onChange={(e) => setData('address', e.target.value)}/>
                     </div>

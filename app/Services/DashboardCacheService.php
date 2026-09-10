@@ -107,6 +107,24 @@ class DashboardCacheService
         $statusBreakdown = Report::select('evaluation', DB::raw('COUNT(*) as count'))
             ->groupBy('evaluation')
             ->get();
+
+        // The same breakdown, but by the status everyone actually sees (see
+        // Request::deriveStatus): the report's evaluation while the application is
+        // being decided, then the request status once it enters the payment /
+        // certificate lifecycle. Grouping reports.evaluation alone can only ever
+        // produce the decision statuses - it never shows the payment or certificate
+        // stages, because those live on requests.status. Kept alongside the
+        // evaluation breakdown rather than replacing it: the funnel on the Documents
+        // tab counts decisions, not lifecycle stages.
+        $applicationStatusBreakdown = RequestModel::with('report:report_id,request_id,evaluation')
+            ->select('id', 'status')
+            ->get()
+            ->countBy(fn ($request) => RequestModel::deriveStatus(
+                $request->status,
+                $request->report?->evaluation
+            ) ?? 'unknown')
+            ->map(fn ($count, $status) => ['status' => $status, 'count' => $count])
+            ->values();
         
         // Average processing time by status
         $processingTimeByStatus = Report::whereNotNull('date_reported')
@@ -244,6 +262,7 @@ class DashboardCacheService
             'hourly_pattern' => $hourlyPattern,
             'day_of_week_pattern' => $dayOfWeekPattern,
             'status_breakdown' => $statusBreakdown,
+            'application_status_breakdown' => $applicationStatusBreakdown,
             'processing_time_by_status' => $processingTimeByStatus,
             'processing_time_trend' => $processingTimeTrend,
             'project_types' => $projectTypes,

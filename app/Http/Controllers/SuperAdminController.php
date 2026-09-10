@@ -38,8 +38,12 @@ class SuperAdminController extends Controller
      */
     private function getAdminWorkflowMetrics()
     {
-        // Get all admin users
-        $admins = User::whereIn('user_type', ['admin', 'super_admin'])->get();
+        // Every metric on this tab describes the Zoning Officer's work, matching
+        // the Admin Audit Log panel below it. The Zoning Administrator's own
+        // (super_admin) activity is deliberately left out: they are the approver
+        // these figures are reported to, not a caseload being measured.
+        $admins = User::where('user_type', 'admin')->get();
+        $administratorNames = User::where('user_type', 'super_admin')->pluck('name');
 
         // Admin performance by reviews
         $adminPerformance = Report::select(
@@ -53,6 +57,7 @@ class SuperAdminController extends Controller
             ->whereNotNull('issued_by')
             ->groupBy('issued_by')
             ->get()
+            ->reject(fn ($item) => $administratorNames->contains($item->issued_by))
             ->map(function($item) use ($admins) {
                 $admin = $admins->firstWhere('name', $item->issued_by);
                 return [
@@ -137,7 +142,7 @@ class SuperAdminController extends Controller
 
         // Admin activity by hour (last 7 days)
         $adminActivityByHour = AuditLog::whereHas('user', function($query) {
-                $query->whereIn('user_type', ['admin', 'super_admin']);
+                $query->where('user_type', 'admin');
             })
             ->where('created_at', '>=', now()->subDays(7))
             ->select(
@@ -150,7 +155,7 @@ class SuperAdminController extends Controller
 
         // Admin activity by day of week
         $adminActivityByDay = AuditLog::whereHas('user', function($query) {
-                $query->whereIn('user_type', ['admin', 'super_admin']);
+                $query->where('user_type', 'admin');
             })
             ->where('created_at', '>=', now()->subDays(30))
             ->select(

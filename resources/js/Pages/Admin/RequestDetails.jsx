@@ -33,6 +33,7 @@ import {
 import { formatDate } from "@/Components/Admin/Request/utils";
 import { useState } from "react";
 import { getStatusConfig } from "@/lib/applicationStatus";
+import SealWatermark from "@/Components/SealWatermark";
 
 export default function RequestDetails({ request }) {
     const [currentStep, setCurrentStep] = useState(1);
@@ -98,7 +99,8 @@ export default function RequestDetails({ request }) {
                     </div>
                 </header>
 
-                <div className="flex flex-1 flex-col gap-6 p-6 bg-white">
+                <div className="relative isolate flex flex-1 flex-col gap-6 p-6 bg-white">
+                    <SealWatermark />
                     <div className="max-w-4xl mx-auto w-full">
                         {/* Back Button */}
                         <div className="mb-4">

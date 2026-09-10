@@ -14,9 +14,14 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from 'recharts';
-import { CHART_COLORS } from './utils';
 
-export function OverviewTab({ monthlyChartData, statusData, projectTypeData }) {
+export function OverviewTab({ monthlyChartData, applicationStatusData = [], projectTypeData }) {
+    // Only statuses that actually have applications get a slice; the legend below
+    // still names every status, so an empty one reads as "none right now" rather
+    // than going missing.
+    const slices = applicationStatusData.filter((entry) => entry.value > 0);
+    const total = applicationStatusData.reduce((sum, entry) => sum + entry.value, 0);
+
     return (
         <div className="grid gap-4 md:grid-cols-2">
             {/* Monthly Submissions Trend */}
@@ -54,27 +59,56 @@ export function OverviewTab({ monthlyChartData, statusData, projectTypeData }) {
             <Card>
                 <CardHeader>
                     <CardTitle>Application Status Distribution</CardTitle>
+                    <p className="text-sm text-gray-500 mt-1">
+                        {total.toLocaleString()} application{total === 1 ? '' : 's'} across every stage
+                    </p>
                 </CardHeader>
                 <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                            <Pie
-                                data={statusData}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                outerRadius={80}
-                                fill="#8884d8"
-                                dataKey="value"
-                            >
-                                {statusData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    {slices.length > 0 ? (
+                        <>
+                            <ResponsiveContainer width="100%" height={240}>
+                                <PieChart>
+                                    <Pie
+                                        data={slices}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        label={({ percent }) => (percent >= 0.05 ? `${(percent * 100).toFixed(0)}%` : '')}
+                                        outerRadius={85}
+                                        innerRadius={45}
+                                        dataKey="value"
+                                    >
+                                        {slices.map((entry) => (
+                                            <Cell key={entry.key} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip formatter={(value, name) => [`${value} application${value === 1 ? '' : 's'}`, name]} />
+                                </PieChart>
+                            </ResponsiveContainer>
+
+                            {/* The full status list, so a stage sitting at zero is
+                                visibly zero instead of simply absent. */}
+                            <ul className="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+                                {applicationStatusData.map((entry) => (
+                                    <li key={entry.key} className="flex items-center justify-between gap-2 text-xs">
+                                        <span className="flex min-w-0 items-center gap-2">
+                                            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
+                                            <span className={`truncate ${entry.value > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
+                                                {entry.name}
+                                            </span>
+                                        </span>
+                                        <span className={`font-semibold tabular-nums ${entry.value > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
+                                            {entry.value}
+                                        </span>
+                                    </li>
                                 ))}
-                            </Pie>
-                            <Tooltip />
-                        </PieChart>
-                    </ResponsiveContainer>
+                            </ul>
+                        </>
+                    ) : (
+                        <div className="flex h-[300px] items-center justify-center text-gray-500">
+                            No applications yet
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 

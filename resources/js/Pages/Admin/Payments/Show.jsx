@@ -18,6 +18,7 @@ import {
     SidebarTrigger,
 } from "@/Components/ui/sidebar";
 import { ArrowLeft, FileText } from "lucide-react";
+import SealWatermark from "@/Components/SealWatermark";
 
 export default function PaymentShow({ auth, payment, userType = 'admin' }) {
     const isSuperAdmin = userType === 'super_admin';
@@ -82,7 +83,8 @@ export default function PaymentShow({ auth, payment, userType = 'admin' }) {
                 </header>
 
                 {/* Main Content */}
-                <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-gradient-to-br from-blue-50 to-slate-50">
+                <div className="relative isolate flex flex-1 flex-col gap-4 p-4 pt-0 bg-gradient-to-br from-blue-50 to-slate-50">
+                    <SealWatermark />
                     {/* Page Header */}
                     <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

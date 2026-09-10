@@ -41,6 +41,7 @@ import { Toaster } from "@/Components/ui/toaster";
 import { ToastAction } from "@/Components/ui/toast";
 import axios from "axios";
 import { getStatusConfig } from "@/lib/applicationStatus";
+import SealWatermark from "@/Components/SealWatermark";
 
 /**
  * Display-only formatting for peso amount fields.
@@ -363,7 +364,8 @@ export default function ReviewRequest({ request }) {
                     </div>
                 </header>
 
-                <div className="flex flex-1 flex-col gap-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen">
+                <div className="relative isolate flex flex-1 flex-col gap-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen">
+                    <SealWatermark />
                     <div className="max-w-7xl mx-auto w-full">
                         {/* Back Button */}
                         <div className="mb-4">

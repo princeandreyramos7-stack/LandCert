@@ -19,6 +19,7 @@ import { RejectDialog } from "./RejectDialog";
 import { generateCSV, downloadCSV } from "./utils";
 import { useLiveData, useNewItemCount } from "@/hooks/useLiveData";
 import { LiveIndicator } from "@/Components/LiveIndicator";
+import SealWatermark from "@/Components/SealWatermark";
 
 // Props refreshed by the live poller. Declared outside the component so the
 // array identity is stable and the polling effect is not re-created each render.
@@ -427,7 +428,11 @@ export function AdminRequestList({ requests, flash = {} }) {
     };
 
     return (
-        <div className="space-y-6 min-h-screen bg-white p-6">
+        <div className="relative isolate space-y-6 min-h-screen bg-white p-6">
+            {/* This page paints its own bg-white across the whole area, which
+                would cover the layout's watermark - so it carries its own. */}
+            <SealWatermark />
+
             {/* Statistics Cards. The live-refresh status renders itself into the
                 layout's top bar, so nothing is reserved for it here. */}
             <div>

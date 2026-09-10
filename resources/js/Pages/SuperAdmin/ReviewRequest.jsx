@@ -44,6 +44,7 @@ import { useToast } from "@/Components/ui/use-toast";
 import { Toaster } from "@/Components/ui/toaster";
 import axios from "axios";
 import { getStatusConfig } from "@/lib/applicationStatus";
+import SealWatermark from "@/Components/SealWatermark";
 
 export default function SuperAdminReviewRequest({ request }) {
     const [currentStep, setCurrentStep] = useState(1);
@@ -314,7 +315,8 @@ export default function SuperAdminReviewRequest({ request }) {
                     </div>
                 </header>
 
-                <div className="flex flex-1 flex-col gap-6 p-6 bg-gray-50 min-h-screen">
+                <div className="relative isolate flex flex-1 flex-col gap-6 p-6 bg-gray-50 min-h-screen">
+                    <SealWatermark />
                     <div className="max-w-7xl mx-auto w-full">
                         {/* Back Button */}
                         <div className="mb-4">

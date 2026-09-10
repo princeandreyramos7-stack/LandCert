@@ -13,6 +13,7 @@ import {
   SidebarTrigger,
 } from "@/Components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
+import SealWatermark from "@/Components/SealWatermark";
 
 export default function Reports() {
   return (
@@ -45,7 +46,8 @@ export default function Reports() {
             </Breadcrumb>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-gradient-to-br from-purple-50 to-slate-50">
+        <div className="relative isolate flex flex-1 flex-col gap-4 p-4 pt-0 bg-gradient-to-br from-purple-50 to-slate-50">
+            <SealWatermark />
           <Card>
             <CardHeader>
               <CardTitle>Reports Management</CardTitle>

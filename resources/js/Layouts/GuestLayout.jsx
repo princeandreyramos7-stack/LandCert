@@ -103,9 +103,9 @@ export default function GuestLayout({ children }) {
                             </h2>
                             <p className="text-blue-200/80 text-base leading-relaxed">
                                 Apply for Certificate of Zoning Compliance
-                                (CZC), Special Use Permit, and Temporary Use
-                                Permit. Track your application status in real
-                                time.
+                                (CZC), Zoning Certification (ZC), Special Use
+                                Permit, and Temporary Use Permit. Track your
+                                application status in real time.
                             </p>
                         </div>
 

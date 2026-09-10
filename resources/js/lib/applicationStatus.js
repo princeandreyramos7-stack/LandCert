@@ -154,6 +154,65 @@ export const STATUS_FILTERS = [
 ];
 
 /**
+ * One colour per status, so a chart of the distribution keeps the same colour
+ * for "For Payment" no matter which slices happen to be present that day.
+ * Keyed by STATUS_FILTERS value.
+ */
+export const STATUS_COLORS = {
+    pending: "#f59e0b",
+    reviewed: "#3b82f6",
+    in_applicant: "#f97316",
+    approved: "#8b5cf6",
+    for_payment: "#eab308",
+    application_approved: "#10b981",
+    rejected: "#ef4444",
+    other: "#94a3b8",
+};
+
+/**
+ * Roll {status, count} rows up into the buckets the All Applications filter
+ * offers, so a chart summarising the applications is labelled with the same
+ * vocabulary as the list it summarises.
+ *
+ * A status matching no bucket is collected under "Other" rather than dropped:
+ * a chart whose slices silently fail to add up to the total is worse than one
+ * with an unfamiliar slice in it.
+ *
+ * @param {Array<{status: string, count: number}>} rows
+ * @returns {Array<{key: string, name: string, value: number, color: string}>}
+ */
+export function groupStatusCounts(rows = []) {
+    const buckets = STATUS_FILTERS.filter((entry) => entry.value !== "all").map((entry) => ({
+        key: entry.value,
+        name: entry.label,
+        value: 0,
+        color: STATUS_COLORS[entry.value] ?? STATUS_COLORS.other,
+    }));
+
+    let other = 0;
+
+    for (const row of rows) {
+        const status = String(row?.status ?? "").toLowerCase();
+        const count = Number(row?.count) || 0;
+        if (!count) continue;
+
+        const bucket = buckets.find((entry) => {
+            const option = STATUS_FILTERS.find((filter) => filter.value === entry.key);
+            return option?.matches.includes(status);
+        });
+
+        if (bucket) bucket.value += count;
+        else other += count;
+    }
+
+    if (other > 0) {
+        buckets.push({ key: "other", name: "Other", value: other, color: STATUS_COLORS.other });
+    }
+
+    return buckets;
+}
+
+/**
  * Does an application's stored status belong under the chosen filter?
  */
 export function matchesStatusFilter(status, filterValue) {

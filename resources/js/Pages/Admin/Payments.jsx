@@ -42,6 +42,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Search, Eye, CheckCircle, XCircle } from 'lucide-react';
+import SealWatermark from "@/Components/SealWatermark";
 
 export default function Payments({ auth, payments, filters }) {
     const { flash } = usePage().props;
@@ -162,7 +163,8 @@ export default function Payments({ auth, payments, filters }) {
                         </Breadcrumb>
                     </div>
                 </header>
-                <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+                <div className="relative isolate flex flex-1 flex-col gap-4 p-4 pt-0">
+                    <SealWatermark />
                     {/* Content */}
                     <div className="bg-white rounded-lg shadow-sm border">
                         <div className="p-6">

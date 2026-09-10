@@ -15,6 +15,7 @@ import {
 } from "@/Components/ui/sidebar";
 import { Toaster } from "@/Components/ui/toaster";
 import NotificationBell from "@/Components/NotificationBell";
+import SealWatermark from "@/Components/SealWatermark";
 
 export default function SuperAdminLayout({
     title,
@@ -65,9 +66,10 @@ export default function SuperAdminLayout({
                     </div>
                 </header>
                 <div
-                    className="flex flex-1 flex-col min-h-screen"
+                    className="relative isolate flex flex-1 flex-col min-h-screen"
                     style={{ background: "#f5f7ff" }}
                 >
+                    <SealWatermark />
                     <div className="flex-1 p-4 sm:p-6">
                         <HeaderSlotProvider slot={headerSlot}>
                             {children}
