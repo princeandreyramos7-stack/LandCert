@@ -66,14 +66,14 @@ export default function SuperAdminReviewRequest({ request }) {
     const decisionLocked = ['approved', 'certificate_preparing', 'certificate_ready', 'released']
         .includes(String(request.status || '').toLowerCase());
 
-    // Whether the Zoning Officer has already marked the application reviewed.
-    // If not, the Zoning Administrator reviews AND decides in one step.
+    // Reviewing an application — checking it over and setting the Treasury fee —
+    // is the Zoning Officer's step. Until they mark it reviewed there is no
+    // report to decide on, so the Administrator's decision form stays closed.
     const officerReviewed = String(request.status || '').toLowerCase() === 'reviewed';
 
     const [formData, setFormData] = useState({
         rejection_reason: request.rejection_reason || 'Lacking of Requirements', // Use existing or default
         assign_to_admin: false,
-        payment_amount: request.payment_amount ? String(request.payment_amount) : '',
     });
     const [loading, setLoading] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -202,16 +202,13 @@ export default function SuperAdminReviewRequest({ request }) {
             return;
         }
 
-        if (action === 'approved' && !officerReviewed) {
-            const amount = parseFloat(formData.payment_amount);
-            if (!formData.payment_amount || Number.isNaN(amount) || amount < 0) {
-                toast({
-                    variant: "destructive",
-                    title: "Treasury fee required",
-                    description: "Enter the amount the applicant must pay at the Treasury before approving.",
-                });
-                return;
-            }
+        if (!officerReviewed) {
+            toast({
+                variant: "destructive",
+                title: "Waiting on the Zoning Officer",
+                description: "This application has not been reviewed yet. The Zoning Officer must review it and set the Treasury fee before a decision can be made.",
+            });
+            return;
         }
 
         setShowConfirmDialog(true);
@@ -222,24 +219,15 @@ export default function SuperAdminReviewRequest({ request }) {
         setLoading(true);
 
         try {
-            let endpoint;
-            let payload;
-            if (officerReviewed) {
-                endpoint = action === 'approved'
-                    ? route('super-admin.approve-request', request.report_id)
-                    : route('super-admin.reject-request', request.report_id);
-                payload = {
-                    description: action === 'rejected' ? formData.rejection_reason : 'Application approved by Super Admin',
-                    issued_by: 'Super Admin',
-                    assign_to_admin: formData.assign_to_admin,
-                };
-            } else {
-                // The officer has not reviewed — review AND decide in one step.
-                endpoint = route('super-admin.review-and-decide', request.id);
-                payload = action === 'approved'
-                    ? { action: 'approved', payment_amount: formData.payment_amount }
-                    : { action: 'rejected', rejection_reason: formData.rejection_reason };
-            }
+            // Only reachable once the officer has reviewed, so the report exists.
+            const endpoint = action === 'approved'
+                ? route('super-admin.approve-request', request.report_id)
+                : route('super-admin.reject-request', request.report_id);
+            const payload = {
+                description: action === 'rejected' ? formData.rejection_reason : 'Application approved by Super Admin',
+                issued_by: 'Super Admin',
+                assign_to_admin: formData.assign_to_admin,
+            };
 
             await axios.post(endpoint, payload);
 
@@ -449,20 +437,21 @@ export default function SuperAdminReviewRequest({ request }) {
                                     </div>
                                 )}
 
-                                {/* The officer has not reviewed yet — the Administrator does both steps here. */}
+                                {/* Nothing for the Administrator to decide until the officer has reviewed. */}
                                 {!officerReviewed && !decisionLocked && (
-                                    <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-lg p-4 flex items-start gap-3">
-                                        <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                    <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                                         <div>
-                                            <h4 className="text-sm font-semibold text-blue-900">Review &amp; decide in one step</h4>
-                                            <p className="text-sm text-blue-700 mt-1">
-                                                The Zoning Officer has not reviewed this application yet. You can review it
-                                                and approve or deny it now — set the Treasury fee below when approving.
+                                            <h4 className="text-sm font-semibold text-amber-900">Waiting on the Zoning Officer</h4>
+                                            <p className="text-sm text-amber-800 mt-1">
+                                                This application has not been reviewed yet. The Zoning Officer reviews it and
+                                                sets the Treasury fee — once they mark it reviewed, the decision appears here.
                                             </p>
                                         </div>
                                     </div>
                                 )}
 
+                                {officerReviewed && (
                                 <form onSubmit={handleSubmit} className="space-y-6">
                                     {/* Action Selection */}
                                     <div>
@@ -521,29 +510,8 @@ export default function SuperAdminReviewRequest({ request }) {
                                     {/* Approved Form */}
                                     {action === 'approved' && (
                                         <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
-                                            {/* Treasury fee — required when the officer has not set one */}
-                                            {!officerReviewed && (
-                                                <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
-                                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
-                                                        Amount to Pay at the Treasury <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <div className="relative max-w-xs">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.01"
-                                                            value={formData.payment_amount}
-                                                            onChange={(e) => setFormData({ ...formData, payment_amount: e.target.value })}
-                                                            placeholder="0.00"
-                                                            className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:border-green-400 focus:ring-1 focus:ring-green-400"
-                                                        />
-                                                    </div>
-                                                    <p className="text-xs text-gray-600 mt-1">
-                                                        The applicant will be asked to pay this amount at the Treasury Office.
-                                                    </p>
-                                                </div>
-                                            )}
+                                            {/* No Treasury fee field here: the officer sets the fee during
+                                                review, and this form only opens once they have. */}
 
                                             {/* Assign to Admin */}
                                             <div className="flex items-center gap-3 p-4 bg-gray-50 border-2 border-gray-200 rounded-lg">
@@ -639,6 +607,7 @@ export default function SuperAdminReviewRequest({ request }) {
                                         </Button>
                                     </div>
                                 </form>
+                                )}
                             </CardContent>
                         </Card>
                     </div>

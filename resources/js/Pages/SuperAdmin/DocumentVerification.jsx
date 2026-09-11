@@ -52,14 +52,14 @@ export default function DocumentVerification({ request }) {
     const decisionLocked = ['approved', 'certificate_preparing', 'certificate_ready', 'released']
         .includes(String(request.status || '').toLowerCase());
 
-    // Whether the Zoning Officer has already marked the application reviewed.
-    // If not, the Zoning Administrator reviews AND decides in one step.
+    // Approving from here is a quick approve of the officer's review, not a
+    // substitute for it. Until the Zoning Officer marks the application reviewed
+    // there is no report and no Treasury fee, so the decision form stays closed.
     const officerReviewed = String(request.status || '').toLowerCase() === 'reviewed';
 
     const [formData, setFormData] = useState({
         rejection_reason: request.rejection_reason || 'Lacking of Requirements',
         admin_notes: request.admin_notes || '',
-        payment_amount: request.payment_amount ? String(request.payment_amount) : '',
     });
     const [loading, setLoading] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -157,16 +157,13 @@ export default function DocumentVerification({ request }) {
             return;
         }
 
-        if (action === 'approved') {
-            const amount = parseFloat(formData.payment_amount);
-            if (!formData.payment_amount || Number.isNaN(amount) || amount < 0) {
-                toast({
-                    variant: "destructive",
-                    title: "Treasury fee required",
-                    description: "Enter the amount the applicant must pay at the Treasury before approving.",
-                });
-                return;
-            }
+        if (!officerReviewed) {
+            toast({
+                variant: "destructive",
+                title: "Waiting on the Zoning Officer",
+                description: "This application has not been marked as reviewed yet. The Zoning Officer must review it and set the Treasury fee before it can be approved or denied here.",
+            });
+            return;
         }
 
         setShowConfirmDialog(true);
@@ -176,24 +173,13 @@ export default function DocumentVerification({ request }) {
         setShowConfirmDialog(false);
         setLoading(true);
 
-        // If the Zoning Officer already reviewed, use the plain approve/deny
-        // endpoints. Otherwise the Zoning Administrator reviews AND decides in
-        // one step via review-and-decide (creates the report on the fly).
-        let endpoint;
-        let payload;
-        if (officerReviewed) {
-            endpoint = action === 'approved'
-                ? route('super-admin.approve-request', request.report_id)
-                : route('super-admin.reject-request', request.report_id);
-            payload = action === 'rejected'
-                ? { description: formData.rejection_reason }
-                : {};
-        } else {
-            endpoint = route('super-admin.review-and-decide', request.id);
-            payload = action === 'approved'
-                ? { action: 'approved', payment_amount: formData.payment_amount, admin_notes: formData.admin_notes }
-                : { action: 'rejected', rejection_reason: formData.rejection_reason };
-        }
+        // Only reachable once the officer has reviewed, so the report exists.
+        const endpoint = action === 'approved'
+            ? route('super-admin.approve-request', request.report_id)
+            : route('super-admin.reject-request', request.report_id);
+        const payload = action === 'rejected'
+            ? { description: formData.rejection_reason }
+            : {};
 
         router.post(endpoint, payload, {
             preserveScroll: true,
@@ -508,23 +494,25 @@ export default function DocumentVerification({ request }) {
                             </div>
                         )}
 
-                        {/* The officer has not reviewed yet — the Administrator does both steps here. */}
+                        {/* Quick approve acts on the officer's review, so it only opens once
+                            they have marked the application reviewed. */}
                         {!officerReviewed && !decisionLocked && (
-                            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                            <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
                                 <div className="flex items-start gap-3">
-                                    <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                    <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                                     <div>
-                                        <h4 className="text-sm font-semibold text-blue-900">Review &amp; decide in one step</h4>
-                                        <p className="text-sm text-blue-700 mt-1">
-                                            The Zoning Officer has not reviewed this application yet. As the Zoning
-                                            Administrator you can review it and approve or deny it now — set the
-                                            Treasury fee below when approving.
+                                        <h4 className="text-sm font-semibold text-amber-900">Waiting on the Zoning Officer</h4>
+                                        <p className="text-sm text-amber-800 mt-1">
+                                            This application has not been marked as reviewed yet. The Zoning Officer
+                                            reviews it and sets the Treasury fee — once they do, approve and deny
+                                            appear here.
                                         </p>
                                     </div>
                                 </div>
                             </div>
                         )}
 
+                        {officerReviewed && (
                         <form onSubmit={handleSubmit} className="space-y-6">
                             {/* Action Selection */}
                             <div>
@@ -592,42 +580,20 @@ export default function DocumentVerification({ request }) {
                                         </div>
                                     </div>
 
-                                    {/* Treasury fee. Read-only when the officer already set it during
-                                        review; editable when the Administrator is reviewing here. */}
+                                    {/* Treasury fee, always read-only here: the officer sets it during
+                                        review, which is the only state this form opens in. */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Amount to Pay at the Treasury <span className="text-red-500">*</span>
+                                            Amount to Pay at the Treasury
                                         </label>
-                                        {officerReviewed ? (
-                                            <>
-                                                <p className="text-lg font-semibold text-gray-900">
-                                                    {request.payment_amount
-                                                        ? `₱${formatAmountForDisplay(request.payment_amount)}`
-                                                        : <span className="text-sm font-normal text-gray-500 italic">Not set by the officer</span>}
-                                                </p>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    Set by the Zoning Officer when the application was reviewed.
-                                                </p>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="relative max-w-xs">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        value={formData.payment_amount}
-                                                        onChange={(e) => setFormData({ ...formData, payment_amount: e.target.value })}
-                                                        placeholder="0.00"
-                                                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:border-green-400 focus:ring-1 focus:ring-green-400"
-                                                    />
-                                                </div>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    The applicant will be asked to pay this amount at the Treasury Office.
-                                                </p>
-                                            </>
-                                        )}
+                                        <p className="text-lg font-semibold text-gray-900">
+                                            {request.payment_amount
+                                                ? `₱${formatAmountForDisplay(request.payment_amount)}`
+                                                : <span className="text-sm font-normal text-gray-500 italic">Not set by the officer</span>}
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Set by the Zoning Officer when the application was reviewed.
+                                        </p>
                                     </div>
                                 </div>
                             )}
@@ -736,6 +702,7 @@ export default function DocumentVerification({ request }) {
                                 </Button>
                             </div>
                         </form>
+                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -762,7 +729,7 @@ export default function DocumentVerification({ request }) {
                                             <p className="text-sm text-gray-600">
                                                 The applicant will be asked to pay{' '}
                                                 <span className="font-semibold text-gray-900">
-                                                    ₱{formatAmountForDisplay(officerReviewed ? request.payment_amount : formData.payment_amount) || '0.00'}
+                                                    ₱{formatAmountForDisplay(request.payment_amount) || '0.00'}
                                                 </span>{' '}
                                                 at the Treasury Office, and is notified immediately.
                                             </p>

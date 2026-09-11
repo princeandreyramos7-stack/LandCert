@@ -132,7 +132,6 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     // Super Admin specific actions
     Route::post('/approve-request/{reportId}', [\App\Http\Controllers\SuperAdminController::class, 'approveRequest'])->name('approve-request');
     Route::post('/reject-request/{reportId}', [\App\Http\Controllers\SuperAdminController::class, 'rejectRequest'])->name('reject-request');
-    Route::post('/requests/{requestId}/review-and-decide', [\App\Http\Controllers\SuperAdminController::class, 'reviewAndDecide'])->name('review-and-decide');
     Route::post('/create-admin', [\App\Http\Controllers\SuperAdminController::class, 'createAdmin'])->name('create-admin');
     Route::put('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'deleteUser'])->name('users.delete');
@@ -182,15 +181,16 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     // Audit log export
     Route::get('/audit-logs/export', [\App\Http\Controllers\AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
 
+    // Reports & Document Management — by applicant, by month, by reviewing officer
+    Route::get('/reports', [\App\Http\Controllers\SuperAdminReportsController::class, 'index'])->name('reports');
+    Route::get('/reports/preview', [\App\Http\Controllers\SuperAdminReportsController::class, 'preview'])->name('reports.preview');
+    Route::get('/reports/generate', [\App\Http\Controllers\SuperAdminReportsController::class, 'generate'])->name('reports.generate');
+
     // Payment Management Routes - Unified Page
     Route::get('/payments', function (\Illuminate\Http\Request $request) { return redirect('/payments' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('payments');
-    Route::post('/payments/record', [PaymentController::class, 'recordPayment'])->name('payments.record');
-    Route::post('/payments/check-duplicate', [PaymentController::class, 'checkDuplicate'])->name('payments.check-duplicate');
     Route::post('/payments/upload-receipt', [\App\Http\Controllers\SuperAdminController::class, 'uploadReceipt'])->name('payments.upload-receipt');
     Route::get('/payments/{id}/show', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'payment-details', $id)); })->name('payments.show');
     Route::put('/payments/{payment}', [\App\Http\Controllers\SuperAdminController::class, 'updatePayment'])->name('payments.update');
-    Route::post('/payments/{payment}/verify', [\App\Http\Controllers\SuperAdminController::class, 'verifyPayment'])->name('payments.verify');
-    Route::post('/payments/{payment}/reject', [\App\Http\Controllers\SuperAdminController::class, 'rejectPayment'])->name('payments.reject');
     
     // Profile routes
     Route::get('/profile', [\App\Http\Controllers\SuperAdminController::class, 'profile'])->name('profile');
@@ -210,9 +210,10 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::get('/requests/{id}/view-application', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'view-application', $id)); })->name('requests.view-application');
     Route::get('/requests/{id}/document-verification', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'document-verification', $id)); })->name('requests.document-verification');
     
-    Route::get('/reports', function () {
-        return Inertia::render('Admin/Reports');
-    })->name('reports');
+    // Reports — applicant and period only; see AdminReportsController.
+    Route::get('/reports', [\App\Http\Controllers\AdminReportsController::class, 'index'])->name('reports');
+    Route::get('/reports/preview', [\App\Http\Controllers\AdminReportsController::class, 'preview'])->name('reports.preview');
+    Route::get('/reports/generate', [\App\Http\Controllers\AdminReportsController::class, 'generate'])->name('reports.generate');
     Route::get('/users', function (\Illuminate\Http\Request $request) { return redirect('/users' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('users');
     Route::put('/users/{userId}', [AdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{userId}', [AdminController::class, 'deleteUser'])->name('users.delete');

@@ -10,6 +10,7 @@ import {
     Clock,
     History,
     MessageSquare,
+    FileBarChart,
 } from "lucide-react";
 import SidebarUserMenu from "@/Components/SidebarUserMenu";
 import {
@@ -61,6 +62,11 @@ const navGroups = [
         label: "Management",
         items: [
             { title: "Users", url: "/super-admin/users", icon: Users },
+            {
+                title: "Reports",
+                url: "/super-admin/reports",
+                icon: FileBarChart,
+            },
             {
                 title: "Audit Logs",
                 url: "/super-admin/audit-logs",

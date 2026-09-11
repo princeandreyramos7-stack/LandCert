@@ -2,16 +2,14 @@ import { useState } from "react";
 import { Head, router } from "@inertiajs/react";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import { PaymentHistoryTable } from "@/Components/Admin/Payments/PaymentHistoryTable";
-import { RecordPaymentModal } from "@/Components/Admin/Payments/RecordPaymentModal";
 import { PaymentDetailsCard } from "@/Components/Admin/Payments/PaymentDetailsCard";
 import { AddReceiptModal } from "@/Components/Admin/Payments/AddReceiptModal";
-import { AddPaymentPickerModal } from "@/Components/Admin/Payments/AddPaymentPickerModal";
 import { Card, CardContent } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
 import {
     DollarSign, Clock, AlertCircle, CreditCard,
-    CheckCircle2, XCircle, Plus
+    CheckCircle2, XCircle
 } from "lucide-react";
 import { LiveRefresh } from "@/Components/LiveRefresh";
 
@@ -21,9 +19,7 @@ export default function PaymentsUnified({
     allPayments = [],
     stats = {} 
 }) {
-    const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
     const [isAddReceiptModalOpen, setIsAddReceiptModalOpen] = useState(false);
-    const [isAddPaymentPickerOpen, setIsAddPaymentPickerOpen] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
 
@@ -53,22 +49,6 @@ export default function PaymentsUnified({
         (sum, payment) => sum + (parseFloat(payment.expected_amount) || 0), 0
     );
 
-    const handleRecordPayment = (payment) => {
-        setSelectedPayment(payment);
-        setIsRecordModalOpen(true);
-    };
-
-    // "Add Payment" button - let admin pick which approved, unpaid
-    // application to manually record a payment (with receipt image) for.
-    const handleOpenAddPayment = () => {
-        setIsAddPaymentPickerOpen(true);
-    };
-
-    const handlePickRequestForPayment = (request) => {
-        setIsAddPaymentPickerOpen(false);
-        handleRecordPayment(request);
-    };
-
     const handleViewDetails = (payment) => {
         setSelectedPayment(payment);
         setShowDetailsModal(true);
@@ -77,11 +57,6 @@ export default function PaymentsUnified({
     const handleAddReceipt = (payment) => {
         setSelectedPayment(payment);
         setIsAddReceiptModalOpen(true);
-    };
-
-    const handleModalClose = () => {
-        setIsRecordModalOpen(false);
-        setSelectedPayment(null);
     };
 
     const handleAddReceiptClose = () => {
@@ -112,13 +87,8 @@ export default function PaymentsUnified({
                                 </p>
                             </div>
                         </div>
-                        <Button
-                            onClick={handleOpenAddPayment}
-                            className="bg-[#0d1f5c] hover:bg-[#0d1f5c]/90 text-white gap-2"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Payment
-                        </Button>
+                        {/* No Add Payment here: recording a payment at the counter is the
+                            Zoning Officer's duty. This screen is for oversight. */}
                     </div>
                 </div>
 
@@ -207,22 +177,7 @@ export default function PaymentsUnified({
                     onViewDetails={handleViewDetails}
                     onAddReceipt={handleAddReceipt}
                     routePrefix="super-admin"
-                    showStatusFilter={true}
-                />
-
-                {/* Add Payment - pick which approved application to record a payment for */}
-                <AddPaymentPickerModal
-                    isOpen={isAddPaymentPickerOpen}
-                    onClose={() => setIsAddPaymentPickerOpen(false)}
-                    requests={pendingPaymentsData}
-                    onSelect={handlePickRequestForPayment}
-                />
-
-                {/* Record Payment Modal */}
-                <RecordPaymentModal
-                    isOpen={isRecordModalOpen}
-                    onClose={handleModalClose}
-                    requestData={selectedPayment}
+                    canVerify={false}
                 />
 
                 {/* Add Receipt Modal */}

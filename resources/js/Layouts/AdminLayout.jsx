@@ -73,7 +73,12 @@ export default function AdminLayout({ title, breadcrumbs = [], children }) {
                 </header>
 
                 {/* Page body */}
+                {/* data-page-body is a hook for print stylesheets: this element is
+                    position:relative (it anchors the seal watermark), which would
+                    otherwise anchor a page's absolutely-positioned print area
+                    beside the sidebar instead of at the top of the sheet. */}
                 <div
+                    data-page-body
                     className="relative isolate flex flex-1 flex-col min-h-screen"
                     style={{ background: "#f5f7ff" }}
                 >

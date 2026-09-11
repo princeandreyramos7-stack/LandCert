@@ -33,6 +33,9 @@ export function PaymentHistoryTable({
     onViewDetails,
     onAddReceipt,
     routePrefix = "admin",
+    // Verifying a payment is the Zoning Officer's counter duty. The Zoning
+    // Administrator opens this same table for oversight, with verify withheld.
+    canVerify = true,
     className = "",
 }) {
     const [verifyingPayment, setVerifyingPayment] = useState(null);
@@ -340,7 +343,7 @@ export function PaymentHistoryTable({
                                                         <span>Order of Payment</span>
                                                     </DropdownMenuItem>
 
-                                                    {payment.payment_status === "pending" && (
+                                                    {canVerify && payment.payment_status === "pending" && (
                                                         <DropdownMenuItem
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -425,12 +428,14 @@ export function PaymentHistoryTable({
             </div>
 
             {/* Verify / Deny Payment Dialog */}
-            <VerifyPaymentDialog
-                isOpen={!!verifyingPayment}
-                onClose={() => setVerifyingPayment(null)}
-                payment={verifyingPayment}
-                routePrefix={routePrefix}
-            />
+            {canVerify && (
+                <VerifyPaymentDialog
+                    isOpen={!!verifyingPayment}
+                    onClose={() => setVerifyingPayment(null)}
+                    payment={verifyingPayment}
+                    routePrefix={routePrefix}
+                />
+            )}
         </div>
     );
 }
