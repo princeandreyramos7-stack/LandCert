@@ -64,7 +64,7 @@ const navGroups = [
             { title: "Users", url: "/super-admin/users", icon: Users },
             {
                 title: "Reports",
-                url: "/super-admin/reports",
+                url: "/reports",
                 icon: FileBarChart,
             },
             {

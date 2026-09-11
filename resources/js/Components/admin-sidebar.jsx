@@ -56,7 +56,7 @@ const navGroups = [
         label: "Management",
         items: [
             { title: "Users", url: "/admin/users", icon: Users },
-            { title: "Reports", url: "/admin/reports", icon: FileBarChart },
+            { title: "Reports", url: "/reports", icon: FileBarChart },
             { title: "Audit Logs", url: "/admin/audit-logs", icon: Activity },
             { title: "SMS Broadcast", url: "/admin/sms", icon: MessageSquare },
         ],

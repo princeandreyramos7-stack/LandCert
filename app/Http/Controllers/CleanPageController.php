@@ -104,6 +104,9 @@ class CleanPageController extends Controller
         'certificates'    => ['method' => 'index',     'controllers' => ['*' => CertificateController::class]],
         'users'           => ['method' => 'users',     'controllers' => ['super_admin' => SuperAdminController::class, 'admin' => AdminController::class]],
         'audit-logs'      => ['method' => 'auditLogs', 'controllers' => ['super_admin' => SuperAdminController::class, 'admin' => AdminController::class]],
+        // Two controllers, because the officer is offered fewer reports than the
+        // administrator — see AdminReportsController.
+        'reports'         => ['method' => 'index',     'controllers' => ['super_admin' => SuperAdminReportsController::class, 'admin' => AdminReportsController::class]],
         'sms-broadcast'   => ['method' => 'index',     'controllers' => ['*' => SmsController::class]],
     ];
 

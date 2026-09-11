@@ -180,8 +180,10 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     // Audit log export
     Route::get('/audit-logs/export', [\App\Http\Controllers\AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
 
-    // Reports & Document Management — by applicant, by month, by reviewing officer
-    Route::get('/reports', [\App\Http\Controllers\SuperAdminReportsController::class, 'index'])->name('reports');
+    // Reports & Document Management — by applicant, by month, by reviewing officer.
+    // The page is served from the plain /reports address (see CleanPageController);
+    // this entry just forwards anything still pointing at the prefixed one.
+    Route::get('/reports', function (\Illuminate\Http\Request $request) { return redirect('/reports' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('reports');
     Route::get('/reports/preview', [\App\Http\Controllers\SuperAdminReportsController::class, 'preview'])->name('reports.preview');
     Route::get('/reports/generate', [\App\Http\Controllers\SuperAdminReportsController::class, 'generate'])->name('reports.generate');
 
@@ -209,8 +211,9 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::get('/requests/{id}/view-application', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'view-application', $id)); })->name('requests.view-application');
     Route::get('/requests/{id}/document-verification', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'document-verification', $id)); })->name('requests.document-verification');
     
-    // Reports — applicant and period only; see AdminReportsController.
-    Route::get('/reports', [\App\Http\Controllers\AdminReportsController::class, 'index'])->name('reports');
+    // Reports — applicant and period only; see AdminReportsController. Served
+    // from the plain /reports address; this entry forwards to it.
+    Route::get('/reports', function (\Illuminate\Http\Request $request) { return redirect('/reports' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('reports');
     Route::get('/reports/preview', [\App\Http\Controllers\AdminReportsController::class, 'preview'])->name('reports.preview');
     Route::get('/reports/generate', [\App\Http\Controllers\AdminReportsController::class, 'generate'])->name('reports.generate');
     Route::get('/users', function (\Illuminate\Http\Request $request) { return redirect('/users' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('users');
