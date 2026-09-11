@@ -410,6 +410,23 @@ class SuperAdminReportsController extends Controller
                         'issued_at' => $certificate->issued_at,
                         'released_at' => $certificate->released_at,
                     ] : null,
+
+                    // The issued documents themselves. Both generators read the
+                    // application rather than a stored file, so they are offered
+                    // from the same point the decision was reached - an approved
+                    // application has them, an undecided one has nothing to show.
+                    'documents' => [
+                        'available' => $orderPayable,
+                        'certificate_url' => $orderPayable
+                            ? route($this->routePrefix() . '.generate-certificate', $request->id)
+                            : null,
+                        'clearance_url' => $orderPayable
+                            ? route($this->routePrefix() . '.generate-clearance', $request->id)
+                            : null,
+                        'note' => $orderPayable
+                            ? null
+                            : 'Issued once the application is approved.',
+                    ],
                 ];
             });
     }

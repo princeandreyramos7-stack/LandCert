@@ -102,13 +102,63 @@ inertiaRouter.on('navigate', (event) => {
     }, 0);
 });
 
+/**
+ * Recover from a page chunk that no longer exists on the server.
+ *
+ * Every build gives the page chunks new hashed names and the deploy removes the
+ * old ones. A browser still holding the previous app.js — from its own cache,
+ * or a tab left open across the deploy — asks for a chunk that has since been
+ * deleted, gets a 404, and the page simply never renders.
+ *
+ * Reloading fetches the current document and with it the current asset names.
+ * The flag guards against a loop: if the chunk is still missing after a reload
+ * the cause is not a stale page, and looping would hide that rather than fix it.
+ */
+const RELOAD_FLAG = 'cpdo:reloaded-for-stale-chunk';
+
+const reloadOnceForStaleChunk = (error) => {
+    if (sessionStorage.getItem(RELOAD_FLAG)) {
+        console.error('Asset still missing after reload:', error);
+        return false;
+    }
+
+    try {
+        sessionStorage.setItem(RELOAD_FLAG, '1');
+    } catch {
+        // Private mode and the like: reloading blind risks a loop, so don't.
+        return false;
+    }
+
+    window.location.reload();
+    return true;
+};
+
+// Vite raises this for a failed module preload.
+window.addEventListener('vite:preloadError', (event) => {
+    if (reloadOnceForStaleChunk(event?.payload)) event.preventDefault();
+});
+
+// A successful load means whatever we have is current.
+window.addEventListener('load', () => {
+    try {
+        sessionStorage.removeItem(RELOAD_FLAG);
+    } catch {
+        /* nothing to clear */
+    }
+});
+
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.jsx`,
             import.meta.glob('./Pages/**/*.jsx'),
-        ),
+        ).catch((error) => {
+            // preloadError does not fire for every failure path, so the import
+            // itself is guarded too.
+            reloadOnceForStaleChunk(error);
+            throw error;
+        }),
     setup({ el, App, props }) {
         const root = createRoot(el);
 

@@ -8,7 +8,8 @@ import SealWatermark from "@/Components/SealWatermark";
 import {
     FileBarChart, User, CalendarDays, UserCheck,
     FileDown, FileSpreadsheet, Search, Printer, Eye, Loader2,
-    FileText, Receipt, Banknote, Paperclip, Award, ExternalLink, X, FolderOpen,
+    FileText, Receipt, Banknote, Paperclip, Award, X, FolderOpen,
+    ArrowUpRight, ChevronDown, ChevronUp,
 } from "lucide-react";
 
 const MONTHS = [
@@ -114,18 +115,22 @@ function Section({ icon: Icon, title, count, action, children }) {
     );
 }
 
-/** Opens an existing CPDO document in a new tab. Hidden when printing. */
+/**
+ * Opens an existing CPDO document. Hidden when printing.
+ *
+ * Same tab, not a new one: these are pages of the same system, and a new tab
+ * per document leaves a trail of them to close. The browser's Back button
+ * returns to the report.
+ */
 function DocLink({ href, children }) {
     if (!href) return null;
     return (
         <a
             href={href}
-            target="_blank"
-            rel="noopener noreferrer"
             className="print:hidden inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-semibold text-[#0d1f5c] transition-colors hover:border-[#d4a017] hover:text-[#d4a017]"
         >
             {children}
-            <ExternalLink className="h-3 w-3" />
+            <ArrowUpRight className="h-3 w-3" />
         </a>
     );
 }
@@ -218,7 +223,7 @@ function Lightbox({ item, onClose }) {
 /* ── One application, as a step in the applicant's history ────────────────── */
 
 function ApplicationDetail({ app, total, onZoom }) {
-    const { form, order_of_payment: order, payment, requirements, certificate } = app;
+    const { form, order_of_payment: order, payment, requirements, certificate, documents } = app;
 
     return (
         <div className="space-y-3">
@@ -348,15 +353,31 @@ function ApplicationDetail({ app, total, onZoom }) {
                 )}
             </Section>
 
-            {certificate && (
-                <Section icon={Award} title="Certificate">
+            <Section
+                icon={Award}
+                title="Certificate & Clearance"
+                action={
+                    documents?.available ? (
+                        <span className="flex flex-wrap gap-2">
+                            <DocLink href={documents.certificate_url}>Certificate</DocLink>
+                            <DocLink href={documents.clearance_url}>Clearance</DocLink>
+                        </span>
+                    ) : null
+                }
+            >
+                {certificate ? (
                     <dl className="divide-y divide-gray-50">
                         <Field label="Certificate No.">{certificate.number}</Field>
                         <Field label="Status">{titleCase(certificate.status)}</Field>
+                        <Field label="Issued">{date(certificate.issued_at)}</Field>
                         <Field label="Released">{date(certificate.released_at)}</Field>
                     </dl>
-                </Section>
-            )}
+                ) : documents?.available ? (
+                    <Empty>No certificate recorded yet — the documents above are generated from this application.</Empty>
+                ) : (
+                    <Empty>{documents?.note}</Empty>
+                )}
+            </Section>
         </div>
     );
 }
@@ -588,6 +609,11 @@ export default function ReportsWorkspace({
     const [step, setStep] = useState(0);
     const [zoom, setZoom] = useState(null);
 
+    // The picker is a tall list and its job is done once a report is on screen,
+    // so it folds away and leaves the room to the report. Reopening it is one
+    // click, and changing the subject opens it again on its own.
+    const [filtersOpen, setFiltersOpen] = useState(true);
+
     const filteredApplicants = useMemo(() => {
         const q = applicantSearch.trim().toLowerCase();
         if (!q) return applicants;
@@ -625,6 +651,7 @@ export default function ReportsWorkspace({
             );
             setReport(data);
             setStep(0);
+            setFiltersOpen(false);
         } catch (e) {
             setError(e.response?.data?.message || "Could not build the report. Please try again.");
             setReport(null);
@@ -647,7 +674,9 @@ export default function ReportsWorkspace({
     const download = (format) => {
         const p = params();
         p.set("format", format);
-        window.open(`${route(`${routePrefix}.reports.generate`)}?${p}`, "_blank");
+        // Same tab: the browser hands the file to its download manager and the
+        // report is still on screen behind it.
+        window.location.href = `${route(`${routePrefix}.reports.generate`)}?${p}`;
     };
 
     // Changing the subject invalidates what is on screen — showing last
@@ -656,12 +685,14 @@ export default function ReportsWorkspace({
         setter(value);
         setReport(null);
         setError(null);
+        setFiltersOpen(true);
     };
 
     const switchType = (key) => {
         setActive(key);
         setReport(null);
         setError(null);
+        setFiltersOpen(true);
     };
 
     const applications = report?.applications ?? [];
@@ -742,7 +773,45 @@ export default function ReportsWorkspace({
 
                 {/* Filters */}
                 <Card className="mb-4 border-gray-100 shadow-sm print:hidden">
-                    <CardContent className="p-4 sm:p-5">
+                    {/* Collapsed once a report is showing, so the tall applicant
+                        list stops competing with it for the screen. */}
+                    {!filtersOpen && (
+                        <button
+                            type="button"
+                            onClick={() => setFiltersOpen(true)}
+                            aria-expanded={false}
+                            className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-gray-50 sm:p-5"
+                        >
+                            <span className="min-w-0">
+                                <span className="block text-sm font-semibold text-[#0d1f5c]">
+                                    {REPORTS.find((r) => r.key === active)?.title ?? "Report"}
+                                </span>
+                                <span className="block truncate text-xs text-gray-400">
+                                    {report?.subtitle || "Change what this report covers"}
+                                </span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-[#0d1f5c]">
+                                Change
+                                <ChevronDown className="h-4 w-4" />
+                            </span>
+                        </button>
+                    )}
+
+                    <CardContent className={`p-4 sm:p-5 ${filtersOpen ? "" : "hidden"}`}>
+                        {report && (
+                            <div className="mb-4 flex justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setFiltersOpen(false)}
+                                    aria-expanded
+                                    className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 transition-colors hover:text-[#0d1f5c]"
+                                >
+                                    Hide
+                                    <ChevronUp className="h-4 w-4" />
+                                </button>
+                            </div>
+                        )}
+
                         {active === "applicant" && (
                             <div>
                                 <label className="mb-2 block text-sm font-semibold text-[#0d1f5c]">
