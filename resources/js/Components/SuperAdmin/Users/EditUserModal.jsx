@@ -11,21 +11,13 @@ import {
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/Components/ui/select";
 import { useToast } from "@/Components/ui/use-toast";
-import { User, Mail, Key, Shield, Phone, MapPin, Loader2 } from "lucide-react";
+import { User, Mail, Key, Phone, MapPin, Loader2 } from "lucide-react";
 
 const BLANK = {
     name: "",
     email: "",
     password: "",
-    user_type: "applicant",
     contact_number: "",
     address: "",
 };
@@ -37,6 +29,10 @@ const BLANK = {
  * the container changed. Editing a row is a small correction — sending someone
  * to another page and back for it lost their filters, their search and their
  * place in the list every time.
+ *
+ * There is deliberately no role field: it never worked here, and a role is not
+ * a detail to correct in passing. The request omits user_type entirely and
+ * updateUser leaves the account's role untouched when it is absent.
  */
 export function EditUserModal({ user, isOpen, onClose }) {
     const { toast } = useToast();
@@ -53,7 +49,6 @@ export function EditUserModal({ user, isOpen, onClose }) {
             name: user.name || "",
             email: user.email || "",
             password: "",
-            user_type: user.user_type || "applicant",
             contact_number: user.contact_number || "",
             address: user.address || "",
         });
@@ -160,25 +155,6 @@ export function EditUserModal({ user, isOpen, onClose }) {
                             Leave blank to keep the current password.
                         </p>
                         {errors.password && <p className="text-xs text-red-600">{errors.password}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="edit-user-type" className="flex items-center gap-2">
-                            <Shield className="h-4 w-4 text-blue-600" />
-                            User Type *
-                        </Label>
-                        <Select value={form.user_type} onValueChange={set("user_type")}>
-                            <SelectTrigger id="edit-user-type">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="applicant">Applicant</SelectItem>
-                                <SelectItem value="staff">Staff</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="super_admin">Super Admin</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        {errors.user_type && <p className="text-xs text-red-600">{errors.user_type}</p>}
                     </div>
 
                     <div className="space-y-2">

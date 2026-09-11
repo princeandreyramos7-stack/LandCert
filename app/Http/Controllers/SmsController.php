@@ -21,26 +21,56 @@ class SmsController extends Controller
 
     /* ── Broadcast page ──────────────────────────────────────── */
 
+    /**
+     * Who this account may text, as audience key => user_type.
+     *
+     * The Zoning Administrator can also reach the Zoning Officers; an officer
+     * gets applicants only. Enforced here rather than in the page, so hiding a
+     * tab is not the only thing standing between a role and a broadcast.
+     */
+    private function audiences(): array
+    {
+        $audiences = ['applicants' => 'applicant'];
+
+        if (auth()->user()?->user_type === 'super_admin') {
+            $audiences['officers'] = 'admin';
+        }
+
+        return $audiences;
+    }
+
     public function index(Request $request): Response
     {
+        $audiences = $this->audiences();
+        $types = array_values($audiences);
+
         $users = User::whereNotNull('contact_number')
             ->where('contact_number', '!=', '')
-            ->where('user_type', 'applicant')
+            ->whereIn('user_type', $types)
             ->select('id', 'name', 'email', 'contact_number', 'user_type')
             ->orderBy('name')
             ->get();
 
         $stats = [
-            'total_users' => User::where('user_type', 'applicant')->count(),
+            'total_users' => User::whereIn('user_type', $types)->count(),
             'with_phone'  => $users->count(),
             'sms_enabled' => $this->sms->isEnabled(),
             'sender'      => config('services.sms.sender_name'),
+            // Counted per audience so the screen can say how many it is about
+            // to reach, rather than quoting one total for a list it filters.
+            'with_phone_by_audience' => collect($audiences)
+                ->map(fn ($type) => $users->where('user_type', $type)->count())
+                ->all(),
+            'total_by_audience' => collect($audiences)
+                ->map(fn ($type) => User::where('user_type', $type)->count())
+                ->all(),
         ];
 
         return Inertia::render('Admin/Sms/Index', [
             'users'         => $users,
             'stats'         => $stats,
-            'broadcastTpls' => $this->getBroadcastTemplates(),
+            'audiences'     => array_keys($audiences),
+            'broadcastTpls' => $this->broadcastTemplatesByAudience(),
             // Only super-admins receive the editable auto-templates
             'autoTemplates' => auth()->user()?->user_type === 'super_admin'
                 ? SmsTemplate::orderBy('id')->get()
@@ -52,24 +82,31 @@ class SmsController extends Controller
 
     public function send(Request $request)
     {
+        $audiences = $this->audiences();
+
         $validated = $request->validate([
             'recipients' => 'required|in:all,selected',
+            'audience'   => 'nullable|in:' . implode(',', array_keys($audiences)),
             'user_ids'   => 'required_if:recipients,selected|array',
             'user_ids.*' => 'integer|exists:users,id',
             'message'    => 'required|string|min:3|max:320',
         ]);
 
-        if ($validated['recipients'] === 'all') {
-            $users = User::whereNotNull('contact_number')
-                ->where('contact_number', '!=', '')
-                ->where('user_type', 'applicant')
-                ->get();
-        } else {
-            $users = User::whereIn('id', $validated['user_ids'])
-                ->whereNotNull('contact_number')
-                ->where('contact_number', '!=', '')
-                ->get();
-        }
+        // The audience decides which user_type a broadcast may reach, and the
+        // same restriction is applied to a hand-picked list: "selected" used to
+        // accept any id at all, so the recipients were whatever the page chose
+        // to offer rather than whatever this role is allowed to text.
+        $audience = $validated['audience'] ?? 'applicants';
+        $type = $audiences[$audience] ?? 'applicant';
+
+        $users = User::whereNotNull('contact_number')
+            ->where('contact_number', '!=', '')
+            ->where('user_type', $type)
+            ->when(
+                $validated['recipients'] === 'selected',
+                fn ($query) => $query->whereIn('id', $validated['user_ids'])
+            )
+            ->get();
 
         if ($users->isEmpty()) {
             return back()->with('error', 'No users with valid phone numbers found.');
@@ -171,6 +208,45 @@ class SmsController extends Controller
             [$user->name, $user->email, $user->contact_number ?? ''],
             $template
         );
+    }
+
+    /**
+     * Ready-made messages, per audience.
+     *
+     * An applicant is being told about their own application; a Zoning Officer
+     * is being told about the office's caseload. Addressing an officer with
+     * "your application is approved, please pay at the Treasury" would be
+     * nonsense, so the two sets are kept apart and the page swaps between them
+     * with the audience.
+     */
+    private function broadcastTemplatesByAudience(): array
+    {
+        $sets = ['applicants' => $this->getBroadcastTemplates()];
+
+        if (array_key_exists('officers', $this->audiences())) {
+            $sets['officers'] = $this->getOfficerBroadcastTemplates();
+        }
+
+        return $sets;
+    }
+
+    /**
+     * Messages the Zoning Administrator sends to the Zoning Officers. All about
+     * the work in front of them: what is waiting, what is overdue, what needs
+     * releasing.
+     */
+    private function getOfficerBroadcastTemplates(): array
+    {
+        return [
+            ['label' => 'Applications for Review',     'message' => 'Hi {name}! There are applications awaiting your review at CPDO LC. Please check the Applications page and act on them today. - Zoning Administrator'],
+            ['label' => 'Pending Review Follow-up',    'message' => 'Hi {name}! Some applications assigned to you have been pending review for several days. Please prioritise them. - Zoning Administrator'],
+            ['label' => 'Returned for Correction',     'message' => 'Hi {name}! An application you reviewed has been returned for correction. Please check the remarks and resubmit your evaluation. - Zoning Administrator'],
+            ['label' => 'Set the Treasury Fee',        'message' => 'Hi {name}! An application is waiting for the Treasury fee to be set before it can be approved. Please complete the review. - Zoning Administrator'],
+            ['label' => 'Payments to Verify',          'message' => 'Hi {name}! There are payments waiting to be verified at the counter. Please check the Payments page. - Zoning Administrator'],
+            ['label' => 'Certificates for Release',    'message' => 'Hi {name}! There are certificates ready for release. Please prepare them for the applicants to collect. - Zoning Administrator'],
+            ['label' => 'Office Reminder',             'message' => 'Hi {name}! Reminder from the Zoning Administrator: please keep application records updated before the end of the day. - Zoning Administrator'],
+            ['label' => 'Custom Message',              'message' => ''],
+        ];
     }
 
     private function getBroadcastTemplates(): array

@@ -1145,7 +1145,10 @@ class SuperAdminController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $userId,
-            'user_type' => 'required|in:admin,staff,applicant,super_admin',
+            // Optional, not required: the edit form no longer offers a role, so
+            // a request without one leaves the account's role exactly as it was
+            // rather than failing validation.
+            'user_type' => 'sometimes|in:admin,staff,applicant,super_admin',
             'contact_number' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:500',
             'password' => 'nullable|string|min:8',
@@ -1154,10 +1157,13 @@ class SuperAdminController extends Controller
         $updateData = [
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'user_type' => $validated['user_type'],
             'contact_number' => $validated['contact_number'] ?? null,
             'address' => $validated['address'] ?? null,
         ];
+
+        if (array_key_exists('user_type', $validated)) {
+            $updateData['user_type'] = $validated['user_type'];
+        }
 
         // Only update password if provided
         if (!empty($validated['password'])) {

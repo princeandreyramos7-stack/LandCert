@@ -156,7 +156,12 @@ function TemplateCard({ tpl, updateRoute, resetRoute }) {
 }
 
 /* ── Main page ─────────────────────────────────────────────── */
-export default function SmsIndex({ users = [], stats = {}, broadcastTpls = [], autoTemplates = [] }) {
+const AUDIENCE_LABELS = {
+    applicants: { title: "Applicants", blurb: "People who have filed with the office" },
+    officers:   { title: "Zoning Officers", blurb: "CPDO staff accounts" },
+};
+
+export default function SmsIndex({ users = [], stats = {}, broadcastTpls = {}, autoTemplates = [], audiences = ["applicants"] }) {
     const { auth } = usePage().props;
     const isSuperAdmin = auth?.user?.user_type === "super_admin";
     const Layout    = isSuperAdmin ? SuperAdminLayout : AdminLayout;
@@ -171,14 +176,28 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = [], a
 
     const { data, setData, post, processing } = useForm({
         recipients: "all",
+        audience:   audiences[0] ?? "applicants",
         user_ids:   [],
         message:    "",
     });
 
+    // The audience decides which accounts are on the list at all. A selection
+    // made under one audience is cleared when it changes: those ids belong to
+    // people this broadcast is no longer addressed to.
+    const audienceType = data.audience === "officers" ? "admin" : "applicant";
+    const chooseAudience = (value) => {
+        setData((current) => ({ ...current, audience: value, user_ids: [] }));
+    };
+
+    const inAudience = useMemo(
+        () => users.filter(u => u.user_type === audienceType),
+        [users, audienceType]
+    );
+
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
-        return users.filter(u => !q || u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.contact_number?.includes(q));
-    }, [users, search]);
+        return inAudience.filter(u => !q || u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.contact_number?.includes(q));
+    }, [inAudience, search]);
 
     const allSelected = filtered.length > 0 && filtered.every(u => data.user_ids.includes(u.id));
 
@@ -195,7 +214,15 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = [], a
         }
     };
 
-    const recipientCount = data.recipients === "all" ? stats.with_phone : data.user_ids.length;
+    // An applicant is told about their own application; an officer is told about
+    // the office's caseload, so each audience has its own set of ready-made
+    // messages. Tolerates the old flat array in case a stale page is still open.
+    const templates = Array.isArray(broadcastTpls)
+        ? broadcastTpls
+        : broadcastTpls[data.audience] ?? broadcastTpls.applicants ?? [];
+
+    const audienceTotal = stats.with_phone_by_audience?.[data.audience] ?? inAudience.length;
+    const recipientCount = data.recipients === "all" ? audienceTotal : data.user_ids.length;
 
     const submit = e => {
         e.preventDefault();
@@ -270,14 +297,18 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = [], a
                         <div className="grid grid-cols-1 gap-4 mb-5 sm:grid-cols-3">
                             <Card className="border-l-4 border-l-[#0d1f5c] bg-white shadow-sm">
                                 <CardContent className="p-4">
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Total Applicants</p>
-                                    <p className="text-3xl font-black text-[#0d1f5c]">{stats.total_users}</p>
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">
+                                        Total {AUDIENCE_LABELS[data.audience]?.title ?? "Recipients"}
+                                    </p>
+                                    <p className="text-3xl font-black text-[#0d1f5c]">
+                                        {stats.total_by_audience?.[data.audience] ?? stats.total_users}
+                                    </p>
                                 </CardContent>
                             </Card>
                             <Card className="border-l-4 border-l-[#d4a017] bg-white shadow-sm">
                                 <CardContent className="p-4">
                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">With Phone</p>
-                                    <p className="text-3xl font-black text-[#0d1f5c]">{stats.with_phone}</p>
+                                    <p className="text-3xl font-black text-[#0d1f5c]">{audienceTotal}</p>
                                 </CardContent>
                             </Card>
                             <Card className={`border-l-4 ${recipientCount > 0 ? "border-l-green-500" : "border-l-gray-300"} bg-white shadow-sm`}>
@@ -301,8 +332,35 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = [], a
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-5 space-y-3">
+                                            {/* Only shown when this account has more than
+                                                one audience to choose between. */}
+                                            {audiences.length > 1 && (
+                                                <div className="pb-3 mb-1 border-b border-gray-100">
+                                                    <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2">
+                                                        Send to
+                                                    </p>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {audiences.map(key => {
+                                                            const meta = AUDIENCE_LABELS[key] ?? { title: key, blurb: "" };
+                                                            const on = data.audience === key;
+                                                            return (
+                                                                <button key={key} type="button"
+                                                                    onClick={() => chooseAudience(key)}
+                                                                    aria-pressed={on}
+                                                                    className={`rounded-lg border-2 p-3 text-left transition-all ${on ? "border-[#0d1f5c] bg-[#0d1f5c]/[0.03]" : "border-gray-100 hover:border-gray-200"}`}>
+                                                                    <p className="text-sm font-bold text-[#0d1f5c]">{meta.title}</p>
+                                                                    <p className="text-xs text-gray-400">
+                                                                        {stats.with_phone_by_audience?.[key] ?? 0} with phone
+                                                                    </p>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {[
-                                                { value: "all",      label: "All Users with Phone", desc: `${stats.with_phone} recipients` },
+                                                { value: "all",      label: "All Users with Phone", desc: `${audienceTotal} recipients` },
                                                 { value: "selected", label: "Selected Users",        desc: `${data.user_ids.length} selected` },
                                             ].map(opt => (
                                                 <label key={opt.value}
@@ -336,7 +394,7 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = [], a
 
                                         {showBroadcastTpl && (
                                             <div className="border-b border-gray-50 p-4 space-y-2 bg-gray-50/50">
-                                                {broadcastTpls.map((tpl, i) => (
+                                                {templates.map((tpl, i) => (
                                                     <button key={i} type="button"
                                                         onClick={() => { setData("message", tpl.message); setShowBroadcastTpl(false); }}
                                                         className="w-full text-left px-3 py-2.5 rounded-lg border border-gray-100 bg-white hover:border-[#d4a017] hover:bg-[#d4a017]/5 transition-all group">

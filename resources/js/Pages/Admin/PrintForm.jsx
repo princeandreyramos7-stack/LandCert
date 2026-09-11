@@ -103,13 +103,6 @@ body {
     width: 210mm;
     min-height: 297mm;
     background: #fff;
-    /* City seal watermark. Pre-faded asset: background-image has no opacity of
-       its own, and this sheet already sets print-color-adjust: exact so it
-       reaches paper. */
-    background-image: url('/images/ilagan-seal-watermark.png');
-    background-repeat: no-repeat;
-    background-position: center center;
-    background-size: 50% auto;
     margin: 8px auto;
     border: 1px solid #e5e7eb;
     padding: 7mm 8mm 7mm 8mm;
@@ -138,6 +131,17 @@ body {
     padding: 2pt 4pt;
     vertical-align: top;
     word-break: break-word;
+}
+
+/* ── row rule ──
+   The paper form rules a line under each numbered group: 1-2, 3-4, 5-6, 7-8,
+   11-12, then 13, 14, 15, 16, 17 and 18 one to a row. 9 and 10 are not listed
+   here because they are stacked blocks that already close with their own rule.
+
+   Applied to the group's last <tr> rather than to every cell, so a group that
+   spans several cells still gets one unbroken line across the sheet. */
+.pf-page tr.pf-rule > td {
+    border-bottom: 1px solid #000 !important;
 }
 
 /* border helpers */
@@ -553,7 +557,10 @@ export default function PrintForm({ application: a, auth }) {
                 {/* ── MAIN TITLE ── */}
                 <table className="form-table">
                     <tbody>
-                        <tr>
+                        {/* Ruled off like every numbered group below it, so the
+                            title reads as its own band rather than running into
+                            field 1. */}
+                        <tr className="pf-rule">
                             <td
                                 style={{
                                     textAlign: "center",
@@ -582,7 +589,7 @@ export default function PrintForm({ application: a, auth }) {
                     </colgroup>
                     <tbody>
                         {/* Row 1 */}
-                        <tr>
+                        <tr className="pf-rule">
                             <td className="nb-t" style={{ height: "22pt" }}>
                                 <span className="lbl">1. Name of Applicant</span>
                                 <span className="val">{v(a.applicant_name) || nb}</span>
@@ -593,7 +600,7 @@ export default function PrintForm({ application: a, auth }) {
                             </td>
                         </tr>
                         {/* Row 2 */}
-                        <tr>
+                        <tr className="pf-rule">
                             <td style={{ height: "22pt" }}>
                                 <span className="lbl">3. Address of Applicant</span>
                                 <span className="val">{v(a.applicant_address) || nb}</span>
@@ -604,7 +611,7 @@ export default function PrintForm({ application: a, auth }) {
                             </td>
                         </tr>
                         {/* Row 3 */}
-                        <tr>
+                        <tr className="pf-rule">
                             <td style={{ height: "22pt" }}>
                                 <span className="lbl">5. Name of Authorized Representative (if applicable)</span>
                                 <span className="val">{v(a.representative_name) || nb}</span>
@@ -628,7 +635,7 @@ export default function PrintForm({ application: a, auth }) {
                         <col style={{ width: "64%" }} />
                     </colgroup>
                     <tbody>
-                        <tr>
+                        <tr className="pf-rule">
                             <td className="nb-t" style={{ height: "22pt" }}>
                                 <span className="lbl">7. Project Type</span>
                                 <span className="val">{v(a.project_type) || nb}</span>
@@ -809,7 +816,7 @@ export default function PrintForm({ application: a, auth }) {
                         <col style={{ width: "67%" }} />
                     </colgroup>
                     <tbody>
-                        <tr>
+                        <tr className="pf-rule">
                             {/* 11 — right over land */}
                             <td className="nb-t" style={{ height: "26pt", verticalAlign: "top" }}>
                                 <span className="lbl">11. Right Over Land</span>
@@ -848,7 +855,7 @@ export default function PrintForm({ application: a, auth }) {
                 {/* 13 — Existing Land Use */}
                 <table>
                     <tbody>
-                        <tr>
+                        <tr className="pf-rule">
                             <td className="nb-t" style={{ paddingBottom: "4pt" }}>
                                 <span className="lbl">13. Existing Land Uses of Project Site</span>
                                 {/* Line 1 */}
@@ -894,7 +901,7 @@ export default function PrintForm({ application: a, auth }) {
                 {/* 14 — Project Cost */}
                 <table>
                     <tbody>
-                        <tr>
+                        <tr className="pf-rule">
                             <td className="nb-t" style={{ padding: "3pt 4pt" }}>
                                 <span className="lbl">14. Project Cost / Capitalization (in pesos, write in words and figure)</span>
                                 <div style={{ marginTop: "2pt", display: "flex", alignItems: "baseline", gap: "6pt" }}>
@@ -919,7 +926,7 @@ export default function PrintForm({ application: a, auth }) {
                 {/* Q15 */}
                 <table>
                     <tbody>
-                        <tr>
+                        <tr className="pf-rule">
                             <td className="nb-t" style={{ paddingBottom: "4pt" }}>
                                 <p className="q">
                                     15. IS THE PROJECT APPLIED FOR THE SUBJECT OF WRITTEN NOTICE(S) FROM THIS
@@ -951,7 +958,7 @@ export default function PrintForm({ application: a, auth }) {
                 {/* Q16 */}
                 <table>
                     <tbody>
-                        <tr>
+                        <tr className="pf-rule">
                             <td style={{ paddingBottom: "3pt", paddingTop: "2pt" }}>
                                 <div style={{ fontSize: "6.5pt", lineHeight: "1.5" }}>
                                     <span style={{ fontWeight: "bold" }}>16. IS THE PROJECT APPLIED FOR THE SUBJECT OF SIMILAR APPLICATION(S) WITH OTHER OFFICES OF THE COMMISSION AND/OR DEPUTIZED ZONING ADMINISTRATOR?</span>
@@ -994,7 +1001,7 @@ export default function PrintForm({ application: a, auth }) {
                 {/* Q17 */}
                 <table>
                     <tbody>
-                        <tr>
+                        <tr className="pf-rule">
                             <td style={{ paddingBottom: "3pt", paddingTop: "2pt" }}>
                                 <div style={{ fontSize: "6.5pt", fontWeight: "bold", marginBottom: "3pt" , marginTop: "5px"}}>
                                     17. PREFERRED MODE OF RELEASE OF DECISION
@@ -1025,7 +1032,7 @@ export default function PrintForm({ application: a, auth }) {
                         <col style={{ width: "50%" }} />
                     </colgroup>
                     <tbody>
-                        <tr>
+                        <tr className="pf-rule">
                             <td style={{ padding: "0", border: "none" }}>
                                 <div style={{ fontSize: "6.5pt", fontWeight: "bold", marginBottom: "0" }}>
                                     18. SIGNATURE OF APPLICANT
