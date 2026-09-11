@@ -286,6 +286,14 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
                     min-height: 297mm;
                     margin: 0 auto;
                     background: white;
+                    /* City seal watermark. Pre-faded asset: background-image has
+                       no opacity of its own, and these sheets already set
+                       print-color-adjust: exact so it reaches paper. */
+                    background-image: url('/images/ilagan-seal-watermark.png');
+                    background-repeat: no-repeat;
+                    background-position: center center;
+                    background-size: 55% auto;
+
                     font-family: 'Times New Roman', serif;
                     font-size: 11pt;
                     color: #000;

@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { TablePagination } from "@/Components/ui/table-pagination";
+import SealWatermark from "@/Components/SealWatermark";
 import {
     FileBarChart, User, CalendarDays, UserCheck,
     FileDown, FileSpreadsheet, Search, Printer, Eye, Loader2,
@@ -909,7 +910,13 @@ export default function ReportsWorkspace({
 
                 {/* The report itself */}
                 {report && (
-                    <div id="report-panel" className="rounded-xl border border-gray-100 bg-white shadow-sm">
+                    <div id="report-panel" className="relative isolate rounded-xl border border-gray-100 bg-white shadow-sm">
+                        {/* The layout's watermark sits behind this panel, which is
+                            opaque, so the report carries its own. Inside the panel
+                            it also survives printing, where everything outside
+                            #report-panel is hidden. */}
+                        <SealWatermark className="rounded-xl" />
+
                         {/* Letterhead — printed as well as shown */}
                         <div className="border-b-2 border-[#0d1f5c] px-4 py-4 text-center sm:px-6">
                             <p className="text-[10px] uppercase tracking-widest text-gray-500">

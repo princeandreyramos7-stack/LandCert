@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { Head, router } from "@inertiajs/react";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
+import SealWatermark from "@/Components/SealWatermark";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Badge } from "@/Components/ui/badge";
 import { Button } from "@/Components/ui/button";
@@ -264,7 +265,11 @@ export default function ApplicationDetails({ application, requirements = [], doc
         <>
             <Head title={`${application.application_number || "Application"} — CPDO`} />
             <ApplicantLayout title="Application Details">
-                <div className="max-w-6xl mx-auto space-y-6">
+                {/* The layout's watermark sits behind the page, and these cards
+                    are opaque, so it never showed through here. This one is
+                    scoped to the content column so it reads with the record. */}
+                <div className="relative isolate max-w-6xl mx-auto space-y-6">
+                    <SealWatermark />
                     {/* Header */}
                     <Card>
                         <CardContent className="pt-6">

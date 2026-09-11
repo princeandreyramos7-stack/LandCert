@@ -51,6 +51,9 @@ class SuperAdminReportsController extends Controller
     /** Above this, a scan is re-encoded even if its dimensions are modest. */
     private const REPORT_IMAGE_MAX_BYTES = 120 * 1024;
 
+    /** Width of the faded seal watermark baked into every PDF, in pixels. */
+    private const WATERMARK_WIDTH = 300;
+
     /**
      * The page itself: the choices a report can be built from.
      */
@@ -471,6 +474,78 @@ class SuperAdminReportsController extends Controller
      * because older rows were written before it was recorded.
      */
     /**
+     * A faded city seal for the PDF watermark, generated once and cached.
+     *
+     * Pre-faded rather than dropped in at full strength under a CSS opacity:
+     * DomPDF's support for opacity is patchy, and a seal that lands at full
+     * strength over a report would make it unreadable. Baking the transparency
+     * into the image takes the renderer out of the question.
+     *
+     * Returns null if it cannot be built - a report without a watermark is
+     * still a report.
+     */
+    private function watermarkPath(): ?string
+    {
+        $cached = storage_path('app/report-watermark.png');
+        if (is_file($cached)) {
+            return $cached;
+        }
+
+        $source = public_path('images/ilagan1logo.png');
+        if (!is_readable($source)) {
+            return null;
+        }
+
+        try {
+            $seal = @imagecreatefrompng($source);
+            if (!$seal) {
+                return null;
+            }
+
+            // Every PDF carries this, and at 6% opacity the detail is invisible,
+            // so it is shrunk first: the full-size seal added a quarter of a
+            // megabyte to each document for nothing anyone can see.
+            $width = self::WATERMARK_WIDTH;
+            $height = (int) round(imagesy($seal) * ($width / imagesx($seal)));
+
+            $small = imagecreatetruecolor($width, $height);
+            imagealphablending($small, false);
+            imagesavealpha($small, true);
+            imagefilledrectangle($small, 0, 0, $width, $height, imagecolorallocatealpha($small, 0, 0, 0, 127));
+            imagecopyresampled($small, $seal, 0, 0, 0, 0, $width, $height, imagesx($seal), imagesy($seal));
+            imagedestroy($seal);
+            $seal = $small;
+
+            // Scale every pixel's alpha towards transparent. GD's alpha runs
+            // 0 (opaque) to 127 (clear), so this pushes each one most of the
+            // way to clear while leaving the colours alone.
+            for ($y = 0; $y < $height; $y++) {
+                for ($x = 0; $x < $width; $x++) {
+                    $colour = imagecolorat($seal, $x, $y);
+                    $alpha = ($colour >> 24) & 0x7F;
+                    // 0.92 leaves 8% opacity, matching the on-screen panel
+                    // (SealWatermark.jsx) so paper and screen agree.
+                    $faded = (int) round($alpha + (127 - $alpha) * 0.92);
+                    imagesetpixel($seal, $x, $y, imagecolorallocatealpha(
+                        $seal,
+                        ($colour >> 16) & 0xFF,
+                        ($colour >> 8) & 0xFF,
+                        $colour & 0xFF,
+                        min(127, $faded)
+                    ));
+                }
+            }
+
+            imagepng($seal, $cached, 9);
+            imagedestroy($seal);
+
+            return is_file($cached) ? $cached : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
      * Absolute path to a stored file, or null if it is not on either disk.
      *
      * DomPDF reads images off the filesystem, not over HTTP - the document
@@ -549,6 +624,7 @@ class SuperAdminReportsController extends Controller
             'generatedOn' => now()->format('F j, Y \a\t g:i A'),
             'generatedBy' => auth()->user()?->name ?? 'Zoning Administrator',
             'statusCounts' => $applications->countBy('status'),
+            'watermark' => $this->watermarkPath(),
         ]);
         $pdf->setPaper('a4', 'portrait');
 
@@ -678,6 +754,7 @@ class SuperAdminReportsController extends Controller
             'generatedOn' => now()->format('F j, Y \a\t g:i A'),
             'generatedBy' => auth()->user()?->name ?? 'Zoning Administrator',
             'statusCounts' => $rows->countBy('status'),
+            'watermark' => $this->watermarkPath(),
         ]);
         $pdf->setPaper('a4', 'landscape');
 

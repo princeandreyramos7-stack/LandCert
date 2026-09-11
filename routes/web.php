@@ -125,7 +125,6 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::get('/users/create', function () {
         return Inertia::render('SuperAdmin/CreateUser');
     })->name('users.create');
-    Route::get('/users/{userId}/edit', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'edit-user', $id)); })->name('users.edit');
     Route::get('/audit-logs', function (\Illuminate\Http\Request $request) { return redirect('/audit-logs' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('audit-logs');
     Route::get('/settings', [\App\Http\Controllers\SuperAdminController::class, 'settings'])->name('settings');
     

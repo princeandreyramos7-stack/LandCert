@@ -1,6 +1,7 @@
 import { Link } from "@inertiajs/react";
 import { Globe, Activity, Award } from "lucide-react";
 import { Toaster } from "@/Components/ui/toaster";
+import SealWatermark from "@/Components/SealWatermark";
 
 export default function GuestLayout({ children }) {
     return (
@@ -157,7 +158,10 @@ export default function GuestLayout({ children }) {
             </div>
 
             {/* ── Right panel (form area) ───────────────────────────── */}
-            <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 lg:p-12 relative overflow-y-auto">
+            {/* The seal sits behind the form column only. The left panel is dark
+                navy with its own artwork, where a faint seal would be lost. */}
+            <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 lg:p-12 relative isolate overflow-y-auto">
+                <SealWatermark />
                 {/* Mobile logo */}
                 <div className="lg:hidden w-full max-w-md mb-8">
                     <Link href="/" className="flex items-center gap-3">

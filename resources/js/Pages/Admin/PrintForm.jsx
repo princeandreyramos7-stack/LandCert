@@ -103,6 +103,13 @@ body {
     width: 210mm;
     min-height: 297mm;
     background: #fff;
+    /* City seal watermark. Pre-faded asset: background-image has no opacity of
+       its own, and this sheet already sets print-color-adjust: exact so it
+       reaches paper. */
+    background-image: url('/images/ilagan-seal-watermark.png');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 50% auto;
     margin: 8px auto;
     border: 1px solid #e5e7eb;
     padding: 7mm 8mm 7mm 8mm;

@@ -1109,18 +1109,6 @@ class SuperAdminController extends Controller
     }
 
     /**
-     * Show edit user form
-     */
-    public function editUser($userId): Response
-    {
-        $user = User::findOrFail($userId);
-
-        return Inertia::render('SuperAdmin/EditUser', [
-            'user' => $user,
-        ]);
-    }
-
-    /**
      * Create a new user (admin, staff, applicant, or super_admin)
      */
     public function createAdmin(Request $request)

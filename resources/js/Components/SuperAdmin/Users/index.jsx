@@ -30,6 +30,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { EditUserModal } from "./EditUserModal";
 import {
     MoreVertical,
     Search,
@@ -61,6 +62,8 @@ export function SuperAdminUserManagement({ users }) {
     const [currentPage, setCurrentPage] = useState(1);
     const USERS_PER_PAGE = 10;
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [userToEdit, setUserToEdit] = useState(null);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState(null);
     const { toast } = useToast();
 
@@ -132,8 +135,11 @@ export function SuperAdminUserManagement({ users }) {
         return labels[userType] || userType.toUpperCase();
     };
 
+    // Edited in place rather than on a page of its own: a correction to one row
+    // should not cost the list's filters, search and scroll position.
     const handleEdit = (user) => {
-        router.visit(route("super-admin.users.edit", user.id));
+        setUserToEdit(user);
+        setIsEditDialogOpen(true);
     };
 
     const handleDelete = (user) => {
@@ -330,6 +336,12 @@ export function SuperAdminUserManagement({ users }) {
             </Card>
 
             {/* Delete Confirmation Dialog */}
+            <EditUserModal
+                user={userToEdit}
+                isOpen={isEditDialogOpen}
+                onClose={() => setIsEditDialogOpen(false)}
+            />
+
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <DialogContent>
                     <DialogHeader>

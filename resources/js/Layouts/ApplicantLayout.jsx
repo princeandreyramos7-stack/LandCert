@@ -14,6 +14,7 @@ import {
     SidebarTrigger,
 } from "@/Components/ui/sidebar";
 import { Toaster } from "@/Components/ui/toaster";
+import SealWatermark from "@/Components/SealWatermark";
 
 /**
  * Shared layout for all applicant pages.
@@ -66,11 +67,16 @@ export default function ApplicantLayout({ title, children }) {
                     </div>
                 </header>
 
-                {/* Page body */}
+                {/* Page body. data-page-body is a hook for print stylesheets:
+                    this element is position:relative (it anchors the seal
+                    watermark), which would otherwise anchor a page's
+                    absolutely-positioned print area beside the sidebar. */}
                 <div
-                    className="flex flex-1 flex-col min-h-screen overflow-x-hidden"
+                    data-page-body
+                    className="relative isolate flex flex-1 flex-col min-h-screen overflow-x-hidden"
                     style={{ background: "#f5f7ff" }}
                 >
+                    <SealWatermark />
                     <div className="flex-1 p-4 sm:p-6">
                         <HeaderSlotProvider slot={headerSlot}>
                             {children}

@@ -24,7 +24,7 @@ export default function SealWatermark({ className = "" }) {
             <img
                 src="/images/ilagan1logo.png"
                 alt=""
-                className="w-[min(60%,34rem)] max-w-none select-none opacity-[0.05]"
+                className="w-[min(60%,34rem)] max-w-none select-none opacity-[0.08]"
             />
         </div>
     );

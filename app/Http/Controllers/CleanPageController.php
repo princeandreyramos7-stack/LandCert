@@ -86,10 +86,6 @@ class CleanPageController extends Controller
             'method' => 'show',
             'controllers' => ['*' => CertificateController::class],
         ],
-        'edit-user' => [
-            'method' => 'editUser',
-            'controllers' => ['*' => SuperAdminController::class],
-        ],
         'upload-receipt' => [
             'method' => 'uploadReceiptPage',
             'controllers' => ['*' => PaymentController::class],

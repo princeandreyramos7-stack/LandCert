@@ -41,6 +41,7 @@ import {
 } from '@/Components/ui/dialog';
 import { useToast } from '@/Components/ui/use-toast';
 import { Toaster } from '@/Components/ui/toaster';
+import SealWatermark from "@/Components/SealWatermark";
 
 /**
  * Display-only formatting for peso amount fields.
@@ -277,7 +278,8 @@ export default function UploadReceipt({ application, existingPayment }) {
                 </header>
 
                 {/* Main Content - Responsive padding */}
-                <div className="flex flex-1 flex-col gap-3 sm:gap-4 p-3 sm:p-4">
+                <div data-page-body className="relative isolate flex flex-1 flex-col gap-3 sm:gap-4 p-3 sm:p-4">
+                    <SealWatermark />
                     {/* Application Info - Responsive */}
                     <Card>
                         <CardHeader>

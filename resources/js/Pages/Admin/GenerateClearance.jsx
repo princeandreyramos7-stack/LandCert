@@ -144,6 +144,14 @@ export default function GenerateCertificate({ application, payment, reviewer, zo
 
                 /* A4 sheet, matching the paper the office prints on. */
                 .certificate-page {
+                    /* City seal watermark. Pre-faded asset: background-image has
+                       no opacity of its own, and this sheet already sets
+                       print-color-adjust: exact so it reaches paper. */
+                    background-image: url('/images/ilagan-seal-watermark.png');
+                    background-repeat: no-repeat;
+                    background-position: center center;
+                    background-size: 55% auto;
+
                     width: 100%;
                     max-width: 210mm;
                     min-height: 297mm;

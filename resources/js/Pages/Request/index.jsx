@@ -17,6 +17,7 @@ import {
 } from "@/Components/ui/sidebar";
 import RequestForm from "@/Components/Request_form";
 import { Toaster } from "@/Components/ui/toaster";
+import SealWatermark from "@/Components/SealWatermark";
 
 export default function RequestPage({ isEditing = false, existingApplication = null }) {
     const { auth } = usePage();
@@ -53,11 +54,18 @@ export default function RequestPage({ isEditing = false, existingApplication = n
                         </Breadcrumb>
                     </div>
                 </header>
-                <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+                <div data-page-body className="relative isolate flex flex-1 flex-col gap-4 p-4 pt-0">
                     {/* Enhanced background with animated gradient */}
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 opacity-60 pointer-events-none" />
                     <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMzYjgyZjYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2YzAtMC41NTItLjQ0OC0xLTEtMXMtMSAuNDQ4LTEgMSAuNDQ4IDEgMSAxIDEtLjQ0OCAxLTF6bS0yIDFjLS41NTIgMC0xLS40NDgtMS0xczQuNDQ4LTEgMS0xIDEgLjQ0OCAxIDEtLjQ0OCAxLTEgMXoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30 pointer-events-none" />
                     
+                    {/* The seal sits after the two decorative washes above and
+                        before the form card below, so it layers between them.
+                        !z-0 overrides the component's own -z-10, which would
+                        otherwise put it beneath those washes and wash it out to
+                        nothing. */}
+                    <SealWatermark className="!z-0" />
+
                     {/* Main content container with enhanced styling */}
                     <div className="relative rounded-2xl border border-gray-200 bg-white/95 backdrop-blur-sm shadow-2xl shadow-blue-200/50 p-8 animate-fadeIn">
                         {/* Decorative gradient border */}

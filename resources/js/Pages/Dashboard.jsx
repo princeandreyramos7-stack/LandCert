@@ -18,6 +18,7 @@ import { Toaster } from "@/Components/ui/toaster";
 import { LiveRefresh } from "@/Components/LiveRefresh";
 import { HeaderSlotProvider } from "@/Components/HeaderSlot";
 import { useState } from "react";
+import SealWatermark from "@/Components/SealWatermark";
 
 export default function Page({ requests = [] }) {
     const { auth } = usePage().props;
@@ -61,8 +62,9 @@ export default function Page({ requests = [] }) {
                 </header>
 
                 {/* Content */}
-                <div className="flex flex-1 flex-col min-h-screen overflow-x-hidden"
+                <div data-page-body className="relative isolate flex flex-1 flex-col min-h-screen overflow-x-hidden"
                     style={{ background: "#f5f7ff" }}>
+                    <SealWatermark />
                     <div className="flex-1 p-4 sm:p-6 overflow-x-hidden max-w-7xl w-full mx-auto">
                         <HeaderSlotProvider slot={headerSlot}>
                             <LiveRefresh only={["requests"]} items={requests} label="applications" className="justify-end mb-4" />

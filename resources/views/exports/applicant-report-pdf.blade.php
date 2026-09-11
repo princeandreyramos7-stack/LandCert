@@ -7,6 +7,12 @@
         @page { size: A4 portrait; margin: 14mm; }
         body { font-family: Arial, sans-serif; font-size: 9px; color: #333; }
 
+        /* City seal behind the report. position:fixed is what makes DomPDF
+           repeat it on every page; the image is pre-faded by the controller,
+           so this does not lean on DomPDF's patchy opacity support. */
+        .watermark { position: fixed; top: 0; left: 0; width: 100%; height: 100%; text-align: center; }
+        .watermark img { width: 60%; margin-top: 18%; }
+
         .letterhead { text-align: center; border-bottom: 2px solid #0d1f5c; padding-bottom: 8px; margin-bottom: 10px; }
         .letterhead .republic { font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: #555; }
         .letterhead .city { font-size: 13px; font-weight: bold; color: #0d1f5c; margin: 1px 0; }
@@ -60,6 +66,10 @@
     </style>
 </head>
 <body>
+    @if (!empty($watermark))
+        <div class="watermark"><img src="{{ $watermark }}" alt=""></div>
+    @endif
+
     <div class="letterhead">
         <div class="republic">Republic of the Philippines</div>
         <div class="city">City of Ilagan, Isabela</div>
