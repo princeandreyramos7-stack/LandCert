@@ -1,0 +1,1 @@
+import{j as e}from"./app-BH-OZSg6.js";function a({className:n=""}){return e.jsx("div",{"aria-hidden":"true",className:`pointer-events-none absolute inset-0 -z-10 flex items-center justify-center overflow-hidden ${n}`,children:e.jsx("img",{src:"/images/ilagan1logo.png",alt:"",className:"w-[min(60%,34rem)] max-w-none select-none opacity-[0.05]"})})}export{a as S};

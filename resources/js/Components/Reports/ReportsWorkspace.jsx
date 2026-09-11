@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Card, CardContent } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
+import { TablePagination } from "@/Components/ui/table-pagination";
 import {
     FileBarChart, User, CalendarDays, UserCheck,
     FileDown, FileSpreadsheet, Search, Printer, Eye, Loader2,
@@ -383,14 +384,37 @@ function SeeApplicationButton({ row, onSeeApplicant, className = "" }) {
     );
 }
 
+const PER_PAGE_CHOICES = [25, 50, 100];
+
 function RowsTable({ rows, onSeeApplicant }) {
+    const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(PER_PAGE_CHOICES[0]);
+
+    // A new report is a new list; staying on page 7 of the last one would show
+    // an empty table for a report that has results.
+    useEffect(() => {
+        setPage(1);
+    }, [rows]);
+
+    const pageCount = Math.max(1, Math.ceil(rows.length / perPage));
+    const safePage = Math.min(page, pageCount);
+    const visible = rows.slice((safePage - 1) * perPage, safePage * perPage);
+
     if (rows.length === 0) return <Empty>No applications match this report.</Empty>;
 
     return (
         <>
+            {/* Paging is for reading on screen only. Printing and the PDF/CSV
+                downloads carry every record — a report that quietly stopped at
+                page one would not be a report of the period at all. */}
+            <div className="hidden print:block">
+                <PrintRows rows={rows} />
+            </div>
+
+            <div className="print:hidden">
             {/* Phones get stacked cards; a nine-column table is unreadable there. */}
             <ul className="space-y-2 md:hidden">
-                {rows.map((row) => (
+                {visible.map((row) => (
                     <li key={row.application_number} className="rounded-lg border border-gray-200 p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                             <span className="font-bold text-[#0d1f5c]">{row.application_number}</span>
@@ -425,7 +449,7 @@ function RowsTable({ rows, onSeeApplicant }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {rows.map((row, i) => (
+                        {visible.map((row, i) => (
                             <tr key={row.application_number} className={i % 2 ? "bg-[#fafbff]" : ""}>
                                 <td className="whitespace-nowrap px-3 py-2 font-semibold text-[#0d1f5c]">
                                     {row.application_number}
@@ -450,7 +474,80 @@ function RowsTable({ rows, onSeeApplicant }) {
                     </tbody>
                 </table>
             </div>
+
+            {/* Rows-per-page sits beside the pager; TablePagination hides itself
+                when everything fits on one page, so the choice would strand
+                without its own guard. */}
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {rows.length > PER_PAGE_CHOICES[0] ? (
+                    <label className="flex items-center gap-2 text-sm text-gray-600">
+                        Rows per page
+                        <select
+                            value={perPage}
+                            onChange={(e) => {
+                                setPerPage(Number(e.target.value));
+                                setPage(1);
+                            }}
+                            className="rounded-md border border-gray-200 px-2 py-1 text-sm focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017]"
+                        >
+                            {PER_PAGE_CHOICES.map((n) => (
+                                <option key={n} value={n}>{n}</option>
+                            ))}
+                        </select>
+                    </label>
+                ) : (
+                    <p className="text-sm text-gray-500">
+                        {rows.length} application{rows.length === 1 ? "" : "s"}
+                    </p>
+                )}
+
+                <TablePagination
+                    currentPage={safePage}
+                    totalItems={rows.length}
+                    perPage={perPage}
+                    onPageChange={setPage}
+                    label="applications"
+                />
+            </div>
+            </div>
         </>
+    );
+}
+
+/**
+ * Every row, unpaged and unstyled for paper. Only rendered inside a print:block
+ * wrapper, so it costs nothing on screen.
+ */
+function PrintRows({ rows }) {
+    return (
+        <table className="w-full border-collapse text-[11px]">
+            <thead>
+                <tr className="text-left">
+                    <th className="border-b border-gray-400 px-1 py-1">Application No.</th>
+                    <th className="border-b border-gray-400 px-1 py-1">Applicant</th>
+                    <th className="border-b border-gray-400 px-1 py-1">Clearance</th>
+                    <th className="border-b border-gray-400 px-1 py-1">Location</th>
+                    <th className="border-b border-gray-400 px-1 py-1">Status</th>
+                    <th className="border-b border-gray-400 px-1 py-1">Reviewed By</th>
+                    <th className="border-b border-gray-400 px-1 py-1 text-right">Fee</th>
+                    <th className="border-b border-gray-400 px-1 py-1">Filed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {rows.map((row) => (
+                    <tr key={row.application_number} style={{ breakInside: "avoid" }}>
+                        <td className="border-b border-gray-200 px-1 py-1">{row.application_number}</td>
+                        <td className="border-b border-gray-200 px-1 py-1">{row.applicant_name}</td>
+                        <td className="border-b border-gray-200 px-1 py-1">{row.project_type}</td>
+                        <td className="border-b border-gray-200 px-1 py-1">{row.location}</td>
+                        <td className="border-b border-gray-200 px-1 py-1">{row.status}</td>
+                        <td className="border-b border-gray-200 px-1 py-1">{row.reviewed_by || "—"}</td>
+                        <td className="border-b border-gray-200 px-1 py-1 text-right">{peso(row.payment_amount) || "—"}</td>
+                        <td className="border-b border-gray-200 px-1 py-1">{date(row.filed_on) || "—"}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
     );
 }
 
