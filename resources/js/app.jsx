@@ -52,11 +52,20 @@ function AppWrapper({ children, auth: initialAuth }) {
             }, 0);
         };
 
-        // Handle browser page show event (for back/forward cache)
+        // A page brought back from the browser's back/forward cache is the
+        // page exactly as it was left - props, session and all - so asking it
+        // whether the user is signed in only repeats what it remembered. On a
+        // protected route it is reloaded instead, and the server answers with
+        // the truth: the page, or the login screen.
         const handlePageShow = (event) => {
-            // If page was loaded from cache (persisted), check auth
-            if (event.persisted) {
+            if (!event.persisted) return;
+            const currentPath = window.location.pathname;
+            const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+            const isPublicRoute = publicRoutes.some(route => currentPath === route || currentPath.startsWith('/reset-password/'));
+            if (isPublicRoute) {
                 checkAuth();
+            } else {
+                window.location.reload();
             }
         };
 

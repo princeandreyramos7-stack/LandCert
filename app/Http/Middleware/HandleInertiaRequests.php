@@ -2,11 +2,30 @@
 
 namespace App\Http\Middleware;
 
+use Closure;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
+    /**
+     * Every page served to a signed-out visitor throws away the key the
+     * browser's page history is encrypted with (see config/inertia.php), so
+     * whatever an earlier session left in that history - a dashboard, an
+     * applicant's file - can no longer be redrawn with the Back button. Back
+     * then has to ask the server, and the server answers as it should for
+     * someone who is not signed in.
+     */
+    public function handle(Request $request, Closure $next)
+    {
+        if (!$request->user()) {
+            Inertia::clearHistory();
+        }
+
+        return parent::handle($request, $next);
+    }
+
     /**
      * The root template that is loaded on the first page visit.
      *

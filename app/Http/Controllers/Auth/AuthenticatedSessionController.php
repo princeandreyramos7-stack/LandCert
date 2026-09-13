@@ -34,6 +34,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // A fresh session gets a fresh history key: the pages the browser
+        // remembers from before this sign-in (the login screen, or another
+        // account's pages) cannot be brought back with the Back button.
+        Inertia::clearHistory();
+
+
         // Redirect based on user type.
         //
         // Staff always land on their dashboard. `intended()` is deliberately not
