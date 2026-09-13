@@ -82,14 +82,20 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     
     // Requirement document routes (for viewing/deleting only - upload is now in Step 4)
     Route::delete('/requirements/{id}', [\App\Http\Controllers\RequirementDocumentController::class, 'destroy'])->name('requirements.destroy');
-    Route::get('/requirements/{id}/view', [\App\Http\Controllers\RequirementDocumentController::class, 'view'])->name('requirements.view');
+    // Pictures, not pages: one report shows a dozen of these at once, and its
+    // printed pack shows them again, so they get a limit of their own rather
+    // than eating the group's sixty a minute and leaving the later scans as
+    // blank boxes on the printout.
+    Route::get('/requirements/{id}/view', [\App\Http\Controllers\RequirementDocumentController::class, 'view'])
+        ->withoutMiddleware('throttle:60,1')->middleware('throttle:300,1')->name('requirements.view');
     
     // Payment receipt upload routes
     Route::get('/receipt/upload/{requestId}', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'upload-receipt', $id)); })->name('receipt.upload.page');
     
     // Payment routes for applicants
     Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
-    Route::get('/payments/{payment}/receipt', [PaymentController::class, 'viewReceipt'])->name('payments.receipt.view');
+    Route::get('/payments/{payment}/receipt', [PaymentController::class, 'viewReceipt'])
+        ->withoutMiddleware('throttle:60,1')->middleware('throttle:300,1')->name('payments.receipt.view');
 
     // Certificate download/preview (applicant-facing, ownership checked in controller)
     Route::get('/certificate/{certificate}/download', [CertificateController::class, 'applicantDownload'])->name('certificate.download');

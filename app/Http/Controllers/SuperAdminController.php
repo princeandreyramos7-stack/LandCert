@@ -361,7 +361,7 @@ class SuperAdminController extends Controller
             'user', 
             'reports', 
             'applicant.corporation', 
-            'applicant.representative',
+            'applicant.primaryRepresentative',
             'project', 
             'location', 
             'property'
@@ -378,8 +378,8 @@ class SuperAdminController extends Controller
                 'applicant_address' => $request->applicant->applicant_address ?? 'N/A',
                 'corporation_name' => $request->applicant->corporation->corporation_name ?? null,
                 'corporation_address' => $request->applicant->corporation->corporation_address ?? null,
-                'authorized_representative_name' => $request->applicant->representative->representative_name ?? null,
-                'authorized_representative_address' => $request->applicant->representative->representative_address ?? null,
+                'authorized_representative_name' => $request->applicant->primaryRepresentative->representative_name ?? null,
+                'authorized_representative_address' => $request->applicant->primaryRepresentative->representative_address ?? null,
                 'authorization_letter_path' => $request->authorization_letter_path,
                 'project_type' => $request->project->project_type ?? 'N/A',
                 'project_nature' => $request->project->project_nature ?? 'N/A',
@@ -1728,30 +1728,7 @@ class SuperAdminController extends Controller
             ->whereNotNull('signature_path')
             ->first();
 
-        $applicationData = [
-            'id' => $request->id,
-            'application_number' => $request->application_number,
-            'decision_number' => $request->decision_number,
-            'status' => $request->status,
-            'created_at' => $request->created_at,
-            'updated_at' => $request->updated_at,
-            'applicant_name' => $request->applicant?->applicant_name,
-            'applicant_address' => $request->applicant?->applicant_address,
-            'corporation_name' => $request->applicant?->corporation?->corporation_name,
-            'corporation_address' => $request->applicant?->corporation?->corporation_address,
-            'project_type' => $request->project?->project_type,
-            'project_nature' => $request->project?->project_nature,
-            'project_cost' => $request->project?->project_cost,
-            'project_location_street' => $request->location?->street_address,
-            'project_location_barangay' => $request->location?->barangay,
-            'project_location_municipality' => $request->location?->city_municipality,
-            'right_over_land' => $request->property?->right_over_land,
-            'lot_area_sqm' => $request->property?->lot_area_sqm,
-            // Filled in by the Zoning Officer at issuance time.
-            'lot_number' => $request->property?->lot_number,
-            'tax_declaration_no' => $request->property?->tax_declaration_no,
-            'zone_classification' => $request->property?->zone_classification ?: $request->property?->existing_land_use,
-        ];
+        $applicationData = \App\Services\ApplicationDocuments::issuance($request);
 
         return \Inertia\Inertia::render('Admin/GenerateCertificate', [
             'application' => $applicationData,
@@ -1809,30 +1786,7 @@ class SuperAdminController extends Controller
             ->whereNotNull('signature_path')
             ->first();
 
-        $applicationData = [
-            'id' => $request->id,
-            'application_number' => $request->application_number,
-            'decision_number' => $request->decision_number,
-            'status' => $request->status,
-            'created_at' => $request->created_at,
-            'updated_at' => $request->updated_at,
-            'applicant_name' => $request->applicant?->applicant_name,
-            'applicant_address' => $request->applicant?->applicant_address,
-            'corporation_name' => $request->applicant?->corporation?->corporation_name,
-            'corporation_address' => $request->applicant?->corporation?->corporation_address,
-            'project_type' => $request->project?->project_type,
-            'project_nature' => $request->project?->project_nature,
-            'project_cost' => $request->project?->project_cost,
-            'project_location_street' => $request->location?->street_address,
-            'project_location_barangay' => $request->location?->barangay,
-            'project_location_municipality' => $request->location?->city_municipality,
-            'right_over_land' => $request->property?->right_over_land,
-            'lot_area_sqm' => $request->property?->lot_area_sqm,
-            // Filled in by the Zoning Officer at issuance time.
-            'lot_number' => $request->property?->lot_number,
-            'tax_declaration_no' => $request->property?->tax_declaration_no,
-            'zone_classification' => $request->property?->zone_classification ?: $request->property?->existing_land_use,
-        ];
+        $applicationData = \App\Services\ApplicationDocuments::issuance($request);
 
         return \Inertia\Inertia::render('Admin/GenerateClearance', [
             'application' => $applicationData,
@@ -1883,30 +1837,7 @@ class SuperAdminController extends Controller
             ->whereNotNull('signature_path')
             ->first();
 
-        $applicationData = [
-            'id' => $request->id,
-            'application_number' => $request->application_number,
-            'decision_number' => $request->decision_number,
-            'status' => $request->status,
-            'created_at' => $request->created_at,
-            'updated_at' => $request->updated_at,
-            'applicant_name' => $request->applicant?->applicant_name,
-            'applicant_address' => $request->applicant?->applicant_address,
-            'corporation_name' => $request->applicant?->corporation?->corporation_name,
-            'corporation_address' => $request->applicant?->corporation?->corporation_address,
-            'project_type' => $request->project?->project_type,
-            'project_nature' => $request->project?->project_nature,
-            'project_cost' => $request->project?->project_cost,
-            'project_location_street' => $request->location?->street_address,
-            'project_location_barangay' => $request->location?->barangay,
-            'project_location_municipality' => $request->location?->city_municipality,
-            'right_over_land' => $request->property?->right_over_land,
-            'lot_area_sqm' => $request->property?->lot_area_sqm,
-            // Filled in by the Zoning Officer at issuance time.
-            'lot_number' => $request->property?->lot_number,
-            'tax_declaration_no' => $request->property?->tax_declaration_no,
-            'zone_classification' => $request->property?->zone_classification ?: $request->property?->existing_land_use,
-        ];
+        $applicationData = \App\Services\ApplicationDocuments::issuance($request);
 
         return \Inertia\Inertia::render('Admin/GenerateOrderOfPayment', [
             'application' => $applicationData,

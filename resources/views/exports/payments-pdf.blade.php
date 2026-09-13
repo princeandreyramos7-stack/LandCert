@@ -101,6 +101,8 @@
     </style>
 </head>
 <body>
+    @include('exports.partials.letterhead')
+
     <div class="header">
         <h1>Payment Records Export</h1>
         <p>Generated on {{ $exportDate }}</p>

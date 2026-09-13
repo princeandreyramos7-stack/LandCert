@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Request as RequestModel;
 use App\Models\User;
+use App\Services\ApplicationDocuments;
+use App\Support\ReportLogos;
+use App\Support\Xlsx;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -189,9 +192,9 @@ class SuperAdminReportsController extends Controller
         $format = $validated['format'] ?? 'pdf';
 
         // The applicant PDF is the transaction file, not a one-line-per-application
-        // table, so it gets its own document. The CSV stays tabular either way -
-        // a spreadsheet of nested documents would not be usable.
-        if ($type === 'applicant' && $format !== 'csv') {
+        // table, so it gets its own document. The spreadsheets stay tabular
+        // either way - a sheet of nested documents would not be usable.
+        if ($type === 'applicant' && $format === 'pdf') {
             return $this->applicantPdf($validated['applicant']);
         }
 
@@ -201,9 +204,11 @@ class SuperAdminReportsController extends Controller
             'officer' => $this->officerReport($validated['officer'] ?? 'all'),
         };
 
-        return $format === 'csv'
-            ? $this->csv($rows, $slug)
-            : $this->pdf($rows, $title, $subtitle, $slug);
+        return match ($format) {
+            'xlsx' => $this->xlsx($rows, $title, $subtitle, $slug),
+            'csv' => $this->csv($rows, $title, $subtitle, $slug),
+            default => $this->pdf($rows, $title, $subtitle, $slug),
+        };
     }
 
     /**
@@ -214,7 +219,7 @@ class SuperAdminReportsController extends Controller
     {
         return $request->validate([
             'type' => 'required|in:' . implode(',', $this->allowedTypes()),
-            'format' => 'nullable|in:pdf,csv',
+            'format' => 'nullable|in:pdf,xlsx,csv',
             'applicant' => 'required_if:type,applicant|nullable|string|max:255',
             'year' => 'required_if:type,period|nullable|integer|min:2000|max:2100',
             // "all" means the whole year, so this is not simply a month number.
@@ -318,21 +323,23 @@ class SuperAdminReportsController extends Controller
      */
     private function applicantTransactions(string $applicantName)
     {
-        return RequestModel::with([
-            'applicant:id,applicant_name,applicant_address,applicant_contact,applicant_type',
-            'project:id,request_id,project_type,project_nature,project_cost',
-            'location:id,request_id,street_address,barangay,city_municipality,province',
-            'property:id,request_id,lot_number,lot_area_sqm,right_over_land,existing_land_use',
+        // Countersigns every issued document, so looked up once rather than
+        // once per application.
+        $zoningAdministrator = ApplicationDocuments::signer(ApplicationDocuments::zoningAdministrator());
+
+        // The documents are drawn in full, so the relations they read are
+        // loaded whole rather than column by column.
+        return RequestModel::with(array_merge(ApplicationDocuments::FORM_RELATIONS, [
             'report',
             'payments',
             'requirementDocuments:id,request_id,requirement_name,original_filename,file_path,created_at',
             'certificates:id,request_id,certificate_number,status,issued_at,released_at',
-        ])
+        ]))
             ->whereHas('applicant', fn ($a) => $a->where('applicant_name', $applicantName))
             ->orderBy('created_at')
             ->get()
             ->values()
-            ->map(function ($request, $index) {
+            ->map(function ($request, $index) use ($zoningAdministrator) {
                 $report = $request->report;
                 $reviewer = $report?->resolveReviewer();
                 $rawStatus = RequestModel::deriveStatus($request->status, $report?->evaluation);
@@ -353,6 +360,25 @@ class SuperAdminReportsController extends Controller
                     ->first();
 
                 $certificate = $request->certificates->sortByDesc('issued_at')->first();
+
+                // What the certificate, clearance and order of payment are
+                // drawn from - the same arrays their own pages receive, so the
+                // report shows the same document. The verified payment is what
+                // those documents print.
+                $issuance = ApplicationDocuments::issuance($request);
+                $verifiedPayment = $request->payments
+                    ->where('payment_status', 'verified')
+                    ->sortByDesc('created_at')
+                    ->first();
+                $signers = [
+                    'payment' => $verifiedPayment ? [
+                        'amount' => $verifiedPayment->amount,
+                        'payment_date' => $verifiedPayment->payment_date,
+                        'receipt_number' => $verifiedPayment->receipt_number,
+                    ] : null,
+                    'reviewer' => ApplicationDocuments::signer($reviewer),
+                    'zoning_administrator' => $zoningAdministrator,
+                ];
 
                 return [
                     'step' => $index + 1,
@@ -377,6 +403,7 @@ class SuperAdminReportsController extends Controller
                         'reviewed_by' => $reviewer->name ?? null,
                         'date_reviewed' => $report?->date_reported,
                         'print_url' => route($this->routePrefix() . '.requests.print', $request->id),
+                        'sheet' => ApplicationDocuments::form($request),
                     ],
 
                     'order_of_payment' => [
@@ -388,6 +415,12 @@ class SuperAdminReportsController extends Controller
                         'note' => $orderPayable
                             ? null
                             : 'Issued once the application is approved.',
+                        // What the slip is drawn from, so the panel can show
+                        // the document itself. Same shape the generator page
+                        // receives, because it is the same sheet component.
+                        'sheet' => $orderPayable
+                            ? $signers + ['application' => $issuance, 'payment_amount' => $fee]
+                            : null,
                     ],
 
                     'payment' => $payment ? [
@@ -431,24 +464,51 @@ class SuperAdminReportsController extends Controller
                         'released_at' => $certificate->released_at,
                     ] : null,
 
-                    // The issued documents themselves. Both generators read the
-                    // application rather than a stored file, so they are offered
-                    // from the same point the decision was reached - an approved
-                    // application has them, an undecided one has nothing to show.
-                    'documents' => [
-                        'available' => $orderPayable,
-                        'certificate_url' => $orderPayable
-                            ? route($this->routePrefix() . '.generate-certificate', $request->id)
-                            : null,
-                        'clearance_url' => $orderPayable
-                            ? route($this->routePrefix() . '.generate-clearance', $request->id)
-                            : null,
-                        'note' => $orderPayable
-                            ? null
-                            : 'Issued once the application is approved.',
-                    ],
+                    // The one document this application is for. An applicant
+                    // files for a single kind of clearance, and the Certificates
+                    // page already encodes which generator produces it: ZC is a
+                    // Zoning Certification, everything else is a clearance or
+                    // permit. Offering both here was offering one that does not
+                    // apply.
+                    //
+                    // The generator reads the application rather than a stored
+                    // file, so it is offered from the point the decision was
+                    // reached - an approved application has it, an undecided
+                    // one has nothing to show.
+                    'document' => $this->issuedDocument($request, $orderPayable, $signers + ['application' => $issuance]),
                 ];
             });
+    }
+
+    /**
+     * Which document an application is for, by its clearance type, and where
+     * the generator for it lives. Mirrors the rule on the Certificates page.
+     */
+    private function issuedDocument($request, bool $available, array $sheet): array
+    {
+        $type = strtoupper(trim((string) ($request->project?->project_type ?? '')));
+
+        $label = match ($type) {
+            'ZC' => 'Zoning Certification',
+            'CZC' => 'Certificate of Zoning Compliance',
+            'SUP' => 'Special Use Permit',
+            'TUP' => 'Temporary Use Permit',
+            default => 'Locational Clearance',
+        };
+
+        $generator = $type === 'ZC' ? 'generate-certificate' : 'generate-clearance';
+
+        return [
+            'available' => $available,
+            'type' => $type ?: null,
+            'label' => $label,
+            'url' => $available
+                ? route($this->routePrefix() . '.' . $generator, $request->id)
+                : null,
+            'note' => $available ? null : 'Issued once the application is approved.',
+            // What the document is drawn from, so the report can show it.
+            'sheet' => $available ? $sheet : null,
+        ];
     }
 
     /* ── Shared row builder ───────────────────────────────────────────────── */
@@ -692,10 +752,8 @@ class SuperAdminReportsController extends Controller
      */
     private function shrinkScans(array $app, array &$temporary): array
     {
-        if (($app['payment']['receipt_kind'] ?? null) === 'image') {
-            $app['payment']['receipt_path'] = $this->downscale($app['payment']['receipt_path'], $temporary);
-        }
-
+        // Only the requirements are reproduced; the receipt is not, so it is
+        // not re-encoded either.
         $app['requirements'] = collect($app['requirements'])
             ->map(function ($doc) use (&$temporary) {
                 if ($doc['kind'] === 'image') {
@@ -798,20 +856,182 @@ class SuperAdminReportsController extends Controller
         return $pdf->download("cpdo-report-{$slug}-" . now()->format('Ymd-His') . '.pdf');
     }
 
-    private function csv($rows, string $slug)
+    /**
+     * The report as an Excel workbook.
+     *
+     * Laid out the way the printed one is: the office letterhead, the report's
+     * title and subject, the summary, then the table, then who prepared it -
+     * with the header row filled in the office's navy, the columns sized to
+     * their contents, dates that sort as dates, fees that add up, a filter on
+     * the table and the header kept in view as it scrolls. Opened in Excel it
+     * reads as the report, not as the data behind one.
+     */
+    private function xlsx($rows, string $title, string $subtitle, string $slug)
+    {
+        $filename = "cpdo-report-{$slug}-" . now()->format('Ymd-His') . '.xlsx';
+        $generatedBy = auth()->user()?->name ?? 'Zoning Administrator';
+        $statusCounts = $rows->countBy('status')->sortKeys();
+        $totalFees = $rows->sum(fn ($row) => (float) ($row->payment_amount ?? 0));
+        $columns = 12;
+        $date = fn ($value) => $value ? Carbon::parse($value) : null;
+        $money = fn ($value) => $value !== null && $value !== '' ? (float) $value : null;
+
+        $widths = [5, 17, 30, 16, 12, 26, 44, 28, 26, 19, 14, 19];
+        $sheet = (new Xlsx($this->sheetName($slug)))->widths($widths);
+
+        // Letterhead: the city seal and the Ilagan 2030 mark either side of
+        // the office's lines, as the printed documents carry it. The lines
+        // are centred across the whole sheet, so the pictures are placed by
+        // pixel from the centre rather than in the edge columns, which on a
+        // twelve-column sheet would put them half a screen away from the text.
+        $logo = 66;
+        $centre = (int) ($sheet->widthPixels() / 2);
+        $reach = 170;   // half the width of the widest letterhead line, plus a gap
+        $y = 10;        // centred against the three 20/24/20pt rows
+        if ($seal = ReportLogos::seal()) {
+            $sheet->imageAt($seal, $centre - $reach - $logo, 0, $y, $logo);
+        }
+        if ($mark = ReportLogos::mark()) {
+            $sheet->imageAt($mark, $centre + $reach, 0, $y, $logo);
+        }
+        $sheet->row([['Republic of the Philippines', 'letterhead']], 20)->mergeLastRow($columns);
+        $sheet->row([['City of Ilagan, Isabela', 'city']], 24)->mergeLastRow($columns);
+        $sheet->row([['City Planning & Development Office', 'letterhead']], 20)->mergeLastRow($columns);
+        $sheet->blank();
+
+        // Title block
+        $sheet->row([[strtoupper($title), 'title']], 30)->mergeLastRow($columns);
+        $sheet->row([[$subtitle, 'subtitle']], 22)->mergeLastRow($columns);
+        $sheet->row([['Generated ' . now()->format('F j, Y \a\t g:i A') . ' by ' . $generatedBy, 'meta']])->mergeLastRow($columns);
+        $sheet->blank();
+
+        // Summary
+        $sheet->row([['Applications', 'label'], [$rows->count(), 'value']]);
+        foreach ($statusCounts as $status => $count) {
+            $sheet->row([[$status, 'label'], [$count, 'value']]);
+        }
+        $sheet->row([['Fees assessed (PHP)', 'label'], [$totalFees, 'number']]);
+        $sheet->blank();
+
+        // The table
+        $sheet->row([
+            ['#', 'header'], ['Application No.', 'header'], ['Applicant', 'header'], ['Contact', 'header'],
+            ['Locational Clearance', 'header'], ['Project Nature', 'header'], ['Location', 'header'],
+            ['Status', 'header'], ['Reviewed By', 'header'], ['Date Reviewed', 'header'],
+            ['Fee (PHP)', 'header'], ['Filed On', 'header'],
+        ], 24)
+            ->freezeBelowLastRow()
+            ->repeatLastRowWhenPrinting();
+        $headerRow = $sheet->lastRow();
+
+        foreach ($rows->values() as $i => $row) {
+            $alt = $i % 2 === 1 ? 'Alt' : '';
+            $sheet->row([
+                [$i + 1, "int{$alt}"],
+                [$row->application_number, "text{$alt}"],
+                [$row->applicant_name, "text{$alt}"],
+                [$row->applicant_contact, "text{$alt}"],
+                [$row->project_type, "text{$alt}"],
+                [$row->project_nature, "text{$alt}"],
+                [$row->location, "text{$alt}"],
+                [$row->status, "text{$alt}"],
+                [$row->reviewed_by, "text{$alt}"],
+                [$date($row->date_reported), "date{$alt}"],
+                [$money($row->payment_amount), "number{$alt}"],
+                [$date($row->filed_on), "date{$alt}"],
+            ]);
+        }
+
+        $sheet->row([
+            ['', 'totalBlank'], ['TOTAL', 'totalLabel'],
+            [$rows->count() . ' application' . ($rows->count() === 1 ? '' : 's'), 'totalLabel'],
+            ['', 'totalBlank'], ['', 'totalBlank'], ['', 'totalBlank'], ['', 'totalBlank'],
+            ['', 'totalBlank'], ['', 'totalBlank'], ['', 'totalBlank'],
+            [$totalFees, 'totalNumber'], ['', 'totalBlank'],
+        ]);
+
+        // The filter covers the table only, header to last data row.
+        $lastDataRow = $sheet->lastRow() - 1;
+        if ($lastDataRow > $headerRow) {
+            $sheet->filter($headerRow, $lastDataRow, $columns);
+        }
+        $sheet->blank();
+
+        // Sign-off
+        $sheet->row([['This report was generated from the CPDO Land Use Certification System records.', 'note']])->mergeLastRow($columns);
+        $sheet->row([['Prepared by', 'label'], [$generatedBy, 'value']]);
+
+        return response()
+            ->download($sheet->save(), $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])
+            ->deleteFileAfterSend(true);
+    }
+
+    /** The sheet's tab name: short, because Excel allows 31 characters. */
+    private function sheetName(string $slug): string
+    {
+        return match (true) {
+            str_starts_with($slug, 'period') => 'Applications Filed',
+            str_starts_with($slug, 'applicant') => 'By Applicant',
+            str_starts_with($slug, 'officer') => 'By Zoning Officer',
+            default => 'Report',
+        };
+    }
+
+    /**
+     * The report as plain CSV, for tools that want the rows and nothing else.
+     * Same arrangement as the workbook, without the styling a CSV cannot hold.
+     */
+    private function csv($rows, string $title, string $subtitle, string $slug)
     {
         $filename = "cpdo-report-{$slug}-" . now()->format('Ymd-His') . '.csv';
+        $generatedBy = auth()->user()?->name ?? 'Zoning Administrator';
+        $statusCounts = $rows->countBy('status')->sortKeys();
+        $totalFees = $rows->sum(fn ($row) => (float) ($row->payment_amount ?? 0));
+        $longDate = fn ($value) => $value ? Carbon::parse($value)->format('F j, Y') : '';
 
-        return response()->streamDownload(function () use ($rows) {
+        return response()->streamDownload(function () use ($rows, $title, $subtitle, $generatedBy, $statusCounts, $totalFees, $longDate) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, [
-                'Application No.', 'Applicant', 'Contact', 'Locational Clearance',
-                'Project Nature', 'Location', 'Status', 'Reviewed By',
-                'Date Reviewed', 'Fee', 'Filed On',
-            ]);
 
-            foreach ($rows as $row) {
-                fputcsv($out, [
+            // Byte-order mark: without it Excel reads the file as ANSI and
+            // turns every accented name into mojibake.
+            fwrite($out, "\xEF\xBB\xBF");
+
+            $line = fn (...$cells) => fputcsv($out, $cells);
+            $blank = fn () => fwrite($out, "\n");
+
+            // Letterhead
+            $line('Republic of the Philippines');
+            $line('City of Ilagan, Isabela');
+            $line('City Planning & Development Office');
+            $blank();
+
+            // Title block
+            $line(strtoupper($title));
+            $line($subtitle);
+            $line('Generated ' . now()->format('F j, Y \a\t g:i A') . ' by ' . $generatedBy);
+            $blank();
+
+            // Summary
+            $line('SUMMARY');
+            $line('Applications', $rows->count());
+            foreach ($statusCounts as $status => $count) {
+                $line($status, $count);
+            }
+            $line('Fees assessed (PHP)', number_format($totalFees, 2, '.', ''));
+            $blank();
+
+            // The table
+            $line(
+                '#', 'Application No.', 'Applicant', 'Contact', 'Locational Clearance',
+                'Project Nature', 'Location', 'Status', 'Reviewed By',
+                'Date Reviewed', 'Fee (PHP)', 'Filed On'
+            );
+
+            foreach ($rows->values() as $i => $row) {
+                $line(
+                    $i + 1,
                     $row->application_number,
                     $row->applicant_name,
                     $row->applicant_contact,
@@ -820,14 +1040,23 @@ class SuperAdminReportsController extends Controller
                     $row->location,
                     $row->status,
                     $row->reviewed_by,
-                    $row->date_reported ? Carbon::parse($row->date_reported)->format('Y-m-d') : '',
-                    $row->payment_amount,
-                    $row->filed_on ? Carbon::parse($row->filed_on)->format('Y-m-d') : '',
-                ]);
+                    $longDate($row->date_reported),
+                    $row->payment_amount !== null && $row->payment_amount !== ''
+                        ? number_format((float) $row->payment_amount, 2, '.', '')
+                        : '',
+                    $longDate($row->filed_on)
+                );
             }
 
+            $line('', 'TOTAL', $rows->count() . ' application' . ($rows->count() === 1 ? '' : 's'), '', '', '', '', '', '', '', number_format($totalFees, 2, '.', ''), '');
+            $blank();
+
+            // Sign-off
+            $line('This report was generated from the CPDO Land Use Certification System records.');
+            $line('Prepared by', $generatedBy);
+
             fclose($out);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     /**

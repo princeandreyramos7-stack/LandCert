@@ -1,10 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import { Card, CardContent } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { TablePagination } from "@/Components/ui/table-pagination";
 import SealWatermark from "@/Components/SealWatermark";
+import FitToWidth from "@/Components/FitToWidth";
+import OrderOfPaymentSheet from "@/Components/OrderOfPaymentSheet";
+import CertificateSheet from "@/Components/CertificateSheet";
+import ClearanceSheet from "@/Components/ClearanceSheet";
+import ApplicationFormSheet from "@/Components/ApplicationFormSheet";
 import {
     FileBarChart, User, CalendarDays, UserCheck,
     FileDown, FileSpreadsheet, Search, Printer, Eye, Loader2,
@@ -63,6 +71,51 @@ const date = (value, withTime = false) => {
 
 const titleCase = (value) =>
     value ? String(value).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : null;
+
+/**
+ * Resolves once every picture in the printed pack under `root` has either
+ * loaded or given up — or after `timeoutMs`, so a single stuck download cannot
+ * hold the printer hostage. A picture that fails is printed as the browser's
+ * broken-image box, which is honest about what happened; a picture that has
+ * not finished yet would print as nothing at all.
+ *
+ * Only the pack's pictures: the on-screen previews load lazily as they scroll
+ * into view, and one that never has would be waited on forever.
+ */
+async function waitForImages(root, timeoutMs = 30000) {
+    if (!root) return;
+    const images = Array.from(root.querySelectorAll(".pack-page img")).filter((img) => img.loading !== "lazy");
+    const broken = (img) => img.complete && img.naturalWidth === 0;
+    const settle = (img) =>
+        new Promise((resolve) => {
+            const done = () => resolve();
+            if (img.complete && img.naturalWidth > 0) {
+                // Loaded, but possibly not decoded; decoding it now means the
+                // printer does not have to.
+                (img.decode ? img.decode() : Promise.resolve()).then(done, done);
+                return;
+            }
+            if (img.complete) return done(); // failed
+            img.addEventListener("load", () => (img.decode ? img.decode() : Promise.resolve()).then(done, done), { once: true });
+            img.addEventListener("error", done, { once: true });
+        });
+    const deadline = new Promise((resolve) => setTimeout(resolve, timeoutMs));
+
+    await Promise.race([Promise.all(images.map(settle)), deadline]);
+
+    // A download the browser abandoned part-way — it does that when the same
+    // scan is asked for by several pictures at once — leaves a broken image.
+    // One more try, alone this time, usually brings it in.
+    const retry = images.filter(broken);
+    if (retry.length) {
+        retry.forEach((img) => {
+            const src = img.getAttribute("src");
+            img.removeAttribute("src");
+            img.setAttribute("src", src);
+        });
+        await Promise.race([Promise.all(retry.map(settle)), deadline]);
+    }
+}
 
 /* ── Small shared pieces ──────────────────────────────────────────────────── */
 
@@ -193,10 +246,16 @@ function DocPreview({ kind, url, label, onZoom, className = "h-48" }) {
     );
 }
 
-/** Full-size view of a document image. */
+/**
+ * Full-size view of a document — a scan, or one of the drawn sheets.
+ *
+ * Rendered onto <body>: the report sits inside the layout's main pane, which
+ * is a stacking context of its own, and a fixed overlay opened in there slides
+ * under the sidebar and header instead of over them.
+ */
 function Lightbox({ item, onClose }) {
     if (!item) return null;
-    return (
+    return createPortal(
         <div
             role="dialog"
             aria-modal="true"
@@ -213,17 +272,123 @@ function Lightbox({ item, onClose }) {
                 <X className="h-5 w-5" />
             </button>
             <figure className="max-h-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
-                <img src={item.url} alt={item.label} className="max-h-[80vh] w-auto rounded-lg bg-white object-contain" />
+                {item.render ? (
+                    <div className="max-h-[85vh] w-[min(92vw,60rem)] overflow-auto rounded-lg bg-gray-200 p-2">
+                        <div>
+                            <FitToWidth>{item.render()}</FitToWidth>
+                        </div>
+                    </div>
+                ) : (
+                    <img src={item.url} alt={item.label} className="max-h-[80vh] w-auto rounded-lg bg-white object-contain" />
+                )}
                 <figcaption className="mt-2 text-center text-sm text-white/80">{item.label}</figcaption>
             </figure>
+        </div>,
+        document.body
+    );
+}
+
+/**
+ * One of the drawn documents, small, beside its particulars — the same place
+ * and size the receipt scan gets, so every section reads the same way. Click
+ * to see it full size. Screen only: the printed pack draws it at full size.
+ */
+function SheetThumb({ label, onZoom, full, children }) {
+    // `full` is what the enlarged view shows when the thumbnail is only part
+    // of the document — the form's first sheet standing in for both.
+    const open = () => onZoom?.({ label, render: () => full ?? children });
+    return (
+        <figure className="m-0 print:hidden">
+            <div
+                role="button"
+                tabIndex={0}
+                title="Click to enlarge"
+                onClick={open}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } }}
+                className="block w-full cursor-zoom-in overflow-hidden rounded-md border border-gray-200 bg-gray-100 p-2 focus:outline-none focus:ring-2 focus:ring-[#d4a017]"
+            >
+                {/* FitToWidth sizes itself to its parent's clientWidth, padding
+                    included, so it gets an unpadded parent of its own. */}
+                <div>
+                    <FitToWidth>{children}</FitToWidth>
+                </div>
+            </div>
+            <figcaption className="mt-1 text-center text-[11px] text-gray-400">{label}</figcaption>
+        </figure>
+    );
+}
+
+/* ── The drawn documents ──────────────────────────────────────────────────── */
+
+/**
+ * The certificate or clearance this application is for, drawn from the same
+ * data and the same sheet as its own page. ZC is issued a certificate; every
+ * other category a clearance — the rule the Certificates page applies.
+ */
+function IssuedDocumentSheet({ document }) {
+    const s = document?.sheet;
+    if (!s) return null;
+
+    return document.type === "ZC" ? (
+        <CertificateSheet
+            compact
+            application={s.application}
+            payment={s.payment}
+            zoningAdministrator={s.zoning_administrator}
+        />
+    ) : (
+        <ClearanceSheet
+            compact
+            application={s.application}
+            payment={s.payment}
+            reviewer={s.reviewer}
+            zoningAdministrator={s.zoning_administrator}
+        />
+    );
+}
+
+function OrderSheet({ order }) {
+    const s = order?.sheet;
+    if (!s) return null;
+    return (
+        <OrderOfPaymentSheet
+            compact
+            application={s.application}
+            payment={s.payment}
+            paymentAmount={s.payment_amount}
+            reviewer={s.reviewer}
+            zoningAdministrator={s.zoning_administrator}
+        />
+    );
+}
+
+/** Particulars on the left, the document on the right — the receipt's layout. */
+function WithSheet({ sheet, children }) {
+    if (!sheet) return children;
+    return (
+        <div className="grid gap-4 md:grid-cols-[1fr_18rem]">
+            <div className="min-w-0">{children}</div>
+            {sheet}
         </div>
     );
 }
 
 /* ── One application, as a step in the applicant's history ────────────────── */
 
+/**
+ * A Zoning Certification (ZC) is requested on its requirements alone — there
+ * is no application form to file for one — so the form is left out of its
+ * file, on screen and on paper.
+ */
+const filesApplicationForm = (app) => app.document?.type !== "ZC";
+
+/** The notarized application form the applicant handed in, if they have. */
+const notarizedForm = (app) => app.requirements.find((d) => d.is_application_form);
+
 function ApplicationDetail({ app, total, onZoom }) {
-    const { form, order_of_payment: order, payment, requirements, certificate, documents } = app;
+    const { form, order_of_payment: order, payment, requirements, certificate, document } = app;
+    const hasForm = filesApplicationForm(app);
+    const notarized = hasForm ? notarizedForm(app) : null;
 
     return (
         <div className="space-y-3">
@@ -238,35 +403,101 @@ function ApplicationDetail({ app, total, onZoom }) {
                 <StatusPill status={app.status} />
             </div>
 
+            {/* The document this application is for, first — it is what the
+                whole file exists to produce. One document, named for what was
+                applied for, rather than a certificate and a clearance offered
+                side by side when only one of them ever applies. */}
+            <Section
+                icon={Award}
+                title={document?.label ?? "Issued Document"}
+                action={document?.available ? <DocLink href={document.url}>Open document</DocLink> : null}
+            >
+                {document?.available ? (
+                    <WithSheet
+                        sheet={document.sheet && (
+                            <SheetThumb label={document.label} onZoom={onZoom}>
+                                <IssuedDocumentSheet document={document} />
+                            </SheetThumb>
+                        )}
+                    >
+                        {certificate ? (
+                            <dl className="divide-y divide-gray-50">
+                                <Field label="Certificate No.">{certificate.number}</Field>
+                                <Field label="Status">{titleCase(certificate.status)}</Field>
+                                <Field label="Issued">{date(certificate.issued_at)}</Field>
+                                <Field label="Released">{date(certificate.released_at)}</Field>
+                            </dl>
+                        ) : (
+                            <Empty>No certificate recorded yet — the {document.label} is generated from this application.</Empty>
+                        )}
+                    </WithSheet>
+                ) : (
+                    <Empty>{document?.note}</Empty>
+                )}
+            </Section>
+
+            {/* The form as filed: the notarized copy the applicant handed in
+                where there is one, the system's own drawing of it otherwise.
+                A ZC has no form, so its section is the particulars alone. */}
             <Section
                 icon={FileText}
-                title="Application Form"
-                action={<DocLink href={form.print_url}>Open form</DocLink>}
+                title={hasForm ? "Application Form" : "Application Details"}
+                action={hasForm ? <DocLink href={form.print_url}>Open form</DocLink> : null}
             >
-                <dl className="divide-y divide-gray-50">
-                    <Field label="Applicant">
-                        {form.applicant_name}
-                        {form.applicant_type ? ` (${titleCase(form.applicant_type)})` : ""}
-                    </Field>
-                    <Field label="Address">{form.address}</Field>
-                    <Field label="Contact">{form.contact}</Field>
-                    <Field label="Locational Clearance">
-                        {form.project_type}
-                        {form.project_nature ? ` — ${form.project_nature}` : ""}
-                    </Field>
-                    <Field label="Project Location">{form.location}</Field>
-                    <Field label="Lot Area">
-                        {form.lot_area_sqm ? `${Number(form.lot_area_sqm).toLocaleString()} sqm` : null}
-                    </Field>
-                    <Field label="Right Over Land">{form.right_over_land}</Field>
-                    <Field label="Existing Land Use">{form.existing_land_use}</Field>
-                    <Field label="Reviewed By">
-                        {form.reviewed_by
-                            ? `${form.reviewed_by}${date(form.date_reviewed) ? ` · ${date(form.date_reviewed)}` : ""}`
-                            : null}
-                    </Field>
-                    <Field label="Decision No.">{app.decision_number}</Field>
-                </dl>
+                <WithSheet
+                    sheet={
+                        !hasForm ? null : notarized ? (
+                            <figure className="m-0 print:hidden">
+                                <DocPreview
+                                    kind={notarized.kind}
+                                    url={notarized.url}
+                                    label="Notarized application form"
+                                    onZoom={onZoom}
+                                    className="h-72"
+                                />
+                                <figcaption className="mt-1 text-center text-[11px] text-gray-400">
+                                    Notarized application form
+                                </figcaption>
+                            </figure>
+                        ) : form.sheet ? (
+                            <SheetThumb label="Application form (system copy)" onZoom={onZoom}>
+                                <ApplicationFormSheet
+                                    compact
+                                    application={form.sheet}
+                                    wrap={(page, key) => (key === "form" ? page : null)}
+                                />
+                            </SheetThumb>
+                        ) : null
+                    }
+                >
+                    <dl className="divide-y divide-gray-50">
+                        <Field label="Application No.">{app.application_number}</Field>
+                        <Field label="Applicant">
+                            {form.applicant_name}
+                            {form.applicant_type ? ` (${titleCase(form.applicant_type)})` : ""}
+                        </Field>
+                        <Field label="Address">{form.address}</Field>
+                        <Field label="Contact">{form.contact}</Field>
+                        <Field label="Locational Clearance">
+                            {form.project_type}
+                            {form.project_nature ? ` — ${form.project_nature}` : ""}
+                            {app.decision_number && (
+                                <span className="block text-xs text-gray-500">Decision No. {app.decision_number}</span>
+                            )}
+                        </Field>
+                        <Field label="Project Location">{form.location}</Field>
+                        <Field label="Lot Area">
+                            {form.lot_area_sqm ? `${Number(form.lot_area_sqm).toLocaleString()} sqm` : null}
+                        </Field>
+                        <Field label="Right Over Land">{form.right_over_land}</Field>
+                        <Field label="Existing Land Use">{form.existing_land_use}</Field>
+                        <Field label="Reviewed By">
+                            {form.reviewed_by
+                                ? `${form.reviewed_by}${date(form.date_reviewed) ? ` · ${date(form.date_reviewed)}` : ""}`
+                                : null}
+                        </Field>
+                    </dl>
+                </WithSheet>
             </Section>
 
             <Section
@@ -275,9 +506,24 @@ function ApplicationDetail({ app, total, onZoom }) {
                 action={order.available ? <DocLink href={order.url}>Open order</DocLink> : null}
             >
                 {order.available ? (
-                    <dl>
-                        <Field label="Amount Due">{peso(order.amount) ?? "Not set"}</Field>
-                    </dl>
+                    <WithSheet
+                        sheet={order.sheet && (
+                            <SheetThumb label="Order of payment" onZoom={onZoom}>
+                                <OrderSheet order={order} />
+                            </SheetThumb>
+                        )}
+                    >
+                        <dl className="divide-y divide-gray-50">
+                            <Field label="Amount Due">{peso(order.amount) ?? "Not set"}</Field>
+                            <Field label="Applicant">{order.sheet?.application?.applicant_name}</Field>
+                            <Field label="For">
+                                {order.sheet?.application?.project_type}
+                                {order.sheet?.application?.project_nature ? ` — ${order.sheet.application.project_nature}` : ""}
+                            </Field>
+                            <Field label="Prepared By">{order.sheet?.reviewer?.name}</Field>
+                            <Field label="Approved By">{order.sheet?.zoning_administrator?.name}</Field>
+                        </dl>
+                    </WithSheet>
                 ) : (
                     <Empty>{order.note}</Empty>
                 )}
@@ -353,31 +599,6 @@ function ApplicationDetail({ app, total, onZoom }) {
                 )}
             </Section>
 
-            <Section
-                icon={Award}
-                title="Certificate & Clearance"
-                action={
-                    documents?.available ? (
-                        <span className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-                            <DocLink href={documents.certificate_url}>Certificate</DocLink>
-                            <DocLink href={documents.clearance_url}>Clearance</DocLink>
-                        </span>
-                    ) : null
-                }
-            >
-                {certificate ? (
-                    <dl className="divide-y divide-gray-50">
-                        <Field label="Certificate No.">{certificate.number}</Field>
-                        <Field label="Status">{titleCase(certificate.status)}</Field>
-                        <Field label="Issued">{date(certificate.issued_at)}</Field>
-                        <Field label="Released">{date(certificate.released_at)}</Field>
-                    </dl>
-                ) : documents?.available ? (
-                    <Empty>No certificate recorded yet — the documents above are generated from this application.</Empty>
-                ) : (
-                    <Empty>{documents?.note}</Empty>
-                )}
-            </Section>
         </div>
     );
 }
@@ -385,18 +606,20 @@ function ApplicationDetail({ app, total, onZoom }) {
 /* ── The printed pack (applicant report) ──────────────────────────────────── */
 
 /**
- * One document to a page: certificate, application form, order of payment, then
- * every remaining requirement.
+ * The file, as it would be pulled from the cabinet: a cover, the certificate
+ * or clearance, the application form, the order of payment, the receipt, then
+ * every submitted requirement — one to a page, all of them pictures.
  *
- * Only scans can be reproduced as pictures. The certificate and the order of
- * payment are generated from the application on demand and no image of either
- * is kept on file, so those pages carry their particulars instead of a blank
- * sheet pretending to be the document.
+ * The certificate, clearance, form and order of payment are the same sheets
+ * their own pages draw, at the same size, zoomed to fit inside the report's
+ * page margins. The receipt and the requirements are the scans on file.
  */
-function PrintPage({ icon: Icon, title, subtitle, children }) {
+function PrintPage({ icon: Icon, title, subtitle, mode, children }) {
     return (
         <section
-            className="hidden print:flex print:min-h-[9in] print:flex-col"
+            className={mode === "capture"
+                ? "pack-page flex min-h-[9in] flex-col"
+                : "pack-page hidden print:flex print:min-h-[9in] print:flex-col"}
             style={{ breakAfter: "page", breakInside: "avoid" }}
         >
             <header className="mb-3 border-b-2 border-[#0d1f5c] pb-2">
@@ -411,6 +634,64 @@ function PrintPage({ icon: Icon, title, subtitle, children }) {
     );
 }
 
+/**
+ * A drawn sheet on its own page. No strip above it — the letterhead says what
+ * it is. The zoom that fits an A4 sheet inside the page margins is in the
+ * print stylesheet, on .print-sheet.
+ */
+function PrintSheet({ mode, children }) {
+    return (
+        <section
+            className={mode === "capture" ? "pack-page print-sheet block" : "pack-page print-sheet hidden print:block"}
+            style={{ breakAfter: "page" }}
+        >
+            {children}
+        </section>
+    );
+}
+
+/** The report's first page: who, what for, and when. */
+function PrintCover({ app, total, generatedOn, mode }) {
+    const { form, document } = app;
+    return (
+        <section
+            className={mode === "capture"
+                ? "pack-page flex min-h-[9.5in] flex-col items-center justify-center text-center"
+                : "pack-page hidden print:flex print:min-h-[9.5in] print:flex-col print:items-center print:justify-center text-center"}
+            style={{ breakAfter: "page" }}
+        >
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-600">Republic of the Philippines</p>
+            <p className="mt-1 text-3xl font-black text-[#0d1f5c]">City of Ilagan, Isabela</p>
+            <p className="mt-1 text-sm font-bold uppercase tracking-widest text-[#d4a017]">City Planning &amp; Development Office</p>
+
+            <img
+                src="/images/ilagan1logo.png"
+                alt="Seal of the City of Ilagan"
+                className="my-10 h-64 w-64 object-contain"
+            />
+
+            <h2 className="text-2xl font-black uppercase tracking-wide text-[#0d1f5c]">Applicant Transaction Summary</h2>
+
+            <dl className="mt-8 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-left text-base">
+                <dt className="font-semibold text-gray-500">Applicant</dt>
+                <dd className="font-bold text-gray-900">{form.applicant_name || "—"}</dd>
+                <dt className="font-semibold text-gray-500">Locational Clearance</dt>
+                <dd className="font-bold text-gray-900">
+                    {document?.label || form.project_type}
+                    {document?.type ? ` (${document.type})` : ""}
+                </dd>
+                <dt className="font-semibold text-gray-500">Date Applied</dt>
+                <dd className="font-bold text-gray-900">{date(app.filed_on) || "—"}</dd>
+            </dl>
+
+            <p className="mt-12 text-[11px] text-gray-400">
+                Application {app.step} of {total} · {app.application_number}
+                {generatedOn ? ` · Generated ${generatedOn}` : ""}
+            </p>
+        </section>
+    );
+}
+
 /** A scan filling its page, captioned. */
 function PrintScan({ doc }) {
     if (doc.kind === "image") {
@@ -419,6 +700,8 @@ function PrintScan({ doc }) {
                 <img
                     src={doc.url}
                     alt={doc.name || doc.filename}
+                    loading="eager"
+                    decoding="sync"
                     className="max-h-[8in] w-full flex-1 object-contain"
                 />
                 <figcaption className="mt-2 text-center text-[10px] text-gray-500">
@@ -436,84 +719,90 @@ function PrintScan({ doc }) {
     );
 }
 
-function PrintPack({ app, total }) {
-    const { form, order_of_payment: order, payment, requirements, certificate, documents } = app;
-
-    const formScan = requirements.find((d) => d.is_application_form);
-    const rest = requirements.filter((d) => !d.is_application_form);
+function PrintPack({ app, total, generatedOn, mode = "print" }) {
+    const { form, order_of_payment: order, payment, requirements, document } = app;
     const who = `${app.application_number} · ${form.applicant_name || ""}`.trim();
 
+    // The form page is the notarized copy the applicant handed in, so it is
+    // not repeated among the requirements below. A ZC has no form page.
+    const hasForm = filesApplicationForm(app);
+    const notarized = hasForm ? notarizedForm(app) : null;
+    const attachments = notarized ? requirements.filter((d) => d !== notarized) : requirements;
+
     return (
-        <div className="hidden print:block">
-            {/* 1 — Certificate */}
-            <PrintPage icon={Award} title={`Certificate — Application ${app.step} of ${total}`} subtitle={who}>
-                {certificate ? (
-                    <dl className="text-[12px]">
-                        <Field label="Certificate No.">{certificate.number}</Field>
-                        <Field label="Status">{titleCase(certificate.status)}</Field>
-                        <Field label="Issued">{date(certificate.issued_at)}</Field>
-                        <Field label="Released">{date(certificate.released_at)}</Field>
+        <div className={mode === "capture" ? "block" : "hidden print:block"}>
+            {/* 1 — Cover */}
+            <PrintCover app={app} total={total} generatedOn={generatedOn} mode={mode} />
+
+            {/* 2 — Certificate or clearance */}
+            {document?.sheet ? (
+                <PrintSheet mode={mode}>
+                    <IssuedDocumentSheet document={document} />
+                </PrintSheet>
+            ) : (
+                <PrintPage icon={Award} title={document?.label || "Issued Document"} subtitle={who} mode={mode}>
+                    <p className="text-[11px] italic text-gray-500">{document?.note || "Not yet issued."}</p>
+                </PrintPage>
+            )}
+
+            {/* 3 — Application form: the notarized copy the applicant filed.
+                Failing that, the system's own drawing of the form (its first
+                sheet only — the requirements checklist is not part of the
+                record). Nothing at all for a ZC. */}
+            {hasForm && notarized && (
+                <PrintPage icon={FileText} title="Application Form — notarized copy as filed" subtitle={who} mode={mode}>
+                    <PrintScan doc={notarized} />
+                </PrintPage>
+            )}
+            {hasForm && !notarized && form.sheet && (
+                <ApplicationFormSheet
+                    compact
+                    application={form.sheet}
+                    wrap={(page, key) => (key === "form" ? <PrintSheet key={key} mode={mode}>{page}</PrintSheet> : null)}
+                />
+            )}
+
+            {/* 4 — Order of payment */}
+            {order.sheet ? (
+                <PrintSheet mode={mode}>
+                    <OrderSheet order={order} />
+                </PrintSheet>
+            ) : (
+                <PrintPage icon={Receipt} title="Order of Payment" subtitle={who} mode={mode}>
+                    <p className="text-[11px] italic text-gray-500">{order.note || "Not yet issued."}</p>
+                </PrintPage>
+            )}
+
+            {/* 5 — Receipt, where one was recorded */}
+            {payment && (
+                <PrintPage icon={Banknote} title="Official Receipt" subtitle={who} mode={mode}>
+                    <dl className="mb-3 text-[12px]">
+                        <Field label="O.R. Number">{payment.receipt_number}</Field>
+                        <Field label="Amount Paid">{peso(payment.amount)}</Field>
+                        <Field label="Date Paid">{date(payment.date)}</Field>
+                        <Field label="Status">{titleCase(payment.status)}</Field>
                     </dl>
-                ) : (
-                    <p className="text-[11px] italic text-gray-500">
-                        {documents?.available
-                            ? "No certificate has been recorded for this application yet."
-                            : documents?.note}
-                    </p>
-                )}
-            </PrintPage>
+                    {payment.receipt_url && (
+                        <PrintScan
+                            doc={{
+                                kind: payment.receipt_kind,
+                                url: payment.receipt_url,
+                                name: "Official receipt",
+                                filename: `Official receipt ${payment.receipt_number || ""}`.trim(),
+                            }}
+                        />
+                    )}
+                </PrintPage>
+            )}
 
-            {/* 2 — Application form, the notarized scan where one was submitted */}
-            <PrintPage icon={FileText} title="Application Form" subtitle={who}>
-                {formScan ? (
-                    <PrintScan doc={formScan} />
-                ) : (
-                    <dl className="text-[12px]">
-                        <Field label="Applicant">{form.applicant_name}</Field>
-                        <Field label="Address">{form.address}</Field>
-                        <Field label="Contact">{form.contact}</Field>
-                        <Field label="Locational Clearance">{form.project_type}</Field>
-                        <Field label="Project Location">{form.location}</Field>
-                        <Field label="Reviewed By">{form.reviewed_by}</Field>
-                    </dl>
-                )}
-            </PrintPage>
-
-            {/* 3 — Order of payment, with the receipt where one was recorded */}
-            <PrintPage icon={Receipt} title="Order of Payment" subtitle={who}>
-                {order.available ? (
-                    <>
-                        <dl className="text-[12px]">
-                            <Field label="Amount Due">{peso(order.amount) ?? "Not set"}</Field>
-                            <Field label="O.R. Number">{payment?.receipt_number}</Field>
-                            <Field label="Amount Paid">{peso(payment?.amount)}</Field>
-                            <Field label="Date Paid">{date(payment?.date)}</Field>
-                        </dl>
-                        {payment?.receipt_url && payment.receipt_kind === "image" && (
-                            <figure className="m-0 mt-3 flex flex-1 flex-col">
-                                <img
-                                    src={payment.receipt_url}
-                                    alt="Official receipt"
-                                    className="max-h-[6in] w-full flex-1 object-contain"
-                                />
-                                <figcaption className="mt-2 text-center text-[10px] text-gray-500">
-                                    Official receipt
-                                </figcaption>
-                            </figure>
-                        )}
-                    </>
-                ) : (
-                    <p className="text-[11px] italic text-gray-500">{order.note}</p>
-                )}
-            </PrintPage>
-
-            {/* 4 onwards — one requirement to a page */}
-            {rest.map((doc, i) => (
+            {/* 6 onwards — one requirement to a page */}
+            {attachments.map((doc, i) => (
                 <PrintPage
                     key={doc.id}
                     icon={Paperclip}
-                    title={`Requirement ${i + 1} of ${rest.length} — ${doc.name || "Attachment"}`}
+                    title={`Requirement ${i + 1} of ${attachments.length} — ${doc.name || "Attachment"}`}
                     subtitle={who}
+                    mode={mode}
                 >
                     <PrintScan doc={doc} />
                 </PrintPage>
@@ -566,7 +855,7 @@ function RowsTable({ rows, onSeeApplicant }) {
 
     return (
         <>
-            {/* Paging is for reading on screen only. Printing and the PDF/CSV
+            {/* Paging is for reading on screen only. Printing and the PDF/Excel
                 downloads carry every record — a report that quietly stopped at
                 page one would not be a report of the period at all. */}
             <div className="hidden print:block">
@@ -748,6 +1037,12 @@ export default function ReportsWorkspace({
     const [error, setError] = useState(null);
     const [step, setStep] = useState(0);
     const [zoom, setZoom] = useState(null);
+    // "print" while the pictures are being readied for the printer, "pdf"
+    // while the pack is being photographed page by page.
+    const [busy, setBusy] = useState(null);
+    const [progress, setProgress] = useState({ done: 0, total: 0 });
+    const panelRef = useRef(null);
+    const captureRef = useRef(null);
 
     // The picker is a tall list and its job is done once a report is on screen,
     // so it folds away and leaves the room to the report. Reopening it is one
@@ -819,6 +1114,75 @@ export default function ReportsWorkspace({
         window.location.href = `${route(`${routePrefix}.reports.generate`)}?${p}`;
     };
 
+    // The print dialog photographs the page the instant it opens. A scan that
+    // is still downloading comes out as a blank box, so the pictures are
+    // waited for first.
+    const printReport = async () => {
+        setBusy("print");
+        try {
+            await waitForImages(panelRef.current);
+        } finally {
+            setBusy(null);
+        }
+        window.print();
+    };
+
+    // The applicant file as a PDF: the same pack the printer gets, photographed
+    // one page at a time and laid onto A4 sheets. Built here rather than on the
+    // server because the certificate, clearance, form and order of payment are
+    // drawn by the browser — there is no copy of them anywhere else.
+    const savePack = async () => {
+        setBusy("pdf");
+        setProgress({ done: 0, total: 0 });
+        try {
+            // The capture pack is rendered only while this runs.
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            const root = captureRef.current;
+            if (!root) return;
+            await waitForImages(root);
+
+            const pages = Array.from(root.querySelectorAll(".pack-page"));
+            setProgress({ done: 0, total: pages.length });
+
+            const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
+            const margin = 12;
+            const maxW = 210 - margin * 2;
+            const maxH = 297 - margin * 2;
+
+            for (let i = 0; i < pages.length; i++) {
+                const target = pages[i];
+                // Brought to the top of the layer first: html2canvas reads the
+                // page's place on screen, and a page scrolled out of the layer
+                // has none worth reading.
+                target.scrollIntoView({ block: "start" });
+                const canvas = await html2canvas(target, {
+                    scale: 1.5,
+                    logging: false,
+                    backgroundColor: "#ffffff",
+                    // html2canvas photographs by cloning the whole document,
+                    // and this document holds every scan two or three times
+                    // over. Everything that is neither this page, nor on the
+                    // way to it, nor a stylesheet in <head> is left out of the
+                    // clone, which turns a ten-second page into a one-second one.
+                    ignoreElements: (el) =>
+                        !(el.contains(target) || target.contains(el) || el.ownerDocument.head?.contains(el)),
+                });
+                // Fit the photographed page inside the margins, keeping its shape.
+                const ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
+                const w = canvas.width * ratio;
+                const h = canvas.height * ratio;
+                if (i > 0) pdf.addPage();
+                pdf.addImage(canvas.toDataURL("image/jpeg", 0.9), "JPEG", margin, margin, w, h);
+                setProgress({ done: i + 1, total: pages.length });
+            }
+
+            const who = (report?.subtitle || "applicant").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
+            pdf.save(`cpdo-applicant-${who}.pdf`);
+        } finally {
+            setBusy(null);
+        }
+    };
+
     // Changing the subject invalidates what is on screen — showing last
     // report's rows under a new heading would be worse than showing nothing.
     const choose = (setter) => (value) => {
@@ -861,6 +1225,20 @@ export default function ReportsWorkspace({
                         width: 100% !important;
                         border: 0 !important;
                         box-shadow: none !important;
+                    }
+
+                    /* The drawn documents are true A4 sheets. Zoomed to 0.86 they
+                       sit inside the 12mm page margins with room to spare, and
+                       zoom — unlike transform — shrinks the box the page
+                       reserves for them, so nothing spills onto a blank sheet. */
+                    .print-sheet { zoom: 0.86; }
+                    .print-sheet > * { break-inside: avoid; }
+
+                    /* Letterhead gradients, the yellow title highlights and the
+                       seal must print as shown. */
+                    #report-panel, #report-panel * {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
 
                     @page { margin: 12mm; }
@@ -1119,24 +1497,33 @@ export default function ReportsWorkspace({
 
                 {/* The report itself */}
                 {report && (
-                    <div id="report-panel" className="relative isolate rounded-xl border border-gray-100 bg-white shadow-sm">
+                    <div id="report-panel" ref={panelRef} className="relative isolate rounded-xl border border-gray-100 bg-white shadow-sm">
                         {/* The layout's watermark sits behind this panel, which is
                             opaque, so the report carries its own. Inside the panel
                             it also survives printing, where everything outside
                             #report-panel is hidden. */}
                         <SealWatermark className="rounded-xl" />
 
-                        {/* Letterhead — printed as well as shown */}
-                        <div className="border-b-2 border-[#0d1f5c] px-4 py-4 text-center sm:px-6">
-                            <p className="text-[10px] uppercase tracking-widest text-gray-500">
-                                Republic of the Philippines
-                            </p>
-                            <p className="text-base font-black text-[#0d1f5c] sm:text-lg">
-                                City of Ilagan, Isabela
-                            </p>
-                            <p className="text-[11px] font-bold uppercase tracking-wide text-[#d4a017]">
-                                City Planning &amp; Development Office
-                            </p>
+                        {/* Letterhead — printed as well as shown, except on the
+                            applicant file, which opens with its own cover page. */}
+                        <div className={`border-b-2 border-[#0d1f5c] px-4 py-4 text-center sm:px-6 ${report.type === "applicant" ? "print:hidden" : ""}`}>
+                            {/* The seal and the Ilagan 2030 mark either side of the
+                                office's lines — the letterhead every download carries. */}
+                            <div className="flex items-center justify-center gap-3 sm:gap-5">
+                                <img src="/images/ilagan1logo.png" alt="Seal of the City of Ilagan" className="h-12 w-12 shrink-0 object-contain sm:h-14 sm:w-14" />
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-widest text-gray-500">
+                                        Republic of the Philippines
+                                    </p>
+                                    <p className="text-base font-black text-[#0d1f5c] sm:text-lg">
+                                        City of Ilagan, Isabela
+                                    </p>
+                                    <p className="text-[11px] font-bold uppercase tracking-wide text-[#d4a017]">
+                                        City Planning &amp; Development Office
+                                    </p>
+                                </div>
+                                <img src="/images/Ilagan Logo2.png" alt="Ilagan 2030" className="h-12 w-12 shrink-0 object-contain sm:h-14 sm:w-14" />
+                            </div>
                             <h2 className="mt-3 text-base font-black text-[#0d1f5c] sm:text-lg">{report.title}</h2>
                             <p className="text-sm font-bold text-[#d4a017]">{report.subtitle}</p>
                             <p className="mt-1 text-[11px] text-gray-400">Generated {report.generated_on}</p>
@@ -1144,22 +1531,27 @@ export default function ReportsWorkspace({
 
                         {/* Actions — screen only */}
                         <div className="grid grid-cols-2 gap-2 border-b border-gray-100 px-4 py-3 sm:flex sm:flex-wrap sm:items-center sm:px-6 print:hidden">
-                            <Button onClick={() => window.print()} className="col-span-2 gap-2 bg-[#0d1f5c] text-white hover:bg-[#0d1f5c]/90 sm:col-span-1">
-                                <Printer className="h-4 w-4" />
-                                Print
+                            <Button onClick={printReport} disabled={busy !== null} className="col-span-2 gap-2 bg-[#0d1f5c] text-white hover:bg-[#0d1f5c]/90 sm:col-span-1">
+                                {busy === "print" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                                {busy === "print" ? "Preparing…" : "Print"}
                             </Button>
-                            <Button onClick={() => download("pdf")} variant="outline" className="gap-2 border-gray-200">
-                                <FileDown className="h-4 w-4" />
-                                <span className="truncate">PDF</span>
+                            <Button
+                                onClick={() => (report.type === "applicant" ? savePack() : download("pdf"))}
+                                disabled={busy !== null}
+                                variant="outline"
+                                className="gap-2 border-gray-200"
+                            >
+                                {busy === "pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+                                <span className="truncate">{busy === "pdf" ? `Page ${progress.done} of ${progress.total}` : "PDF"}</span>
                             </Button>
-                            <Button onClick={() => download("csv")} variant="outline" className="gap-2 border-gray-200">
+                            <Button onClick={() => download("xlsx")} disabled={busy !== null} variant="outline" className="gap-2 border-gray-200">
                                 <FileSpreadsheet className="h-4 w-4" />
-                                CSV
+                                Excel
                             </Button>
                         </div>
 
                         {/* Summary */}
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-xs sm:px-6">
+                        <div className={`flex flex-wrap gap-x-4 gap-y-1 border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-xs sm:px-6 ${report.type === "applicant" ? "print:hidden" : ""}`}>
                             <span>
                                 <b className="text-[#0d1f5c]">{report.summary.applications}</b> application
                                 {report.summary.applications === 1 ? "" : "s"}
@@ -1224,12 +1616,11 @@ export default function ReportsWorkspace({
                                         <div className="print:hidden">
                                             {current && <ApplicationDetail app={current} total={applications.length} onZoom={setZoom} />}
                                         </div>
-                                        {/* On paper the file becomes a pack: certificate,
-                                            application form, order of payment, then one
-                                            requirement to a page — for every application,
+                                        {/* On paper the file becomes a pack of the submitted
+                                            requirements, one to a page — for every application,
                                             not only the one on screen. */}
                                         {applications.map((a) => (
-                                            <PrintPack key={a.id} app={a} total={applications.length} />
+                                            <PrintPack key={a.id} app={a} total={applications.length} generatedOn={report.generated_on} />
                                         ))}
 
                                         {applications.length > 1 && (
@@ -1263,7 +1654,7 @@ export default function ReportsWorkspace({
                                         <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 print:hidden">
                                             Showing the first {report.row_limit.toLocaleString()} of{" "}
                                             {report.summary.applications.toLocaleString()} applications on screen.
-                                            The counts above cover all of them, and the PDF and CSV downloads
+                                            The counts above cover all of them, and the PDF and Excel downloads
                                             include every row — or narrow the period to see them all here.
                                         </p>
                                     )}
@@ -1274,6 +1665,39 @@ export default function ReportsWorkspace({
                     </div>
                 )}
                 <Lightbox item={zoom} onClose={() => setZoom(null)} />
+
+                {/* While a PDF is being built: the pack, shown at its true size
+                    so it can be photographed, under a curtain that says what is
+                    happening. Gone again the moment the file is saved.
+
+                    Both go straight onto <body>, in a layer pinned to the
+                    viewport. html2canvas crops each photograph by where the
+                    page sat in the live document, and it is asked to leave
+                    everything but that page out of its clone — which shifts
+                    anything laid out in flow. A pinned layer does not move. */}
+                {busy === "pdf" && report?.type === "applicant" && createPortal(
+                    <>
+                        <div className="fixed inset-0 z-40 overflow-auto bg-white print:hidden" aria-hidden="true">
+                            <div ref={captureRef} className="w-[210mm] bg-white">
+                                {applications.map((a) => (
+                                    <PrintPack key={a.id} app={a} total={applications.length} generatedOn={report.generated_on} mode="capture" />
+                                ))}
+                            </div>
+                        </div>
+                        <div
+                            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/70 text-white print:hidden"
+                            role="status"
+                            aria-live="polite"
+                        >
+                            <Loader2 className="h-8 w-8 animate-spin" />
+                            <p className="text-sm font-semibold">Building the PDF…</p>
+                            <p className="text-xs text-white/70">
+                                {progress.total ? `Page ${progress.done} of ${progress.total}` : "Readying the pictures"}
+                            </p>
+                        </div>
+                    </>,
+                    document.body
+                )}
         </>
     );
 }

@@ -569,6 +569,7 @@ class PaymentController extends Controller
             abort(404, 'Receipt file not found.');
         }
 
-        return \Storage::disk('local')->response($payment->receipt_file_path);
+        // Short private caching, for the same reason as RequirementDocumentController::view().
+        return \App\Support\CachedFileResponse::make(\Storage::disk('local'), $payment->receipt_file_path);
     }
 }

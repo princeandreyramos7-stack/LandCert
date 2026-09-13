@@ -8,7 +8,7 @@ import { zoningAdministratorName } from "@/lib/signerName";
  * categories get — the office issues it as a letter to the applicant, granting
  * the permit for one year subject to eight standing conditions.
  */
-export default function TupClearanceLetter({ application, payment, zoningAdministrator, innerRef }) {
+export default function TupClearanceLetter({ application, payment, zoningAdministrator, innerRef, className = "certificate-page print-document" }) {
     const formatDate = (value) =>
         value
             ? new Date(value).toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' })
@@ -47,7 +47,7 @@ export default function TupClearanceLetter({ application, payment, zoningAdminis
     return (
         <div
             ref={innerRef}
-            className="certificate-page print-document"
+            className={className}
             style={{ fontSize: '10pt', lineHeight: 1.35 }}
         >
             <OfficialLetterhead code="CPD-003-0" />

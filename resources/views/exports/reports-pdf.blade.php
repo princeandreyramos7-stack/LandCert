@@ -13,10 +13,6 @@
         .watermark { position: fixed; top: 0; left: 0; width: 100%; height: 100%; text-align: center; }
         .watermark img { width: 60%; margin-top: 18%; }
 
-        .letterhead { text-align: center; border-bottom: 2px solid #0d1f5c; padding-bottom: 8px; margin-bottom: 10px; }
-        .letterhead .republic { font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: #555; }
-        .letterhead .city { font-size: 12px; font-weight: bold; color: #0d1f5c; margin: 1px 0; }
-        .letterhead .office { font-size: 9px; font-weight: bold; color: #d4a017; text-transform: uppercase; }
 
         .report-title { text-align: center; margin-bottom: 10px; }
         .report-title h1 { font-size: 14px; color: #0d1f5c; margin: 0; }
@@ -45,11 +41,7 @@
         <div class="watermark"><img src="{{ $watermark }}" alt=""></div>
     @endif
 
-    <div class="letterhead">
-        <div class="republic">Republic of the Philippines</div>
-        <div class="city">City of Ilagan, Isabela</div>
-        <div class="office">City Planning &amp; Development Office</div>
-    </div>
+    @include('exports.partials.letterhead')
 
     <div class="report-title">
         <h1>{{ $title }}</h1>

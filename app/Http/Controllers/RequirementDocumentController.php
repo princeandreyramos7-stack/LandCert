@@ -327,17 +327,20 @@ class RequirementDocumentController extends Controller
             abort(403, 'You are not authorized to view this document.');
         }
 
-        // Try both public and local disks
-        if (Storage::disk('public')->exists($document->file_path)) {
-            return Storage::disk('public')->response(
-                $document->file_path,
-                $document->original_filename
-            );
-        } elseif (Storage::disk('local')->exists($document->file_path)) {
-            return Storage::disk('local')->response(
-                $document->file_path,
-                $document->original_filename
-            );
+        // Try both public and local disks. The file is scanned once and then
+        // shown in several places at once - the report's preview, its printed
+        // pack and its PDF all draw the same scan - so the browser is told it
+        // may keep its copy for a short while rather than fetch it again for
+        // each, and given an ETag so a later check is answered without the
+        // bytes. Private: it is one applicant's document, for this viewer.
+        foreach (['public', 'local'] as $disk) {
+            if (Storage::disk($disk)->exists($document->file_path)) {
+                return \App\Support\CachedFileResponse::make(
+                    Storage::disk($disk),
+                    $document->file_path,
+                    $document->original_filename
+                );
+            }
         }
 
         abort(404, 'File not found.');

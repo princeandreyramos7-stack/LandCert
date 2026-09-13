@@ -85,6 +85,8 @@
     </style>
 </head>
 <body>
+    @include('exports.partials.letterhead')
+
     <div class="header">
         <h1>Audit Logs Report</h1>
         <p>City Planning and Development Office</p>

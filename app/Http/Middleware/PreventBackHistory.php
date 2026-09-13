@@ -39,13 +39,17 @@ class PreventBackHistory
         // Process the request
         $response = $next($request);
 
-        // Apply strict cache-control headers to prevent browser caching
-        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0');
-        $response->headers->set('Pragma', 'no-cache');
-        $response->headers->set('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
-        
-        // Additional security headers
-        $response->headers->set('Last-Modified', gmdate('D, d M Y H:i:s') . ' GMT');
+        // Apply strict cache-control headers to prevent browser caching -
+        // except where the response has set a cache life of its own; see
+        // NoCacheHeaders::declaresOwnCacheLife().
+        if (!NoCacheHeaders::declaresOwnCacheLife($response)) {
+            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0');
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
+
+            // Additional security headers
+            $response->headers->set('Last-Modified', gmdate('D, d M Y H:i:s') . ' GMT');
+        }
         
         // Prevent page from being stored in browser cache
         $response->headers->set('X-Content-Type-Options', 'nosniff');

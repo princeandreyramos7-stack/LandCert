@@ -1,0 +1,284 @@
+import React, { forwardRef } from "react";
+import OfficialLetterhead from "@/Components/OfficialLetterhead";
+import ESignatureImage from "@/Components/ESignatureImage";
+import { zoningAdministratorName } from "@/lib/signerName";
+
+/**
+ * The certificate itself — the sheet, without the page around it.
+ *
+ * Lifted out of the Generate Certificate page so the applicant report can show
+ * the same document. Nothing is kept on file for it: it is drawn from the
+ * application each time, so it is drawn here, once, for both.
+ *
+ * CZC gets the Zoning Certification; SUP and TUP get the road Certification.
+ */
+
+
+/* ── Zoning Ordinance constants ────────────────────────────────────────────
+   Fixed references printed on every Zoning Certification. */
+const ORDINANCE_ARTICLE = '5';
+const ORDINANCE_SECTION = '12.6';
+const SP_RESOLUTION_NO = '160';
+const SP_RESOLUTION_DATE = 'March 05, 2019';
+
+/**
+ * A blank to be filled by hand, or the value when we have one.
+ *
+ * The blank sits on the sentence's own baseline, so the comma or period that
+ * follows it lines up with the value instead of floating above the rule.
+ *
+ * It deliberately does NOT set its own line-height: html2canvas (the engine
+ * behind Download PDF) then places the text by the paragraph's line box while
+ * drawing the border by the span's shorter one, and the rule comes out struck
+ * through the value. Inheriting the line-height keeps the two in agreement.
+ */
+function Fill({ value, width = '150pt', bold = false }) {
+    return (
+        <span
+            style={{
+                display: 'inline-block',
+                minWidth: width,
+                borderBottom: '1px solid #000',
+                textAlign: 'center',
+                fontWeight: bold ? 'bold' : 'normal',
+                padding: '0 4pt',
+                verticalAlign: 'baseline',
+            }}
+        >
+            {value || ' '}
+        </span>
+    );
+}
+
+/**
+ * One signature slot: the e-signature image sits ON the ruled line, with the
+ * printed name and title underneath. Falls back to an empty gap (same height,
+ * so the layout never shifts) when the signer has no signature on file.
+ */
+function SignatureBlock({ signatureUrl, name, title }) {
+    return (
+        <div style={{ textAlign: 'center', width: '260pt' }}>
+            <div style={{ position: 'relative', height: '36pt', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                <ESignatureImage src={signatureUrl} maxHeight="36pt" marginBottom="-2pt" />
+            </div>
+            <div style={{ fontWeight: 'bold', fontSize: '10pt' }}>{name}</div>
+            <div style={{ fontSize: '10pt' }}>{title}</div>
+        </div>
+    );
+}
+
+
+/** Payment footer. `order` differs between the two official templates. */
+function PaymentFooter({ payment, order }) {
+    const amount = payment?.amount
+        ? `₱${Number(payment.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+        : '';
+    const date = payment?.payment_date
+        ? new Date(payment.payment_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        : '';
+
+    const rows = {
+        amountFirst: [
+            ['Amount Paid  :', amount],
+            ['O.R. No.       :', payment?.receipt_number || ''],
+            ['Date            :', date],
+        ],
+        orFirst: [
+            ['O.R. No.  :', payment?.receipt_number || ''],
+            ['Date       :', date],
+            ['Amount  :', amount],
+        ],
+    }[order];
+
+    return (
+        // The roomy line-height is what keeps the ruled blanks clear of the
+        // values in the downloaded PDF — see the note on <Fill>.
+        <div style={{ marginTop: '40pt', fontSize: '10pt', lineHeight: 2 }}>
+            {rows.map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '6pt' }}>
+                    <span style={{ width: '90pt' }}>{label}</span>
+                    <Fill value={value} width="160pt" />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+/* ── Template A — CZC ──────────────────────────────────────────────────────
+   "ZONING CERTIFICATION" */
+function ZoningCertification({ application, payment, zoningAdministrator, issuedOn }) {
+    const area = application.lot_area_sqm
+        ? Number(application.lot_area_sqm).toLocaleString('en-PH')
+        : '';
+
+    return (
+        <>
+            <div style={{ textAlign: 'center', margin: '26pt 0 20pt' }}>
+                <span style={{ background: '#FFFF00', padding: '3pt 10pt', fontWeight: 'bold', fontSize: '12pt' }}>
+                    ZONING CERTIFICATION
+                </span>
+            </div>
+
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: '0 0 14pt 0' }}>
+                This is to certify that parcel of land, lot <Fill value={application.lot_number} width="190pt" />, under Tax Dec.
+            </p>
+
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: 0 }}>
+                No. <Fill value={application.tax_declaration_no} width="180pt" />, registered under name of <Fill value={application.applicant_name} width="240pt" /> with an
+            </p>
+
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: 0 }}>
+                area of <Fill value={area} width="90pt" /> sq.m. located at brgy. <Fill value={application.project_location_barangay} width="190pt" />, City of Ilagan, Isabela, was
+            </p>
+
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: 0 }}>
+                verified to fall within the <Fill value={application.zone_classification} width="160pt" /> <strong>ZONE</strong> as per article {ORDINANCE_ARTICLE}, section <Fill value={ORDINANCE_SECTION} width="70pt" /> of the
+            </p>
+
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: 0 }}>
+                Comprehensive Land Use Plan and the Zoning Ordinance of City of Ilagan, Isabela approved by
+            </p>
+
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: 0 }}>
+                the Sangguniang Panlalawigan of Isabela through SP Resolution No. <Fill value={SP_RESOLUTION_NO} width="60pt" /> dated <Fill value={SP_RESOLUTION_DATE} width="150pt" />.
+            </p>
+
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', marginTop: '18pt' }}>
+                This certification is issued to <Fill value={application.applicant_name} width="270pt" />, for whatever
+            </p>
+
+            <p style={{ textAlign: 'justify', lineHeight: '1.8', margin: 0 }}>
+                purpose it may serve.
+            </p>
+
+            <p style={{ lineHeight: '1.8', marginTop: '18pt' }}>
+                City of Ilagan, Isabela <Fill value={issuedOn} width="240pt" />.
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '52pt' }}>
+                <div style={{ textAlign: 'center', width: '280pt' }}>
+                    <div style={{ position: 'relative', height: '36pt', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                        <ESignatureImage src={zoningAdministrator?.signature_url} maxHeight="36pt" marginBottom="-2pt" />
+                    </div>
+                    <div style={{ fontWeight: 'bold', fontSize: '10pt' }}>{zoningAdministratorName(zoningAdministrator?.name)}</div>
+                    <div style={{ fontSize: '10pt' }}>City Planning &amp; Development Coordinator/</div>
+                    <div style={{ fontSize: '10pt' }}>Zoning Administrator</div>
+                </div>
+            </div>
+
+            <div style={{ marginTop: '40pt', fontSize: '10pt', lineHeight: 1.6 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '4pt' }}>
+                    <span style={{ width: '80pt' }}>O.R. No.  :</span>
+                    <Fill value={payment?.receipt_number || ''} width="160pt" />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '4pt' }}>
+                    <span style={{ width: '80pt' }}>Date       :</span>
+                    <Fill value={payment?.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''} width="160pt" />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <span style={{ width: '80pt' }}>Amount  :</span>
+                    <Fill value={payment?.amount ? `₱${Number(payment.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : ''} width="160pt" />
+                </div>
+            </div>
+        </>
+    );
+}
+
+/* ── Template B — SUP / TUP ────────────────────────────────────────────────
+   "CERTIFICATION" (existing road abutting the lot) */
+function RoadCertification({ application, payment, zoningAdministrator, issuedOn }) {
+    return (
+        <>
+            <div style={{ textAlign: 'center', margin: '30pt 0 22pt' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '13pt', letterSpacing: '3pt' }}>
+                    CERTIFICATION
+                </span>
+            </div>
+
+            <p style={{ fontWeight: 'bold', margin: '0 0 14pt' }}>TO WHOM IT MAY CONCERN:</p>
+
+            <p style={{ textAlign: 'justify', textIndent: '40pt', lineHeight: '2', margin: 0 }}>
+                This is to certify that as per certification issued by the City Assessor’s Office, there is
+                an <strong>existing road</strong> abutting Title no. <Fill value={application.lot_number} width="140pt" />,
+                under Tax Dec. No. <Fill value={application.tax_declaration_no} width="180pt" /> registered under the
+                name of <Fill value={application.applicant_name} width="220pt" /> located at
+                brgy. <Fill value={application.project_location_barangay} width="180pt" />, City of Ilagan, Isabela.
+            </p>
+
+            <p style={{ textAlign: 'justify', textIndent: '40pt', lineHeight: '2', marginTop: '18pt' }}>
+                This certification is issued upon the request of interested party for whatever purpose it may serve.
+            </p>
+
+            <p style={{ lineHeight: '2', marginTop: '18pt', textIndent: '40pt' }}>
+                Given this <Fill value={issuedOn} width="200pt" /> at the City of Ilagan, Isabela.
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '52pt' }}>
+                <SignatureBlock
+                    signatureUrl={zoningAdministrator?.signature_url}
+                    name={zoningAdministratorName(zoningAdministrator?.name)}
+                    title={<>City Planning &amp; Development Coordinator/<br />Zoning Administrator</>}
+                />
+            </div>
+
+            <PaymentFooter payment={payment} order="amountFirst" />
+        </>
+    );
+}
+
+/** True for the Zoning Certification template, false for the road Certification. */
+export function isZoningCertification(projectType) {
+    return String(projectType || '').trim().toUpperCase() === 'CZC';
+}
+
+/** Today, as the certificate carries it. */
+export function certificateIssuedOn() {
+    return new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+/* A4, like the paper the office prints on. The compact form drops the fixed
+   height and shadow for use as a picture inside another document. */
+const SHEET_CSS = `
+.certificate-sheet {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    background: white;
+    font-family: 'Times New Roman', serif;
+    font-size: 11pt;
+    color: #000;
+    padding: 10mm 15mm;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.certificate-sheet.sheet--compact {
+    min-height: 0;
+    box-shadow: none;
+}
+`;
+
+const CertificateSheet = forwardRef(function CertificateSheet(
+    { application, payment, zoningAdministrator, issuedOn, compact = false, className = "" },
+    ref
+) {
+    const TemplateBody = isZoningCertification(application?.project_type)
+        ? ZoningCertification
+        : RoadCertification;
+
+    return (
+        <>
+            <style dangerouslySetInnerHTML={{ __html: SHEET_CSS }} />
+            <div ref={ref} className={`certificate-sheet${compact ? " sheet--compact" : ""} ${className}`.trim()}>
+                <OfficialLetterhead />
+                <TemplateBody
+                    application={application || {}}
+                    payment={payment}
+                    zoningAdministrator={zoningAdministrator}
+                    issuedOn={issuedOn || certificateIssuedOn()}
+                />
+            </div>
+        </>
+    );
+});
+
+export default CertificateSheet;
