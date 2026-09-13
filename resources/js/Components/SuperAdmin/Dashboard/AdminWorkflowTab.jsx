@@ -21,17 +21,29 @@ const actionBadgeClass = (action = '') => {
  * AdminWorkflowTab Component
  * Displays admin activity, performance, and workflow metrics for Super Admin
  */
+/**
+ * A list the server may have sent as an object: PHP encodes a collection
+ * whose keys are not 0..n as `{}` rather than `[]`. Either way, an array.
+ */
+const asList = (value) => (Array.isArray(value) ? value : value && typeof value === "object" ? Object.values(value) : []);
+
 export function AdminWorkflowTab({ adminActivity = {} }) {
     const {
-        admin_performance = [],
-        recent_actions = [],
+        admin_performance: adminPerformanceRaw = [],
+        recent_actions: recentActionsRaw = [],
         recent_actions_total = 0,
-        activity_by_hour = [],
-        activity_by_day = [],
-        review_trend = [],
-        certificates_by_admin = [],
+        activity_by_hour: activityByHourRaw = [],
+        activity_by_day: activityByDayRaw = [],
+        review_trend: reviewTrendRaw = [],
+        certificates_by_admin: certificatesByAdminRaw = [],
         response_metrics = {},
     } = adminActivity;
+    const admin_performance = asList(adminPerformanceRaw);
+    const recent_actions = asList(recentActionsRaw);
+    const activity_by_hour = asList(activityByHourRaw);
+    const activity_by_day = asList(activityByDayRaw);
+    const review_trend = asList(reviewTrendRaw);
+    const certificates_by_admin = asList(certificatesByAdminRaw);
 
     // Client-side search over the loaded slice — never navigates away from the tab.
     const [auditSearch, setAuditSearch] = useState('');

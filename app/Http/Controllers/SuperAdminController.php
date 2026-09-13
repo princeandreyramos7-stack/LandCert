@@ -70,7 +70,12 @@ class SuperAdminController extends Controller
                     'avg_review_time' => round($item->avg_review_time ?? 0, 1),
                     'approval_rate' => $item->total_reviews > 0 ? round(($item->approved_count / $item->total_reviews) * 100, 1) : 0,
                 ];
-            });
+            })
+            // reject() keeps the original keys. Once the first row is an
+            // administrator's, what is left starts at 1, and a collection
+            // whose keys are not 0..n is encoded as a JSON object - which the
+            // dashboard then cannot slice() or map(), and the whole page dies.
+            ->values();
 
         // Admin actions from the audit log. This feeds the "Admin Audit Log" panel
         // on the Admin Workflow tab, which searches/scrolls client-side, so we send a
