@@ -74,12 +74,6 @@ class HandleInertiaRequests extends Middleware
                 'fileMaxBytes' => self::iniBytes('upload_max_filesize'),
                 'maxFiles' => (int) ini_get('max_file_uploads'),
             ],
-            // Unread notifications, for the badge on the sidebar's Notifications
-            // item. Lazy, so a page that does not draw the sidebar never runs
-            // the count.
-            'unreadNotifications' => fn () => $request->user()
-                ? \App\Models\Notification::where('user_id', $request->user()->id)->where('read', false)->count()
-                : 0,
             // Add flash messages
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
