@@ -107,11 +107,12 @@ class RouteSweepTest extends TestCase
                         $failures[] = "$who GET /$uri -> $target -> {$second->getStatusCode()}";
                     }
                 }
-                // The next role starts with a clean session.
-                $this->refreshApplication();
+                // The next role starts signed out, with a clean session. (Not
+                // refreshApplication(): that leaves the test's database
+                // transaction behind on the old connection and unsettles the
+                // tests that follow.)
                 $this->app['auth']->forgetGuards();
-                Storage::fake('local');
-                Storage::disk('local')->put($doc->file_path, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='));
+                $this->flushSession();
             }
         }
 

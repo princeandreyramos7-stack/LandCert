@@ -63,9 +63,11 @@ export default function SidebarUserMenu({
     const trigger = (
         <SidebarMenuButton
             size="lg"
-            className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            tooltip={user.name}
+            className="rounded-xl text-sidebar-foreground transition-all duration-200 hover:bg-white/10 hover:text-white data-[state=open]:bg-white/10 data-[state=open]:text-white group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:justify-center"
         >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sidebar-primary/80 text-xs font-black text-sidebar-primary-foreground">
+            {/* Avatar in a gold ring - on the rail this is the whole card. */}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sidebar-primary text-xs font-black text-[#0d1f5c] shadow-[0_0_0_2px_hsl(var(--sidebar-primary)/0.45)] transition-transform duration-200 group-data-[collapsible=icon]:hover:scale-105">
                 {user.avatar_url ? (
                     <img
                         src={user.avatar_url}

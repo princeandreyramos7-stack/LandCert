@@ -31,6 +31,10 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- No text messages from a test run: with the key from .env the service
+             would call the gateway, and a slow or failed call turned a recorded
+             payment into a redirect with an error. -->
+        <env name="SMS_ENABLED" value="false"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
