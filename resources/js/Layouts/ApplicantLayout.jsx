@@ -15,7 +15,6 @@ import {
 } from "@/Components/ui/sidebar";
 import { Toaster } from "@/Components/ui/toaster";
 import SealWatermark from "@/Components/SealWatermark";
-import { applicantSidebarStartsOpen } from "@/lib/applicantSidebar";
 
 /**
  * Shared layout for all applicant pages.
@@ -27,7 +26,7 @@ export default function ApplicantLayout({ title, children }) {
     const [headerSlot, setHeaderSlot] = useState(null);
 
     return (
-        <SidebarProvider defaultOpen={applicantSidebarStartsOpen()}>
+        <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
                 {/* Top bar */}

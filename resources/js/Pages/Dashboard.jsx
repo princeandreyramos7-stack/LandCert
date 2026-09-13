@@ -19,7 +19,6 @@ import { LiveRefresh } from "@/Components/LiveRefresh";
 import { HeaderSlotProvider } from "@/Components/HeaderSlot";
 import { useState } from "react";
 import SealWatermark from "@/Components/SealWatermark";
-import { applicantSidebarStartsOpen } from "@/lib/applicantSidebar";
 
 export default function Page({ requests = [] }) {
     const { auth } = usePage().props;
@@ -30,7 +29,7 @@ export default function Page({ requests = [] }) {
     const [headerSlot, setHeaderSlot] = useState(null);
 
     return (
-        <SidebarProvider defaultOpen={applicantSidebarStartsOpen()}>
+        <SidebarProvider>
             <Head title="Dashboard — CPDO"/>
             <Sidebar/>
             <SidebarInset>

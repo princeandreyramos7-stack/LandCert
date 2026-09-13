@@ -11,12 +11,11 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/Co
 import { Separator } from "@/Components/ui/separator";
 import { Toaster } from "@/Components/ui/toaster";
 import { LiveRefresh } from "@/Components/LiveRefresh";
-import { applicantSidebarStartsOpen } from "@/lib/applicantSidebar";
 
 /* Admin variant of the layout (uses AdminSidebar) */
 function AdminWrapper({ children }) {
     return (
-        <SidebarProvider defaultOpen={applicantSidebarStartsOpen()}>
+        <SidebarProvider>
             <AdminSidebar/>
             <SidebarInset>
                 <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 bg-white border-b border-gray-100 shadow-sm">

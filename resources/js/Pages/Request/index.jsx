@@ -18,7 +18,6 @@ import {
 import RequestForm from "@/Components/Request_form";
 import { Toaster } from "@/Components/ui/toaster";
 import SealWatermark from "@/Components/SealWatermark";
-import { applicantSidebarStartsOpen } from "@/lib/applicantSidebar";
 
 export default function RequestPage({ isEditing = false, existingApplication = null }) {
     const { auth } = usePage();
@@ -26,7 +25,7 @@ export default function RequestPage({ isEditing = false, existingApplication = n
     const Sidebar = isAdmin ? AdminSidebar : AppSidebar;
 
     return (
-        <SidebarProvider defaultOpen={applicantSidebarStartsOpen()}>
+        <SidebarProvider>
             <Head title="Application Form" />
             <Sidebar />
             <Toaster />
