@@ -82,13 +82,9 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
 
     // Initialize form when requestData changes
     useEffect(() => {
-        console.log("Initialization useEffect triggered", { requestData, isOpen });
-        console.log("Full requestData object:", JSON.stringify(requestData, null, 2));
         if (requestData && isOpen) {
             // Use request_id from requestData (not id)
             const requestId = requestData.request_id || requestData.id;
-            console.log("Setting request_id to:", requestId);
-            console.log("Setting amount to:", requestData.expected_amount);
             setFormData((prev) => ({
                 ...prev,
                 request_id: requestId,
@@ -297,10 +293,8 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
 
     // Validate form
     const validateForm = () => {
-        console.log("Validating form with data:", formData);
         
         if (!formData.request_id) {
-            console.log("Validation failed: missing request_id");
             toast({
                 variant: "destructive",
                 title: "Validation Error",
@@ -310,7 +304,6 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
         }
         
         if (!formData.receipt_number.trim()) {
-            console.log("Validation failed: missing receipt_number");
             toast({
                 variant: "destructive",
                 title: "Validation Error",
@@ -319,9 +312,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
             return false;
         }
 
-        console.log("Amount check:", formData.amount, "<=", 0, "?", formData.amount <= 0);
         if (formData.amount <= 0) {
-            console.log("Validation failed: amount <= 0");
             toast({
                 variant: "destructive",
                 title: "Validation Error",
@@ -331,7 +322,6 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
         }
 
         if (!formData.payment_date) {
-            console.log("Validation failed: missing payment_date");
             toast({
                 variant: "destructive",
                 title: "Validation Error",
@@ -345,9 +335,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
         paymentDate.setHours(0, 0, 0, 0); // Set to midnight for fair comparison
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        console.log("Date check:", paymentDate, ">", today, "?", paymentDate > today);
         if (paymentDate > today) {
-            console.log("Validation failed: future date");
             toast({
                 variant: "destructive",
                 title: "Validation Error",
@@ -357,7 +345,6 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
         }
 
         // Payment method is now always cash - no conditional validation needed
-        console.log("Validation passed!");
         return true;
     };
 

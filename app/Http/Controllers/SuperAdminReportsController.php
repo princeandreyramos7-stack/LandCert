@@ -54,6 +54,9 @@ class SuperAdminReportsController extends Controller
     /** Width of the faded seal watermark baked into every PDF, in pixels. */
     private const WATERMARK_WIDTH = 300;
 
+    /** Most rows the on-screen preview will carry; downloads are never capped. */
+    private const PREVIEW_ROW_LIMIT = 1000;
+
     /**
      * The page itself: the choices a report can be built from.
      */
@@ -153,14 +156,24 @@ class SuperAdminReportsController extends Controller
             ? $this->periodReport((int) $validated['year'], $validated['month'] ?? 'all')
             : $this->officerReport($validated['officer'] ?? 'all');
 
+        // The panel pages in the browser, so every row used to travel in this
+        // one response - a busy year could be megabytes. The summary is still
+        // computed over the full set, so the counts stay honest; only the rows
+        // shipped to the screen are capped. The PDF and CSV are built from the
+        // full set and are unaffected.
+        $total = $rows->count();
+        $truncated = $total > self::PREVIEW_ROW_LIMIT;
+
         return response()->json([
             'type' => $type,
             'title' => $title,
             'subtitle' => $subtitle,
             'generated_on' => now()->format('F j, Y \a\t g:i A'),
-            'rows' => $rows,
+            'rows' => $truncated ? $rows->take(self::PREVIEW_ROW_LIMIT)->values() : $rows,
+            'truncated' => $truncated,
+            'row_limit' => self::PREVIEW_ROW_LIMIT,
             'summary' => [
-                'applications' => $rows->count(),
+                'applications' => $total,
                 'status_counts' => $rows->countBy('status'),
             ],
         ]);
@@ -402,6 +415,13 @@ class SuperAdminReportsController extends Controller
                         // link to it: an image inline, a PDF in a frame.
                         'kind' => $this->fileKind($doc->mime_type, $doc->original_filename ?: $doc->file_path),
                         'path' => $this->storagePath($doc->file_path),
+                        // The notarized application form is submitted as a
+                        // requirement, so the printed pack can lead with it
+                        // instead of burying it among the attachments.
+                        'is_application_form' => str_contains(
+                            strtolower((string) $doc->requirement_name),
+                            'application form'
+                        ),
                     ])->values(),
 
                     'certificate' => $certificate ? [

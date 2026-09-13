@@ -11,6 +11,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // The site sits behind the host's reverse proxy, which terminates TLS
+        // and forwards plain HTTP. Without trusting it, Laravel sees every
+        // request as insecure: generated URLs come out http://, and the
+        // secure-cookie flag is judged against the wrong scheme.
+        $middleware->trustProxies(at: '*');
+
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,

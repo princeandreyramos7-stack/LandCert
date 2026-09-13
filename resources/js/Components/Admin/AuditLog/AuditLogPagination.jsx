@@ -1,72 +1,32 @@
 import React from "react";
-import {
-    Pagination,
-    PaginationContent,
-    PaginationEllipsis,
-    PaginationItem,
-    PaginationLink,
-    PaginationNext,
-    PaginationPrevious,
-} from "@/Components/ui/pagination";
+import { TablePagination } from "@/Components/ui/table-pagination";
 
+/**
+ * Paging for the audit log, using the same pager as the applications, users and
+ * reports tables so the screens behave alike.
+ *
+ * The difference is where the paging happens: those lists hold every row and
+ * slice them in the browser, while the log is paginated by the server. So this
+ * takes the page number TablePagination hands back and turns it into the URL
+ * the server expects, instead of slicing anything itself.
+ */
 export function AuditLogPagination({ logs, onPageChange }) {
-    if (!logs?.links || logs.links.length <= 3) return null;
+    if (!logs?.total) return null;
+
+    const pageUrl = (page) => {
+        // path() has no query string of its own; the caller re-applies the
+        // active filters when it makes the request.
+        const base = logs.path || window.location.pathname;
+        return `${base}?page=${page}`;
+    };
 
     return (
-        <Pagination className="mt-4">
-            <PaginationContent>
-                {logs.links.map((link, index) => {
-                    if (index === 0) {
-                        return (
-                            <PaginationItem key={index}>
-                                <PaginationPrevious
-                                    onClick={() => onPageChange(link.url)}
-                                    className={
-                                        !link.url
-                                            ? "pointer-events-none opacity-50"
-                                            : "cursor-pointer"
-                                    }
-                                />
-                            </PaginationItem>
-                        );
-                    }
-
-                    if (index === logs.links.length - 1) {
-                        return (
-                            <PaginationItem key={index}>
-                                <PaginationNext
-                                    onClick={() => onPageChange(link.url)}
-                                    className={
-                                        !link.url
-                                            ? "pointer-events-none opacity-50"
-                                            : "cursor-pointer"
-                                    }
-                                />
-                            </PaginationItem>
-                        );
-                    }
-
-                    if (link.label === "...") {
-                        return (
-                            <PaginationItem key={index}>
-                                <PaginationEllipsis />
-                            </PaginationItem>
-                        );
-                    }
-
-                    return (
-                        <PaginationItem key={index}>
-                            <PaginationLink
-                                onClick={() => onPageChange(link.url)}
-                                isActive={link.active}
-                                className="cursor-pointer"
-                            >
-                                {link.label}
-                            </PaginationLink>
-                        </PaginationItem>
-                    );
-                })}
-            </PaginationContent>
-        </Pagination>
+        <TablePagination
+            currentPage={logs.current_page ?? 1}
+            totalItems={logs.total ?? 0}
+            perPage={logs.per_page ?? 15}
+            onPageChange={(page) => onPageChange(pageUrl(page))}
+            label="log entries"
+        />
     );
 }

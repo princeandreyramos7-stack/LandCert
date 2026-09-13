@@ -53,7 +53,7 @@ export default function CreateUser() {
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <div className="w-1 h-4 rounded-full bg-[#d4a017]"/>
-                                <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">Super Admin</p>
+                                <p className="text-[#d4a017] text-xs font-black tracking-widest uppercase">Zoning Administrator</p>
                             </div>
                             <h1 className="text-xl font-black text-white">Create New User</h1>
                             <p className="text-blue-200/70 text-sm">Add a new user account to the system</p>

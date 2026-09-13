@@ -162,9 +162,6 @@ export default function ReviewRequest({ request }) {
         const docs = request.uploaded_requirements || [];
         const reference = request.requirements_reference || [];
         
-        console.log('=== Admin ReviewRequest Debug ===');
-        console.log('Uploaded requirements:', docs);
-        console.log('Requirements reference:', reference);
         
         const sectionById = new Map(reference.map((r) => [r.id, r.section || 'main']));
 
@@ -184,7 +181,6 @@ export default function ReviewRequest({ request }) {
         });
 
         const result = Array.from(groups.values());
-        console.log('Grouped requirements:', result);
         
         return result;
     }, [request.uploaded_requirements, request.requirements_reference]);

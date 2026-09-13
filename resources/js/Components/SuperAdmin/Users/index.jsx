@@ -195,8 +195,8 @@ export function SuperAdminUserManagement({ users }) {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {[
                     { label: "Total Users",   value: stats.total,        icon: Users,  border: "border-l-[#0d1f5c]", iconBg: "bg-[#0d1f5c]/10", iconColor: "text-[#0d1f5c]" },
-                    { label: "Super Admins",  value: stats.super_admins, icon: Shield, border: "border-l-[#d4a017]",  iconBg: "bg-[#d4a017]/10",  iconColor: "text-[#d4a017]"  },
-                    { label: "Admins",        value: stats.admins,       icon: TrendingUp, border: "border-l-blue-500", iconBg: "bg-blue-50", iconColor: "text-blue-600" },
+                    { label: "Zoning Administrators", value: stats.super_admins, icon: Shield, border: "border-l-[#d4a017]",  iconBg: "bg-[#d4a017]/10",  iconColor: "text-[#d4a017]"  },
+                    { label: "Zoning Officers",       value: stats.admins,       icon: TrendingUp, border: "border-l-blue-500", iconBg: "bg-blue-50", iconColor: "text-blue-600" },
                     { label: "Applicants",    value: stats.applicants,   icon: Users,  border: "border-l-gray-400",   iconBg: "bg-gray-50",       iconColor: "text-gray-500"   },
                 ].map((s, i) => (
                     <Card key={i} className={`border-l-4 ${s.border} bg-white shadow-sm hover:shadow-md transition-shadow`}>
@@ -245,8 +245,8 @@ export function SuperAdminUserManagement({ users }) {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Users</SelectItem>
-                                <SelectItem value="super_admin">Super Admins</SelectItem>
-                                <SelectItem value="admin">Admins</SelectItem>
+                                <SelectItem value="super_admin">Zoning Administrators</SelectItem>
+                                <SelectItem value="admin">Zoning Officers</SelectItem>
                                 <SelectItem value="applicant">Applicants</SelectItem>
                             </SelectContent>
                         </Select>

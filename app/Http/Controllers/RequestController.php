@@ -251,14 +251,22 @@ class RequestController extends Controller
      */
     public function store(Request $request)
     {
-        // Check for recent duplicate submissions (within last 5 minutes)
-        // Since applicant_name was moved to applicants table, check by user_id and time only
-        $recentRequest = RequestModel::where('user_id', auth()->id())
+        // Catch a double submission — the same form sent twice from a
+        // double-click or a retry — without refusing a genuine second
+        // application. The old check blocked *any* filing within five minutes
+        // of the last one, so an applicant with two properties was turned
+        // away. Now it only matches when the project location is the same:
+        // that is the same application again, not a new one.
+        $recentDuplicate = RequestModel::where('user_id', auth()->id())
             ->where('created_at', '>=', now()->subMinutes(5))
-            ->first();
-            
-        if ($recentRequest) {
-            return back()->withErrors(['duplicate' => 'A similar request was recently submitted. Please wait before submitting again.']);
+            ->whereHas('location', function ($q) use ($request) {
+                $q->where('street_address', $request->input('project_location_street'))
+                  ->where('barangay', $request->input('project_location_barangay'));
+            })
+            ->exists();
+
+        if ($recentDuplicate) {
+            return back()->withErrors(['duplicate' => 'This application was already submitted a moment ago. Check My Applications before filing it again.']);
         }
 
         $validated = $request->validate([
@@ -307,8 +315,45 @@ class RequestController extends Controller
             'verified_requirements' => 'nullable|array',
         ]);
 
-        // Use a database transaction to ensure all records are created together
-        $result = DB::transaction(function () use ($validated, $request) {
+        // Use a database transaction to ensure all records are created together.
+        //
+        // Wrapped in a short retry: generateApplicationNumber() reads the last
+        // sequence and then inserts, so two submissions at the same instant can
+        // pick the same number. The unique index refuses the second one, and
+        // without this the applicant got a raw 500 for it. Retrying recomputes
+        // the sequence with the first insert now committed, which resolves it.
+        $result = null;
+        $attempts = 0;
+
+        while ($result === null) {
+            try {
+                $result = $this->createApplication($validated, $request);
+            } catch (\Illuminate\Database\QueryException $e) {
+                $isDuplicateKey = ($e->errorInfo[1] ?? null) === 1062;
+                if (!$isDuplicateKey || ++$attempts >= 3) {
+                    \Log::error('Application submission failed', [
+                        'user_id' => auth()->id(),
+                        'attempt' => $attempts,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    return back()
+                        ->withInput()
+                        ->withErrors(['submit' => 'The system was busy and could not file your application. Nothing was saved — please try again.']);
+                }
+            }
+        }
+
+        return $this->finishSubmission($result);
+    }
+
+    /**
+     * Everything the submission writes, as one transaction. Split out so that
+     * store() can retry it when an application number collides.
+     */
+    private function createApplication(array $validated, Request $request): array
+    {
+        return DB::transaction(function () use ($validated, $request) {
             // 1. Create Applicant record
             $applicant = \App\Models\Applicant::create([
                 'applicant_name' => $validated['applicant_name'],
@@ -443,7 +488,14 @@ class RequestController extends Controller
                 'report' => $report,
             ];
         });
+    }
 
+    /**
+     * Notify the applicant and send them to their list. Kept apart from the
+     * write so a notification failure can never roll back a filed application.
+     */
+    private function finishSubmission(array $result)
+    {
         // Send email notification to the user
         try {
             Mail::to(auth()->user()->email)->send(

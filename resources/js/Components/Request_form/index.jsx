@@ -329,17 +329,6 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             setCompletedSteps([...completedSteps, currentStep]);
         }
         
-        // Log form data before showing confirmation dialog
-        console.log('Form data before submit:', {
-            applicant_name: data.applicant_name,
-            applicant_address: data.applicant_address,
-            project_type: data.project_type,
-            project_nature: data.project_nature,
-            existing_land_use: data.existing_land_use,
-            has_written_notice: data.has_written_notice,
-            requirement_uploads: data.requirement_uploads,
-        });
-        
         setIsConfirmDialogOpen(true);
     };
 
@@ -354,8 +343,6 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         setSubmitErrorKind(null);
 
         if (isEditing && existingApplication?.id) {
-            console.log('=== EDIT SUBMIT START (FETCH API) ===');
-            console.log('data.requirement_uploads:', data.requirement_uploads);
             
             // Create FormData
             const formData = new FormData();
@@ -387,13 +374,9 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                 }
             });
             
-            console.log(`Total files to upload: ${fileCount}`);
-            console.log('FormData entries:');
             for (let pair of formData.entries()) {
-                console.log(pair[0], '=', pair[1]);
             }
             
-            console.log('Submitting via fetch...');
             
             try {
                 const response = await fetchWithCsrf(route('requests.update', existingApplication.id), {
@@ -404,7 +387,6 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                     },
                 });
                 
-                console.log('Response status:', response.status);
                 
                 if (response.ok) {
                     toast({

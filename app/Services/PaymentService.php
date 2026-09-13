@@ -65,6 +65,25 @@ class PaymentService
     public function recordPayment(RequestModel $request, array $data)
     {
         return DB::transaction(function () use ($request, $data) {
+            // One fee, one payment. Without this a double-click, a retried
+            // submission or two officers at the counter each create another
+            // verified payment and re-run the status change.
+            //
+            // The row is locked for the length of the transaction so a second
+            // request cannot read "no payment yet" while this one is still
+            // writing.
+            $locked = RequestModel::whereKey($request->id)->lockForUpdate()->first();
+
+            $alreadyPaid = Payment::where('request_id', $locked->id)
+                ->where('payment_status', 'verified')
+                ->exists();
+
+            if ($alreadyPaid) {
+                throw new \RuntimeException(
+                    'This application already has a verified payment recorded against it.'
+                );
+            }
+
             // Create payment record
             $payment = Payment::create([
                 'request_id' => $request->id,

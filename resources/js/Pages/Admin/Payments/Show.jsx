@@ -23,11 +23,15 @@ import SealWatermark from "@/Components/SealWatermark";
 export default function PaymentShow({ auth, payment, userType = 'admin' }) {
     const isSuperAdmin = userType === 'super_admin';
     const Sidebar = isSuperAdmin ? SuperAdminSidebar : AdminSidebar;
-    const historyRoute = isSuperAdmin ? 'super-admin.payments.history' : 'admin.payments.history';
+    // The payments list is served from the plain /payments address for both
+    // roles (see CleanPageController). admin.payments.history and
+    // admin.payments.pending were never defined, and route() throws on an
+    // unknown name — which is why this page rendered blank.
+    const paymentsUrl = '/payments';
     const dashboardRoute = isSuperAdmin ? 'super-admin.dashboard' : 'admin.dashboard';
 
     const handleBackToHistory = () => {
-        router.visit(route(historyRoute));
+        router.visit(paymentsUrl);
     };
 
     return (
@@ -56,7 +60,7 @@ export default function PaymentShow({ auth, payment, userType = 'admin' }) {
                                 <BreadcrumbSeparator />
                                 <BreadcrumbItem>
                                     <BreadcrumbLink
-                                        href={route("admin.payments.pending")}
+                                        href={paymentsUrl}
                                         className="text-slate-600 hover:text-slate-900"
                                     >
                                         Payments
@@ -65,7 +69,7 @@ export default function PaymentShow({ auth, payment, userType = 'admin' }) {
                                 <BreadcrumbSeparator />
                                 <BreadcrumbItem>
                                     <BreadcrumbLink
-                                        href={route("admin.payments.history")}
+                                        href={paymentsUrl}
                                         className="text-slate-600 hover:text-slate-900"
                                     >
                                         History

@@ -98,7 +98,7 @@ function Field({ label, children }) {
 function Section({ icon: Icon, title, count, action, children }) {
     return (
         <section className="rounded-lg border border-gray-200 bg-white">
-            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-3 py-2 sm:px-4">
+            <header className="flex flex-col gap-2 border-b border-gray-100 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
                 <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#0d1f5c]">
                     <Icon className="h-4 w-4 shrink-0 text-[#d4a017]" />
                     {title}
@@ -127,7 +127,7 @@ function DocLink({ href, children }) {
     return (
         <a
             href={href}
-            className="print:hidden inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-semibold text-[#0d1f5c] transition-colors hover:border-[#d4a017] hover:text-[#d4a017]"
+            className="print:hidden inline-flex w-full items-center justify-center gap-1 rounded-md border border-gray-200 px-3 py-2 text-xs font-semibold text-[#0d1f5c] transition-colors hover:border-[#d4a017] hover:text-[#d4a017] sm:w-auto sm:justify-start sm:px-2.5 sm:py-1"
         >
             {children}
             <ArrowUpRight className="h-3 w-3" />
@@ -334,7 +334,7 @@ function ApplicationDetail({ app, total, onZoom }) {
                                     label={doc.name || doc.filename || `Requirement ${i + 1}`}
                                     onZoom={onZoom}
                                 />
-                                <div className="mt-2 flex items-start justify-between gap-2">
+                                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                     <div className="min-w-0">
                                         <p className="text-xs font-semibold text-gray-900">
                                             <span className="mr-1 text-gray-400">{i + 1}.</span>
@@ -358,7 +358,7 @@ function ApplicationDetail({ app, total, onZoom }) {
                 title="Certificate & Clearance"
                 action={
                     documents?.available ? (
-                        <span className="flex flex-wrap gap-2">
+                        <span className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                             <DocLink href={documents.certificate_url}>Certificate</DocLink>
                             <DocLink href={documents.clearance_url}>Clearance</DocLink>
                         </span>
@@ -378,6 +378,146 @@ function ApplicationDetail({ app, total, onZoom }) {
                     <Empty>{documents?.note}</Empty>
                 )}
             </Section>
+        </div>
+    );
+}
+
+/* ── The printed pack (applicant report) ──────────────────────────────────── */
+
+/**
+ * One document to a page: certificate, application form, order of payment, then
+ * every remaining requirement.
+ *
+ * Only scans can be reproduced as pictures. The certificate and the order of
+ * payment are generated from the application on demand and no image of either
+ * is kept on file, so those pages carry their particulars instead of a blank
+ * sheet pretending to be the document.
+ */
+function PrintPage({ icon: Icon, title, subtitle, children }) {
+    return (
+        <section
+            className="hidden print:flex print:min-h-[9in] print:flex-col"
+            style={{ breakAfter: "page", breakInside: "avoid" }}
+        >
+            <header className="mb-3 border-b-2 border-[#0d1f5c] pb-2">
+                <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-[#0d1f5c]">
+                    <Icon className="h-4 w-4" />
+                    {title}
+                </p>
+                {subtitle && <p className="mt-0.5 text-[11px] text-gray-500">{subtitle}</p>}
+            </header>
+            <div className="flex flex-1 flex-col">{children}</div>
+        </section>
+    );
+}
+
+/** A scan filling its page, captioned. */
+function PrintScan({ doc }) {
+    if (doc.kind === "image") {
+        return (
+            <figure className="m-0 flex flex-1 flex-col">
+                <img
+                    src={doc.url}
+                    alt={doc.name || doc.filename}
+                    className="max-h-[8in] w-full flex-1 object-contain"
+                />
+                <figcaption className="mt-2 text-center text-[10px] text-gray-500">
+                    {doc.filename}
+                </figcaption>
+            </figure>
+        );
+    }
+
+    return (
+        <p className="text-[11px] italic text-gray-500">
+            {doc.filename} — {doc.kind === "pdf" ? "PDF document, held on file" : "file held on file"}.
+            Not reproduced here.
+        </p>
+    );
+}
+
+function PrintPack({ app, total }) {
+    const { form, order_of_payment: order, payment, requirements, certificate, documents } = app;
+
+    const formScan = requirements.find((d) => d.is_application_form);
+    const rest = requirements.filter((d) => !d.is_application_form);
+    const who = `${app.application_number} · ${form.applicant_name || ""}`.trim();
+
+    return (
+        <div className="hidden print:block">
+            {/* 1 — Certificate */}
+            <PrintPage icon={Award} title={`Certificate — Application ${app.step} of ${total}`} subtitle={who}>
+                {certificate ? (
+                    <dl className="text-[12px]">
+                        <Field label="Certificate No.">{certificate.number}</Field>
+                        <Field label="Status">{titleCase(certificate.status)}</Field>
+                        <Field label="Issued">{date(certificate.issued_at)}</Field>
+                        <Field label="Released">{date(certificate.released_at)}</Field>
+                    </dl>
+                ) : (
+                    <p className="text-[11px] italic text-gray-500">
+                        {documents?.available
+                            ? "No certificate has been recorded for this application yet."
+                            : documents?.note}
+                    </p>
+                )}
+            </PrintPage>
+
+            {/* 2 — Application form, the notarized scan where one was submitted */}
+            <PrintPage icon={FileText} title="Application Form" subtitle={who}>
+                {formScan ? (
+                    <PrintScan doc={formScan} />
+                ) : (
+                    <dl className="text-[12px]">
+                        <Field label="Applicant">{form.applicant_name}</Field>
+                        <Field label="Address">{form.address}</Field>
+                        <Field label="Contact">{form.contact}</Field>
+                        <Field label="Locational Clearance">{form.project_type}</Field>
+                        <Field label="Project Location">{form.location}</Field>
+                        <Field label="Reviewed By">{form.reviewed_by}</Field>
+                    </dl>
+                )}
+            </PrintPage>
+
+            {/* 3 — Order of payment, with the receipt where one was recorded */}
+            <PrintPage icon={Receipt} title="Order of Payment" subtitle={who}>
+                {order.available ? (
+                    <>
+                        <dl className="text-[12px]">
+                            <Field label="Amount Due">{peso(order.amount) ?? "Not set"}</Field>
+                            <Field label="O.R. Number">{payment?.receipt_number}</Field>
+                            <Field label="Amount Paid">{peso(payment?.amount)}</Field>
+                            <Field label="Date Paid">{date(payment?.date)}</Field>
+                        </dl>
+                        {payment?.receipt_url && payment.receipt_kind === "image" && (
+                            <figure className="m-0 mt-3 flex flex-1 flex-col">
+                                <img
+                                    src={payment.receipt_url}
+                                    alt="Official receipt"
+                                    className="max-h-[6in] w-full flex-1 object-contain"
+                                />
+                                <figcaption className="mt-2 text-center text-[10px] text-gray-500">
+                                    Official receipt
+                                </figcaption>
+                            </figure>
+                        )}
+                    </>
+                ) : (
+                    <p className="text-[11px] italic text-gray-500">{order.note}</p>
+                )}
+            </PrintPage>
+
+            {/* 4 onwards — one requirement to a page */}
+            {rest.map((doc, i) => (
+                <PrintPage
+                    key={doc.id}
+                    icon={Paperclip}
+                    title={`Requirement ${i + 1} of ${rest.length} — ${doc.name || "Attachment"}`}
+                    subtitle={who}
+                >
+                    <PrintScan doc={doc} />
+                </PrintPage>
+            ))}
         </div>
     );
 }
@@ -1003,14 +1143,14 @@ export default function ReportsWorkspace({
                         </div>
 
                         {/* Actions — screen only */}
-                        <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 px-4 py-3 sm:px-6 print:hidden">
-                            <Button onClick={() => window.print()} className="gap-2 bg-[#0d1f5c] text-white hover:bg-[#0d1f5c]/90">
+                        <div className="grid grid-cols-2 gap-2 border-b border-gray-100 px-4 py-3 sm:flex sm:flex-wrap sm:items-center sm:px-6 print:hidden">
+                            <Button onClick={() => window.print()} className="col-span-2 gap-2 bg-[#0d1f5c] text-white hover:bg-[#0d1f5c]/90 sm:col-span-1">
                                 <Printer className="h-4 w-4" />
                                 Print
                             </Button>
                             <Button onClick={() => download("pdf")} variant="outline" className="gap-2 border-gray-200">
                                 <FileDown className="h-4 w-4" />
-                                Download PDF
+                                <span className="truncate">PDF</span>
                             </Button>
                             <Button onClick={() => download("csv")} variant="outline" className="gap-2 border-gray-200">
                                 <FileSpreadsheet className="h-4 w-4" />
@@ -1084,13 +1224,13 @@ export default function ReportsWorkspace({
                                         <div className="print:hidden">
                                             {current && <ApplicationDetail app={current} total={applications.length} onZoom={setZoom} />}
                                         </div>
-                                        <div className="hidden print:block">
-                                            {applications.map((a) => (
-                                                <div key={a.id} className="mb-6" style={{ breakInside: "avoid" }}>
-                                                    <ApplicationDetail app={a} total={applications.length} onZoom={setZoom} />
-                                                </div>
-                                            ))}
-                                        </div>
+                                        {/* On paper the file becomes a pack: certificate,
+                                            application form, order of payment, then one
+                                            requirement to a page — for every application,
+                                            not only the one on screen. */}
+                                        {applications.map((a) => (
+                                            <PrintPack key={a.id} app={a} total={applications.length} />
+                                        ))}
 
                                         {applications.length > 1 && (
                                             <div className="mt-4 flex items-center justify-between gap-2 print:hidden">
@@ -1118,7 +1258,17 @@ export default function ReportsWorkspace({
                                     </>
                                 )
                             ) : (
-                                <RowsTable rows={report.rows ?? []} onSeeApplicant={seeApplicant} />
+                                <>
+                                    {report.truncated && (
+                                        <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 print:hidden">
+                                            Showing the first {report.row_limit.toLocaleString()} of{" "}
+                                            {report.summary.applications.toLocaleString()} applications on screen.
+                                            The counts above cover all of them, and the PDF and CSV downloads
+                                            include every row — or narrow the period to see them all here.
+                                        </p>
+                                    )}
+                                    <RowsTable rows={report.rows ?? []} onSeeApplicant={seeApplicant} />
+                                </>
                             )}
                         </div>
                     </div>

@@ -39,10 +39,12 @@ class CleanPageController extends Controller
      */
     private const PAGES = [
         'generate-clearance' => [
+            'roles' => ['admin', 'super_admin'],
             'method' => 'generateClearance',
             'controllers' => ['super_admin' => SuperAdminController::class, '*' => AdminController::class],
         ],
         'generate-certificate' => [
+            'roles' => ['admin', 'super_admin'],
             'method' => 'generateCertificate',
             'controllers' => ['super_admin' => SuperAdminController::class, '*' => AdminController::class],
         ],
@@ -59,14 +61,17 @@ class CleanPageController extends Controller
             'controllers' => ['*' => AdminController::class],
         ],
         'view-application' => [
+            'roles' => ['admin', 'super_admin'],
             'method' => 'viewApplication',
             'controllers' => ['super_admin' => SuperAdminController::class, '*' => AdminController::class],
         ],
         'review-application' => [
+            'roles' => ['admin', 'super_admin'],
             'method' => 'reviewRequest',
             'controllers' => ['super_admin' => SuperAdminController::class, '*' => AdminController::class],
         ],
         'document-verification' => [
+            'roles' => ['admin', 'super_admin'],
             'method' => 'documentVerification',
             'controllers' => ['super_admin' => SuperAdminController::class, '*' => AdminController::class],
         ],
@@ -79,10 +84,12 @@ class CleanPageController extends Controller
             'controllers' => ['*' => RequestController::class],
         ],
         'payment-details' => [
+            'roles' => ['admin', 'super_admin'],
             'method' => 'show',
             'controllers' => ['*' => PaymentController::class],
         ],
         'certificate-details' => [
+            'roles' => ['admin', 'super_admin'],
             'method' => 'show',
             'controllers' => ['*' => CertificateController::class],
         ],
@@ -169,6 +176,17 @@ class CleanPageController extends Controller
         }
 
         $role = $request->user()?->user_type;
+
+        // The roles allowed onto the page, checked here rather than trusted to
+        // the entry routes. Those routes are role-gated, so an applicant cannot
+        // normally get an id into an admin page's session slot - but a session
+        // outlives a role change, and a page that hands an applicant to
+        // AdminController on the strength of a stale slot is not a page that
+        // should exist.
+        if (isset($page['roles']) && !in_array($role, $page['roles'], true)) {
+            abort(403);
+        }
+
         $controller = $page['controllers'][$role] ?? $page['controllers']['*'];
 
         return app($controller)->{$page['method']}($id);

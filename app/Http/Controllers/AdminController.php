@@ -2536,8 +2536,12 @@ class AdminController extends Controller
             $requestModel = RequestModel::findOrFail($validated['request_id']);
             $file = $request->file('file');
             
-            // Store the file
-            $path = $file->store('requirements', 'public');
+            // The private disk, never 'public': storage/app/public is symlinked
+            // to public/storage and served straight off the web server, which
+            // puts an applicant's documents beyond the ownership check in
+            // RequirementDocumentController@view. Every other upload path here
+            // uses 'local'; these two did not.
+            $path = $file->store('requirements', 'local');
             
             // Create requirement document record
             $requirementDoc = \App\Models\RequirementDocument::create([

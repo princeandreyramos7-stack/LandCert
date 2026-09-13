@@ -119,9 +119,6 @@ export default function SuperAdminReviewRequest({ request }) {
         const docs = request.uploaded_requirements || [];
         const reference = request.requirements_reference || [];
         
-        console.log('=== SuperAdmin ReviewRequest Debug ===');
-        console.log('Uploaded requirements:', docs);
-        console.log('Requirements reference:', reference);
         
         // Create groups for ALL requirements from reference
         const groups = new Map();
@@ -155,7 +152,6 @@ export default function SuperAdminReviewRequest({ request }) {
         });
 
         const result = Array.from(groups.values());
-        console.log('Grouped requirements (ALL):', result);
         
         return result;
     }, [request.uploaded_requirements, request.requirements_reference]);

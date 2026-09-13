@@ -26,7 +26,10 @@ class RecordPaymentRequest extends FormRequest
     {
         return [
             'request_id' => ['required', 'integer', 'exists:requests,id'],
-            'receipt_number' => ['required', 'string', 'max:50'],
+            // One OR number, one payment. The browser's checkDuplicate() call
+            // runs before submission and cannot stop two officers recording the
+            // same receipt at once, so the rule is enforced here as well.
+            'receipt_number' => ['required', 'string', 'max:50', Rule::unique('payments', 'receipt_number')],
             'amount' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'payment_method' => ['required', Rule::in(['cash'])],

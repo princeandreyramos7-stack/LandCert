@@ -9,7 +9,17 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardCacheService
 {
-    const CACHE_TTL = 0; // No cache — always fresh data
+    /*
+     | Seconds the analytics stay cached.
+     |
+     | This was 0 - "always fresh" - which meant every dashboard load ran the
+     | full set of ~19 aggregate queries and loaded every application with its
+     | relations into memory. That is the first thing to buckle when several
+     | staff open the dashboard together. Sixty seconds is short enough that a
+     | chart never looks stale, and the live lists refresh on their own timer
+     | regardless.
+     */
+    const CACHE_TTL = 60;
 
     /**
      * Get dashboard analytics (always fresh)
@@ -284,25 +294,31 @@ class DashboardCacheService
      */
     private function calculateStats()
     {
-        $allRequests = RequestModel::with(['user', 'reports'])->get();
+        // Counted in the database rather than by loading every application
+        // with its user and reports into PHP and walking them - the same
+        // four numbers, without the memory and time growing with the table.
+        //
+        // The status is the report's evaluation where a report exists and the
+        // request's own status where it does not, which is what the loop it
+        // replaces did with `$report?->evaluation ?? $request->status`.
+        // Joined to each request's first report only (lowest id), which is
+        // what `->reports->first()` returned; a plain join would count a
+        // request with two reports under two statuses.
+        $counts = DB::table('requests')
+            ->leftJoin('reports', function ($join) {
+                $join->on('reports.request_id', '=', 'requests.id')
+                     ->whereRaw('reports.report_id = (SELECT MIN(r2.report_id) FROM reports r2 WHERE r2.request_id = requests.id)');
+            })
+            ->whereNull('requests.deleted_at')
+            ->selectRaw('COALESCE(reports.evaluation, requests.status) AS status, COUNT(*) AS n')
+            ->groupByRaw('COALESCE(reports.evaluation, requests.status)')
+            ->pluck('n', 'status');
 
-        $statusCounts = ['pending' => 0, 'approved' => 0, 'rejected' => 0];
-        
-        foreach ($allRequests as $request) {
-            // Get the latest report for this request
-            $report = $request->reports->first();
-            $status = $report?->evaluation ?? $request->status;
-            
-            if (isset($statusCounts[$status])) {
-                $statusCounts[$status]++;
-            }
-        }
-        
         return [
-            'total' => $allRequests->count(),
-            'pending' => $statusCounts['pending'],
-            'approved' => $statusCounts['approved'],
-            'rejected' => $statusCounts['rejected'],
+            'total' => (int) $counts->sum(),
+            'pending' => (int) ($counts['pending'] ?? 0),
+            'approved' => (int) ($counts['approved'] ?? 0),
+            'rejected' => (int) ($counts['rejected'] ?? 0),
         ];
     }
 
