@@ -351,6 +351,22 @@ class RequestController extends Controller
      * Everything the submission writes, as one transaction. Split out so that
      * store() can retry it when an application number collides.
      */
+    /**
+     * The project's tenure as it will be stored: [duration, years].
+     *
+     * A Temporary Use Permit is issued for one year, so for one the tenure is
+     * fixed at "Temporary" for 1 year whatever the form sent - the browser
+     * sets the same, but the rule belongs here, not only in the browser.
+     */
+    private static function projectTenure(array $validated): array
+    {
+        if (strtoupper(trim((string) ($validated['project_type'] ?? ''))) === 'TUP') {
+            return ['Temporary', 1];
+        }
+
+        return [$validated['project_nature_duration'] ?? null, $validated['project_nature_years'] ?? null];
+    }
+
     private function createApplication(array $validated, Request $request): array
     {
         return DB::transaction(function () use ($validated, $request) {
@@ -408,12 +424,13 @@ class RequestController extends Controller
 
             // 5. Create Project record
             if (isset($validated['project_type']) || isset($validated['project_nature'])) {
+                [$duration, $years] = self::projectTenure($validated);
                 \App\Models\NormalizedProject::create([
                     'request_id' => $newRequest->id,
                     'project_type' => $validated['project_type'] ?? '',
                     'project_nature' => $validated['project_nature'] ?? '',
-                    'project_nature_duration' => $validated['project_nature_duration'] ?? null,
-                    'project_nature_years' => $validated['project_nature_years'] ?? null,
+                    'project_nature_duration' => $duration,
+                    'project_nature_years' => $years,
                     'project_cost' => $validated['project_cost'] ?? null,
                 ]);
             }
@@ -650,13 +667,14 @@ class RequestController extends Controller
             }
 
             // Update Project
+            [$duration, $years] = self::projectTenure($validated);
             \App\Models\NormalizedProject::updateOrCreate(
                 ['request_id' => $existingRequest->id],
                 [
                     'project_type' => $validated['project_type'] ?? '',
                     'project_nature' => $validated['project_nature'] ?? '',
-                    'project_nature_duration' => $validated['project_nature_duration'] ?? null,
-                    'project_nature_years' => $validated['project_nature_years'] ?? null,
+                    'project_nature_duration' => $duration,
+                    'project_nature_years' => $years,
                     'project_cost' => $validated['project_cost'] ?? null,
                 ]
             );

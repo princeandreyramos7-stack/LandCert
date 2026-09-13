@@ -88,8 +88,13 @@
            Without this, a single element slightly wider than the viewport
            (e.g. a fixed-width table or badge) can make the whole page
            scrollable sideways, which also drags fixed/centered modals
-           along with it and makes them appear cut off. */
-        overflow-x: hidden;
+           along with it and makes them appear cut off.
+
+           clip, not hidden: overflow-x: hidden on <body> makes the body a
+           scroll container of its own, and anything position: sticky inside
+           it then sticks to the body - which never scrolls - rather than to
+           the page. clip cuts the overflow the same way without doing that. */
+        overflow-x: clip;
         max-width: 100vw;
     }
 }

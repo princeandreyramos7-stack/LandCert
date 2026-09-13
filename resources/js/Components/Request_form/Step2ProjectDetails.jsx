@@ -176,7 +176,15 @@ const parseCostInput = (displayValue) => {
  */
 const PROJECT_NATURE_OPTIONS = ["New Const.", "Improvement"];
 
+/**
+ * A Temporary Use Permit is, by definition, temporary and for one year — the
+ * permit itself is issued for a year (see TupClearanceLetter). The tenure
+ * fields say so and are not editable for one.
+ */
+const isTemporaryUsePermit = (data) => String(data.project_type || "").toUpperCase() === "TUP";
+
 export function Step2ProjectDetails({ data, errors, onDataChange }) {
+    const tup = isTemporaryUsePermit(data);
     const [natureChoice, setNatureChoice] = React.useState(() => {
         const current = String(data.project_nature || "");
         if (!current) return "";
@@ -403,10 +411,11 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
                     12. Project Tenure <span className="text-red-500">*</span>
                 </Label>
                 <Select
-                    value={data.project_nature_duration}
+                    value={tup ? "Temporary" : data.project_nature_duration}
                     onValueChange={(value) =>
                         onDataChange("project_nature_duration", value)
                     }
+                    disabled={tup}
                 >
                     <SelectTrigger>
                         <SelectValue placeholder="Select tenure" />
@@ -418,6 +427,11 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
                         </SelectItem>
                     </SelectContent>
                 </Select>
+                {tup && (
+                    <p className="text-xs text-gray-500">
+                        A Temporary Use Permit is issued for one year, so the tenure is set for you.
+                    </p>
+                )}
                 {errors.project_nature_duration && (
                     <p className="text-sm text-red-500">
                         {errors.project_nature_duration}
@@ -425,17 +439,20 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
                 )}
             </div>
 
-            {data.project_nature_duration === "Temporary" && (
+            {(tup || data.project_nature_duration === "Temporary") && (
                 <div className="space-y-2">
                     <Label htmlFor="project_nature_years">Specify Years</Label>
                     <Input
                         id="project_nature_years"
                         type="number"
-                        value={data.project_nature_years}
+                        min={1}
+                        value={tup ? 1 : data.project_nature_years}
                         onChange={(e) =>
                             onDataChange("project_nature_years", e.target.value)
                         }
                         placeholder="Number of years"
+                        readOnly={tup}
+                        className={tup ? "bg-gray-50 text-gray-700" : undefined}
                     />
                     {errors.project_nature_years && (
                         <p className="text-sm text-red-500">

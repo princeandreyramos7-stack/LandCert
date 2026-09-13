@@ -73,7 +73,7 @@ export default function ApplicantLayout({ title, children }) {
                     absolutely-positioned print area beside the sidebar. */}
                 <div
                     data-page-body
-                    className="relative isolate flex flex-1 flex-col min-h-screen overflow-x-hidden"
+                    className="relative isolate flex flex-1 flex-col min-h-screen overflow-x-clip"
                     style={{ background: "#f5f7ff" }}
                 >
                     <SealWatermark />

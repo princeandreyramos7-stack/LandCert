@@ -54,7 +54,7 @@ function Field({ label, value }) {
 
 function Section({ icon: Icon, title, children }) {
     return (
-        <Card>
+        <Card className="bg-transparent shadow-none">
             <CardHeader className="border-b bg-gray-50/60">
                 <CardTitle className="flex items-center gap-2 text-base text-gray-900">
                     <Icon className="h-5 w-5 text-blue-600" />
@@ -265,13 +265,15 @@ export default function ApplicationDetails({ application, requirements = [], doc
         <>
             <Head title={`${application.application_number || "Application"} — CPDO`} />
             <ApplicantLayout title="Application Details">
-                {/* The layout's watermark sits behind the page, and these cards
-                    are opaque, so it never showed through here. This one is
-                    scoped to the content column so it reads with the record. */}
-                <div className="relative isolate max-w-6xl mx-auto space-y-6">
-                    <SealWatermark />
+                {/* The record is laid out as one white sheet with the seal
+                    behind it, and the cards on the sheet are left transparent
+                    so the seal shows through them. A seal behind opaque cards
+                    - the layout's, or one under this column - was only ever
+                    visible in the gaps between them. */}
+                <div className="relative isolate mx-auto max-w-6xl space-y-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
+                    <SealWatermark className="rounded-2xl" follow />
                     {/* Header */}
-                    <Card>
+                    <Card className="bg-transparent shadow-none">
                         <CardContent className="pt-6">
                             <div className="flex flex-wrap items-start justify-between gap-4">
                                 <div className="flex items-start gap-4">

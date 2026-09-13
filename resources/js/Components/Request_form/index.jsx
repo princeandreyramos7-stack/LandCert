@@ -128,6 +128,16 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         ];
     }, [data.project_type]);
 
+    // A Temporary Use Permit runs for one year, so its tenure is not a choice.
+    // Written into the form as soon as the category is picked, so what is
+    // submitted matches what Step 2 shows.
+    useEffect(() => {
+        if (String(data.project_type || "").toUpperCase() !== "TUP") return;
+        if (data.project_nature_duration !== "Temporary" || String(data.project_nature_years) !== "1") {
+            setData((current) => ({ ...current, project_nature_duration: "Temporary", project_nature_years: 1 }));
+        }
+    }, [data.project_type, data.project_nature_duration, data.project_nature_years]);
+
     // A Zoning Certification has no project to describe: the applicant fills in
     // their details and uploads the documents, so steps 2 and 3 drop out.
     const activeSteps = useMemo(
