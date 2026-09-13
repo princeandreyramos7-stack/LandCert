@@ -42,6 +42,7 @@ import {
 import { useToast } from '@/Components/ui/use-toast';
 import { Toaster } from '@/Components/ui/toaster';
 import SealWatermark from "@/Components/SealWatermark";
+import { applicantSidebarStartsOpen } from "@/lib/applicantSidebar";
 
 /**
  * Display-only formatting for peso amount fields.
@@ -259,7 +260,7 @@ export default function UploadReceipt({ application, existingPayment }) {
     };
 
     return (
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={applicantSidebarStartsOpen()}>
             <AppSidebar />
             <SidebarInset>
                 <Head title="Upload Payment Receipt" />

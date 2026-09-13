@@ -14,6 +14,14 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // On a fresh database there is nothing to backfill - and the model
+        // below cannot be used yet: its soft-delete scope asks for a
+        // deleted_at column that a later migration adds. The query builder
+        // has no scope, so it is what decides whether to go on.
+        if (DB::table('requests')->whereNull('application_number')->count() === 0) {
+            return;
+        }
+
         // Get all requests that don't have an application_number yet
         $requests = RequestModel::whereNull('application_number')
             ->with('applicant')

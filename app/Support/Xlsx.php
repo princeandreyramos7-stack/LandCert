@@ -265,13 +265,22 @@ class Xlsx
         return is_int($value) ? (string) $value : rtrim(rtrim(sprintf('%.10F', $value), '0'), '.');
     }
 
-    /** Days since 1899-12-30, which is how Excel counts a date. */
+    /**
+     * Days since 1899-12-30, which is how Excel counts a date.
+     *
+     * Counted on the calendar date alone, in UTC: a zone's offset in 1899 is
+     * its old local-mean-time one (Manila's was +8:04), so subtracting
+     * timestamps across the two eras comes out minutes short and a day early.
+     */
     private static function excelDate(\DateTimeInterface $value): string
     {
-        $date = Carbon::instance($value)->startOfDay();
-        $epoch = Carbon::create(1899, 12, 30, 0, 0, 0, $date->getTimezone());
+        // The calendar date as the office sees it: a row stored in UTC that
+        // reads 16:00 on the 1st is the 2nd in Manila.
+        $date = Carbon::instance($value)->setTimezone(date_default_timezone_get());
+        $day = Carbon::create($date->year, $date->month, $date->day, 0, 0, 0, 'UTC');
+        $epoch = Carbon::create(1899, 12, 30, 0, 0, 0, 'UTC');
 
-        return (string) intdiv($date->getTimestamp() - $epoch->getTimestamp(), 86400);
+        return (string) (int) round(($day->getTimestamp() - $epoch->getTimestamp()) / 86400);
     }
 
     /* ── The parts of the package ─────────────────────────────────────── */

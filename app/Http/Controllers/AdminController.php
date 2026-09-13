@@ -868,8 +868,9 @@ class AdminController extends Controller
      */
     public function getRequirements(Request $request)
     {
-        $projectType = $request->input('project_type');
-        
+        // No type asked for is the general list, not a type error.
+        $projectType = (string) $request->input('project_type', '');
+
         $requirements = \App\Constants\ApplicationRequirements::getRequirements($projectType);
         
         return response()->json([
@@ -1237,9 +1238,17 @@ class AdminController extends Controller
                     );
                 }
                 if ($rejReq->user->email) {
+                    // Throwable, not Exception: the wrong argument count this
+                    // call once had was an Error, slipped past the catch, and
+                    // turned every rejection into a 500.
                     try {
-                        \Mail::to($rejReq->user->email)->send(new \App\Mail\PaymentRejected($payment, $rejReq));
-                    } catch (\Exception $e) {
+                        \Mail::to($rejReq->user->email)->send(new \App\Mail\PaymentRejected(
+                            $payment,
+                            $rejReq->applicant->applicant_name ?? $rejReq->user->name,
+                            $rejReq->application_number ?? $rejReq->id,
+                            $validated['rejection_reason']
+                        ));
+                    } catch (\Throwable $e) {
                         \Log::error('Failed to send payment denial email: ' . $e->getMessage());
                     }
                 }

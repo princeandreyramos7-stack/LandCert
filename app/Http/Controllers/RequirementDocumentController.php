@@ -213,6 +213,14 @@ class RequirementDocumentController extends Controller
             return;
         }
 
+        // Whose application it is comes before what state it is in: someone
+        // else's applicant gets a refusal, not a note about why *their*
+        // documents are locked - which would tell them the application is
+        // under review.
+        if ($requestModel->user_id !== auth()->id()) {
+            abort(403, 'You are not authorized to upload documents for this application.');
+        }
+
         $status = strtolower((string) $requestModel->status);
 
         if (!in_array($status, ['in_applicant', 'rejected'], true)) {

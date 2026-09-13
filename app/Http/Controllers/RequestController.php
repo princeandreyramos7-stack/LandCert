@@ -813,17 +813,18 @@ class RequestController extends Controller
             }
         ])->findOrFail($id);
 
-        // Check if this request belongs to the logged-in user
-        if ($request->user_id !== auth()->id()) {
-            return redirect()->back()->with('error', 'Unauthorized access');
-        }
+        // Someone else's application is a refusal, not a redirect: this page
+        // is reached through a bounce from the id-bearing route, so "back" is
+        // that route, which bounces here again, for ever.
+        abort_if($request->user_id !== auth()->id(), 403, 'You are not authorized to view this order of payment.');
 
         // The Order of Payment is the document the applicant brings to the Treasury,
         // so it is only issued once the Zoning Administrator has approved the
         // application — not while it is still awaiting that approval.
         $orderOfPaymentStatuses = ['approved'];
         if (!in_array(strtolower((string) $request->status), $orderOfPaymentStatuses, true)) {
-            return redirect()->back()->with('error', 'The Order of Payment is available once your application has been approved by the Zoning Administrator.');
+            // To the list, never back(): see above.
+            return redirect()->route('my-applications')->with('error', 'The Order of Payment is available once your application has been approved by the Zoning Administrator.');
         }
 
         $payment = $request->payments->first();
