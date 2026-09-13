@@ -1498,11 +1498,11 @@ export default function ReportsWorkspace({
                 {/* The report itself */}
                 {report && (
                     <div id="report-panel" ref={panelRef} className="relative isolate rounded-xl border border-gray-100 bg-white shadow-sm">
-                        {/* The layout's watermark sits behind this panel, which is
-                            opaque, so the report carries its own. Inside the panel
-                            it also survives printing, where everything outside
-                            #report-panel is hidden. */}
-                        <SealWatermark className="rounded-xl" />
+                        {/* Printed only. On screen the layout's watermark already
+                            shows behind the page, and a second seal inside the
+                            panel read as a duplicate; on paper everything outside
+                            #report-panel is hidden, so the panel carries its own. */}
+                        <SealWatermark className="rounded-xl hidden print:flex" />
 
                         {/* Letterhead — printed as well as shown, except on the
                             applicant file, which opens with its own cover page. */}
