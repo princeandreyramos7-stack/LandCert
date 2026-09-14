@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
-import { Link, usePage } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
+import { journeyOf, bucketOf, TONES } from "@/lib/applicantJourney";
 import {
     FileText,
     Clock,
@@ -18,24 +19,6 @@ function formatDate(ds) {
     if (!ds) return "—";
     return new Date(ds).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" });
 }
-
-const APPROVED_CFG = { label: "Application Approved", icon: CheckCircle, bg: "bg-green-50", text: "text-green-700", border: "border-green-200", dot: "bg-green-500" };
-const STATUS_MAP = {
-    pending:      { label: "Pending",      icon: Clock,        bg: "bg-yellow-50",  text: "text-yellow-700",  border: "border-yellow-200", dot: "bg-yellow-500" },
-    approved:     { label: "Approved",     icon: CheckCircle,  bg: "bg-green-50",   text: "text-green-700",   border: "border-green-200",  dot: "bg-green-500"  },
-    rejected:     { label: "Denied",     icon: XCircle,      bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200",    dot: "bg-red-500"    },
-    "under review":{ label: "Under Review", icon: AlertCircle, bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200",   dot: "bg-blue-500"   },
-    // Everything after the payment is verified is just "Application Approved".
-    payment_confirmed:     APPROVED_CFG,
-    certificate_preparing: APPROVED_CFG,
-    certificate_ready:     APPROVED_CFG,
-    released:              APPROVED_CFG,
-};
-
-function statusCfg(s) {
-    return STATUS_MAP[s?.toLowerCase()] || STATUS_MAP.pending;
-}
-
 /* ── Stat card ──────────────────────────────────────────────────── */
 function StatCard({ label, value, icon: Icon, accent, desc }) {
     return (
@@ -70,17 +53,15 @@ function ActionCard({ href, icon: Icon, title, desc, iconBg, iconColor }) {
 }
 
 /* ── Status badge ───────────────────────────────────────────────── */
-function StatusBadge({ status }) {
-    const cfg = statusCfg(status);
-    const Icon = cfg.icon;
+function StatusBadge({ journey }) {
+    const tone = TONES[journey.tone];
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}/>
-            {cfg.label}
+        <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset ${tone.badge}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${tone.bar}`}/>
+            {journey.label}
         </span>
     );
 }
-
 /* ── Main component ─────────────────────────────────────────────── */
 export function Dashboard({ requests }) {
     const { auth } = usePage().props;
@@ -89,54 +70,60 @@ export function Dashboard({ requests }) {
 
     const data = requests?.data || requests || [];
 
-    const stats = useMemo(() => ({
-        total:       data.length,
-        pending:     data.filter(r => r.status?.toLowerCase() === "pending").length,
-        approved:    data.filter(r => r.status?.toLowerCase() === "approved").length,
-        underReview: data.filter(r => r.status?.toLowerCase() === "under review").length,
-        rejected:    data.filter(r => r.status?.toLowerCase() === "rejected").length,
-    }), [data]);
+    // Counted the way the applicant thinks about it: what needs them, what
+    // the office is working on, what is ready - not the office's statuses.
+    const stats = useMemo(() => {
+        const c = { total: data.length, action: 0, progress: 0, done: 0, denied: 0 };
+        for (const r of data) {
+            if (journeyOf(r).failed) c.denied++;
+            else c[bucketOf(r)]++;
+        }
+        return c;
+    }, [data]);
 
-    const recent = useMemo(() => data.slice(0, 5), [data]);
+    // Anything that needs the applicant comes first, then the newest.
+    const recent = useMemo(() => {
+        const rank = (r) => (journeyOf(r).needsAction ? 0 : 1);
+        return [...data].sort((a, b) => rank(a) - rank(b)).slice(0, 5);
+    }, [data]);
 
     const statCards = [
         {
             label: "Total Applications",
             value: stats.total,
             icon: FileText,
-            desc: "All submitted applications",
+            desc: "All you have filed",
             accent: { border: "border-gray-100", left: "border-l-[#0d1f5c]", iconBg: "bg-[#0d1f5c]/10", iconColor: "text-[#0d1f5c]" },
         },
         {
-            label: "Pending Review",
-            value: stats.pending,
-            icon: Clock,
-            desc: "Awaiting processing",
-            accent: { border: "border-yellow-50", left: "border-l-yellow-500", iconBg: "bg-yellow-50", iconColor: "text-yellow-600" },
+            label: "Needs My Action",
+            value: stats.action,
+            icon: AlertCircle,
+            desc: stats.action ? "Something to do below" : "Nothing waiting on you",
+            accent: { border: "border-amber-50", left: "border-l-[#d4a017]", iconBg: "bg-[#d4a017]/15", iconColor: "text-[#d4a017]" },
         },
         {
-            label: "Under Review",
-            value: stats.underReview,
-            icon: AlertCircle,
-            desc: "Being evaluated",
+            label: "With the Office",
+            value: stats.progress,
+            icon: Clock,
+            desc: "Being verified, approved or prepared",
             accent: { border: "border-blue-50", left: "border-l-blue-500", iconBg: "bg-blue-50", iconColor: "text-blue-600" },
         },
         {
-            label: "Approved",
-            value: stats.approved,
+            label: "Ready",
+            value: stats.done,
             icon: CheckCircle,
-            desc: "Successfully approved",
+            desc: "Document ready to download",
             accent: { border: "border-green-50", left: "border-l-green-500", iconBg: "bg-green-50", iconColor: "text-green-600" },
         },
         {
             label: "Denied",
-            value: stats.rejected,
+            value: stats.denied,
             icon: XCircle,
-            desc: "Not approved",
+            desc: "Can be corrected and resubmitted",
             accent: { border: "border-red-50", left: "border-l-red-500", iconBg: "bg-red-50", iconColor: "text-red-500" },
         },
     ];
-
     return (
         <div className="space-y-6">
 
@@ -175,7 +162,7 @@ export function Dashboard({ requests }) {
             </div>
 
             {/* ── Stat cards ──────────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
                 {statCards.map((s, i) => (
                     <StatCard key={i} {...s}/>
                 ))}
@@ -185,8 +172,8 @@ export function Dashboard({ requests }) {
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
                     <div>
-                        <h2 className="font-black text-[#0d1f5c] text-base">Recent Applications</h2>
-                        <p className="text-xs text-gray-400 mt-0.5">Your latest submitted applications</p>
+                        <h2 className="font-black text-[#0d1f5c] text-base">Your Applications</h2>
+                        <p className="text-xs text-gray-400 mt-0.5">{stats.action ? `${stats.action} waiting on you - shown first` : "Newest first"}</p>
                     </div>
                     <Link href="/my-applications"
                         className="flex items-center gap-1.5 text-xs font-bold text-[#0d1f5c] hover:text-[#d4a017] transition-colors group">
@@ -215,41 +202,54 @@ export function Dashboard({ requests }) {
                 ) : (
                     <div className="divide-y divide-gray-50">
                         {recent.map((app) => {
-                            const cfg = statusCfg(app.status);
+                            const journey = journeyOf(app);
+                            const tone = TONES[journey.tone];
+                            const type = String(app.project_type || "").toUpperCase();
+                            const details = route("my-applications.show", app.id);
                             return (
                                 <div key={app.id}
-                                    className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/60 transition-colors group">
-                                    {/* ID badge */}
-                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-sm text-white"
-                                        style={{ background: "linear-gradient(135deg,#0d1f5c,#1a3a8f)" }}>
-                                        #{app.id}
-                                    </div>
-
-                                    {/* Info */}
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-[#0d1f5c] text-sm truncate">
-                                            {app.applicant_name || "Unnamed Applicant"}
-                                        </p>
-                                        <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400 flex-wrap">
-                                            <span className="flex items-center gap-1">
-                                                <Calendar className="w-3 h-3"/>
-                                                {formatDate(app.created_at)}
+                                    className={`flex flex-col gap-3 px-6 py-4 transition-colors hover:bg-gray-50/60 sm:flex-row sm:items-center ${journey.needsAction ? "border-l-4 border-l-[#d4a017]" : ""}`}>
+                                    {/* Number + type */}
+                                    <div className="flex items-center gap-3 sm:w-52 sm:shrink-0">
+                                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black ${tone.soft} ${tone.text}`}>
+                                            {type || "APP"}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <Link href={details} className="block truncate font-mono text-xs font-bold text-[#0d1f5c] hover:underline">
+                                                {app.application_number || `#${app.id}`}
+                                            </Link>
+                                            <span className="flex items-center gap-1 text-[11px] text-gray-400">
+                                                <Calendar className="h-3 w-3"/>{formatDate(app.created_at)}
                                             </span>
-                                            {app.project_type && (
-                                                <span className="truncate max-w-[160px]">{app.project_type}</span>
-                                            )}
                                         </div>
                                     </div>
-
-                                    {/* Status */}
-                                    <StatusBadge status={app.status}/>
+                                    {/* Project + what's next */}
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-bold text-gray-900">{app.project_nature || "Application"}</p>
+                                        <p className={`truncate text-xs ${journey.needsAction ? `font-semibold ${tone.text}` : "text-gray-500"}`}>{journey.headline}</p>
+                                    </div>
+                                    {/* Status + action */}
+                                    <div className="flex items-center justify-between gap-3 sm:justify-end">
+                                        <StatusBadge journey={journey}/>
+                                        {journey.action && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const url = route(journey.action.route, app.id);
+                                                    journey.action.newTab ? window.open(url, "_blank") : router.visit(url);
+                                                }}
+                                                className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${journey.needsAction ? "bg-[#0d1f5c] text-white hover:bg-[#0d1f5c]/90" : "text-[#0d1f5c] hover:bg-[#0d1f5c]/5"}`}>
+                                                {journey.action.label}
+                                                <ArrowRight className="h-3.5 w-3.5"/>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             );
                         })}
                     </div>
                 )}
             </div>
-
             {/* ── Quick Actions ────────────────────────────────────── */}
             <div>
                 <h2 className="font-black text-[#0d1f5c] text-base mb-3">Quick Actions</h2>

@@ -34,17 +34,23 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     // 'form'   -> the messages are validation problems the applicant can fix
     // 'system' -> the message is a server/system failure, nothing to fix in the form
     const [submitErrorKind, setSubmitErrorKind] = useState(null);
+    // Inline marks from the step validators, keyed by field (see validateCurrentStep).
+    const [stepErrors, setStepErrors] = useState({});
     const { toast } = useToast();
     const page = usePage();
     const flash = page.props.flash || {};
     // What the server will accept in one POST, shared from php.ini.
     const uploadLimits = page.props.uploadLimits || {};
 
+    // A new application starts with the applicant's own name and address
+    // from their account, so the first page is mostly done before they begin.
+    const me = page.props.auth?.user || {};
+
     const { data, setData, post, put, processing, errors, reset } = useForm({
         // Step 1: Applicant Information
-        applicant_name: existingApplication?.applicant_name || "",
+        applicant_name: existingApplication?.applicant_name || me.name || "",
         corporation_name: existingApplication?.corporation_name || "",
-        applicant_address: existingApplication?.applicant_address || "",
+        applicant_address: existingApplication?.applicant_address || me.address || "",
         corporation_address: existingApplication?.corporation_address || "",
         authorized_representative_name: existingApplication?.authorized_representative_name || "",
         authorized_representative_address: existingApplication?.authorized_representative_address || "",
@@ -185,6 +191,8 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     // Handle data changes
     const handleDataChange = (field, value) => {
         setData(field, value);
+        // A field being typed into is being fixed: its mark comes off at once.
+        if (stepErrors[field]) setStepErrors((e) => { const next = { ...e }; delete next[field]; return next; });
     };
 
     // Check if current step should be marked as completed based on validation
@@ -224,6 +232,39 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         }
     };
 
+    // The step validators speak in labels ("Applicant Name is required"); the
+    // fields show their own error underneath when told which field it is.
+    // So each message is matched back to its field and shown there too, and
+    // the page scrolls to the first one, instead of a toast alone.
+    const FIELD_BY_LABEL = {
+        "Applicant Name": "applicant_name", "Applicant Address": "applicant_address",
+        "Corporation Name": "corporation_name", "Corporation Address": "corporation_address",
+        "Authorized Representative Name": "authorized_representative_name", "Authorized Representative Address": "authorized_representative_address",
+        "Authorized Representative Email": "authorized_representative_email", "Authorization Letter": "authorization_letter",
+        "Project Nature Duration": "project_nature_duration", "Project Nature Years": "project_nature_years", "Project Nature": "project_nature",
+        "Project Area (sqm)": "lot_area_sqm", "Project Cost": "project_cost", "Right Over Land": "right_over_land", "Existing Land Use": "existing_land_use",
+        "Written Notice to Tenants": "has_written_notice", "Notice Officer Name": "notice_officer_name", "Notice Dates": "notice_dates",
+        "Similar Application Filed": "has_similar_application", "Similar Application Offices": "similar_application_offices", "Similar Application Dates": "similar_application_dates",
+        "Preferred Release Mode": "preferred_release_mode",
+    };
+    const fieldErrorsFrom = (messages) => {
+        const found = {};
+        for (const message of messages) {
+            const label = Object.keys(FIELD_BY_LABEL).sort((a, b) => b.length - a.length).find((l) => message.startsWith(l));
+            if (label && !found[FIELD_BY_LABEL[label]]) found[FIELD_BY_LABEL[label]] = message;
+        }
+        return found;
+    };
+    const scrollToFirstError = (fields) => {
+        const first = Object.keys(fields)[0];
+        if (!first) return;
+        const el = document.querySelector(`[name="${first}"], #${first}`);
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            if (typeof el.focus === "function") el.focus({ preventScroll: true });
+        }
+    };
+
     // Validate current step
     const validateCurrentStep = () => {
         let validationErrors = [];
@@ -245,13 +286,17 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                 break;
         }
 
+        const inline = fieldErrorsFrom(validationErrors);
+        setStepErrors(inline);
+
         if (validationErrors.length > 0) {
+            scrollToFirstError(inline);
             toast({
                 variant: "destructive",
-                title: "Validation Error",
+                title: "A few things to fill in",
                 description: (
                     <div>
-                        <p className="mb-2">Please fill in the following required fields:</p>
+                        <p className="mb-2">The fields are marked on the form:</p>
                         <ul className="list-disc list-inside">
                             {validationErrors.map((error, index) => (
                                 <li key={index}>{error}</li>
@@ -657,7 +702,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                                     {currentStep === 1 && (
                                         <Step1ApplicantInfo
                                             data={data}
-                                            errors={errors}
+                                            errors={{ ...stepErrors, ...errors }}
                                             hasRepresentative={hasRepresentative}
                                             onDataChange={handleDataChange}
                                             onRepresentativeToggle={handleRepresentativeToggle}
@@ -669,7 +714,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                                     {currentStep === 2 && (
                                         <Step2ProjectDetails
                                             data={data}
-                                            errors={errors}
+                                            errors={{ ...stepErrors, ...errors }}
                                             onDataChange={handleDataChange}
                                         />
                                     )}
@@ -679,7 +724,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                                     {currentStep === 3 && (
                                         <Step3LandUse
                                             data={data}
-                                            errors={errors}
+                                            errors={{ ...stepErrors, ...errors }}
                                             hasRepresentative={hasRepresentative}
                                             onDataChange={handleDataChange}
                                             onToast={toast}
@@ -691,7 +736,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                                     {currentStep === 4 && (
                                         <Step4Requirements
                                             data={data}
-                                            errors={errors}
+                                            errors={{ ...stepErrors, ...errors }}
                                             onDataChange={handleDataChange}
                                             requirements={requirements}
                                             existingDocuments={existingApplication?.existing_documents || {}}

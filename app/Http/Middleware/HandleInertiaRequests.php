@@ -58,6 +58,9 @@ class HandleInertiaRequests extends Middleware
                     'user_type' => $request->user()->user_type,
                     'roles' => $request->user()->roles,
                     'avatar_url' => $request->user()->avatar_url,
+                    // The application form starts with these filled in.
+                    'address' => $request->user()->address,
+                    'contact_number' => $request->user()->contact_number,
                 ] : null,
             ],
             /*

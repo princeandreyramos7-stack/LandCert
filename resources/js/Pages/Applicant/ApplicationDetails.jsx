@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { Head, router } from "@inertiajs/react";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import SealWatermark from "@/Components/SealWatermark";
+import { JourneyPanel } from "@/Components/Applicant/JourneyPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Badge } from "@/Components/ui/badge";
 import { Button } from "@/Components/ui/button";
@@ -337,6 +338,12 @@ export default function ApplicationDetails({ application, requirements = [], doc
                         </CardContent>
                     </Card>
 
+                    {/* Where it stands and what happens next - the same panel as My Applications. */}
+                    <JourneyPanel
+                        app={application}
+                        onHere={() => document.getElementById("requirements")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    />
+
                     {/* Applicant */}
                     <Section icon={User} title="Applicant Information">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -437,6 +444,7 @@ export default function ApplicationDetails({ application, requirements = [], doc
                     )}
 
                     {/* Requirements */}
+                    <div id="requirements" className="scroll-mt-20" />
                     <Section icon={ListChecks} title="Requirements">
                         {canUpload ? (
                             <p className="text-xs text-gray-500 mb-4">

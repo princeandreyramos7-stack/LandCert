@@ -184,12 +184,12 @@ class SecurityTest extends TestCase
         $officer = $this->userOf('admin');
 
         // Staff pages, for an applicant.
-        foreach (['/applications', '/payments', '/certificates', '/users', '/audit-logs', '/reports', '/sms-broadcast', '/backups', '/dashboard-panel'] as $page) {
+        foreach (['/applications', '/payments', '/certificates', '/users', '/audit-logs', '/reports', '/sms-broadcast', '/super-admin/backups', '/dashboard-panel'] as $page) {
             $this->actingAs($applicant)->get($page)->assertForbidden();
         }
 
         // The administrator's own, for an officer.
-        foreach (['/backups', '/super-admin/users', '/super-admin/dashboard'] as $page) {
+        foreach (['/super-admin/backups', '/super-admin/users', '/super-admin/dashboard'] as $page) {
             $status = $this->actingAs($officer)->get($page)->getStatusCode();
             $this->assertContains($status, [403, 302], "officer reached $page");
         }

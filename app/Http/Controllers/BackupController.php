@@ -4,74 +4,54 @@ namespace App\Http\Controllers;
 
 use App\Services\AuditLogService;
 use App\Support\BackupSchedule;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
-use Inertia\Inertia;
-use Inertia\Response;
 
 /**
- * Backups, for the Zoning Administrator.
+ * The backups folder, for the Zoning Administrator.
  *
  * The backup itself is spatie/laravel-backup: a dump of the database and a
  * copy of every uploaded file, zipped onto the "backups" disk, run by the
- * scheduler. It used to run at a fixed hour with no way of knowing, short of
- * looking at the disk, whether it had. This page shows what is on the disk,
- * how the last run went and when the next one is, takes a backup on demand,
- * hands the files out, and lets the office choose daily or weekly.
+ * scheduler. There is no page for it - the administrator opens the folder
+ * from the sidebar, on whatever page they are on, and sees the files in it,
+ * how the last run went and when the next is due; takes one now, downloads
+ * or deletes one, and picks daily or weekly. Everything here answers in JSON
+ * to that folder.
  */
 class BackupController extends Controller
 {
-    public function index(): Response
+    /** The folder's contents. */
+    public function index(): JsonResponse
     {
-        $disk = Storage::disk('backups');
-        $files = collect($disk->allFiles())
-            ->filter(fn ($path) => str_ends_with(strtolower($path), '.zip'))
-            ->map(fn ($path) => [
-                'name' => basename($path),
-                'path' => $path,
-                'size' => $disk->size($path),
-                'created_at' => Carbon::createFromTimestamp($disk->lastModified($path))->toIso8601String(),
-            ])
-            ->sortByDesc('created_at')
-            ->values();
-
-        $schedule = BackupSchedule::current();
-
-        return Inertia::render('SuperAdmin/Backups', [
-            'backups' => $files,
-            'totalSize' => $files->sum('size'),
-            'schedule' => $schedule,
-            'nextRun' => BackupSchedule::nextRun($schedule)->toIso8601String(),
-            'lastRun' => BackupSchedule::lastRun(),
-            'keepDays' => (int) config('backup.cleanup.default_strategy.keep_all_backups_for_days', 7),
-        ]);
+        return response()->json($this->folder());
     }
 
-    /** Take a backup now. Synchronous: the office waits a few seconds and sees the result. */
-    public function run()
+    /** Take a backup now. Synchronous: the office waits a few seconds and sees the file appear. */
+    public function run(): JsonResponse
     {
         try {
             // Notifications are mail, and mail is not something a backup should
-            // depend on; the outcome is recorded for the page instead.
+            // depend on; the outcome is recorded for the folder instead.
             $code = Artisan::call('backup:run', ['--disable-notifications' => true]);
             $output = trim(Artisan::output());
 
             if ($code !== 0 || str_contains($output, 'Backup failed')) {
                 BackupSchedule::recordRun(false, self::lastLine($output), 'manual');
 
-                return back()->with('error', 'The backup did not complete: ' . self::lastLine($output));
+                return response()->json(['message' => 'The backup did not complete: ' . self::lastLine($output)] + $this->folder(), 500);
             }
 
             BackupSchedule::recordRun(true, 'Backup completed', 'manual');
-            AuditLogService::log('backup_created', 'Manual backup taken from the Backups page', 'Backup', null);
+            AuditLogService::log('backup_created', 'Manual backup taken from the Backups folder', 'Backup', null);
 
-            return back()->with('success', 'Backup completed. The file is listed below.');
+            return response()->json(['message' => 'Backup completed.'] + $this->folder());
         } catch (\Throwable $e) {
             BackupSchedule::recordRun(false, $e->getMessage(), 'manual');
 
-            return back()->with('error', 'The backup did not complete: ' . $e->getMessage());
+            return response()->json(['message' => 'The backup did not complete: ' . $e->getMessage()] + $this->folder(), 500);
         }
     }
 
@@ -82,16 +62,16 @@ class BackupController extends Controller
         return Storage::disk('backups')->download($path, basename($path));
     }
 
-    public function destroy(string $file)
+    public function destroy(string $file): JsonResponse
     {
         $path = $this->locate($file);
         Storage::disk('backups')->delete($path);
         AuditLogService::log('backup_deleted', "Backup {$file} deleted", 'Backup', null);
 
-        return back()->with('success', 'Backup deleted.');
+        return response()->json(['message' => 'Backup deleted.'] + $this->folder());
     }
 
-    public function schedule(Request $request)
+    public function schedule(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'frequency' => 'required|in:daily,weekly',
@@ -102,7 +82,32 @@ class BackupController extends Controller
         $saved = BackupSchedule::save($validated);
         AuditLogService::log('backup_schedule_updated', "Automatic backup set to {$saved['frequency']} at {$saved['time']}", 'Backup', null);
 
-        return back()->with('success', 'Backup schedule saved.');
+        return response()->json(['message' => 'Schedule saved.'] + $this->folder());
+    }
+
+    private function folder(): array
+    {
+        $disk = Storage::disk('backups');
+        $files = collect($disk->allFiles())
+            ->filter(fn ($path) => str_ends_with(strtolower($path), '.zip'))
+            ->map(fn ($path) => [
+                'name' => basename($path),
+                'size' => $disk->size($path),
+                'created_at' => Carbon::createFromTimestamp($disk->lastModified($path))->toIso8601String(),
+            ])
+            ->sortByDesc('created_at')
+            ->values();
+
+        $schedule = BackupSchedule::current();
+
+        return [
+            'backups' => $files,
+            'totalSize' => $files->sum('size'),
+            'schedule' => $schedule,
+            'nextRun' => BackupSchedule::nextRun($schedule)->toIso8601String(),
+            'lastRun' => BackupSchedule::lastRun(),
+            'keepDays' => (int) config('backup.cleanup.default_strategy.keep_all_backups_for_days', 7),
+        ];
     }
 
     /**

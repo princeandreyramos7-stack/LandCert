@@ -41,12 +41,17 @@ class RequestController extends Controller
                 'requests.user_id',
                 'requests.status as request_status',
                 'requests.released_to_applicant_at',
+                'requests.application_number',
                 'requests.created_at',
                 'requests.updated_at',
                 'applicants.applicant_name',
                 'normalized_projects.project_type',
                 'normalized_projects.project_nature',
+                'locations.barangay as project_location_barangay',
                 'locations.city_municipality as project_location_city',
+                // Whether the notarized form (requirement #1) is in yet: the
+                // dashboard says the same thing about it as My Applications.
+                DB::raw('EXISTS(SELECT 1 FROM requirement_documents rd WHERE rd.request_id = requests.id AND rd.requirement_id = 1) as has_notarized_form'),
                 DB::raw("CASE WHEN requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN requests.status ELSE COALESCE(reports.evaluation, requests.status) END as status")
             )
             ->orderBy('requests.created_at', 'desc')
@@ -1031,6 +1036,9 @@ class RequestController extends Controller
                 'decision_number' => $request->decision_number,
                 'status' => RequestModel::deriveStatus($request->status, $report?->evaluation),
                 'request_status' => $request->status,
+                // For the "where it stands" panel: the same flags My Applications reads.
+                'released_to_applicant_at' => $request->released_to_applicant_at,
+                'has_notarized_form' => $request->requirementDocuments->contains(fn ($d) => (int) $d->requirement_id === 1),
                 'created_at' => $request->created_at?->format('F j, Y'),
                 'updated_at' => $request->updated_at?->format('F j, Y'),
 

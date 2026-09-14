@@ -137,7 +137,8 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     })->name('users.create');
     Route::get('/audit-logs', function (\Illuminate\Http\Request $request) { return redirect('/audit-logs' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('audit-logs');
 
-    // Backups: the page is served from /backups (CleanPageController); these are its actions.
+    // Backups: a folder the administrator opens from the sidebar, not a page. JSON throughout.
+    Route::get('/backups', [\App\Http\Controllers\BackupController::class, 'index'])->name('backups.index');
     Route::post('/backups/run', [\App\Http\Controllers\BackupController::class, 'run'])->name('backups.run');
     Route::put('/backups/schedule', [\App\Http\Controllers\BackupController::class, 'schedule'])->name('backups.schedule');
     Route::get('/backups/{file}/download', [\App\Http\Controllers\BackupController::class, 'download'])->name('backups.download');

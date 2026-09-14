@@ -113,7 +113,6 @@ class CleanPageController extends Controller
         'reports'         => ['method' => 'index',     'controllers' => ['super_admin' => SuperAdminReportsController::class, 'admin' => AdminReportsController::class]],
         'sms-broadcast'   => ['method' => 'index',     'controllers' => ['super_admin' => SmsController::class, 'admin' => SmsController::class]],
         // The administrator alone: a role with no entry here gets a 403.
-        'backups'         => ['method' => 'index',     'controllers' => ['super_admin' => BackupController::class]],
     ];
 
     /** Slugs for the section pages. */

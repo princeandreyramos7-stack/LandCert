@@ -11,8 +11,9 @@ import {
     History,
     MessageSquare,
     FileBarChart,
-    DatabaseBackup,
+    FolderArchive,
 } from "lucide-react";
+import BackupsFolder from "@/Components/SuperAdmin/BackupsFolder";
 import SidebarUserMenu from "@/Components/SidebarUserMenu";
 import {
     Sidebar,
@@ -79,9 +80,10 @@ const navGroups = [
                 icon: MessageSquare,
             },
             {
+                // Not a page: opens the backups folder over whatever page is open.
                 title: "Backups",
-                url: "/backups",
-                icon: DatabaseBackup,
+                action: "backups",
+                icon: FolderArchive,
             },
         ],
     },
@@ -91,6 +93,7 @@ export function SuperAdminSidebar({ ...props }) {
     const { auth } = usePage().props;
     const { state } = useSidebar();
     const collapsed = state === "collapsed";
+    const [backupsOpen, setBackupsOpen] = React.useState(false);
 
     const user = {
         name: auth?.user?.name || "Zoning Administrator",
@@ -153,6 +156,21 @@ export function SuperAdminSidebar({ ...props }) {
                         )}
                         <SidebarMenu>
                             {group.items.map((item) => {
+                                if (item.action === "backups") {
+                                    return (
+                                        <SidebarMenuItem key={item.title}>
+                                            <SidebarMenuButton
+                                                type="button"
+                                                onClick={() => setBackupsOpen(true)}
+                                                tooltip={item.title}
+                                                className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-semibold"
+                                            >
+                                                <item.icon className="w-5 h-5 shrink-0" />
+                                                <span>{item.title}</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                    );
+                                }
                                 const isActive =
                                     currentPath === item.url ||
                                     (currentPath.startsWith(item.url + "/") &&
@@ -192,6 +210,8 @@ export function SuperAdminSidebar({ ...props }) {
                     </SidebarGroup>
                 ))}
             </SidebarContent>
+
+            <BackupsFolder open={backupsOpen} onOpenChange={setBackupsOpen} />
 
             {/* Footer */}
             <SidebarFooter className="border-t border-sidebar-border px-2 py-3">

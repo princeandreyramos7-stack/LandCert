@@ -14,7 +14,7 @@ export const CLEARANCE_TYPES = [
 
 /** Options for a clearance-type dropdown, "All" first. */
 export const CLEARANCE_TYPE_FILTERS = [
-    { value: "all", label: "All Clearance Types" },
+    { value: "all", label: "All Application Types" },
     ...CLEARANCE_TYPES.map((type) => ({
         value: type.value,
         label: `${type.value} — ${type.name}`,

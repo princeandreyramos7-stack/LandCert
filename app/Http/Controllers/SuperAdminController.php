@@ -314,42 +314,10 @@ class SuperAdminController extends Controller
      */
     public function requests(Request $request): Response
     {
-        // Get ALL requests with their related data and reports (using normalized structure)
-        $requestsData = RequestModel::with(['user', 'reports', 'applicant', 'project', 'location'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-        
-        $requests = $requestsData->map(function($request) {
-            // Get the latest report for this request
-            $report = $request->reports->first();
-            
-            $requestArray = $request->toArray();
-            $requestArray['application_id']           = $request->id;
-            $requestArray['authorization_letter_path']= $request->authorization_letter_path ?? null;
-            $requestArray['report_id']                = $report?->report_id;
-            $requestArray['evaluation']               = $report?->evaluation;
-            $requestArray['user_name']                = $request->user?->name;
-            $requestArray['user_email']               = $request->user?->email;
-            $requestArray['status']                   = RequestModel::deriveStatus($request->status, $report?->evaluation);
-
-            // Applicant
-            $requestArray['applicant_name']           = $request->applicant?->applicant_name;
-
-            // Application Type from normalized_projects
-            $requestArray['project_type']             = $request->project?->project_type;
-
-            // Location fields from locations table
-            $requestArray['project_location_street']      = $request->location?->street_address;
-            $requestArray['project_location_barangay']    = $request->location?->barangay;
-            $requestArray['project_location_city']        = $request->location?->city_municipality;
-            $requestArray['project_location_municipality']= $request->location?->city_municipality;
-            $requestArray['project_location_province']    = $request->location?->province;
-            
-            return $requestArray;
-        });
-
+        // One lean query for the list (App\Support\ApplicationsList): only
+        // the columns the table shows, not every row with five relations.
         return Inertia::render('SuperAdmin/Requests', [
-            'requests' => $requests,
+            'requests' => \App\Support\ApplicationsList::rows(),
         ]);
     }
 
