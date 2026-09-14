@@ -516,7 +516,7 @@ export function MyApplicationsList({ applications }) {
                                                     {application.applicant_name || "N/A"}
                                                 </h3>
                                                 
-                                                {/* Locational Clearance Badge - Enhanced */}
+                                                {/* Application Type Badge - Enhanced */}
                                                 {application.project_type && (
                                                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-xl border-2 border-blue-200 shadow-sm">
                                                         <Award className="h-4 w-4 text-blue-600" />

@@ -220,7 +220,7 @@ export function CertificatesTable({
                                     Applicant
                                 </th>
                                 <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
-                                    Locational Clearance
+                                    Application Type
                                 </th>
                                 <th className="text-left px-4 py-3 font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">
                                     Issued Date
@@ -325,8 +325,9 @@ export function CertificatesTable({
                                                         .includes(String(certificate.request?.status || "").toLowerCase())
                                                         ? (certificate.has_verified_payment ? (
                                                         <>
-                                                        {/* Until the office releases it, the applicant cannot print anything. */}
-                                                        {certificate.request?.released_to_applicant_at ? (
+                                                        {/* Until the office releases it, the applicant cannot print anything.
+                                                            Releasing is the Zoning Officer's act; the Administrator only views. */}
+                                                        {routePrefix === 'super-admin' ? null : certificate.request?.released_to_applicant_at ? (
                                                             <DropdownMenuItem
                                                                 onClick={() => setPendingRelease({ certificate, released: false })}
                                                                 className="text-amber-700 font-medium"
@@ -353,7 +354,7 @@ export function CertificatesTable({
                                                                 className="text-green-600 font-medium"
                                                             >
                                                                 <FileText className="h-4 w-4 mr-2" />
-                                                                Generate Certificate
+                                                                {routePrefix === 'super-admin' ? 'View Certificate' : 'Generate Certificate'}
                                                             </DropdownMenuItem>
                                                         ) : (
                                                             <DropdownMenuItem
@@ -361,7 +362,7 @@ export function CertificatesTable({
                                                                 className="text-blue-600 font-medium"
                                                             >
                                                                 <Printer className="h-4 w-4 mr-2" />
-                                                                Generate Clearance
+                                                                {routePrefix === 'super-admin' ? 'View Clearance' : 'Generate Clearance'}
                                                             </DropdownMenuItem>
                                                         )}
                                                         </>

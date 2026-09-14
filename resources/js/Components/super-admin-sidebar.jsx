@@ -11,6 +11,7 @@ import {
     History,
     MessageSquare,
     FileBarChart,
+    DatabaseBackup,
 } from "lucide-react";
 import SidebarUserMenu from "@/Components/SidebarUserMenu";
 import {
@@ -76,6 +77,11 @@ const navGroups = [
                 title: "SMS Broadcast",
                 url: "/super-admin/sms",
                 icon: MessageSquare,
+            },
+            {
+                title: "Backups",
+                url: "/backups",
+                icon: DatabaseBackup,
             },
         ],
     },

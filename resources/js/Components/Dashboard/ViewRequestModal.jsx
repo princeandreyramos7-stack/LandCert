@@ -149,7 +149,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                     {request?.project_type && (
                                         <div>
                                             <p className="text-xs font-medium text-gray-500">
-                                                Locational Clearance
+                                                Application Type
                                             </p>
                                             <p className="font-semibold">
                                                 {request.project_type}

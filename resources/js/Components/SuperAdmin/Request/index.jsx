@@ -101,7 +101,7 @@ export function SuperAdminRequestList({ requests }) {
     const handleExport = () => {
         const url = route("super-admin.export.requests", {
             status: filterStatus,
-            format: "csv",
+            format: "xlsx",
         });
         window.location.href = url;
         toast({
@@ -213,7 +213,7 @@ export function SuperAdminRequestList({ requests }) {
                                 <TableRow className="bg-gray-50">
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Application No.</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Applicant</TableHead>
-                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Locational Clearance</TableHead>
+                                    <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Application Type</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Location</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Date</TableHead>
                                     <TableHead className="font-bold text-[#0d1f5c] text-xs uppercase tracking-wide">Status of Application</TableHead>

@@ -368,7 +368,7 @@ export default function Payments({ auth, payments, filters }) {
                                     <p>{selectedPayment.request?.applicant_name || 'N/A'}</p>
                                 </div>
                                 <div>
-                                    <Label className="font-semibold">Locational Clearance</Label>
+                                    <Label className="font-semibold">Application Type</Label>
                                     <p>{selectedPayment.request?.project_type || 'N/A'}</p>
                                 </div>
                                 <div>

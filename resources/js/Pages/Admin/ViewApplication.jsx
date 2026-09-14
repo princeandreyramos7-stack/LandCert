@@ -100,7 +100,7 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
             });
             toast({
                 title: "Success!",
-                description: "Locational Clearance updated successfully.",
+                description: "Application type updated successfully.",
             });
             setEditingProjectType(false);
             request.project_type = projectType;

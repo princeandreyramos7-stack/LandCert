@@ -112,10 +112,10 @@ export function OverviewTab({ monthlyChartData, applicationStatusData = [], proj
                 </CardContent>
             </Card>
 
-            {/* Locational Clearance Distribution */}
+            {/* Application Type Distribution */}
             <Card className="md:col-span-2">
                 <CardHeader>
-                    <CardTitle>Locational Clearance Distribution</CardTitle>
+                    <CardTitle>Application Type Distribution</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <ResponsiveContainer width="100%" height={300}>

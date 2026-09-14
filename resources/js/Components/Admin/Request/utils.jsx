@@ -120,7 +120,7 @@ export const generateCSV = (requests) => {
         "ID",
         "Applicant Name",
         "User Email",
-        "Locational Clearance",
+        "Application Type",
         "Status",
         "Created Date",
     ];
@@ -145,7 +145,7 @@ export const formatProjectType = (type) => {
     if (!type) return null;
     const labels = {
         "TUP": "TUP (Temporary Use Permit)",
-        "Locational Clearance": "Locational Clearance",
+        "Application Type": "Application Type",
         "CZC": "CZC (Certificate of Zoning Compliance)",
         "Zoning Clearance": "CZC (Certificate of Zoning Compliance)", // Legacy support
         "Zoning": "CZC (Certificate of Zoning Compliance)", // Legacy support

@@ -4,7 +4,7 @@ import { AuditLogComponent } from "@/Components/Admin/AuditLog";
 import { Activity } from "lucide-react";
 import { LiveRefresh } from "@/Components/LiveRefresh";
 
-export default function AuditLogs({ logs, users, actions, modelTypes, filters }) {
+export default function AuditLogs({ logs, users, actions, modelTypes, filters, stats }) {
     return (
         <>
             <Head title="Audit Logs — Zoning Administrator"/>
@@ -24,7 +24,7 @@ export default function AuditLogs({ logs, users, actions, modelTypes, filters })
                 </div>
                 <AuditLogComponent
                     logs={logs} users={users} actions={actions}
-                    modelTypes={modelTypes} filters={filters}
+                    modelTypes={modelTypes} filters={filters} stats={stats}
                     routePrefix="super-admin"
                 />
             </SuperAdminLayout>

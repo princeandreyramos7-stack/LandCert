@@ -343,7 +343,7 @@ function Step2Content({ request }) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InfoField
-                    label="Locational Clearance"
+                    label="Application Type"
                     value={request.project_type}
                 />
                 <InfoField

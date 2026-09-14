@@ -57,7 +57,7 @@ export function ClearanceTypeSelector({ value, error, onChange }) {
         <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/70 to-indigo-50/40 p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold text-gray-900">
-                    Type of Locational Clearance
+                    Type of Application
                 </h3>
                 <span className="text-xs text-gray-500">
                     Optional — an admin can set or change this later

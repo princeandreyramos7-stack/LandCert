@@ -138,12 +138,12 @@ export function DocumentsTab({
             </Card>
 
             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-                {/* Locational Clearance Analysis - Radar */}
+                {/* Application Type Analysis - Radar */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <FileText className="h-5 w-5 text-blue-600" />
-                            Locational Clearance Analysis
+                            Application Type Analysis
                         </CardTitle>
                         <p className="text-sm text-gray-500 mt-1">
                             Multi-dimensional view of project types

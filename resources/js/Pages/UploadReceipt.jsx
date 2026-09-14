@@ -305,7 +305,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                     <p className="font-semibold">{application.applicant_name}</p>
                                 </div>
                                 <div>
-                                    <p className="text-gray-500">Locational Clearance</p>
+                                    <p className="text-gray-500">Application Type</p>
                                     <p className="font-semibold">{application.project_type}</p>
                                 </div>
                                 <div>

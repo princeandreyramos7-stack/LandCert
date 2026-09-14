@@ -75,6 +75,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        // The Backups page reads how the last run went; the scheduler has no
+        // other way to report back, since its notifications go by mail.
+        \Illuminate\Support\Facades\Event::listen(\Spatie\Backup\Events\BackupWasSuccessful::class, function () {
+            if (!app()->runningInConsole() || app()->runningUnitTests()) return;
+            \App\Support\BackupSchedule::recordRun(true, 'Backup completed');
+        });
+        \Illuminate\Support\Facades\Event::listen(\Spatie\Backup\Events\BackupHasFailed::class, function ($event) {
+            if (!app()->runningInConsole() || app()->runningUnitTests()) return;
+            \App\Support\BackupSchedule::recordRun(false, $event->exception->getMessage());
+        });
         
         // Set timezone for Carbon
         \Carbon\Carbon::setLocale('en');

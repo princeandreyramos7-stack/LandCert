@@ -88,11 +88,6 @@ class CleanPageController extends Controller
             'method' => 'show',
             'controllers' => ['*' => PaymentController::class],
         ],
-        'certificate-details' => [
-            'roles' => ['admin', 'super_admin'],
-            'method' => 'show',
-            'controllers' => ['*' => CertificateController::class],
-        ],
         'upload-receipt' => [
             'method' => 'uploadReceiptPage',
             'controllers' => ['*' => PaymentController::class],
@@ -115,6 +110,8 @@ class CleanPageController extends Controller
         // administrator — see AdminReportsController.
         'reports'         => ['method' => 'index',     'controllers' => ['super_admin' => SuperAdminReportsController::class, 'admin' => AdminReportsController::class]],
         'sms-broadcast'   => ['method' => 'index',     'controllers' => ['*' => SmsController::class]],
+        // The administrator alone: a role with no entry here gets a 403.
+        'backups'         => ['method' => 'index',     'controllers' => ['super_admin' => BackupController::class]],
     ];
 
     /** Slugs for the section pages. */

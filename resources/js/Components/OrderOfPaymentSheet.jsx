@@ -50,8 +50,10 @@ export function pesoInWords(value) {
 function SigLine({ label, signatureUrl, name, title }) {
     return (
         <div>
-            <div style={{ position: 'relative', height: '26pt', display: 'flex', alignItems: 'flex-end', width: '190pt' }}>
-                <ESignatureImage src={signatureUrl} maxHeight="26pt" maxWidth="150pt" marginBottom="-3pt" />
+            {/* The ink is centred over its verification mark and over the name
+                below it, rather than sitting at the left edge of the block. */}
+            <div style={{ position: 'relative', height: '30pt', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '240pt' }}>
+                <ESignatureImage src={signatureUrl} maxHeight="30pt" maxWidth="150pt" marginBottom="-3pt" />
             </div>
             <div style={{ fontWeight: 'bold' }}>
                 {label}: {name}

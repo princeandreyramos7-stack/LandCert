@@ -44,18 +44,6 @@ class CertificateController extends Controller
     }
 
     /**
-     * Display the specified certificate.
-     */
-    public function show(Certificate $certificate)
-    {
-        $certificate->load(['request.applicant', 'request.project', 'payment', 'issuedBy', 'releasedBy']);
-
-        return Inertia::render('Admin/Certificates/Show', [
-            'certificate' => $certificate,
-        ]);
-    }
-
-    /**
      * Download certificate PDF.
      */
     public function download(Certificate $certificate)

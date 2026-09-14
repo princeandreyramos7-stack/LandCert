@@ -812,7 +812,7 @@ function Step2Content({ request }) {
             });
             toast({
                 title: "Success!",
-                description: "Locational Clearance updated successfully.",
+                description: "Application type updated successfully.",
             });
             setEditingProjectType(false);
             request.project_type = projectType;
@@ -836,7 +836,7 @@ function Step2Content({ request }) {
                 <div className="group">
                     <div className="flex items-center justify-between mb-1.5">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            Locational Clearance
+                            Application Type
                         </p>
                         {!editingProjectType ? (
                             <button

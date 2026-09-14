@@ -916,7 +916,7 @@ class SuperAdminReportsController extends Controller
         // The table
         $sheet->row([
             ['#', 'header'], ['Application No.', 'header'], ['Applicant', 'header'], ['Contact', 'header'],
-            ['Locational Clearance', 'header'], ['Project Nature', 'header'], ['Location', 'header'],
+            ['Application Type', 'header'], ['Project Nature', 'header'], ['Location', 'header'],
             ['Status', 'header'], ['Reviewed By', 'header'], ['Date Reviewed', 'header'],
             ['Fee (PHP)', 'header'], ['Filed On', 'header'],
         ], 24)
@@ -1024,7 +1024,7 @@ class SuperAdminReportsController extends Controller
 
             // The table
             $line(
-                '#', 'Application No.', 'Applicant', 'Contact', 'Locational Clearance',
+                '#', 'Application No.', 'Applicant', 'Contact', 'Application Type',
                 'Project Nature', 'Location', 'Status', 'Reviewed By',
                 'Date Reviewed', 'Fee (PHP)', 'Filed On'
             );

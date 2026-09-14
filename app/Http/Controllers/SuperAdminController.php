@@ -335,7 +335,7 @@ class SuperAdminController extends Controller
             // Applicant
             $requestArray['applicant_name']           = $request->applicant?->applicant_name;
 
-            // Locational Clearance from normalized_projects
+            // Application Type from normalized_projects
             $requestArray['project_type']             = $request->project?->project_type;
 
             // Location fields from locations table
@@ -440,7 +440,7 @@ class SuperAdminController extends Controller
                 'Applicant Name',
                 'Corporation',
                 'Address',
-                'Locational Clearance',
+                'Application Type',
                 'Project Nature',
                 'Location Street',
                 'Location Barangay',
@@ -1269,21 +1269,23 @@ class SuperAdminController extends Controller
             ->pluck('model_type')
             ->toArray();
 
+        // The strip above the table: how busy the system is, and whether
+        // anyone has been knocking on the door.
+        $stats = [
+            'today' => AuditLog::whereDate('created_at', today())->count(),
+            'week' => AuditLog::where('created_at', '>=', now()->subDays(7))->count(),
+            'failed_logins' => AuditLog::where('action', 'failed_login')->where('created_at', '>=', now()->subDays(7))->count(),
+            'active_users' => AuditLog::where('created_at', '>=', now()->subDays(7))->whereNotNull('user_id')->distinct()->count('user_id'),
+        ];
+
         return Inertia::render('SuperAdmin/AuditLogs', [
             'logs' => $logs,
+            'stats' => $stats,
             'users' => $users,
             'actions' => $actions,
             'modelTypes' => $modelTypes,
             'filters' => $request->only(['user_id', 'action', 'model_type', 'date_from', 'date_to', 'search']),
         ]);
-    }
-
-    /**
-     * System settings
-     */
-    public function settings(): Response
-    {
-        return Inertia::render('SuperAdmin/Settings');
     }
 
     /**

@@ -105,10 +105,10 @@ export function PaymentDetailsCard({ payment }) {
                                 value={payment.applicant_name || payment.request?.applicant?.applicant_name}
                             />
                         )}
-                        {/* Locational Clearance — from flat column or relationship */}
+                        {/* Application Type — from flat column or relationship */}
                         {(payment.project_type || payment.request?.project_type) && (
                             <InfoField
-                                label="Locational Clearance"
+                                label="Application Type"
                                 value={payment.project_type || payment.request?.project_type}
                             />
                         )}

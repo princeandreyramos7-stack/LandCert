@@ -314,7 +314,7 @@ export function AdminRequestList({ requests, flash = {} }) {
     const handleExport = () => {
         const url = route("admin.export.requests", {
             status: filterStatus,
-            format: "csv",
+            format: "xlsx",
         });
         window.location.href = url;
         toast({

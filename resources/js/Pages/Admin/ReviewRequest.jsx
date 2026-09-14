@@ -117,7 +117,7 @@ export default function ReviewRequest({ request }) {
     const { toast } = useToast();
 
     // Reusable toast button that jumps to this request's View Application page,
-    // where the Locational Clearance is set.
+    // where the Application Type is set.
     const viewApplicationToastAction = (
         <ToastAction
             altText="Go to View Application"
@@ -229,15 +229,15 @@ export default function ReviewRequest({ request }) {
             return;
         }
 
-        // The Locational Clearance must be set before an application can be marked as
+        // The Application Type must be set before an application can be marked as
         // reviewed — it drives the fee and the certificate wording.
         if (action === 'reviewed') {
             const locationalClearance = String(request.project_type || '').trim().toUpperCase();
             if (locationalClearance === '' || locationalClearance === 'N/A' || locationalClearance === 'NA') {
                 toast({
                     variant: "destructive",
-                    title: "Locational Clearance Required",
-                    description: "Set the Locational Clearance before marking this application as reviewed.",
+                    title: "Application Type Required",
+                    description: "Set the application type before marking this application as reviewed.",
                     action: viewApplicationToastAction,
                 });
                 return;
@@ -963,7 +963,7 @@ function Step2Content({ request }) {
             });
             toast({
                 title: "Success!",
-                description: "Locational Clearance updated successfully.",
+                description: "Application type updated successfully.",
             });
             setEditingProjectType(false);
             // Update the request object
@@ -988,7 +988,7 @@ function Step2Content({ request }) {
                 <div className="group">
                     <div className="flex items-center justify-between mb-1.5">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            Locational Clearance
+                            Application Type
                         </p>
                         {!editingProjectType ? (
                             <button

@@ -101,7 +101,7 @@ export function ApplicationSummaryModal({
                         <div className="space-y-3">
                             <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Project Details</h3>
                             <div className="space-y-2 text-sm">
-                                <SummaryItem label="Locational Clearance" value={data.project_type} />
+                                <SummaryItem label="Application Type" value={data.project_type} />
                                 <SummaryItem label="Project Nature" value={data.project_nature} />
                                 <SummaryItem label="Project Area - Lot (sqm)" value={data.lot_area_sqm} />
                                 <SummaryItem label="Project Area - Bldg. Improvement (sqm)" value={data.bldg_improvement_sqm} />

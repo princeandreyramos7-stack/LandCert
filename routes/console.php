@@ -31,8 +31,16 @@ Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
 // Schedule automated reminders to run hourly
 Schedule::command('reminders:send')->hourly();
 
-// Database + uploaded files backup, once a day
-Schedule::command('backup:run')->dailyAt('02:00');
+// Database + uploaded files backup, daily or weekly as set on the Backups
+// page (App\Support\BackupSchedule), and a daily prune of old ones. Both
+// with notifications off: those go by mail, and a backup must not depend on
+// mail working. The outcome is recorded for the page by AppServiceProvider.
+$backupSchedule = \App\Support\BackupSchedule::current();
+$backupRun = Schedule::command('backup:run --disable-notifications')->withoutOverlapping();
+if ($backupSchedule['frequency'] === 'weekly') {
+    $backupRun->weeklyOn($backupSchedule['day'], $backupSchedule['time']);
+} else {
+    $backupRun->dailyAt($backupSchedule['time']);
+}
+Schedule::command('backup:clean --disable-notifications')->dailyAt('03:30');
 
-// Clean up old backups according to the retention strategy in config/backup.php
-Schedule::command('backup:clean')->dailyAt('03:00');

@@ -64,7 +64,7 @@
                 <tr>
                     <th style="width:9%">Application No.</th>
                     <th style="width:14%">Applicant</th>
-                    <th style="width:11%">Locational Clearance</th>
+                    <th style="width:11%">Application Type</th>
                     <th style="width:21%">Location</th>
                     <th style="width:12%">Status</th>
                     <th style="width:12%">Reviewed By</th>

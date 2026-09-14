@@ -121,7 +121,7 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::post('/requests/{id}/certificate-details', [AdminController::class, 'saveCertificateDetails'])->name('certificate-details');
     Route::post('/update-project-type/{id}', [AdminController::class, 'updateProjectType'])->name('update-project-type');
     Route::post('/requests/{id}/application-details', [AdminController::class, 'updateApplicationDetails'])->name('application-details');
-    Route::post('/requests/{id}/release-to-applicant', [AdminController::class, 'releaseToApplicant'])->name('release-to-applicant');
+    // Releasing to the applicant is the Zoning Officer's act; the Administrator has no route for it.
     Route::get('/requests/{id}/generate-clearance', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'generate-clearance', $id)); })->name('generate-clearance');
     Route::get('/requests/{id}/generate-order-of-payment', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'order-of-payment', $id)); })->name('generate-order-of-payment');
     Route::get('/export/requests', [\App\Http\Controllers\SuperAdminController::class, 'exportRequests'])->name('export.requests');
@@ -132,7 +132,12 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
         return Inertia::render('SuperAdmin/CreateUser');
     })->name('users.create');
     Route::get('/audit-logs', function (\Illuminate\Http\Request $request) { return redirect('/audit-logs' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('audit-logs');
-    Route::get('/settings', [\App\Http\Controllers\SuperAdminController::class, 'settings'])->name('settings');
+
+    // Backups: the page is served from /backups (CleanPageController); these are its actions.
+    Route::post('/backups/run', [\App\Http\Controllers\BackupController::class, 'run'])->name('backups.run');
+    Route::put('/backups/schedule', [\App\Http\Controllers\BackupController::class, 'schedule'])->name('backups.schedule');
+    Route::get('/backups/{file}/download', [\App\Http\Controllers\BackupController::class, 'download'])->name('backups.download');
+    Route::delete('/backups/{file}', [\App\Http\Controllers\BackupController::class, 'destroy'])->name('backups.destroy');
     
     // Super Admin specific actions
     Route::post('/approve-request/{reportId}', [\App\Http\Controllers\SuperAdminController::class, 'approveRequest'])->name('approve-request');
@@ -154,7 +159,6 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     // Certificate Management Routes (NEW: Using CertificateController with PDF generation)
     Route::prefix('certificates')->name('certificates.')->group(function () {
         Route::get('/', function (\Illuminate\Http\Request $request) { return redirect('/certificates' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('index');
-        Route::get('/{certificate}', [CertificateController::class, 'show'])->name('show');
         Route::get('/{certificate}/download', [CertificateController::class, 'download'])->name('download');
         Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
         Route::post('/{certificate}/mark-ready', [CertificateController::class, 'markReady'])->name('mark-ready');
@@ -253,7 +257,6 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     // Certificate Management Routes (NEW: Using CertificateController with PDF generation)
     Route::prefix('certificates')->name('certificates.')->group(function () {
         Route::get('/', function (\Illuminate\Http\Request $request) { return redirect('/certificates' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('index');
-        Route::get('/{certificate}', [CertificateController::class, 'show'])->name('show');
         Route::get('/{certificate}/download', [CertificateController::class, 'download'])->name('download');
         Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
         Route::post('/{certificate}/mark-ready', [CertificateController::class, 'markReady'])->name('mark-ready');

@@ -478,7 +478,7 @@ function ApplicationDetail({ app, total, onZoom }) {
                         </Field>
                         <Field label="Address">{form.address}</Field>
                         <Field label="Contact">{form.contact}</Field>
-                        <Field label="Locational Clearance">
+                        <Field label="Application Type">
                             {form.project_type}
                             {form.project_nature ? ` — ${form.project_nature}` : ""}
                             {app.decision_number && (
@@ -675,7 +675,7 @@ function PrintCover({ app, total, generatedOn, mode }) {
             <dl className="mt-8 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-left text-base">
                 <dt className="font-semibold text-gray-500">Applicant</dt>
                 <dd className="font-bold text-gray-900">{form.applicant_name || "—"}</dd>
-                <dt className="font-semibold text-gray-500">Locational Clearance</dt>
+                <dt className="font-semibold text-gray-500">Application Type</dt>
                 <dd className="font-bold text-gray-900">
                     {document?.label || form.project_type}
                     {document?.type ? ` (${document.type})` : ""}
@@ -873,7 +873,7 @@ function RowsTable({ rows, onSeeApplicant }) {
                         </div>
                         <dl className="mt-2">
                             <Field label="Applicant">{row.applicant_name}</Field>
-                            <Field label="Clearance">{row.project_type}</Field>
+                            <Field label="Type">{row.project_type}</Field>
                             <Field label="Location">{row.location}</Field>
                             <Field label="Reviewed By">{row.reviewed_by}</Field>
                             <Field label="Fee">{peso(row.payment_amount)}</Field>
@@ -890,7 +890,7 @@ function RowsTable({ rows, onSeeApplicant }) {
                         <tr className="bg-[#0d1f5c] text-left text-[11px] uppercase tracking-wide text-white">
                             <th className="px-3 py-2">Application No.</th>
                             <th className="px-3 py-2">Applicant</th>
-                            <th className="px-3 py-2">Clearance</th>
+                            <th className="px-3 py-2">Type</th>
                             <th className="px-3 py-2">Location</th>
                             <th className="px-3 py-2">Status</th>
                             <th className="px-3 py-2">Reviewed By</th>
@@ -976,7 +976,7 @@ function PrintRows({ rows }) {
                 <tr className="text-left">
                     <th className="border-b border-gray-400 px-1 py-1">Application No.</th>
                     <th className="border-b border-gray-400 px-1 py-1">Applicant</th>
-                    <th className="border-b border-gray-400 px-1 py-1">Clearance</th>
+                    <th className="border-b border-gray-400 px-1 py-1">Type</th>
                     <th className="border-b border-gray-400 px-1 py-1">Location</th>
                     <th className="border-b border-gray-400 px-1 py-1">Status</th>
                     <th className="border-b border-gray-400 px-1 py-1">Reviewed By</th>

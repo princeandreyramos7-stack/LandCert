@@ -130,7 +130,7 @@ class AdminController extends Controller
             // Applicant
             $requestArray['applicant_name']           = $request->applicant?->applicant_name;
 
-            // Locational Clearance from normalized_projects
+            // Application Type from normalized_projects
             $requestArray['project_type']             = $request->project?->project_type;
 
             // Location fields from locations table
@@ -736,12 +736,12 @@ class AdminController extends Controller
         }
 
         if ($validated['action'] === 'reviewed') {
-            // The Locational Clearance must be set before an application can be marked as
+            // The Application Type must be set before an application can be marked as
             // reviewed — it drives the fee and the certificate wording.
             $locationalClearance = strtoupper(trim((string) optional($requestModel->project)->project_type));
             if ($locationalClearance === '' || $locationalClearance === 'N/A' || $locationalClearance === 'NA') {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'project_type' => 'Set the Locational Clearance before marking this application as reviewed.',
+                    'project_type' => 'Set the application type before marking this application as reviewed.',
                 ]);
             }
 
@@ -1646,6 +1646,7 @@ class AdminController extends Controller
             
             return (object)[
                 'id' => $request->id,
+                'application_number' => $request->application_number,
                 'applicant_name' => $request->applicant->applicant_name ?? 'N/A',
                 'applicant_address' => $request->applicant->applicant_address ?? 'N/A',
                 'corporation_name' => $request->applicant->corporation->corporation_name ?? null,
@@ -1693,6 +1694,24 @@ class AdminController extends Controller
         if ($format === 'pdf') {
             return $this->exportRequestsPDF($requests, $status);
         }
+
+        // Excel: the same workbook layout as the reports (see ApplicationsWorkbook).
+        if ($format === 'xlsx') {
+            $subtitle = $status === 'all'
+                ? 'All applications on record'
+                : \App\Support\ApplicationsWorkbook::statusLabel($status) . ' applications';
+            $file = \App\Support\ApplicationsWorkbook::build(
+                $requests->values(),
+                $subtitle,
+                auth()->user()?->name ?? 'CPDO'
+            );
+
+            return response()
+                ->download($file, 'cpdo-applications-' . now()->format('Ymd-His') . '.xlsx', [
+                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                ])
+                ->deleteFileAfterSend(true);
+        }
         
         // CSV Export
         $filename = 'requests_export_' . now()->format('Y-m-d_His') . '.csv';
@@ -1710,7 +1729,7 @@ class AdminController extends Controller
                 'Applicant Name',
                 'Corporation',
                 'Address',
-                'Locational Clearance',
+                'Application Type',
                 'Project Nature',
                 'Location Street',
                 'Location Barangay',
@@ -2143,8 +2162,18 @@ class AdminController extends Controller
             null
         );
 
+        // The strip above the table: how busy the system is, and whether
+        // anyone has been knocking on the door.
+        $stats = [
+            'today' => AuditLog::whereDate('created_at', today())->count(),
+            'week' => AuditLog::where('created_at', '>=', now()->subDays(7))->count(),
+            'failed_logins' => AuditLog::where('action', 'failed_login')->where('created_at', '>=', now()->subDays(7))->count(),
+            'active_users' => AuditLog::where('created_at', '>=', now()->subDays(7))->whereNotNull('user_id')->distinct()->count('user_id'),
+        ];
+
         return Inertia::render('Admin/AuditLogs', [
             'logs' => $logs,
+            'stats' => $stats,
             'users' => $users,
             'actions' => $actions,
             'modelTypes' => $modelTypes,
@@ -2363,7 +2392,7 @@ class AdminController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Locational Clearance updated successfully',
+            'message' => 'Application type updated successfully',
             'project_type' => $validated['project_type']
         ]);
     }

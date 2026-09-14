@@ -153,7 +153,7 @@ export const validateStep1 = (data) => {
 export const validateStep2 = (data) => {
     const errors = [];
 
-    // Locational Clearance is now optional - admin can update later
+    // Application Type is now optional - admin can update later
     // No validation needed for project_type
 
     // Project Nature (Required)

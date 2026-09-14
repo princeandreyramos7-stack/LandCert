@@ -206,7 +206,7 @@ export function PaymentsPendingTable({ pendingPayments = [], onRecordPayment }) 
                                     </TableHead>
                                     <TableHead>
                                         <div className="flex items-center">
-                                            Locational Clearance
+                                            Application Type
                                         </div>
                                     </TableHead>
                                     <TableHead className="text-right">
