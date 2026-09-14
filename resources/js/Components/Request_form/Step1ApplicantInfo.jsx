@@ -2,6 +2,7 @@ import React from "react";
 import { Label } from "@/Components/ui/label";
 import { Input } from "@/Components/ui/input";
 import { Textarea } from "@/Components/ui/textarea";
+import { PhilippineAddressFields } from "@/Components/Address/PhilippineAddressFields";
 
 export function Step1ApplicantInfo({
     data,
@@ -40,19 +41,18 @@ export function Step1ApplicantInfo({
                 )}
             </div>
 
+            {/* 3. Address of Applicant — picked from the PSGC rather than
+                typed, so the same barangay is written the same way every
+                time and the office can count applications by place. */}
             <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="applicant_address">
-                    3. Address of Applicant <span className="text-red-500">*</span>
-                </Label>
-                <Textarea
-                    id="applicant_address"
-                    value={data.applicant_address}
-                    onChange={(e) => onDataChange("applicant_address", e.target.value)}
-                    placeholder="Enter applicant address"
+                <PhilippineAddressFields
+                    legend="3. Address of Applicant"
+                    prefix="applicant_address"
+                    values={data}
+                    errors={errors}
+                    onChange={onDataChange}
+                    currentText={data.applicant_address_legacy}
                 />
-                {errors.applicant_address && (
-                    <p className="text-sm text-red-500">{errors.applicant_address}</p>
-                )}
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -215,27 +215,14 @@ export function Step1ApplicantInfo({
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="authorized_representative_address">
-                            6. Address of Authorized Representative{" "}
-                            <span className="text-red-500">*</span>
-                        </Label>
-                        <Textarea
-                            id="authorized_representative_address"
-                            value={data.authorized_representative_address}
-                            onChange={(e) =>
-                                onDataChange(
-                                    "authorized_representative_address",
-                                    e.target.value
-                                )
-                            }
-                            placeholder="Enter representative address"
-                            required={hasRepresentative}
+                        <PhilippineAddressFields
+                            legend="6. Address of Authorized Representative"
+                            prefix="authorized_representative_address"
+                            values={data}
+                            errors={errors}
+                            onChange={onDataChange}
+                            currentText={data.authorized_representative_address_legacy}
                         />
-                        {errors.authorized_representative_address && (
-                            <p className="text-sm text-red-500">
-                                {errors.authorized_representative_address}
-                            </p>
-                        )}
                     </div>
                 </>
             )}

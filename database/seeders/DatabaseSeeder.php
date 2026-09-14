@@ -19,6 +19,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
             AdminUserSeeder::class,
+            // The reference list the address pickers read and the server
+            // validates against. Safe to re-run.
+            PsgcSeeder::class,
             // DocumentTypeSeeder::class, // REMOVED: document_types table no longer exists (dropped in migration)
             // RequestSeeder::class, // Uncomment to seed 100 test requests
         ]);

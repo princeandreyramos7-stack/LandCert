@@ -52,19 +52,6 @@ class AdminUserSeeder extends Seeder
         // Note: the 'super_admin' Spatie role is assigned automatically via
         // User::booted(), which keeps roles in sync with the user_type column.
 
-        // Create or update admin user (default)
-        $admin = User::updateOrCreate(
-            ['email' => 'admin@cpdo.com'],
-            [
-                'name' => 'Zoning Officer',
-                'password' => Hash::make('admin123'),
-                'user_type' => 'admin',
-                'contact_number' => '09123456789',
-                'address' => 'CPDO Office, City of Ilagan',
-                'email_verified_at' => now(),
-            ]
-        );
-
         // Create Zoning Officer - Jeffrey C. Pauig
         $jeff = User::updateOrCreate(
             ['email' => 'jeff@cpdo.com'],
@@ -127,11 +114,10 @@ class AdminUserSeeder extends Seeder
         $this->command->info('==============================================');
         $this->command->info('Zoning Officers created/updated successfully!');
         $this->command->info('');
-        $this->command->info('1. Email: admin@cpdo.com | Password: admin123');
-        $this->command->info('2. Email: jeff@cpdo.com | Password: jeff123 (Jeffrey C. Pauig)');
-        $this->command->info('3. Email: kay@cpdo.com | Password: kay123 (Kay B. Aggarao)');
-        $this->command->info('4. Email: april@cpdo.com | Password: april123 (April V. Cuntapay)');
-        $this->command->info('5. Email: maryjane@cpdo.com | Password: maryjane123 (Mary Jane P. Bulauan)');
+        $this->command->info('1. Email: jeff@cpdo.com | Password: jeff123 (Jeffrey C. Pauig)');
+        $this->command->info('2. Email: kay@cpdo.com | Password: kay123 (Kay B. Aggarao)');
+        $this->command->info('3. Email: april@cpdo.com | Password: april123 (April V. Cuntapay)');
+        $this->command->info('4. Email: maryjane@cpdo.com | Password: maryjane123 (Mary Jane P. Bulauan)');
         $this->command->info('==============================================');
         $this->command->warn('⚠️  Please change the passwords after first login!');
     }

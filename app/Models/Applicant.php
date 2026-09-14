@@ -17,6 +17,12 @@ class Applicant extends Model
         'user_id',
         'applicant_name',
         'applicant_address',
+        // The PSGC selections the address line above was composed from.
+        'address_region_code',
+        'address_province_code',
+        'address_city_code',
+        'address_barangay_code',
+        'address_street',
         'applicant_contact',
         'applicant_type',
     ];

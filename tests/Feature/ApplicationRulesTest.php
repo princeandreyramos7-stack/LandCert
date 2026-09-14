@@ -18,9 +18,8 @@ class ApplicationRulesTest extends TestCase
 
     private function submission(array $extra = []): array
     {
-        return [
+        return array_merge($this->addressFields(), [
             'applicant_name' => 'Juan Dela Cruz',
-            'applicant_address' => 'Purok 1, Alibagu, City of Ilagan',
             'project_nature' => 'New Residential House',
             'project_location_street' => 'Purok 1',
             'project_location_barangay' => 'Alibagu',
@@ -34,7 +33,7 @@ class ApplicationRulesTest extends TestCase
             'preferred_release_mode' => 'pickup',
             'requirement_uploads' => [2 => [UploadedFile::fake()->create('title.pdf', 40, 'application/pdf')]],
             'requirement_names' => [2 => '2. Right Over Land Documentation'],
-        ] + $extra;
+        ]) + $extra;
     }
 
     public function test_a_temporary_use_permit_runs_for_one_year_whatever_was_sent(): void

@@ -12,6 +12,7 @@ use App\Models\Request as RequestModel;
 use App\Models\RequirementDocument;
 use App\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 abstract class TestCase extends BaseTestCase
@@ -93,6 +94,39 @@ abstract class TestCase extends BaseTestCase
         }
 
         return $request->fresh(['applicant', 'project', 'location', 'property', 'report', 'payments']);
+    }
+
+    /**
+     * The five address fields a submission needs, pointing at Alibagu,
+     * City of Ilagan.
+     *
+     * Only the four PSGC rows that address runs through are inserted, not the
+     * country's 42,000 barangays: a test that merely has to file an
+     * application should not pay for the whole reference list. Tests that are
+     * *about* the address seed PsgcSeeder properly (PhilippineAddressTest).
+     */
+    protected function addressFields(string $prefix = 'applicant_address'): array
+    {
+        DB::table('psgc_regions')->insertOrIgnore([
+            'code' => '020000000', 'name' => 'Cagayan Valley', 'short_name' => 'Region II',
+        ]);
+        DB::table('psgc_provinces')->insertOrIgnore([
+            'code' => '023100000', 'name' => 'Isabela', 'region_code' => '020000000', 'kind' => 'province',
+        ]);
+        DB::table('psgc_cities_municipalities')->insertOrIgnore([
+            'code' => '023114000', 'name' => 'City of Ilagan', 'province_code' => '023100000', 'is_city' => true,
+        ]);
+        DB::table('psgc_barangays')->insertOrIgnore([
+            'code' => '023114006', 'name' => 'Alibagu', 'city_code' => '023114000',
+        ]);
+
+        return [
+            "{$prefix}_region_code" => '020000000',
+            "{$prefix}_province_code" => '023100000',
+            "{$prefix}_city_code" => '023114000',
+            "{$prefix}_barangay_code" => '023114006',
+            "{$prefix}_street" => '1 Test Street',
+        ];
     }
 
     /** A requirement scan on file for the application, as an image. */

@@ -184,6 +184,14 @@ class RequestController extends Controller
             // Applicant information
             'applicant_name' => $request->applicant->applicant_name ?? '',
             'applicant_address' => $request->applicant->applicant_address ?? '',
+            // The selections behind the address, so re-opening a returned
+            // application shows the address already picked rather than four
+            // empty dropdowns. Blank for anything filed before the picker.
+            'applicant_address_region_code' => $request->applicant->address_region_code ?? '',
+            'applicant_address_province_code' => $request->applicant->address_province_code ?? '',
+            'applicant_address_city_code' => $request->applicant->address_city_code ?? '',
+            'applicant_address_barangay_code' => $request->applicant->address_barangay_code ?? '',
+            'applicant_address_street' => $request->applicant->address_street ?? '',
             'applicant_type' => $request->applicant->applicant_type ?? 'individual',
             
             // Corporation information
@@ -193,6 +201,11 @@ class RequestController extends Controller
             // Representative information
             'authorized_representative_name' => $request->applicant->primaryRepresentative->representative_name ?? '',
             'authorized_representative_address' => $request->applicant->primaryRepresentative->representative_address ?? '',
+            'authorized_representative_address_region_code' => $request->applicant->primaryRepresentative->address_region_code ?? '',
+            'authorized_representative_address_province_code' => $request->applicant->primaryRepresentative->address_province_code ?? '',
+            'authorized_representative_address_city_code' => $request->applicant->primaryRepresentative->address_city_code ?? '',
+            'authorized_representative_address_barangay_code' => $request->applicant->primaryRepresentative->address_barangay_code ?? '',
+            'authorized_representative_address_street' => $request->applicant->primaryRepresentative->address_street ?? '',
             
             // Project details
             'project_type' => $request->project->project_type ?? '',
@@ -274,14 +287,18 @@ class RequestController extends Controller
             return back()->withErrors(['duplicate' => 'This application was already submitted a moment ago. Check My Applications before filing it again.']);
         }
 
-        $validated = $request->validate([
+        // The two addresses are picked from the PSGC list, so what arrives is
+        // four codes and a street rather than a line of text. The line itself
+        // is composed here from the codes - never taken from the browser - so
+        // what the certificate prints is what was actually selected.
+        $hasRepresentative = filled($request->input('authorized_representative_name'));
+
+        $validated = $request->validate(array_merge([
             // Page 1: Applicant Information
             'applicant_name' => 'required|string|max:255',
             'corporation_name' => 'nullable|string|max:255',
-            'applicant_address' => 'required|string',
             'corporation_address' => 'nullable|string',
             'authorized_representative_name' => 'nullable|string|max:255',
-            'authorized_representative_address' => 'nullable|string',
             'authorization_letter' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             
             // Page 2: Project Details
@@ -318,7 +335,27 @@ class RequestController extends Controller
             'requirement_uploads.*.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
             'requirement_names' => 'nullable|array',
             'verified_requirements' => 'nullable|array',
-        ]);
+        ],
+            \App\Support\PhilippineAddress::rules('applicant_address'),
+            \App\Support\PhilippineAddress::rules('authorized_representative_address', $hasRepresentative)
+        ), [], array_merge(
+            \App\Support\PhilippineAddress::attributes('applicant_address', 'applicant'),
+            \App\Support\PhilippineAddress::attributes('authorized_representative_address', 'representative')
+        ));
+
+        // Each selection has to sit under the one above it. The browser only
+        // ever offers valid combinations; a request made by hand does not.
+        $chain = \Illuminate\Support\Facades\Validator::make($request->all(), []);
+        \App\Support\PhilippineAddress::checkChain($chain, 'applicant_address');
+        if ($hasRepresentative) {
+            \App\Support\PhilippineAddress::checkChain($chain, 'authorized_representative_address');
+        }
+        if ($chain->errors()->isNotEmpty()) {
+            return back()->withInput()->withErrors($chain->errors());
+        }
+
+        $validated['applicant_address'] = \App\Support\PhilippineAddress::resolve($validated, 'applicant_address')['line'] ?? '';
+        $validated['authorized_representative_address'] = \App\Support\PhilippineAddress::resolve($validated, 'authorized_representative_address')['line'] ?? null;
 
         // Use a database transaction to ensure all records are created together.
         //
@@ -377,7 +414,10 @@ class RequestController extends Controller
     {
         return DB::transaction(function () use ($validated, $request) {
             // 1. Create Applicant record
-            $applicant = \App\Models\Applicant::create([
+            $applicant = \App\Models\Applicant::create(\App\Support\PhilippineAddress::columns(
+                \App\Support\PhilippineAddress::resolve($validated, 'applicant_address'),
+                'applicant_address'
+            ) + [
                 'applicant_name' => $validated['applicant_name'],
                 'applicant_address' => $validated['applicant_address'],
                 'applicant_type' => isset($validated['corporation_name']) ? 'corporate' : 'individual',
@@ -420,7 +460,10 @@ class RequestController extends Controller
 
             // 4. Create Representative record if applicable
             if (isset($validated['authorized_representative_name']) && !empty($validated['authorized_representative_name'])) {
-                \App\Models\Representative::create([
+                \App\Models\Representative::create(\App\Support\PhilippineAddress::columns(
+                    \App\Support\PhilippineAddress::resolve($validated, 'authorized_representative_address'),
+                    'representative_address'
+                ) + [
                     'applicant_id' => $applicant->id,
                     'representative_name' => $validated['authorized_representative_name'],
                     'representative_address' => $validated['authorized_representative_address'] ?? '',
@@ -583,14 +626,14 @@ class RequestController extends Controller
         }
 
         // Validate input
-        $validated = $request->validate([
+        $hasRepresentative = filled($request->input('authorized_representative_name'));
+
+        $validated = $request->validate(array_merge([
             // Step 1
             'applicant_name' => 'required|string|max:255',
             'corporation_name' => 'nullable|string|max:255',
-            'applicant_address' => 'required|string',
             'corporation_address' => 'nullable|string',
             'authorized_representative_name' => 'nullable|string|max:255',
-            'authorized_representative_address' => 'nullable|string',
             'authorized_representative_email' => 'nullable|email',
             
             // Step 2
@@ -626,7 +669,25 @@ class RequestController extends Controller
             'requirement_uploads.*.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
             'requirement_names' => 'nullable|array',
             'verified_requirements' => 'nullable|array',
-        ]);
+        ],
+            \App\Support\PhilippineAddress::rules('applicant_address'),
+            \App\Support\PhilippineAddress::rules('authorized_representative_address', $hasRepresentative)
+        ), [], array_merge(
+            \App\Support\PhilippineAddress::attributes('applicant_address', 'applicant'),
+            \App\Support\PhilippineAddress::attributes('authorized_representative_address', 'representative')
+        ));
+
+        $chain = \Illuminate\Support\Facades\Validator::make($request->all(), []);
+        \App\Support\PhilippineAddress::checkChain($chain, 'applicant_address');
+        if ($hasRepresentative) {
+            \App\Support\PhilippineAddress::checkChain($chain, 'authorized_representative_address');
+        }
+        if ($chain->errors()->isNotEmpty()) {
+            return back()->withInput()->withErrors($chain->errors());
+        }
+
+        $validated['applicant_address'] = \App\Support\PhilippineAddress::resolve($validated, 'applicant_address')['line'] ?? '';
+        $validated['authorized_representative_address'] = \App\Support\PhilippineAddress::resolve($validated, 'authorized_representative_address')['line'] ?? null;
 
         try {
             DB::beginTransaction();
@@ -640,7 +701,10 @@ class RequestController extends Controller
             ]);
 
             // Update Applicant
-            $existingRequest->applicant->update([
+            $existingRequest->applicant->update(\App\Support\PhilippineAddress::columns(
+                \App\Support\PhilippineAddress::resolve($validated, 'applicant_address'),
+                'applicant_address'
+            ) + [
                 'applicant_name' => $validated['applicant_name'],
                 'applicant_address' => $validated['applicant_address'],
                 'applicant_type' => !empty($validated['corporation_name']) ? 'corporate' : 'individual',
@@ -663,7 +727,10 @@ class RequestController extends Controller
             if (!empty($validated['authorized_representative_name'])) {
                 \App\Models\Representative::updateOrCreate(
                     ['applicant_id' => $existingRequest->applicant_id, 'is_primary' => true],
-                    [
+                    \App\Support\PhilippineAddress::columns(
+                        \App\Support\PhilippineAddress::resolve($validated, 'authorized_representative_address'),
+                        'representative_address'
+                    ) + [
                         'representative_name' => $validated['authorized_representative_name'],
                         'representative_address' => $validated['authorized_representative_address'] ?? '',
                         'representative_email' => $validated['authorized_representative_email'] ?? '',

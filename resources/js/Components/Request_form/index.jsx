@@ -50,10 +50,31 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         // Step 1: Applicant Information
         applicant_name: existingApplication?.applicant_name || me.name || "",
         corporation_name: existingApplication?.corporation_name || "",
-        applicant_address: existingApplication?.applicant_address || me.address || "",
+        // The address is picked from the PSGC list now; the server composes
+        // the one-line address from these five and stores that. The old
+        // free-text value rides along as `_legacy` so an application filed
+        // before the picker can still show what is on file while it is
+        // being chosen again.
+        applicant_address_region_code: existingApplication?.applicant_address_region_code || "",
+        applicant_address_province_code: existingApplication?.applicant_address_province_code || "",
+        applicant_address_city_code: existingApplication?.applicant_address_city_code || "",
+        applicant_address_barangay_code: existingApplication?.applicant_address_barangay_code || "",
+        applicant_address_street: existingApplication?.applicant_address_street || "",
+        applicant_address_legacy:
+            existingApplication?.applicant_address_barangay_code
+                ? ""
+                : existingApplication?.applicant_address || me.address || "",
         corporation_address: existingApplication?.corporation_address || "",
         authorized_representative_name: existingApplication?.authorized_representative_name || "",
-        authorized_representative_address: existingApplication?.authorized_representative_address || "",
+        authorized_representative_address_region_code: existingApplication?.authorized_representative_address_region_code || "",
+        authorized_representative_address_province_code: existingApplication?.authorized_representative_address_province_code || "",
+        authorized_representative_address_city_code: existingApplication?.authorized_representative_address_city_code || "",
+        authorized_representative_address_barangay_code: existingApplication?.authorized_representative_address_barangay_code || "",
+        authorized_representative_address_street: existingApplication?.authorized_representative_address_street || "",
+        authorized_representative_address_legacy:
+            existingApplication?.authorized_representative_address_barangay_code
+                ? ""
+                : existingApplication?.authorized_representative_address || "",
         authorized_representative_email: "",
         authorization_letter: null,
 
@@ -225,7 +246,11 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             setData({
                 ...data,
                 authorized_representative_name: "",
-                authorized_representative_address: "",
+                authorized_representative_address_region_code: "",
+                authorized_representative_address_province_code: "",
+                authorized_representative_address_city_code: "",
+                authorized_representative_address_barangay_code: "",
+                authorized_representative_address_street: "",
                 authorized_representative_email: "",
                 authorization_letter: null,
             });
@@ -237,9 +262,15 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     // So each message is matched back to its field and shown there too, and
     // the page scrolls to the first one, instead of a toast alone.
     const FIELD_BY_LABEL = {
-        "Applicant Name": "applicant_name", "Applicant Address": "applicant_address",
+        "Applicant Name": "applicant_name",
+        "Applicant Address region": "applicant_address_region_code", "Applicant Address province": "applicant_address_province_code",
+        "Applicant Address municipality": "applicant_address_city_code", "Applicant Address barangay": "applicant_address_barangay_code",
+        "Applicant Address street": "applicant_address_street",
         "Corporation Name": "corporation_name", "Corporation Address": "corporation_address",
-        "Authorized Representative Name": "authorized_representative_name", "Authorized Representative Address": "authorized_representative_address",
+        "Authorized Representative Name": "authorized_representative_name",
+        "Authorized Representative Address region": "authorized_representative_address_region_code", "Authorized Representative Address province": "authorized_representative_address_province_code",
+        "Authorized Representative Address municipality": "authorized_representative_address_city_code", "Authorized Representative Address barangay": "authorized_representative_address_barangay_code",
+        "Authorized Representative Address street": "authorized_representative_address_street",
         "Authorized Representative Email": "authorized_representative_email", "Authorization Letter": "authorization_letter",
         "Project Nature Duration": "project_nature_duration", "Project Nature Years": "project_nature_years", "Project Nature": "project_nature",
         "Project Area (sqm)": "lot_area_sqm", "Project Cost": "project_cost", "Right Over Land": "right_over_land", "Existing Land Use": "existing_land_use",
@@ -406,7 +437,9 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             
             // Add all text fields
             Object.keys(data).forEach(key => {
-                if (key !== 'requirement_uploads') {
+                // `_legacy` is the old free-text address, shown while the
+                // applicant picks the address again; it is not a form field.
+                if (key !== 'requirement_uploads' && !key.endsWith('_legacy')) {
                     const value = data[key];
                     if (value !== null && value !== undefined && value !== '') {
                         formData.append(key, value);
@@ -480,7 +513,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             const formData = new FormData();
 
             Object.keys(data).forEach((key) => {
-                if (key === 'requirement_uploads') return;
+                if (key === 'requirement_uploads' || key.endsWith('_legacy')) return;
                 const value = data[key];
                 if (value === null || value === undefined || value === '') return;
                 if (value instanceof File) {

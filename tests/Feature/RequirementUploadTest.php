@@ -22,9 +22,8 @@ class RequirementUploadTest extends TestCase
 
     private function validPayload(): array
     {
-        return [
+        return array_merge($this->addressFields(), [
             'applicant_name' => 'Test Applicant',
-            'applicant_address' => '123 Test Street',
             'project_nature' => 'Residential building',
             'project_location_street' => 'Purok 1',
             'project_location_barangay' => 'Alibagu',
@@ -36,7 +35,7 @@ class RequirementUploadTest extends TestCase
             'has_written_notice' => 'no',
             'has_similar_application' => 'no',
             'preferred_release_mode' => 'pickup',
-        ];
+        ]);
     }
 
     public function test_nested_requirement_uploads_are_persisted(): void

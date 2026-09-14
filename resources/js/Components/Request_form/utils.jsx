@@ -102,6 +102,29 @@ const validateNumber = (value, fieldName, min = 0, max = null) => {
     return null;
 };
 
+/**
+ * An address picked from the PSGC list: all four codes and the street.
+ * The server checks the chain as well (App\Support\PhilippineAddress) —
+ * this is only so the applicant is told before the form is sent.
+ */
+export const validatePhilippineAddress = (data, prefix, label) => {
+    const errors = [];
+    const missing = [
+        ["region_code", "region"],
+        ["province_code", "province"],
+        ["city_code", "municipality"],
+        ["barangay_code", "barangay"],
+    ].filter(([part]) => !String(data[`${prefix}_${part}`] || "").trim());
+
+    for (const [, word] of missing) errors.push(`${label} ${word} is required`);
+
+    const street = String(data[`${prefix}_street`] || "").trim();
+    if (!street) errors.push(`${label} street is required`);
+    else if (street.length > 255) errors.push(`${label} street must not exceed 255`);
+
+    return errors;
+};
+
 export const validateStep1 = (data) => {
     const errors = [];
 
@@ -109,9 +132,8 @@ export const validateStep1 = (data) => {
     const nameError = validateName(data.applicant_name, "Applicant Name");
     if (nameError) errors.push(nameError);
 
-    // Applicant Address (Required)
-    const addressError = validateAddress(data.applicant_address, "Applicant Address");
-    if (addressError) errors.push(addressError);
+    // Applicant Address (picked from the PSGC list)
+    errors.push(...validatePhilippineAddress(data, "applicant_address", "Applicant Address"));
 
     // Corporation validation (if provided)
     if (data.corporation_name && data.corporation_name.trim() !== "") {
@@ -133,9 +155,8 @@ export const validateStep1 = (data) => {
         const repNameError = validateName(data.authorized_representative_name, "Authorized Representative Name");
         if (repNameError) errors.push(repNameError);
         
-        // Representative address validation
-        const repAddressError = validateAddress(data.authorized_representative_address, "Authorized Representative Address");
-        if (repAddressError) errors.push(repAddressError);
+        // Representative address (picked from the PSGC list)
+        errors.push(...validatePhilippineAddress(data, "authorized_representative_address", "Authorized Representative Address"));
         
         // Representative email validation
         const repEmailError = validateEmail(data.authorized_representative_email, "Authorized Representative Email");

@@ -70,6 +70,16 @@ Route::middleware(['auth', 'throttle:60,1,pages', 'prevent.back'])->group(functi
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.destroy');
     
+    // The address pickers' reference list (PSGC). A form fills four of these
+    // in a row, and a long barangay list is one request per selection, so they
+    // sit outside the page throttle on a limit of their own.
+    Route::prefix('psgc')->name('psgc.')->withoutMiddleware('throttle:60,1,pages')->middleware('throttle:300,1,files')->group(function () {
+        Route::get('/regions', [\App\Http\Controllers\PsgcController::class, 'regions'])->name('regions');
+        Route::get('/regions/{region}/provinces', [\App\Http\Controllers\PsgcController::class, 'provinces'])->name('provinces');
+        Route::get('/provinces/{province}/cities', [\App\Http\Controllers\PsgcController::class, 'cities'])->name('cities');
+        Route::get('/cities/{city}/barangays', [\App\Http\Controllers\PsgcController::class, 'barangays'])->name('barangays');
+    });
+
     // Request routes
     Route::get('/request', [RequestController::class, 'index'])->name('request.index');
     Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:10,1,submit')->name('request.store');
