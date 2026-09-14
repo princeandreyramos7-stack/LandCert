@@ -40,6 +40,89 @@ import {
     DialogTitle,
 } from "@/Components/ui/dialog";
 
+/**
+ * What can be done with one certificate. Shared by the table row and the
+ * card that replaces it on a phone.
+ */
+function CertificateRowActions({ certificate }) {
+    return (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                        >
+                            <MoreVertical className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                        {/* The controller only generates for an approved application or a later
+                            certificate-lifecycle stage; denied / pre-approval requests are blocked
+                            server-side and would silently redirect back, so don't offer the action. */}
+                        {["approved", "certificate_preparing", "certificate_ready", "released"]
+                            .includes(String(certificate.request?.status || "").toLowerCase())
+                            ? (certificate.has_verified_payment ? (
+                            <>
+                            {/* Until the office releases it, the applicant cannot print anything.
+                                Releasing is the Zoning Officer's act; the Administrator only views. */}
+                            {routePrefix === 'super-admin' ? null : certificate.request?.released_to_applicant_at ? (
+                                <DropdownMenuItem
+                                    onClick={() => setPendingRelease({ certificate, released: false })}
+                                    className="text-amber-700 font-medium"
+                                >
+                                    <Undo2 className="h-4 w-4 mr-2" />
+                                    Withdraw from Applicant
+                                </DropdownMenuItem>
+                            ) : (
+                                <DropdownMenuItem
+                                    onClick={() => setPendingRelease({ certificate, released: true })}
+                                    className="text-emerald-700 font-medium"
+                                >
+                                    <Send className="h-4 w-4 mr-2" />
+                                    Release to Applicant
+                                </DropdownMenuItem>
+                            )}
+                            {String(
+                                certificate.request?.project?.project_type
+                                || certificate.request?.project_type
+                                || ''
+                            ).toUpperCase() === 'ZC' ? (
+                                <DropdownMenuItem
+                                    onClick={() => router.visit(route(`${routePrefix}.generate-certificate`, certificate.request_id))}
+                                    className="text-green-600 font-medium"
+                                >
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    {routePrefix === 'super-admin' ? 'View Certificate' : 'Generate Certificate'}
+                                </DropdownMenuItem>
+                            ) : (
+                                <DropdownMenuItem
+                                    onClick={() => router.visit(route(`${routePrefix}.generate-clearance`, certificate.request_id))}
+                                    className="text-blue-600 font-medium"
+                                >
+                                    <Printer className="h-4 w-4 mr-2" />
+                                    {routePrefix === 'super-admin' ? 'View Clearance' : 'Generate Clearance'}
+                                </DropdownMenuItem>
+                            )}
+                            </>
+                        ) : (
+                            <div className="px-3 py-2 text-sm text-slate-500 text-center">
+                                <p className="font-medium">Payment Required</p>
+                                <p className="text-xs mt-1">Awaiting treasury payment verification</p>
+                            </div>
+                        )) : (
+                            <div className="px-3 py-2 text-sm text-slate-500 text-center">
+                                <p className="font-medium">Not available</p>
+                                <p className="text-xs mt-1">
+                                    Application is {(certificate.request?.status || "not approved").replace(/_/g, " ")}
+                                </p>
+                            </div>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+    );
+}
+
 export function CertificatesTable({
     certificates = {},
     filters = {},
@@ -206,7 +289,10 @@ export function CertificatesTable({
 
             {/* Certificates Table */}
             <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
+                {/* From a tablet up: the full table. Below that its seven
+                    columns run off the side of the screen, so the same
+                    certificates are drawn as cards. */}
+                <div className="hidden overflow-x-auto md:block">
                     <table className="w-full">
                         <thead className="border-b border-gray-100">
                             <tr className="bg-gray-50">
@@ -307,80 +393,7 @@ export function CertificatesTable({
                                             )}
                                         </td>
                                         <td className="p-3">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0"
-                                                    >
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-56">
-                                                    {/* The controller only generates for an approved application or a later
-                                                        certificate-lifecycle stage; denied / pre-approval requests are blocked
-                                                        server-side and would silently redirect back, so don't offer the action. */}
-                                                    {["approved", "certificate_preparing", "certificate_ready", "released"]
-                                                        .includes(String(certificate.request?.status || "").toLowerCase())
-                                                        ? (certificate.has_verified_payment ? (
-                                                        <>
-                                                        {/* Until the office releases it, the applicant cannot print anything.
-                                                            Releasing is the Zoning Officer's act; the Administrator only views. */}
-                                                        {routePrefix === 'super-admin' ? null : certificate.request?.released_to_applicant_at ? (
-                                                            <DropdownMenuItem
-                                                                onClick={() => setPendingRelease({ certificate, released: false })}
-                                                                className="text-amber-700 font-medium"
-                                                            >
-                                                                <Undo2 className="h-4 w-4 mr-2" />
-                                                                Withdraw from Applicant
-                                                            </DropdownMenuItem>
-                                                        ) : (
-                                                            <DropdownMenuItem
-                                                                onClick={() => setPendingRelease({ certificate, released: true })}
-                                                                className="text-emerald-700 font-medium"
-                                                            >
-                                                                <Send className="h-4 w-4 mr-2" />
-                                                                Release to Applicant
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                        {String(
-                                                            certificate.request?.project?.project_type
-                                                            || certificate.request?.project_type
-                                                            || ''
-                                                        ).toUpperCase() === 'ZC' ? (
-                                                            <DropdownMenuItem
-                                                                onClick={() => router.visit(route(`${routePrefix}.generate-certificate`, certificate.request_id))}
-                                                                className="text-green-600 font-medium"
-                                                            >
-                                                                <FileText className="h-4 w-4 mr-2" />
-                                                                {routePrefix === 'super-admin' ? 'View Certificate' : 'Generate Certificate'}
-                                                            </DropdownMenuItem>
-                                                        ) : (
-                                                            <DropdownMenuItem
-                                                                onClick={() => router.visit(route(`${routePrefix}.generate-clearance`, certificate.request_id))}
-                                                                className="text-blue-600 font-medium"
-                                                            >
-                                                                <Printer className="h-4 w-4 mr-2" />
-                                                                {routePrefix === 'super-admin' ? 'View Clearance' : 'Generate Clearance'}
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                        </>
-                                                    ) : (
-                                                        <div className="px-3 py-2 text-sm text-slate-500 text-center">
-                                                            <p className="font-medium">Payment Required</p>
-                                                            <p className="text-xs mt-1">Awaiting treasury payment verification</p>
-                                                        </div>
-                                                    )) : (
-                                                        <div className="px-3 py-2 text-sm text-slate-500 text-center">
-                                                            <p className="font-medium">Not available</p>
-                                                            <p className="text-xs mt-1">
-                                                                Application is {(certificate.request?.status || "not approved").replace(/_/g, " ")}
-                                                            </p>
-                                                        </div>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                            <CertificateRowActions certificate={certificate} />
                                         </td>
                                     </tr>
                                 ))
@@ -388,6 +401,44 @@ export function CertificatesTable({
                         </tbody>
                     </table>
                 </div>
+
+                {/* Phones */}
+                <ul className="divide-y divide-slate-100 md:hidden">
+                    {certificatesData.length === 0 ? (
+                        <li className="flex flex-col items-center justify-center px-6 py-12 text-center">
+                            <FileText className="mb-3 h-10 w-10 text-slate-300" />
+                            <p className="font-semibold text-slate-700">No certificates found</p>
+                            <p className="mt-1 text-sm text-slate-500">Try adjusting your filters or search terms</p>
+                        </li>
+                    ) : (
+                        certificatesData.map((certificate) => (
+                            <li key={certificate.id} className="px-4 py-3">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <p className="truncate font-mono text-sm font-semibold text-blue-600">
+                                            {certificate.certificate_number}
+                                        </p>
+                                        <p className="truncate text-sm font-medium text-slate-800">
+                                            {certificate.request?.applicant?.applicant_name || "Unknown"}
+                                        </p>
+                                        <p className="truncate font-mono text-xs text-slate-500">
+                                            {certificate.request?.application_number || `#${certificate.request_id}`}
+                                        </p>
+                                    </div>
+                                    <CertificateRowActions certificate={certificate} />
+                                </div>
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                    {certificate.request?.released_to_applicant_at ? (
+                                        <Badge className="border border-emerald-200 bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Released</Badge>
+                                    ) : (
+                                        <Badge className="border border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-100">Preparing</Badge>
+                                    )}
+                                    <span>{formatDate(certificate.issued_at)}</span>
+                                </div>
+                            </li>
+                        ))
+                    )}
+                </ul>
 
                 {/* Pagination */}
                 {pagination.last_page > 1 && (

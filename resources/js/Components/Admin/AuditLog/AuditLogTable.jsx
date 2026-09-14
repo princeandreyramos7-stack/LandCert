@@ -33,7 +33,11 @@ export function AuditLogTable({ logs, onViewDetails }) {
     }
 
     return (
-        <div className="-mx-4 overflow-x-auto sm:mx-0">
+        <>
+        {/* From a tablet up: the full table. The min-width that keeps
+            its seven columns readable is wider than a phone, so below md
+            the same events are drawn as cards. */}
+        <div className="-mx-4 hidden overflow-x-auto sm:mx-0 md:block">
             <table className="w-full min-w-[56rem] text-sm">
                 <thead className="sticky top-0 z-10 bg-white">
                     <tr className="border-b border-gray-200 text-left text-[11px] font-bold uppercase tracking-wide text-[#0d1f5c]">
@@ -130,5 +134,50 @@ export function AuditLogTable({ logs, onViewDetails }) {
                 </tbody>
             </table>
         </div>
+
+        {/* Phones */}
+        <ul className="divide-y divide-gray-100 md:hidden">
+            {rows.map((log) => {
+                const tone = actionTone(log.action);
+                const role = log.user_type || log.user?.user_type;
+                return (
+                    <li
+                        key={log.id}
+                        onClick={() => onViewDetails(log)}
+                        className="cursor-pointer px-1 py-3 active:bg-gray-50"
+                    >
+                        <div className="flex items-start justify-between gap-2">
+                            <span className={`inline-flex shrink-0 rounded-md px-2 py-0.5 border text-[11px] font-bold ${toneClasses[tone]}`}>
+                                {formatActionLabel(log.action)}
+                            </span>
+                            <span className="shrink-0 text-[11px] text-gray-400">{timeAgo(log.created_at)}</span>
+                        </div>
+                        <p className="mt-1.5 line-clamp-2 text-sm text-gray-700">
+                            {log.description || "—"}
+                        </p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500">
+                            <span className="flex items-center gap-1.5">
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0d1f5c]/10 text-[9px] font-bold text-[#0d1f5c]">
+                                    {initialsOf(log.user_name || log.user?.name)}
+                                </span>
+                                {log.user_name || log.user?.name || "System"}
+                                {role && <span className="text-gray-400">· {roleLabel(role)}</span>}
+                            </span>
+                            {log.model_type && (
+                                <span className="font-mono text-[10px] text-gray-400">
+                                    {String(log.model_type).split("\\").pop()} #{log.model_id}
+                                </span>
+                            )}
+                            {log.ip_address && (
+                                <span className="flex items-center gap-1 font-mono text-[10px] text-gray-400">
+                                    <Globe className="h-3 w-3" />{log.ip_address}
+                                </span>
+                            )}
+                        </div>
+                    </li>
+                );
+            })}
+        </ul>
+        </>
     );
 }

@@ -28,6 +28,95 @@ import { formatDate, formatCurrency } from "./utils.jsx";
 import { router } from "@inertiajs/react";
 import { VerifyPaymentDialog } from "./VerifyPaymentDialog";
 
+/**
+ * What can be done with one payment. Shared by the table row and the card
+ * shown in its place on a phone, so the two can never drift apart.
+ */
+function PaymentRowActions({ payment, routePrefix, canVerify, onViewDetails, onAddReceipt, onVerify }) {
+    return (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <MoreVertical className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onViewDetails?.(payment);
+                            }}
+                            className="cursor-pointer"
+                        >
+                            <Eye className="h-4 w-4 mr-2 text-blue-600" />
+                            <span>View Details</span>
+                        </DropdownMenuItem>
+
+                        {/* The Order of Payment is the slip the applicant
+                            pays against, so it is reachable from the payment
+                            it belongs to. */}
+                        <DropdownMenuItem
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(
+                                    route(`${routePrefix}.generate-order-of-payment`, payment.request_id),
+                                    "_blank"
+                                );
+                            }}
+                            className="cursor-pointer"
+                        >
+                            <Receipt className="h-4 w-4 mr-2 text-[#d4a017]" />
+                            <span>Order of Payment</span>
+                        </DropdownMenuItem>
+
+                        {canVerify && payment.payment_status === "pending" && (
+                            <DropdownMenuItem
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onVerify(payment);
+                                }}
+                                className="cursor-pointer text-emerald-600"
+                            >
+                                <ThumbsUp className="h-4 w-4 mr-2" />
+                                <span>Verify Payment</span>
+                            </DropdownMenuItem>
+                        )}
+                        
+                        <DropdownMenuSeparator />
+                        
+                        {payment.receipt_file_path ? (
+                            <DropdownMenuItem
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(`/payments/${payment.id}/receipt`, '_blank');
+                                }}
+                                className="cursor-pointer"
+                            >
+                                <FileText className="h-4 w-4 mr-2 text-emerald-600" />
+                                <span>View Receipt</span>
+                            </DropdownMenuItem>
+                        ) : (
+                            <DropdownMenuItem
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAddReceipt?.(payment);
+                                }}
+                                className="cursor-pointer"
+                            >
+                                <Upload className="h-4 w-4 mr-2 text-amber-600" />
+                                <span>Add Receipt</span>
+                            </DropdownMenuItem>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+    );
+}
+
 export function PaymentHistoryTable({
     payments = [],
     onViewDetails,
@@ -216,7 +305,11 @@ export function PaymentHistoryTable({
 
             {/* Payment History Table */}
             <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
+                {/* From a tablet up: the full table. Below that it is
+                    unreadable - seven columns on a 390px screen cut the date,
+                    who verified it and the actions off the right-hand edge -
+                    so the same rows are drawn as cards instead. */}
+                <div className="hidden overflow-x-auto md:block">
                     <table className="w-full">
                         <thead className="bg-slate-50 border-b border-slate-200">
                             <tr>
@@ -303,86 +396,14 @@ export function PaymentHistoryTable({
                                             </div>
                                         </td>
                                         <td className="p-3">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48">
-                                                    <DropdownMenuItem
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onViewDetails?.(payment);
-                                                        }}
-                                                        className="cursor-pointer"
-                                                    >
-                                                        <Eye className="h-4 w-4 mr-2 text-blue-600" />
-                                                        <span>View Details</span>
-                                                    </DropdownMenuItem>
-
-                                                    {/* The Order of Payment is the slip the applicant
-                                                        pays against, so it is reachable from the payment
-                                                        it belongs to. */}
-                                                    <DropdownMenuItem
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            window.open(
-                                                                route(`${routePrefix}.generate-order-of-payment`, payment.request_id),
-                                                                "_blank"
-                                                            );
-                                                        }}
-                                                        className="cursor-pointer"
-                                                    >
-                                                        <Receipt className="h-4 w-4 mr-2 text-[#d4a017]" />
-                                                        <span>Order of Payment</span>
-                                                    </DropdownMenuItem>
-
-                                                    {canVerify && payment.payment_status === "pending" && (
-                                                        <DropdownMenuItem
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setVerifyingPayment(payment);
-                                                            }}
-                                                            className="cursor-pointer text-emerald-600"
-                                                        >
-                                                            <ThumbsUp className="h-4 w-4 mr-2" />
-                                                            <span>Verify Payment</span>
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    
-                                                    <DropdownMenuSeparator />
-                                                    
-                                                    {payment.receipt_file_path ? (
-                                                        <DropdownMenuItem
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                window.open(`/payments/${payment.id}/receipt`, '_blank');
-                                                            }}
-                                                            className="cursor-pointer"
-                                                        >
-                                                            <FileText className="h-4 w-4 mr-2 text-emerald-600" />
-                                                            <span>View Receipt</span>
-                                                        </DropdownMenuItem>
-                                                    ) : (
-                                                        <DropdownMenuItem
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                onAddReceipt?.(payment);
-                                                            }}
-                                                            className="cursor-pointer"
-                                                        >
-                                                            <Upload className="h-4 w-4 mr-2 text-amber-600" />
-                                                            <span>Add Receipt</span>
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                            <PaymentRowActions
+                                                payment={payment}
+                                                routePrefix={routePrefix}
+                                                canVerify={canVerify}
+                                                onViewDetails={onViewDetails}
+                                                onAddReceipt={onAddReceipt}
+                                                onVerify={setVerifyingPayment}
+                                            />
                                         </td>
                                     </tr>
                                 ))
@@ -390,6 +411,59 @@ export function PaymentHistoryTable({
                         </tbody>
                     </table>
                 </div>
+
+                {/* Phones */}
+                <ul className="divide-y divide-slate-100 md:hidden">
+                    {paginatedPayments.length === 0 ? (
+                        <li className="flex flex-col items-center justify-center px-6 py-12 text-center">
+                            <Search className="mb-3 h-10 w-10 text-slate-300" />
+                            <p className="font-semibold text-slate-700">No payments found</p>
+                            <p className="mt-1 text-sm text-slate-500">Try adjusting your filters or search terms</p>
+                        </li>
+                    ) : (
+                        paginatedPayments.map((payment) => (
+                            <li
+                                key={payment.id}
+                                onClick={() => onViewDetails?.(payment)}
+                                className="cursor-pointer px-4 py-3 active:bg-slate-50"
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <p className="font-mono text-sm font-semibold text-blue-600">
+                                            {payment.receipt_number || "No OR number"}
+                                        </p>
+                                        <p className="truncate text-sm font-medium text-slate-800">
+                                            {payment.applicant_name || "Unknown"}
+                                        </p>
+                                        <p className="truncate font-mono text-xs text-slate-500">
+                                            {payment.application_number || `#${payment.request_id}`}
+                                        </p>
+                                    </div>
+                                    <div className="flex shrink-0 items-start gap-1">
+                                        <span className="whitespace-nowrap font-semibold text-slate-800">
+                                            {formatCurrency(payment.amount)}
+                                        </span>
+                                        <PaymentRowActions
+                                            payment={payment}
+                                            routePrefix={routePrefix}
+                                            canVerify={canVerify}
+                                            onViewDetails={onViewDetails}
+                                            onAddReceipt={onAddReceipt}
+                                            onVerify={setVerifyingPayment}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                                    <span className="flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        {formatDate(payment.payment_date)}
+                                    </span>
+                                    <span>Verified by {payment.verified_by_name || "—"}</span>
+                                </div>
+                            </li>
+                        ))
+                    )}
+                </ul>
 
                 {/* Pagination */}
                 {totalPages > 1 && (

@@ -192,7 +192,9 @@ export function SuperAdminUserManagement({ users }) {
             </div>
 
             {/* Statistics Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* Two across on a phone: four short counts stacked pushed the
+                list itself below the fold on every load. */}
+            <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
                 {[
                     { label: "Total Users",   value: stats.total,        icon: Users,  border: "border-l-[#0d1f5c]", iconBg: "bg-[#0d1f5c]/10", iconColor: "text-[#0d1f5c]" },
                     { label: "Zoning Administrators", value: stats.super_admins, icon: Shield, border: "border-l-[#d4a017]",  iconBg: "bg-[#d4a017]/10",  iconColor: "text-[#d4a017]"  },
@@ -201,10 +203,10 @@ export function SuperAdminUserManagement({ users }) {
                 ].map((s, i) => (
                     <Card key={i} className={`border-l-4 ${s.border} bg-white shadow-sm hover:shadow-md transition-shadow`}>
                         <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">{s.label}</p>
-                                    <p className="text-3xl font-black text-[#0d1f5c]">{s.value}</p>
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                    <p className="mb-1 text-[10px] font-bold uppercase leading-tight tracking-wide text-gray-500 sm:text-xs">{s.label}</p>
+                                    <p className="text-2xl font-black text-[#0d1f5c] sm:text-3xl">{s.value}</p>
                                 </div>
                                 <div className={`h-9 w-9 rounded-lg ${s.iconBg} flex items-center justify-center`}>
                                     <s.icon className={`h-5 w-5 ${s.iconColor}`}/>
@@ -257,7 +259,11 @@ export function SuperAdminUserManagement({ users }) {
             {/* Users Table */}
             <Card className="bg-white shadow-sm border border-gray-100">
                 <CardContent className="p-6">
-                    <div className="rounded-xl border border-gray-100 overflow-hidden">
+                    <div className="overflow-hidden rounded-xl border border-gray-100">
+                        {/* Name, email, contact, address, type, registered and
+                            actions do not fit a phone; below md the same
+                            accounts are drawn as cards. */}
+                        <div className="hidden md:block">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-gray-50">
@@ -323,6 +329,51 @@ export function SuperAdminUserManagement({ users }) {
                                 )}
                             </TableBody>
                         </Table>
+                        </div>
+
+                        {/* Phones */}
+                        <ul className="divide-y divide-gray-100 md:hidden">
+                            {filteredUsers.length === 0 ? (
+                                <li className="px-4 py-10 text-center text-sm text-muted-foreground">
+                                    {searchTerm || filterUserType !== "all" ? "No users match your filters" : "No users found"}
+                                </li>
+                            ) : (
+                                paginatedUsers.map((user) => (
+                                    <li key={user.id} className="flex items-start gap-3 px-4 py-3">
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="truncate text-sm font-semibold text-gray-900">{user.name}</p>
+                                                <Badge className={`${getUserTypeBadge(user.user_type)} shrink-0 whitespace-nowrap text-[10px]`}>
+                                                    {user.user_type === "super_admin" && <Shield className="mr-1 h-3 w-3" />}
+                                                    {getUserTypeLabel(user.user_type)}
+                                                </Badge>
+                                            </div>
+                                            <p className="truncate text-xs text-gray-500">{user.email}</p>
+                                            <p className="mt-0.5 text-[11px] text-gray-400">
+                                                {user.contact_number || "No contact"} · joined {formatDate(user.created_at)}
+                                            </p>
+                                        </div>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => handleEdit(user)}>
+                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleDelete(user)} className="text-red-600">
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </li>
+                                ))
+                            )}
+                        </ul>
 
                         <TablePagination
                             currentPage={currentPage}
