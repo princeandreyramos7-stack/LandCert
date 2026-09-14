@@ -83,7 +83,7 @@ abstract class TestCase extends BaseTestCase
             'payment_amount' => 3289,
         ]);
 
-        if ($status === 'approved' || in_array($status, RequestModel::CERT_LIFECYCLE_STATUSES, true)) {
+        if (($overrides['paid'] ?? true) && ($status === 'approved' || in_array($status, RequestModel::CERT_LIFECYCLE_STATUSES, true))) {
             Payment::factory()->verified()->create([
                 'request_id' => $request->id,
                 'user_id' => $owner->id,

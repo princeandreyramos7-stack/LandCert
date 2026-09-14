@@ -308,6 +308,16 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
+        // Whose application it is, before the form is even read: a stranger
+        // is refused outright rather than told what their submission lacked.
+        $owner = \App\Models\Request::where('id', $request->input('request_id'))->value('user_id');
+        if ($owner !== null && auth()->user()->user_type === 'applicant' && $owner !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to upload a receipt for this application.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'request_id' => 'required|exists:requests,id',
             'or_number' => 'required|string|max:255',

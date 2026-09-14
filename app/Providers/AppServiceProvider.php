@@ -76,6 +76,20 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
 
+        // See App\Mail\Transport\DeferredTransport: mail is sent once the
+        // response is out, through whichever transport MAIL_MAILER names.
+        \Illuminate\Support\Facades\Mail::extend('deferred', function (array $config) {
+            $inner = $config['mailer'] ?? 'smtp';
+            if ($inner === 'deferred') {
+                $inner = 'smtp';
+            }
+
+            return new \App\Mail\Transport\DeferredTransport(
+                \Illuminate\Support\Facades\Mail::mailer($inner)->getSymfonyTransport(),
+                defer: !$this->app->runningInConsole()
+            );
+        });
+
         // The Backups page reads how the last run went; the scheduler has no
         // other way to report back, since its notifications go by mail.
         \Illuminate\Support\Facades\Event::listen(\Spatie\Backup\Events\BackupWasSuccessful::class, function () {

@@ -70,8 +70,8 @@ class StoredFilesTest extends TestCase
         foreach (['requirements.view', 'payments.receipt.view'] as $name) {
             $middleware = collect($router->gatherRouteMiddleware($router->getRoutes()->getByName($name)))
                 ->map(fn ($m) => is_string($m) ? $m : get_class($m));
-            $this->assertTrue($middleware->contains('Illuminate\Routing\Middleware\ThrottleRequests:300,1'), "$name has its own limit");
-            $this->assertFalse($middleware->contains('Illuminate\Routing\Middleware\ThrottleRequests:60,1'), "$name is out of the page limit");
+            $this->assertTrue($middleware->contains('Illuminate\Routing\Middleware\ThrottleRequests:300,1,files'), "$name has its own limit");
+            $this->assertFalse($middleware->contains('Illuminate\Routing\Middleware\ThrottleRequests:60,1,pages'), "$name is out of the page limit");
         }
     }
 

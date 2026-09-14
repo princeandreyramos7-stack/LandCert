@@ -84,6 +84,17 @@ class PaymentService
                 );
             }
 
+            // Only an application the Zoning Administrator has approved is
+            // payable - the same rule the applicant's own receipt upload
+            // follows. Recording a payment moves the application straight on
+            // to its certificate, so taking one against an application still
+            // under review would carry it past review and approval altogether.
+            if (!in_array(strtolower((string) $locked->status), ['approved', 'for_payment', 'pending_payment'], true)) {
+                throw new \RuntimeException(
+                    'Payment can be recorded once the Zoning Administrator has approved the application.'
+                );
+            }
+
             // Create payment record
             $payment = Payment::create([
                 'request_id' => $request->id,

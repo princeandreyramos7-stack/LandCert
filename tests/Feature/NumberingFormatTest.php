@@ -83,4 +83,25 @@ class NumberingFormatTest extends TestCase
             $this->assertStringStartsWith("{$prefix}-03-26-", $number, "Got: {$number}");
         }
     }
+    public function test_application_number_follows_the_highest_one_of_the_month(): void
+    {
+        $user = User::factory()->create(['user_type' => 'applicant']);
+        $october = Carbon::create(2026, 10, 3, 8, 30, 0);
+        foreach (['TPZ-10-26-0001', 'TPZ-10-26-0002', 'TPZ-10-26-0004', 'TPZ-09-26-0009'] as $number) {
+            RequestModel::create(['user_id' => $user->id, 'applicant_id' => $this->makeApplicant()->id, 'status' => 'pending', 'application_number' => $number]);
+        }
+        // A deleted application keeps its number: the unique index still holds it.
+        RequestModel::create(['user_id' => $user->id, 'applicant_id' => $this->makeApplicant()->id, 'status' => 'pending', 'application_number' => 'TPZ-10-26-0005'])->delete();
+
+        $this->assertSame('TPZ-10-26-0006', RequestModel::generateApplicationNumber($this->makeApplicant()->id, $october));
+        $this->assertSame('TPZ-09-26-0010', RequestModel::generateApplicationNumber($this->makeApplicant()->id, Carbon::create(2026, 9, 3)));
+        $this->assertSame('TPZ-11-26-0001', RequestModel::generateApplicationNumber($this->makeApplicant()->id, Carbon::create(2026, 11, 3)));
+    }
+
+    public function test_the_number_lock_is_taken_and_given_back(): void
+    {
+        $holder = RequestModel::underNumberLock(fn () => \DB::selectOne('SELECT IS_USED_LOCK(?) AS holder', ['cpdo.application_number'])->holder);
+        $this->assertNotNull($holder, 'the lock is held while the work runs');
+        $this->assertNull(\DB::selectOne('SELECT IS_USED_LOCK(?) AS holder', ['cpdo.application_number'])->holder, 'and released afterwards');
+    }
 }

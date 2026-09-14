@@ -58,7 +58,11 @@ Route::middleware(['auth', 'prevent.back'])->group(function () {
     }
 });
 
-Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () {
+// The throttles here carry a key prefix (the third argument) because Laravel
+// otherwise keys every throttle by the user alone: the general limit and the
+// tighter one on filing then share one counter, and a dozen page views used up
+// an applicant's submissions for the minute.
+Route::middleware(['auth', 'throttle:60,1,pages', 'prevent.back'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -68,9 +72,9 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     
     // Request routes
     Route::get('/request', [RequestController::class, 'index'])->name('request.index');
-    Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:10,1')->name('request.store');
+    Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:10,1,submit')->name('request.store');
     Route::get('/requests/{id}/edit', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'edit-application', $id)); })->name('requests.edit');
-    Route::put('/requests/{id}', [RequestController::class, 'update'])->middleware('throttle:10,1')->name('requests.update');
+    Route::put('/requests/{id}', [RequestController::class, 'update'])->middleware('throttle:10,1,submit')->name('requests.update');
     Route::get('/my-applications', [RequestController::class, 'myApplications'])->name('my-applications');
     Route::get('/my-applications/index', [RequestController::class, 'myApplications'])->name('my-applications.index');
     Route::get('/my-applications/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'print-form', $id)); })->name('my-applications.print');
@@ -87,7 +91,7 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     // than eating the group's sixty a minute and leaving the later scans as
     // blank boxes on the printout.
     Route::get('/requirements/{id}/view', [\App\Http\Controllers\RequirementDocumentController::class, 'view'])
-        ->withoutMiddleware('throttle:60,1')->middleware('throttle:300,1')->name('requirements.view');
+        ->withoutMiddleware('throttle:60,1,pages')->middleware('throttle:300,1,files')->name('requirements.view');
     
     // Payment receipt upload routes
     Route::get('/receipt/upload/{requestId}', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'upload-receipt', $id)); })->name('receipt.upload.page');
@@ -95,7 +99,7 @@ Route::middleware(['auth', 'throttle:60,1', 'prevent.back'])->group(function () 
     // Payment routes for applicants
     Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
     Route::get('/payments/{payment}/receipt', [PaymentController::class, 'viewReceipt'])
-        ->withoutMiddleware('throttle:60,1')->middleware('throttle:300,1')->name('payments.receipt.view');
+        ->withoutMiddleware('throttle:60,1,pages')->middleware('throttle:300,1,files')->name('payments.receipt.view');
 
     // Certificate download/preview (applicant-facing, ownership checked in controller)
     Route::get('/certificate/{certificate}/download', [CertificateController::class, 'applicantDownload'])->name('certificate.download');

@@ -103,13 +103,15 @@ class CleanPageController extends Controller
         'dashboard-panel' => ['method' => 'dashboard', 'controllers' => ['super_admin' => SuperAdminController::class, 'admin' => AdminController::class]],
         'applications'    => ['method' => 'requests',  'controllers' => ['super_admin' => SuperAdminController::class, 'admin' => AdminController::class]],
         'payments'        => ['method' => 'payments',  'controllers' => ['super_admin' => SuperAdminController::class, 'admin' => AdminController::class]],
-        'certificates'    => ['method' => 'index',     'controllers' => ['*' => CertificateController::class]],
+        // Staff only, by role rather than by '*': with the fallback an applicant
+        // could open the office's certificate list and the SMS broadcast page.
+        'certificates'    => ['method' => 'index',     'controllers' => ['super_admin' => CertificateController::class, 'admin' => CertificateController::class]],
         'users'           => ['method' => 'users',     'controllers' => ['super_admin' => SuperAdminController::class, 'admin' => AdminController::class]],
         'audit-logs'      => ['method' => 'auditLogs', 'controllers' => ['super_admin' => SuperAdminController::class, 'admin' => AdminController::class]],
         // Two controllers, because the officer is offered fewer reports than the
         // administrator — see AdminReportsController.
         'reports'         => ['method' => 'index',     'controllers' => ['super_admin' => SuperAdminReportsController::class, 'admin' => AdminReportsController::class]],
-        'sms-broadcast'   => ['method' => 'index',     'controllers' => ['*' => SmsController::class]],
+        'sms-broadcast'   => ['method' => 'index',     'controllers' => ['super_admin' => SmsController::class, 'admin' => SmsController::class]],
         // The administrator alone: a role with no entry here gets a 403.
         'backups'         => ['method' => 'index',     'controllers' => ['super_admin' => BackupController::class]],
     ];

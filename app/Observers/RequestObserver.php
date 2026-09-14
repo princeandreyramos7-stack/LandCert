@@ -11,6 +11,14 @@ use Illuminate\Support\Facades\Mail;
 
 class RequestObserver
 {
+    /**
+     * Wait for the transaction. A submission is written inside one, and an
+     * attempt that is rolled back (a repeated application number, retried)
+     * must not log, notify or mail anyone about an application that was
+     * never filed.
+     */
+    public bool $afterCommit = true;
+
     protected $cacheService;
 
     public function __construct(DashboardCacheService $cacheService)

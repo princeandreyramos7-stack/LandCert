@@ -33,7 +33,10 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Receipts and scans are handed out by their own controllers (owner or
+            // staff only); the framework's signed /storage/{path} routes are not
+            // needed and are kept off the routing table.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],

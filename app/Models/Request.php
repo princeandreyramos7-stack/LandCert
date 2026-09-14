@@ -167,8 +167,36 @@ class Request extends Model
     }
 
     /**
+     * Run $work while holding the database's application-number lock, so that
+     * two submissions at the same instant cannot both read the same highest
+     * number and both try to file under it. The lock is a MySQL named lock,
+     * held on this connection from before the number is read until after the
+     * insert is committed; it waits up to ten seconds, and if it cannot be
+     * had the work runs anyway - the unique index and the caller's retry
+     * still stand behind it.
+     */
+    public static function underNumberLock(callable $work)
+    {
+        $connection = \Illuminate\Support\Facades\DB::connection();
+        if (!in_array($connection->getDriverName(), ['mysql', 'mariadb'], true)) {
+            return $work();
+        }
+
+        $name = 'cpdo.application_number';
+        $connection->selectOne('SELECT GET_LOCK(?, 10) AS got', [$name]);
+        try {
+            return $work();
+        } finally {
+            $connection->selectOne('SELECT RELEASE_LOCK(?) AS released', [$name]);
+        }
+    }
+
+    /**
      * Generate a unique Application Number in the format TPZ-MM-YY-NNNN.
-     * Increments per applicant, creating a unique application number for each applicant.
+     * A running number for the month: the next one after the highest filed
+     * in that MM-YY. Callers that may run at the same moment - the applicant's
+     * submission - take the application-number lock around the insert so two
+     * of them cannot read the same highest number.
      * 
      * MM-YY is the month and year the application was CREATED, not the moment
      * this method happens to run.
@@ -184,24 +212,24 @@ class Request extends Model
         $year = $date->format('y');
         $prefix = 'TPZ';
         
-        // Find the highest sequence number for this applicant
-        $lastRequest = self::where('applicant_id', $applicantId)
-            ->whereNotNull('application_number')
-            ->orderByRaw("CAST(SUBSTRING_INDEX(application_number, '-', -1) AS UNSIGNED) DESC")
-            ->value('application_number');
-        
-        $nextSeq = 1;
-        if ($lastRequest) {
-            preg_match('/-(\d+)$/', $lastRequest, $matches);
-            $nextSeq = isset($matches[1]) ? (int) $matches[1] + 1 : 1;
-        }
-        
+        // The running number for the month, from the highest one filed so far.
+        // One query: the old way started at 1 for every applicant and probed
+        // number after number until it found a free one, which under load had
+        // every submission of the moment land on the same candidate.
+        $prefixForMonth = sprintf('%s-%s-%s-', $prefix, $month, $year);
+        // withTrashed: a number stays taken after its application is deleted,
+        // since the unique index still holds it.
+        $highest = (int) self::withTrashed()->where('application_number', 'like', $prefixForMonth . '%')
+            ->selectRaw("MAX(CAST(SUBSTRING_INDEX(application_number, '-', -1) AS UNSIGNED)) AS highest")
+            ->value('highest');
+        $nextSeq = $highest + 1;
+
         // Ensure uniqueness
         $attempt = 0;
         do {
             $candidate = sprintf('%s-%s-%s-%04d', $prefix, $month, $year, $nextSeq + $attempt);
             $attempt++;
-        } while (self::where('application_number', $candidate)->exists());
+        } while (self::withTrashed()->where('application_number', $candidate)->exists());
         
         return $candidate;
     }

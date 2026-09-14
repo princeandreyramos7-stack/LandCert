@@ -224,7 +224,7 @@ class SuperAdminReportsController extends Controller
             'year' => 'required_if:type,period|nullable|integer|min:2000|max:2100',
             // "all" means the whole year, so this is not simply a month number.
             'month' => 'nullable|string|in:all,1,2,3,4,5,6,7,8,9,10,11,12',
-            'officer' => 'nullable|string|max:32',
+            'officer' => ['nullable', 'regex:/^(all|\d+)$/'],
         ]);
     }
 

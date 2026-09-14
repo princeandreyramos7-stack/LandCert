@@ -317,20 +317,21 @@ class RequestController extends Controller
 
         // Use a database transaction to ensure all records are created together.
         //
-        // Wrapped in a short retry: generateApplicationNumber() reads the last
-        // sequence and then inserts, so two submissions at the same instant can
-        // pick the same number. The unique index refuses the second one, and
-        // without this the applicant got a raw 500 for it. Retrying recomputes
-        // the sequence with the first insert now committed, which resolves it.
+        // Submissions that arrive at the same moment take turns at the number:
+        // underNumberLock() holds a database lock from reading the highest
+        // number to the commit, so each one sees the one before it. The retry
+        // is the fallback should the lock not be had in time: the unique index
+        // refuses a repeated number, and the retry recomputes it with the
+        // earlier insert now committed.
         $result = null;
         $attempts = 0;
 
         while ($result === null) {
             try {
-                $result = $this->createApplication($validated, $request);
+                $result = RequestModel::underNumberLock(fn () => $this->createApplication($validated, $request));
             } catch (\Illuminate\Database\QueryException $e) {
                 $isDuplicateKey = ($e->errorInfo[1] ?? null) === 1062;
-                if (!$isDuplicateKey || ++$attempts >= 3) {
+                if (!$isDuplicateKey || ++$attempts >= 5) {
                     \Log::error('Application submission failed', [
                         'user_id' => auth()->id(),
                         'attempt' => $attempts,
@@ -513,12 +514,9 @@ class RequestController extends Controller
      */
     private function finishSubmission(array $result)
     {
-        // Send email notification to the user
+        // The e-mail is the RequestObserver's, sent once the application is
+        // committed; sending it here as well had the applicant get it twice.
         try {
-            Mail::to(auth()->user()->email)->send(
-                new ApplicationSubmitted($result['request'], auth()->user()->name)
-            );
-            
             // Send SMS notification
             if (auth()->user()->contact_number) {
                 app(\App\Services\SmsService::class)->sendApplicationSubmitted(
@@ -529,7 +527,7 @@ class RequestController extends Controller
             }
         } catch (\Exception $e) {
             // Log the error but don't fail the request
-            \Log::error('Failed to send application email: ' . $e->getMessage());
+            \Log::error('Failed to send application SMS: ' . $e->getMessage());
         }
 
         // Redirect to My Applications page with success message
@@ -543,6 +541,10 @@ class RequestController extends Controller
      */
     public function update(Request $request, $id)
     {
+        // Whose application it is, before anything else: a stranger is refused
+        // outright rather than told what their forged submission got wrong.
+        abort_if(RequestModel::where('id', $id)->value('user_id') !== auth()->id(), 403, 'Unauthorized to update this application.');
+
         // AGGRESSIVE LOGGING - Check if method is even called
         error_log("====== UPDATE METHOD HIT ======");
         error_log("Request ID: " . $id);
@@ -616,7 +618,7 @@ class RequestController extends Controller
             // Step 4
             'requirement_uploads' => 'nullable|array',
             'requirement_uploads.*' => 'nullable|array',
-            'requirement_uploads.*.*' => 'file|max:5120',
+            'requirement_uploads.*.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
             'requirement_names' => 'nullable|array',
             'verified_requirements' => 'nullable|array',
         ]);

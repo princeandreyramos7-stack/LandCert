@@ -14,7 +14,9 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'smtp'),
+    // Every mail goes through the "deferred" mailer, which sends it after the
+    // response has gone out; MAIL_MAILER names the real transport underneath.
+    'default' => 'deferred',
 
     /*
     |--------------------------------------------------------------------------
@@ -36,6 +38,11 @@ return [
     */
 
     'mailers' => [
+
+        'deferred' => [
+            'transport' => 'deferred',
+            'mailer' => env('MAIL_MAILER', 'smtp'),
+        ],
 
         'smtp' => [
             'transport' => 'smtp',

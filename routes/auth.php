@@ -19,7 +19,7 @@ Route::middleware('guest')->group(function () {
     // this is capped per IP. Login is already limited inside LoginRequest
     // (5 attempts per email+IP), which is why it is not repeated here.
     Route::post('register', [RegisteredUserController::class, 'store'])
-        ->middleware('throttle:5,1');
+        ->middleware('throttle:5,1,register');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
@@ -33,7 +33,7 @@ Route::middleware('guest')->group(function () {
     // cap this route will send unlimited mail to a third party from this
     // domain, and its responses reveal which addresses are registered.
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
-        ->middleware('throttle:5,1')
+        ->middleware('throttle:5,1,forgot')
         ->name('password.email');
 
     Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
@@ -42,7 +42,7 @@ Route::middleware('guest')->group(function () {
     // The token is the only secret guarding this, so the attempts allowed to
     // guess one are capped too.
     Route::post('reset-password', [NewPasswordController::class, 'store'])
-        ->middleware('throttle:5,1')
+        ->middleware('throttle:5,1,reset')
         ->name('password.store');
 });
 

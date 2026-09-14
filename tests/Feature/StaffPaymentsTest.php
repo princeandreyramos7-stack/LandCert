@@ -38,7 +38,7 @@ class StaffPaymentsTest extends TestCase
     public function test_only_staff_see_the_payments_page_or_record_a_payment(): void
     {
         $applicant = $this->userOf('applicant');
-        $app = $this->application($applicant, 'CZC', 'reviewed');
+        $app = $this->application($applicant, 'CZC', 'approved', null, ['paid' => false]);
 
         $this->actingAs($applicant)->get('/payments')->assertForbidden();
         $this->actingAs($applicant)->postJson('/admin/payments/record', $this->payload($app->id))->assertForbidden();
@@ -50,7 +50,7 @@ class StaffPaymentsTest extends TestCase
     public function test_the_officer_records_a_payment_and_it_is_logged(): void
     {
         $officer = $this->userOf('admin');
-        $app = $this->application($this->userOf('applicant'), 'CZC', 'reviewed');
+        $app = $this->application($this->userOf('applicant'), 'CZC', 'approved', null, ['paid' => false]);
 
         $this->actingAs($officer)
             ->from('/payments')
@@ -75,8 +75,8 @@ class StaffPaymentsTest extends TestCase
     public function test_one_receipt_number_is_one_payment(): void
     {
         $officer = $this->userOf('admin');
-        $first = $this->application($this->userOf('applicant'), 'CZC', 'reviewed');
-        $second = $this->application($this->userOf('applicant'), 'CZC', 'reviewed');
+        $first = $this->application($this->userOf('applicant'), 'CZC', 'approved', null, ['paid' => false]);
+        $second = $this->application($this->userOf('applicant'), 'CZC', 'approved', null, ['paid' => false]);
 
         $this->actingAs($officer)->post('/admin/payments/record', $this->payload($first->id, 'OR-DUP-1'))->assertSessionHas('success');
 
@@ -111,7 +111,7 @@ class StaffPaymentsTest extends TestCase
     public function test_only_pictures_and_pdfs_are_accepted_as_receipts(): void
     {
         $officer = $this->userOf('admin');
-        $app = $this->application($this->userOf('applicant'), 'CZC', 'reviewed');
+        $app = $this->application($this->userOf('applicant'), 'CZC', 'approved', null, ['paid' => false]);
 
         $this->actingAs($officer)
             ->postJson('/admin/payments/record', $this->payload($app->id, 'OR-EXE', [
@@ -142,5 +142,24 @@ class StaffPaymentsTest extends TestCase
             ->assertRedirect();
         $this->assertSame('verified', $another->fresh()->payment_status);
         $this->assertSame($officer->id, $another->fresh()->verified_by);
+    }
+    /**
+     * Recording a payment carries the application on to its certificate, so
+     * an application the administrator has not approved cannot take one -
+     * otherwise the counter would be a way past review and approval.
+     */
+    public function test_a_payment_cannot_be_recorded_before_approval(): void
+    {
+        $officer = $this->userOf('admin');
+        foreach (['pending', 'reviewed', 'in_applicant'] as $status) {
+            $app = $this->application($this->userOf('applicant'), 'CZC', $status);
+            $this->actingAs($officer)
+                ->from('/payments')
+                ->post('/admin/payments/record', $this->payload($app->id, "OR-EARLY-$status"))
+                ->assertRedirect('/payments')
+                ->assertSessionHasErrors('message');
+            $this->assertSame(0, Payment::where('request_id', $app->id)->count());
+            $this->assertSame($status, $app->fresh()->status, "the application must stay $status");
+        }
     }
 }
