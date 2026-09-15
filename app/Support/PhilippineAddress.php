@@ -44,7 +44,7 @@ class PhilippineAddress
             "{$prefix}_province_code" => [$req, 'string', 'size:9', 'exists:psgc_provinces,code'],
             "{$prefix}_city_code" => [$req, 'string', 'size:9', 'exists:psgc_cities_municipalities,code'],
             "{$prefix}_barangay_code" => [$req, 'string', 'size:9', 'exists:psgc_barangays,code'],
-            "{$prefix}_street" => [$req, 'string', 'max:255'],
+            "{$prefix}_street" => ['nullable', 'string', 'max:255'], // Street is always optional
         ];
     }
 

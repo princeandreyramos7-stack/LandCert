@@ -54,9 +54,10 @@ class RegisteredUserController extends Controller
         $validated = $request->validate(array_merge([
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', new LowercaseEmailDomain, 'unique:'.User::class],
-            'contact_number' => 'nullable|string|regex:/^09[0-9]{9}$/|size:11',
+            'contact_number' => 'required|string|regex:/^09[0-9]{9}$/|size:11',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ], \App\Support\PhilippineAddress::rules('address', $startedAddress)), [
+            'contact_number.required' => 'Phone number is required.',
             'contact_number.regex' => 'Contact number must start with 09 and be exactly 11 digits.',
             'contact_number.size' => 'Contact number must be exactly 11 digits.',
         ], \App\Support\PhilippineAddress::attributes('address', ''));
