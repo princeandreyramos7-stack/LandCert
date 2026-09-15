@@ -148,11 +148,11 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
                 }}
             >
                 {/* Header with CPD Number */}
-                <div style={{ position: 'relative', marginBottom: '12pt' }}>
+                <div style={{ position: 'relative', marginBottom: '12pt', paddingTop: '15pt' }}>
                     {/* CPD Number - Top Right with proper margin */}
                     <div style={{ 
                         position: 'absolute', 
-                        top: '-10pt', 
+                        top: '0', 
                         right: '0', 
                         fontSize: '11pt', 
                         fontWeight: 'bold',
@@ -162,7 +162,7 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
                     </div>
 
                     {/* Centered Header Text */}
-                    <div style={{ textAlign: 'center', paddingRight: '60pt' }}>
+                    <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: '11pt', marginBottom: '1pt' }}>Republic of the Philippines</div>
                         <div style={{ fontSize: '12pt', fontWeight: 'bold', marginBottom: '1pt' }}>CITY OF ILAGAN</div>
                         <div style={{ fontSize: '11pt', marginBottom: '1pt' }}>Province of Isabela</div>

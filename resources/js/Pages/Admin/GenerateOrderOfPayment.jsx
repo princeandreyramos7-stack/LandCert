@@ -37,7 +37,7 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
         const filename = `OrderOfPayment_${application.application_number || 'Payment'}.pdf`;
 
         const opt = {
-            margin: [10, 10, 10, 10],
+            margin: [15, 10, 10, 10],  // Increased top margin to prevent CPD number cutoff
             filename: filename,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: {
@@ -48,7 +48,7 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
             },
             jsPDF: {
                 unit: 'mm',
-                format: 'a4',
+                format: 'letter',  // Changed from 'a4' to 'letter' (8.5 x 11 inches)
                 orientation: 'portrait',
                 compress: true
             },
@@ -74,8 +74,21 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
             <style dangerouslySetInnerHTML={{ __html: `
                 /* Hide browser print headers/footers */
                 @page {
-                    size: A4;
-                    margin: 0;
+                    size: letter;
+                    margin: 0.5in 0.5in 0.5in 0.5in;
+                }
+
+                @media print {
+                    body {
+                        margin: 0;
+                        padding: 0;
+                    }
+                    
+                    /* Ensure content fits on one page */
+                    .payment-page {
+                        page-break-inside: avoid;
+                        page-break-after: avoid;
+                    }
                 }
 
                 body {
