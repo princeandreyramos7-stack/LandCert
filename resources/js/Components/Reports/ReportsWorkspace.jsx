@@ -279,7 +279,7 @@ function Lightbox({ item, onClose }) {
                         </div>
                     </div>
                 ) : (
-                    <img src={item.url} alt={item.label} className="max-h-[80vh] w-auto rounded-lg bg-white object-contain" />
+                    <img src={item.url} alt={item.label} className="max-h-[80vh] w-full sm:w-auto rounded-lg bg-white object-contain" />
                 )}
                 <figcaption className="mt-2 text-center text-sm text-white/80">{item.label}</figcaption>
             </figure>

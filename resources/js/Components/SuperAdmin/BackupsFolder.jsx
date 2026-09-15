@@ -77,24 +77,29 @@ export default function BackupsFolder({ open, onOpenChange }) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0">
+            <DialogContent className="max-w-[95vw] sm:max-w-3xl gap-0 overflow-hidden p-0">
                 {/* Title bar, like a folder window */}
-                <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50/80 px-5 py-3">
-                    <span className="rounded-lg bg-[#d4a017]/15 p-2 text-[#d4a017]"><FolderOpen className="h-5 w-5" /></span>
-                    <div className="min-w-0 flex-1">
-                        <DialogTitle className="text-base font-black text-[#0d1f5c]">Backups</DialogTitle>
-                        <DialogDescription className="flex items-center gap-1 text-[11px] text-gray-400">
-                            <span>Server</span><ChevronRight className="h-3 w-3" /><span>storage</span><ChevronRight className="h-3 w-3" /><span className="font-semibold text-gray-600">backups</span>
-                            <span className="ml-2 hidden sm:inline">· {backups.length} file{backups.length === 1 ? "" : "s"}, {fmtBytes(folder?.totalSize)}</span>
-                        </DialogDescription>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 border-b border-gray-100 bg-gray-50/80 px-5 py-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0 w-full sm:w-auto">
+                        <span className="rounded-lg bg-[#d4a017]/15 p-2 text-[#d4a017]"><FolderOpen className="h-5 w-5" /></span>
+                        <div className="min-w-0 flex-1">
+                            <DialogTitle className="text-base font-black text-[#0d1f5c]">Backups</DialogTitle>
+                            <DialogDescription className="flex items-center gap-1 text-[11px] text-gray-400 flex-wrap">
+                                <span>Server</span><ChevronRight className="h-3 w-3" /><span>storage</span><ChevronRight className="h-3 w-3" /><span className="font-semibold text-gray-600">backups</span>
+                                <span className="ml-2">· {backups.length} file{backups.length === 1 ? "" : "s"}, {fmtBytes(folder?.totalSize)}</span>
+                            </DialogDescription>
+                        </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={load} disabled={loading} aria-label="Refresh" className="h-8 w-8 text-gray-500">
-                        <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                    </Button>
-                    <Button onClick={() => act("run", "POST", route("super-admin.backups.run"), null, "Backup completed.")} disabled={busy === "run"} className="h-9 gap-2 bg-[#0d1f5c] text-white hover:bg-[#0d1f5c]/90">
-                        {busy === "run" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                        {busy === "run" ? "Backing up…" : "Back up now"}
-                    </Button>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <Button variant="ghost" size="icon" onClick={load} disabled={loading} aria-label="Refresh" className="h-8 w-8 text-gray-500">
+                            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                        </Button>
+                        <Button onClick={() => act("run", "POST", route("super-admin.backups.run"), null, "Backup completed.")} disabled={busy === "run"} className="h-9 gap-2 bg-[#0d1f5c] text-white hover:bg-[#0d1f5c]/90 flex-1 sm:flex-none">
+                            {busy === "run" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                            <span className="hidden xs:inline">{busy === "run" ? "Backing up…" : "Back up now"}</span>
+                            <span className="xs:hidden">{busy === "run" ? "..." : "Backup"}</span>
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Status line */}

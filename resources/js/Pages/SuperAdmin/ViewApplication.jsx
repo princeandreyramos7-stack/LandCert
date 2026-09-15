@@ -686,12 +686,6 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
                                 </p>
                             )}
                         </div>
-                        {request.project_description && (
-                            <InfoField
-                                label="Project Description"
-                                value={request.project_description}
-                            />
-                        )}
                     </div>
                 </div>
     </>

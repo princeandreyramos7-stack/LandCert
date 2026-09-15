@@ -384,9 +384,6 @@ export default function ApplicationDetails({ application, requirements = [], doc
                                         value={application.project_nature_years ? `${application.project_nature_years} year(s)` : null}
                                     />
                                     <Field label="Project Cost" value={formatPeso(application.project_cost)} />
-                                    <div className="md:col-span-2">
-                                        <Field label="Project Description" value={application.project_description} />
-                                    </div>
                                 </>
                             )}
                         </div>
