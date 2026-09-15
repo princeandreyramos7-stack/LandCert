@@ -73,7 +73,7 @@ export function ApplicationsBoard({ requests, role, exportRoute }) {
                 className="justify-end"
             />
 
-            <ApplicationsStats requests={all} active={status} onSelect={(key) => setStatus(key === status ? "all" : key)} />
+            <ApplicationsStats requests={all} active={status} onSelect={(key) => setStatus(key === status ? "all" : key)} role={role} />
 
             <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
                 <div className="border-b border-gray-100 px-4 py-4 sm:px-5">
