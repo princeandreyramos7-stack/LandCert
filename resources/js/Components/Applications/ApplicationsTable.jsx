@@ -134,6 +134,7 @@ function Actions({ request, role }) {
                 <DropdownMenuContent
                     align="end"
                     onClick={(e) => e.stopPropagation()}
+                    className="z-[100]"
                 >
                     {menuItems(request, role).map((item) => (
                         <DropdownMenuItem

@@ -74,7 +74,7 @@ const SHEET_CSS = `
     background: white;
     position: relative;
     font-family: 'Times New Roman', serif;
-    padding: 0.5in 0.75in;
+    padding: 0.75in 0.75in 0.5in 0.75in;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
@@ -82,6 +82,7 @@ const SHEET_CSS = `
    picture rather than printed, the blank lower half is just blank. */
 .payment-page.payment-page--compact {
     min-height: 0;
+    max-height: fit-content;
     padding-bottom: 0.4in;
     box-shadow: none;
 }
@@ -91,6 +92,21 @@ const SHEET_CSS = `
     display: inline-block;
     min-width: 200pt;
     padding-bottom: 2pt;
+}
+
+@media print {
+    .payment-page {
+        box-shadow: none;
+        page-break-after: avoid;
+        page-break-inside: avoid;
+        min-height: 0;
+        max-height: 10.5in;
+    }
+    
+    @page {
+        size: letter;
+        margin: 0.5in;
+    }
 }
 `;
 
@@ -132,36 +148,43 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
                 }}
             >
                 {/* Header with CPD Number */}
-                <div style={{ position: 'relative', marginBottom: '15pt' }}>
-                    {/* CPD Number - Top Right */}
-                    <div style={{ position: 'absolute', top: '0', right: '0', fontSize: '11pt', fontWeight: 'bold' }}>
+                <div style={{ position: 'relative', marginBottom: '12pt' }}>
+                    {/* CPD Number - Top Right with proper margin */}
+                    <div style={{ 
+                        position: 'absolute', 
+                        top: '-10pt', 
+                        right: '0', 
+                        fontSize: '11pt', 
+                        fontWeight: 'bold',
+                        whiteSpace: 'nowrap'
+                    }}>
                         CPD-002-0
                     </div>
 
                     {/* Centered Header Text */}
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '11pt', marginBottom: '2pt' }}>Republic of the Philippines</div>
-                        <div style={{ fontSize: '12pt', fontWeight: 'bold', marginBottom: '2pt' }}>CITY OF ILAGAN</div>
-                        <div style={{ fontSize: '11pt', marginBottom: '2pt' }}>Province of Isabela</div>
-                        <div style={{ fontSize: '11pt', fontWeight: 'bold', marginBottom: '15pt' }}>CITY PLANNING AND DEVELOPMENT OFFICE</div>
+                    <div style={{ textAlign: 'center', paddingRight: '60pt' }}>
+                        <div style={{ fontSize: '11pt', marginBottom: '1pt' }}>Republic of the Philippines</div>
+                        <div style={{ fontSize: '12pt', fontWeight: 'bold', marginBottom: '1pt' }}>CITY OF ILAGAN</div>
+                        <div style={{ fontSize: '11pt', marginBottom: '1pt' }}>Province of Isabela</div>
+                        <div style={{ fontSize: '11pt', fontWeight: 'bold', marginBottom: '12pt' }}>CITY PLANNING AND DEVELOPMENT OFFICE</div>
 
                         {/* Title with Yellow Background */}
-                        <div style={{ fontSize: '13pt', fontWeight: 'bold', marginTop: '10pt', display: 'inline-block', background: '#FFFF00', padding: '4pt 8pt' }}>
+                        <div style={{ fontSize: '13pt', fontWeight: 'bold', marginTop: '8pt', display: 'inline-block', background: '#FFFF00', padding: '4pt 12pt' }}>
                             ORDER OF PAYMENT
                         </div>
                     </div>
                 </div>
 
                 {/* Divider Line */}
-                <div style={{ borderTop: '2px solid #000', marginBottom: '15pt' }} />
+                <div style={{ borderTop: '2px solid #000', marginBottom: '12pt' }} />
 
                 {/* Recipient */}
-                <div style={{ fontSize: '11pt', marginBottom: '15pt', fontWeight: 'bold' }}>
+                <div style={{ fontSize: '11pt', marginBottom: '12pt', fontWeight: 'bold' }}>
                     TO CTO Cashier Special Collecting Officer
                 </div>
 
                 {/* Body Content */}
-                <div style={{ fontSize: '11pt', lineHeight: '1.8' }}>
+                <div style={{ fontSize: '11pt', lineHeight: '1.6' }}>
                     <div style={{ marginBottom: '2pt' }}>
                         <span>Please receive from </span>
                         <span style={{ borderBottom: '1px solid #000', display: 'inline-block', minWidth: '400pt', fontWeight: 'bold', textAlign: 'center' }}>
@@ -170,7 +193,7 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
                         <span> of</span>
                     </div>
 
-                    <div style={{ marginBottom: '8pt', textAlign: 'center' }}>
+                    <div style={{ marginBottom: '6pt', textAlign: 'center', fontSize: '9pt' }}>
                         <span>(Name of Applicant)</span>
                     </div>
 
@@ -181,17 +204,17 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
                         <span> the sum of</span>
                     </div>
 
-                    <div style={{ marginBottom: '8pt', textAlign: 'center' }}>
+                    <div style={{ marginBottom: '6pt', textAlign: 'center', fontSize: '9pt' }}>
                         <span>(Name of Firm)</span>
                     </div>
 
-                    <div style={{ marginBottom: '15pt' }}>
+                    <div style={{ marginBottom: '12pt' }}>
                         <span style={{ borderBottom: '1px solid #000', display: 'inline-block', minWidth: '500pt', fontWeight: 'bold', textAlign: 'center' }}>
                             {feeDisplay}
                         </span>
                     </div>
 
-                    <div style={{ marginBottom: '8pt' }}>
+                    <div style={{ marginBottom: '6pt' }}>
                         <span>as payment for </span>
                         <span style={{ borderBottom: '1px solid #000', display: 'inline-block', minWidth: '350pt', fontWeight: 'bold', textAlign: 'center' }}>
                             {projectType}
@@ -206,11 +229,11 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
                         <span> located at</span>
                     </div>
 
-                    <div style={{ marginBottom: '8pt', textAlign: 'center' }}>
+                    <div style={{ marginBottom: '6pt', textAlign: 'center', fontSize: '9pt' }}>
                         <span>(Name and nature of Project)</span>
                     </div>
 
-                    <div style={{ marginBottom: '30pt' }}>
+                    <div style={{ marginBottom: '20pt' }}>
                         <span style={{ borderBottom: '1px solid #000', display: 'inline-block', minWidth: '500pt', fontWeight: 'bold', textAlign: 'center' }}>
                             {application?.project_location_barangay
                                 ? `${application.project_location_barangay}, ${application.project_location_municipality || 'Ilagan'}`
@@ -220,7 +243,7 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
                 </div>
 
                 {/* Divider Line */}
-                <div style={{ borderTop: '2px solid #000', marginBottom: '15pt' }} />
+                <div style={{ borderTop: '2px solid #000', marginBottom: '12pt' }} />
 
                 {/* Signatures */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10pt' }}>
