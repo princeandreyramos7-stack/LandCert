@@ -48,14 +48,20 @@ class CertificateService
             'notes'              => 'Auto-generated after payment confirmation',
         ]);
 
-        // Update request status
-        $request->update(['status' => 'certificate_preparing']);
+        // Update request status to certificate_ready immediately since certificate is generated
+        $request->update(['status' => 'certificate_ready']);
+        
+        // Also mark the certificate as ready for pickup immediately
+        $certificate->update([
+            'status' => 'ready_for_pickup',
+            'ready_at' => now(),
+        ]);
 
         // Audit log
         try {
             AuditLogService::log(
                 'certificate_created',
-                "Certificate {$certificateNumber} auto-created for request #{$request->id}",
+                "Certificate {$certificateNumber} auto-created and marked ready for request #{$request->id}",
                 'Certificate',
                 $certificate->id,
                 null,
@@ -63,11 +69,18 @@ class CertificateService
                     'certificate_number' => $certificateNumber,
                     'request_id'         => $request->id,
                     'payment_id'         => $payment->id,
-                    'status'             => 'preparing',
+                    'status'             => 'ready_for_pickup',
                 ]
             );
         } catch (\Exception $e) {
             Log::warning("Audit log failed for certificate creation: " . $e->getMessage());
+        }
+        
+        // Send notifications that certificate is ready
+        try {
+            NotificationService::certificateReady($request, $certificate);
+        } catch (\Exception $e) {
+            Log::error("Failed to send certificate ready notifications: " . $e->getMessage());
         }
 
         Log::info("Certificate created successfully", [
