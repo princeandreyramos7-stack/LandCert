@@ -55,7 +55,6 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         // free-text value rides along as `_legacy` so an application filed
         // before the picker can still show what is on file while it is
         // being chosen again.
-        applicant_address_region_code: existingApplication?.applicant_address_region_code || "",
         applicant_address_province_code: existingApplication?.applicant_address_province_code || "",
         applicant_address_city_code: existingApplication?.applicant_address_city_code || "",
         applicant_address_barangay_code: existingApplication?.applicant_address_barangay_code || "",
@@ -66,7 +65,6 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                 : existingApplication?.applicant_address || me.address || "",
         corporation_address: existingApplication?.corporation_address || "",
         authorized_representative_name: existingApplication?.authorized_representative_name || "",
-        authorized_representative_address_region_code: existingApplication?.authorized_representative_address_region_code || "",
         authorized_representative_address_province_code: existingApplication?.authorized_representative_address_province_code || "",
         authorized_representative_address_city_code: existingApplication?.authorized_representative_address_city_code || "",
         authorized_representative_address_barangay_code: existingApplication?.authorized_representative_address_barangay_code || "",
@@ -246,7 +244,6 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             setData({
                 ...data,
                 authorized_representative_name: "",
-                authorized_representative_address_region_code: "",
                 authorized_representative_address_province_code: "",
                 authorized_representative_address_city_code: "",
                 authorized_representative_address_barangay_code: "",
@@ -263,12 +260,12 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     // the page scrolls to the first one, instead of a toast alone.
     const FIELD_BY_LABEL = {
         "Applicant Name": "applicant_name",
-        "Applicant Address region": "applicant_address_region_code", "Applicant Address province": "applicant_address_province_code",
+        "Applicant Address province": "applicant_address_province_code",
         "Applicant Address municipality": "applicant_address_city_code", "Applicant Address barangay": "applicant_address_barangay_code",
         "Applicant Address street": "applicant_address_street",
         "Corporation Name": "corporation_name", "Corporation Address": "corporation_address",
         "Authorized Representative Name": "authorized_representative_name",
-        "Authorized Representative Address region": "authorized_representative_address_region_code", "Authorized Representative Address province": "authorized_representative_address_province_code",
+        "Authorized Representative Address province": "authorized_representative_address_province_code",
         "Authorized Representative Address municipality": "authorized_representative_address_city_code", "Authorized Representative Address barangay": "authorized_representative_address_barangay_code",
         "Authorized Representative Address street": "authorized_representative_address_street",
         "Authorized Representative Email": "authorized_representative_email", "Authorization Letter": "authorization_letter",

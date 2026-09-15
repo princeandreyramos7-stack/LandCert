@@ -61,7 +61,9 @@ export default function BackupsFolder({ open, onOpenChange }) {
         try {
             const data = await api(method, url, body);
             setFolder(data);
-            setNotice({ ok: true, text: data.message || okText });
+            // A run that did not complete still answers 200 with the folder
+            // and ok:false - the request worked, the backup did not.
+            setNotice({ ok: data.ok !== false, text: data.message || okText });
         } catch (e) {
             setNotice({ ok: false, text: e.message });
             load();

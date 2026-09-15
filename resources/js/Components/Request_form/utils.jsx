@@ -110,7 +110,6 @@ const validateNumber = (value, fieldName, min = 0, max = null) => {
 export const validatePhilippineAddress = (data, prefix, label) => {
     const errors = [];
     const missing = [
-        ["region_code", "region"],
         ["province_code", "province"],
         ["city_code", "municipality"],
         ["barangay_code", "barangay"],

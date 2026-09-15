@@ -26,6 +26,12 @@ class PsgcController extends Controller
         return $this->cached(PhilippineAddress::regions());
     }
 
+    /** Every province in the country: the address form starts here. */
+    public function provinceIndex(): JsonResponse
+    {
+        return $this->cached(PhilippineAddress::allProvinces());
+    }
+
     public function provinces(Request $request, string $region): JsonResponse
     {
         $this->assertCode($region);

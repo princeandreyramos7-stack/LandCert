@@ -187,7 +187,6 @@ class RequestController extends Controller
             // The selections behind the address, so re-opening a returned
             // application shows the address already picked rather than four
             // empty dropdowns. Blank for anything filed before the picker.
-            'applicant_address_region_code' => $request->applicant->address_region_code ?? '',
             'applicant_address_province_code' => $request->applicant->address_province_code ?? '',
             'applicant_address_city_code' => $request->applicant->address_city_code ?? '',
             'applicant_address_barangay_code' => $request->applicant->address_barangay_code ?? '',
@@ -201,7 +200,6 @@ class RequestController extends Controller
             // Representative information
             'authorized_representative_name' => $request->applicant->primaryRepresentative->representative_name ?? '',
             'authorized_representative_address' => $request->applicant->primaryRepresentative->representative_address ?? '',
-            'authorized_representative_address_region_code' => $request->applicant->primaryRepresentative->address_region_code ?? '',
             'authorized_representative_address_province_code' => $request->applicant->primaryRepresentative->address_province_code ?? '',
             'authorized_representative_address_city_code' => $request->applicant->primaryRepresentative->address_city_code ?? '',
             'authorized_representative_address_barangay_code' => $request->applicant->primaryRepresentative->address_barangay_code ?? '',

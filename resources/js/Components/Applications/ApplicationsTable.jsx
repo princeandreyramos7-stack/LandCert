@@ -48,25 +48,6 @@ function Waiting({ request }) {
     );
 }
 
-/**
- * The primary action for a row: the one thing this role most likely wants to
- * do with an application in this state. Everything else sits in the menu.
- */
-function primaryAction(request, role) {
-    const status = String(request.status || "").toLowerCase();
-    const isPending = ["pending", "for_verification", "in_applicant", "returned"].includes(status);
-    const isForApproval = ["reviewed", "pending_superadmin_approval"].includes(status);
-
-    if (role === "admin" && isPending) {
-        return { label: "Verify documents", icon: FileCheck, href: route("admin.requests.document-verification", request.id), tone: "bg-[#0d1f5c] text-white hover:bg-[#0d1f5c]/90" };
-    }
-    if (role === "super_admin" && isForApproval) {
-        return { label: "Review & decide", icon: ClipboardCheck, href: route("super-admin.requests.document-verification", request.id), tone: "bg-[#d4a017] text-[#0d1f5c] hover:bg-[#d4a017]/90" };
-    }
-    const view = role === "admin" ? route("admin.requests.view-application", request.id) : route("super-admin.requests.view-application", request.id);
-    return { label: "View", icon: Eye, href: view, tone: "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50" };
-}
-
 function menuItems(request, role) {
     if (role === "admin") {
         return [
@@ -81,14 +62,15 @@ function menuItems(request, role) {
     ];
 }
 
+/**
+ * Everything is in the menu. There used to be a button beside it for the
+ * likely next step, but it only repeated an item already in the menu two
+ * inches away, and a row that offers the same thing twice reads as offering
+ * two different things.
+ */
 function Actions({ request, role }) {
-    const main = primaryAction(request, role);
     return (
-        <div className="flex items-center justify-end gap-1">
-            <Button size="sm" onClick={(e) => { e.stopPropagation(); router.visit(main.href); }} className={`h-8 gap-1.5 px-3 text-xs font-semibold shadow-none ${main.tone}`}>
-                <main.icon className="h-3.5 w-3.5" />
-                <span className="hidden lg:inline">{main.label}</span>
-            </Button>
+        <div className="flex items-center justify-end">
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500" aria-label="More actions" onClick={(e) => e.stopPropagation()}>
@@ -120,9 +102,8 @@ function Empty({ filtered }) {
 const th = "px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-[#0d1f5c]";
 
 /**
- * All Applications as a table on wide screens and as cards on a phone. Every
- * row opens the application; the button on the right is the next step for
- * this role, and the menu holds the rest.
+ * All Applications as a table on wide screens and as cards on a phone. A row
+ * opens the application; everything else is in the menu on the right.
  */
 export function ApplicationsTable({ requests, role, filtered = false }) {
     if (!requests.length) return <Empty filtered={filtered} />;

@@ -12,9 +12,14 @@ use Illuminate\Support\Facades\Cache;
  * An address picked from the PSGC: the rules that accept it, the check that
  * it is a real place, and the one line it is written as.
  *
- * A form sends five fields per address - four codes and the street - named
+ * A form sends four fields per address - three codes and the street - named
  * after the column the composed line is stored in, so the applicant's address
- * arrives as applicant_address_region_code ... applicant_address_street.
+ * arrives as applicant_address_province_code ... applicant_address_street.
+ *
+ * The region is not asked for. There are 87 province-level entries in the
+ * whole country and each belongs to exactly one region, so asking for the
+ * region first only added a step that could be got wrong; it is read off the
+ * province here and stored as before.
  *
  * The codes are checked here rather than taken on trust. The browser only
  * ever offers valid combinations, but the browser is not what decides: a
@@ -27,8 +32,8 @@ use Illuminate\Support\Facades\Cache;
  */
 class PhilippineAddress
 {
-    /** The five fields that make up one address, in cascade order. */
-    public const PARTS = ['region_code', 'province_code', 'city_code', 'barangay_code', 'street'];
+    /** The fields that make up one address, in cascade order. */
+    public const PARTS = ['province_code', 'city_code', 'barangay_code', 'street'];
 
     /** Validation rules for one address, keyed by full field name. */
     public static function rules(string $prefix, bool $required = true): array
@@ -36,7 +41,6 @@ class PhilippineAddress
         $req = $required ? 'required' : 'nullable';
 
         return [
-            "{$prefix}_region_code" => [$req, 'string', 'size:9', 'exists:psgc_regions,code'],
             "{$prefix}_province_code" => [$req, 'string', 'size:9', 'exists:psgc_provinces,code'],
             "{$prefix}_city_code" => [$req, 'string', 'size:9', 'exists:psgc_cities_municipalities,code'],
             "{$prefix}_barangay_code" => [$req, 'string', 'size:9', 'exists:psgc_barangays,code'],
@@ -48,7 +52,6 @@ class PhilippineAddress
     public static function attributes(string $prefix, string $label): array
     {
         return [
-            "{$prefix}_region_code" => "{$label} region",
             "{$prefix}_province_code" => "{$label} province",
             "{$prefix}_city_code" => "{$label} city or municipality",
             "{$prefix}_barangay_code" => "{$label} barangay",
@@ -67,14 +70,12 @@ class PhilippineAddress
 
         // Nothing to check until the codes are there and well-formed; the
         // rules above have already said so in that case.
-        if (!$get('region_code') || !$get('province_code') || !$get('city_code') || !$get('barangay_code')) {
+        if (!$get('province_code') || !$get('city_code') || !$get('barangay_code')) {
             return;
         }
 
         $province = Province::find($get('province_code'));
-        if (!$province || $province->region_code !== $get('region_code')) {
-            $validator->errors()->add("{$prefix}_province_code", "That province is not in the selected region.");
-
+        if (!$province) {
             return;
         }
 
@@ -128,7 +129,8 @@ class PhilippineAddress
 
         return [
             'line' => implode(', ', array_filter($parts)),
-            'region_code' => $get('region_code'),
+            // Read off the province, not off the request.
+            'region_code' => $province?->region_code,
             'province_code' => $province?->code,
             'city_code' => $city->code,
             'barangay_code' => $barangay->code,
@@ -167,6 +169,21 @@ class PhilippineAddress
         return Cache::remember('psgc.regions', now()->addDay(), fn () => \App\Models\Psgc\Region::orderBy('name')
             ->get(['code', 'name', 'short_name'])
             ->map(fn ($r) => ['code' => $r->code, 'name' => $r->name, 'short_name' => $r->short_name])
+            ->all());
+    }
+
+    /**
+     * Every province-level entry in the country, with the region it belongs
+     * to shown beside it so "Isabela" the province is not mistaken for
+     * Isabela City.
+     */
+    public static function allProvinces(): array
+    {
+        return Cache::remember('psgc.provinces.all', now()->addDay(), fn () => Province::query()
+            ->join('psgc_regions', 'psgc_provinces.region_code', '=', 'psgc_regions.code')
+            ->orderBy('psgc_provinces.name')
+            ->get(['psgc_provinces.code', 'psgc_provinces.name', 'psgc_provinces.kind', 'psgc_regions.name as region_name'])
+            ->map(fn ($p) => ['code' => $p->code, 'name' => $p->name, 'kind' => $p->kind, 'region_name' => $p->region_name])
             ->all());
     }
 

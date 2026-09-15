@@ -75,6 +75,7 @@ Route::middleware(['auth', 'throttle:60,1,pages', 'prevent.back'])->group(functi
     // sit outside the page throttle on a limit of their own.
     Route::prefix('psgc')->name('psgc.')->withoutMiddleware('throttle:60,1,pages')->middleware('throttle:300,1,files')->group(function () {
         Route::get('/regions', [\App\Http\Controllers\PsgcController::class, 'regions'])->name('regions');
+        Route::get('/provinces', [\App\Http\Controllers\PsgcController::class, 'provinceIndex'])->name('provinces.index');
         Route::get('/regions/{region}/provinces', [\App\Http\Controllers\PsgcController::class, 'provinces'])->name('provinces');
         Route::get('/provinces/{province}/cities', [\App\Http\Controllers\PsgcController::class, 'cities'])->name('cities');
         Route::get('/cities/{city}/barangays', [\App\Http\Controllers\PsgcController::class, 'barangays'])->name('barangays');

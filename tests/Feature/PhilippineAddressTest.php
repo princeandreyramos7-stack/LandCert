@@ -12,12 +12,12 @@ use Tests\TestCase;
 /**
  * Addresses picked from the Philippine Standard Geographic Code.
  *
- * The form offers Region -> Province -> City/Municipality -> Barangay, each
- * list drawn from the one above it, and a street typed by hand. What matters
- * on this side is that the server does not take any of it on trust: the list
- * endpoints only ever hand out the children of the thing asked for, and a
- * submission whose barangay does not belong to its city is refused however
- * it was assembled.
+ * The form offers Province -> City/Municipality -> Barangay, each list drawn
+ * from the one above it, and a street typed by hand; the region is read off
+ * the province rather than asked for. What matters on this side is that the
+ * server does not take any of it on trust: the list endpoints only ever hand
+ * out the children of the thing asked for, and a submission whose barangay
+ * does not belong to its city is refused however it was assembled.
  */
 class PhilippineAddressTest extends TestCase
 {
@@ -104,7 +104,6 @@ class PhilippineAddressTest extends TestCase
         $alibagu = collect(PhilippineAddress::barangaysOf(self::CITY_ILAGAN))->firstWhere('name', 'Alibagu');
 
         $resolved = PhilippineAddress::resolve([
-            'a_region_code' => self::REGION_CAGAYAN_VALLEY,
             'a_province_code' => self::PROVINCE_ISABELA,
             'a_city_code' => self::CITY_ILAGAN,
             'a_barangay_code' => $alibagu['code'],
@@ -123,7 +122,6 @@ class PhilippineAddressTest extends TestCase
         $barangay = PhilippineAddress::barangaysOf($city['code'])[0];
 
         $resolved = PhilippineAddress::resolve([
-            'a_region_code' => self::REGION_NCR,
             'a_province_code' => $district['code'],
             'a_city_code' => $city['code'],
             'a_barangay_code' => $barangay['code'],
@@ -204,7 +202,6 @@ class PhilippineAddressTest extends TestCase
         $this->actingAs($applicant)
             ->from('/request')
             ->post('/request', array_merge($this->submission(), [
-                'applicant_address_region_code' => '',
                 'applicant_address_province_code' => '',
                 'applicant_address_city_code' => '',
                 'applicant_address_barangay_code' => '',
@@ -212,7 +209,7 @@ class PhilippineAddressTest extends TestCase
             ]))
             ->assertRedirect('/request')
             ->assertSessionHasErrors([
-                'applicant_address_region_code',
+                'applicant_address_province_code',
                 'applicant_address_barangay_code',
                 'applicant_address_street',
             ]);
@@ -223,6 +220,36 @@ class PhilippineAddressTest extends TestCase
         $this->get(route('psgc.regions'))->assertRedirect('/login');
     }
 
+    public function test_the_province_list_covers_the_whole_country_and_names_its_region(): void
+    {
+        // The form starts at province, so this one list has to carry every
+        // province-level entry there is - including the stand-ins that let
+        // Metro Manila be reached at all.
+        $provinces = $this->actingAs($this->userOf('applicant'))
+            ->getJson(route('psgc.provinces.index'))
+            ->assertOk()->json('data');
+
+        $this->assertCount(87, $provinces);
+        $this->assertContains('Isabela', array_column($provinces, 'name'));
+        $this->assertContains('First District', array_column($provinces, 'name'));
+
+        // The region rides along as a label: it is what tells the province
+        // Isabela from Isabela City in a single flat list.
+        $isabela = collect($provinces)->firstWhere('code', self::PROVINCE_ISABELA);
+        $this->assertSame('Cagayan Valley', $isabela['region_name']);
+    }
+
+    public function test_the_region_is_stored_even_though_it_is_never_asked_for(): void
+    {
+        $alibagu = collect(PhilippineAddress::barangaysOf(self::CITY_ILAGAN))->firstWhere('name', 'Alibagu');
+
+        $this->actingAs($this->userOf('applicant'))
+            ->post('/request', $this->submission(['applicant_address_barangay_code' => $alibagu['code']]))
+            ->assertRedirect(route('my-applications'));
+
+        $this->assertSame(self::REGION_CAGAYAN_VALLEY, Applicant::latest('id')->first()->address_region_code);
+    }
+
     /** A complete, valid submission; $overrides replaces any part of it. */
     private function submission(array $overrides = []): array
     {
@@ -230,7 +257,6 @@ class PhilippineAddressTest extends TestCase
 
         return array_merge([
             'applicant_name' => 'Juan Dela Cruz',
-            'applicant_address_region_code' => self::REGION_CAGAYAN_VALLEY,
             'applicant_address_province_code' => self::PROVINCE_ISABELA,
             'applicant_address_city_code' => self::CITY_ILAGAN,
             'applicant_address_barangay_code' => $alibagu['code'],

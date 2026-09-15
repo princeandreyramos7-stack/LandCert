@@ -44,7 +44,7 @@ import {
  * What can be done with one certificate. Shared by the table row and the
  * card that replaces it on a phone.
  */
-function CertificateRowActions({ certificate }) {
+function CertificateRowActions({ certificate, routePrefix, onRelease }) {
     return (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -68,7 +68,7 @@ function CertificateRowActions({ certificate }) {
                                 Releasing is the Zoning Officer's act; the Administrator only views. */}
                             {routePrefix === 'super-admin' ? null : certificate.request?.released_to_applicant_at ? (
                                 <DropdownMenuItem
-                                    onClick={() => setPendingRelease({ certificate, released: false })}
+                                    onClick={() => onRelease({ certificate, released: false })}
                                     className="text-amber-700 font-medium"
                                 >
                                     <Undo2 className="h-4 w-4 mr-2" />
@@ -76,7 +76,7 @@ function CertificateRowActions({ certificate }) {
                                 </DropdownMenuItem>
                             ) : (
                                 <DropdownMenuItem
-                                    onClick={() => setPendingRelease({ certificate, released: true })}
+                                    onClick={() => onRelease({ certificate, released: true })}
                                     className="text-emerald-700 font-medium"
                                 >
                                     <Send className="h-4 w-4 mr-2" />
@@ -393,7 +393,7 @@ export function CertificatesTable({
                                             )}
                                         </td>
                                         <td className="p-3">
-                                            <CertificateRowActions certificate={certificate} />
+                                            <CertificateRowActions certificate={certificate} routePrefix={routePrefix} onRelease={setPendingRelease} />
                                         </td>
                                     </tr>
                                 ))
@@ -425,7 +425,7 @@ export function CertificatesTable({
                                             {certificate.request?.application_number || `#${certificate.request_id}`}
                                         </p>
                                     </div>
-                                    <CertificateRowActions certificate={certificate} />
+                                    <CertificateRowActions certificate={certificate} routePrefix={routePrefix} onRelease={setPendingRelease} />
                                 </div>
                                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                                     {certificate.request?.released_to_applicant_at ? (

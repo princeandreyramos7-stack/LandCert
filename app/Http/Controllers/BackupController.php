@@ -29,8 +29,41 @@ class BackupController extends Controller
         return response()->json($this->folder());
     }
 
-    /** Take a backup now. Synchronous: the office waits a few seconds and sees the file appear. */
+    /**
+     * Take a backup now. Synchronous: the office waits a few seconds and sees
+     * the file appear.
+     *
+     * A backup that fails is not a broken request - the folder still opens and
+     * still lists what is there - so the answer is 200 with ok:false and the
+     * reason, rather than a 500 that shows up as a red error in the browser's
+     * console and tells the office nothing.
+     */
     public function run(): JsonResponse
+    {
+        [$ok, $message] = $this->attempt();
+
+        // The database connection can fail to open for reasons that have
+        // nothing to do with the backup - Windows runs out of sockets under
+        // load and refuses new ones for a moment. One retry costs a few
+        // seconds and turns that into a completed backup.
+        if (!$ok && self::isTransient($message)) {
+            [$ok, $message] = $this->attempt();
+        }
+
+        BackupSchedule::recordRun($ok, $message, 'manual');
+
+        if ($ok) {
+            AuditLogService::log('backup_created', 'Manual backup taken from the Backups folder', 'Backup', null);
+        }
+
+        return response()->json([
+            'ok' => $ok,
+            'message' => $ok ? 'Backup completed.' : 'The backup did not complete: ' . self::explain($message),
+        ] + $this->folder());
+    }
+
+    /** @return array{0: bool, 1: string} */
+    private function attempt(): array
     {
         try {
             // Notifications are mail, and mail is not something a backup should
@@ -39,20 +72,34 @@ class BackupController extends Controller
             $output = trim(Artisan::output());
 
             if ($code !== 0 || str_contains($output, 'Backup failed')) {
-                BackupSchedule::recordRun(false, self::lastLine($output), 'manual');
-
-                return response()->json(['message' => 'The backup did not complete: ' . self::lastLine($output)] + $this->folder(), 500);
+                return [false, self::lastLine($output)];
             }
 
-            BackupSchedule::recordRun(true, 'Backup completed', 'manual');
-            AuditLogService::log('backup_created', 'Manual backup taken from the Backups folder', 'Backup', null);
-
-            return response()->json(['message' => 'Backup completed.'] + $this->folder());
+            return [true, 'Backup completed'];
         } catch (\Throwable $e) {
-            BackupSchedule::recordRun(false, $e->getMessage(), 'manual');
-
-            return response()->json(['message' => 'The backup did not complete: ' . $e->getMessage()] + $this->folder(), 500);
+            return [false, $e->getMessage()];
         }
+    }
+
+    private static function isTransient(string $message): bool
+    {
+        return str_contains($message, 'Can\'t create TCP/IP socket')
+            || str_contains($message, '10106')
+            || str_contains($message, 'Too many connections');
+    }
+
+    /** Turn the database tool's own wording into something the office can act on. */
+    private static function explain(string $message): string
+    {
+        if (self::isTransient($message)) {
+            return 'the server could not open a connection to the database just now. This clears on its own — try again in a moment.';
+        }
+
+        if (str_contains($message, 'mysqldump') && str_contains($message, 'not recognized')) {
+            return 'mysqldump could not be found. Check DB_DUMP_PATH in the .env file.';
+        }
+
+        return $message;
     }
 
     public function download(string $file)
