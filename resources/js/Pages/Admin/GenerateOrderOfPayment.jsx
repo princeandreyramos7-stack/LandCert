@@ -37,14 +37,16 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
         const filename = `OrderOfPayment_${application.application_number || 'Payment'}.pdf`;
 
         const opt = {
-            margin: [15, 10, 10, 10],  // Increased top margin to prevent CPD number cutoff
+            margin: [20, 10, 10, 10],  // Increased top margin even more to prevent CPD number cutoff
             filename: filename,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: {
                 scale: 2,
                 useCORS: true,
                 letterRendering: true,
-                logging: false
+                logging: false,
+                backgroundColor: '#ffffff',  // Ensure white background
+                removeContainer: true
             },
             jsPDF: {
                 unit: 'mm',

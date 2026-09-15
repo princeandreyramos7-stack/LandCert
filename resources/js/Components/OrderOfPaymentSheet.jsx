@@ -169,7 +169,14 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
                         <div style={{ fontSize: '11pt', fontWeight: 'bold', marginBottom: '12pt' }}>CITY PLANNING AND DEVELOPMENT OFFICE</div>
 
                         {/* Title with Yellow Background */}
-                        <div style={{ fontSize: '13pt', fontWeight: 'bold', marginTop: '8pt', display: 'inline-block', background: '#FFFF00', padding: '4pt 12pt' }}>
+                        <div style={{ 
+                            fontSize: '13pt', 
+                            fontWeight: 'bold', 
+                            marginTop: '8pt', 
+                            display: 'inline-block', 
+                            backgroundColor: '#FFFF00',  /* Changed from 'background' to 'backgroundColor' for better PDF rendering */
+                            padding: '4pt 12pt' 
+                        }}>
                             ORDER OF PAYMENT
                         </div>
                     </div>
