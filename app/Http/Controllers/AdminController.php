@@ -759,7 +759,7 @@ class AdminController extends Controller
                     'application_pending_approval',
                     'Application Pending Your Approval',
                     "Application #{$requestModel->id} from " . ($requestModel->applicant->applicant_name ?? 'Applicant') . " has been reviewed and requires your approval. Payment details have been set by admin.",
-                    "/super-admin/requests/{$requestModel->id}/review",
+                    "/super-admin/requests/{$requestModel->id}/view-application",
                     [
                         'request_id' => $requestModel->id,
                         'applicant_name' => $requestModel->applicant->applicant_name ?? 'N/A',

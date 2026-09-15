@@ -82,7 +82,7 @@ class NotificationService
             'new_application',
             'New Application Received',
             "A new {$projectType} application {$applicationNumber} from {$applicantName} has been submitted and requires review.",
-            "/admin/requests/{$request->id}",
+            "/admin/requests/{$request->id}/view-application",
             [
                 'application_id' => $request->id,
                 'application_number' => $applicationNumber,
@@ -169,7 +169,7 @@ class NotificationService
                 'application_final_approved',
                 'Application Finally Approved',
                 "Application {$applicationNumber} from {$applicantName} has been finally approved by {$approverName}.",
-                "/admin/requests/{$request->id}",
+                "/admin/requests/{$request->id}/view-application",
                 [
                     'application_id' => $request->id,
                     'application_number' => $applicationNumber,
