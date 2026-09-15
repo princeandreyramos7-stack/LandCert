@@ -53,7 +53,6 @@ function menuItems(request, role) {
         return [
             { label: "View application", icon: Eye, href: route("admin.requests.view-application", request.id) },
             { label: "Document verification", icon: FileCheck, href: route("admin.requests.document-verification", request.id) },
-            { label: "Review & evaluate", icon: ClipboardCheck, href: route("admin.requests.review", request.id) },
         ];
     }
     return [
