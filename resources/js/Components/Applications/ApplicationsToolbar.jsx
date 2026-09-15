@@ -1,5 +1,5 @@
 import React from "react";
-import { STATUS_FILTERS } from "@/lib/applicationStatus";
+import { getStatusFiltersForRole } from "@/lib/applicationStatus";
 import { CLEARANCE_TYPE_FILTERS } from "@/lib/clearanceTypes";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
@@ -26,8 +26,10 @@ export function ApplicationsToolbar({
     sort, onSort,
     shown, total,
     onExport, onClear,
+    role = "admin",
 }) {
     const filtered = search || status !== "all" || type !== "all";
+    const STATUS_FILTERS = getStatusFiltersForRole(role);
 
     return (
         <div className="flex flex-col gap-3">

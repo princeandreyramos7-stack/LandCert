@@ -84,6 +84,7 @@ export function ApplicationsBoard({ requests, role, exportRoute }) {
                         sort={sort} onSort={setSort}
                         shown={rows.length} total={all.length}
                         onExport={exportExcel} onClear={clear}
+                        role={role}
                     />
                 </div>
 

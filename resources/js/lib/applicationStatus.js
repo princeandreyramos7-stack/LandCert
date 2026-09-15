@@ -129,14 +129,16 @@ export function getStatusConfig(status) {
  * value. Keeping the list and the matching in one place is what stops the
  * dropdown drifting from the statuses the application can actually be in, which
  * is how "For Payment" and "Returned to Applicant" came to be unfilterable.
+ * 
+ * Each filter now includes a roles array to control visibility per role.
  */
-export const STATUS_FILTERS = [
-    { value: "all", label: "All Status of Application", matches: [] },
-    { value: "pending", label: "For Verification", matches: ["pending", "for_verification"] },
-    { value: "reviewed", label: "For Approval", matches: ["reviewed", "pending_superadmin_approval"] },
-    { value: "in_applicant", label: "Returned to Applicant", matches: ["in_applicant", "returned"] },
-    { value: "approved", label: "Approved — For Payment", matches: ["approved"] },
-    { value: "for_payment", label: "For Payment", matches: ["for_payment", "pending_payment"] },
+export const ALL_STATUS_FILTERS = [
+    { value: "all", label: "All Status of Application", matches: [], roles: ["admin", "super_admin"] },
+    { value: "pending", label: "For Verification", matches: ["pending", "for_verification"], roles: ["admin"] },
+    { value: "reviewed", label: "For Approval", matches: ["reviewed", "pending_superadmin_approval"], roles: ["admin", "super_admin"] },
+    { value: "in_applicant", label: "Returned to Applicant", matches: ["in_applicant", "returned"], roles: ["admin", "super_admin"] },
+    { value: "approved", label: "Approved — For Payment", matches: ["approved"], roles: ["admin", "super_admin"] },
+    { value: "for_payment", label: "For Payment", matches: ["for_payment", "pending_payment"], roles: ["admin", "super_admin"] },
     {
         value: "application_approved",
         label: "Application Approved (paid)",
@@ -149,9 +151,22 @@ export const STATUS_FILTERS = [
             "collected",
             "completed",
         ],
+        roles: ["admin", "super_admin"]
     },
-    { value: "rejected", label: "Application Denied", matches: ["rejected"] },
+    { value: "rejected", label: "Application Denied", matches: ["rejected"], roles: ["admin", "super_admin"] },
 ];
+
+/**
+ * Get status filters filtered by role
+ */
+export function getStatusFiltersForRole(role = "admin") {
+    return ALL_STATUS_FILTERS.filter(filter => filter.roles.includes(role));
+}
+
+/**
+ * Legacy export for backward compatibility - defaults to admin role
+ */
+export const STATUS_FILTERS = ALL_STATUS_FILTERS.filter(filter => filter.roles.includes("admin"));
 
 /**
  * One colour per status, so a chart of the distribution keeps the same colour
@@ -182,7 +197,7 @@ export const STATUS_COLORS = {
  * @returns {Array<{key: string, name: string, value: number, color: string}>}
  */
 export function groupStatusCounts(rows = []) {
-    const buckets = STATUS_FILTERS.filter((entry) => entry.value !== "all").map((entry) => ({
+    const buckets = ALL_STATUS_FILTERS.filter((entry) => entry.value !== "all").map((entry) => ({
         key: entry.value,
         name: entry.label,
         value: 0,
@@ -197,7 +212,7 @@ export function groupStatusCounts(rows = []) {
         if (!count) continue;
 
         const bucket = buckets.find((entry) => {
-            const option = STATUS_FILTERS.find((filter) => filter.value === entry.key);
+            const option = ALL_STATUS_FILTERS.find((filter) => filter.value === entry.key);
             return option?.matches.includes(status);
         });
 
@@ -218,7 +233,7 @@ export function groupStatusCounts(rows = []) {
 export function matchesStatusFilter(status, filterValue) {
     if (!filterValue || filterValue === "all") return true;
 
-    const option = STATUS_FILTERS.find((entry) => entry.value === filterValue);
+    const option = ALL_STATUS_FILTERS.find((entry) => entry.value === filterValue);
     if (!option) return false;
 
     return option.matches.includes(String(status ?? "").toLowerCase());
