@@ -182,9 +182,34 @@ class ApplicationRequirements
         ],
         [
             'id' => 2,
-            'name' => '2. Letter request describing proposed special use',
+            'name' => '2. Right Over Land Documentation',
             'required' => true,
             'section' => 'main',
+            'is_group' => true,
+            'description' => 'Submit all three documents below.'
+        ],
+        [
+            'id' => 13,
+            'name' => 'Title',
+            'required' => true,
+            'section' => 'main',
+            'parent_id' => 2,
+            'description' => ''
+        ],
+        [
+            'id' => 14,
+            'name' => 'Tax Declaration',
+            'required' => true,
+            'section' => 'main',
+            'parent_id' => 2,
+            'description' => ''
+        ],
+        [
+            'id' => 15,
+            'name' => 'Tax Receipt',
+            'required' => true,
+            'section' => 'main',
+            'parent_id' => 2,
             'description' => ''
         ],
         [
@@ -196,21 +221,14 @@ class ApplicationRequirements
         ],
         [
             'id' => 4,
-            'name' => '4. Land title / tax declaration / lease contract',
+            'name' => '4. Site development plan / lot plan',
             'required' => true,
             'section' => 'main',
             'description' => ''
         ],
         [
             'id' => 5,
-            'name' => '5. Site development plan / lot plan',
-            'required' => true,
-            'section' => 'main',
-            'description' => ''
-        ],
-        [
-            'id' => 7,
-            'name' => '6. Barangay clearance / endorsement',
+            'name' => '5. Barangay clearance / endorsement',
             'required' => true,
             'section' => 'main',
             'description' => ''
