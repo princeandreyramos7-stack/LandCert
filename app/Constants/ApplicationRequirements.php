@@ -276,9 +276,34 @@ class ApplicationRequirements
         ],
         [
             'id' => 2,
-            'name' => '2. Letter request stating temporary use/purpose',
+            'name' => '2. Right Over Land Documentation',
             'required' => true,
             'section' => 'main',
+            'is_group' => true,
+            'description' => 'Submit all three documents below.'
+        ],
+        [
+            'id' => 13,
+            'name' => 'Title',
+            'required' => true,
+            'section' => 'main',
+            'parent_id' => 2,
+            'description' => ''
+        ],
+        [
+            'id' => 14,
+            'name' => 'Tax Declaration',
+            'required' => true,
+            'section' => 'main',
+            'parent_id' => 2,
+            'description' => ''
+        ],
+        [
+            'id' => 15,
+            'name' => 'Tax Receipt',
+            'required' => true,
+            'section' => 'main',
+            'parent_id' => 2,
             'description' => ''
         ],
         [
@@ -290,21 +315,14 @@ class ApplicationRequirements
         ],
         [
             'id' => 4,
-            'name' => '4. Proof of ownership / authorization from owner',
+            'name' => '4. Sketch plan / vicinity map',
             'required' => true,
             'section' => 'main',
             'description' => ''
         ],
         [
             'id' => 5,
-            'name' => '5. Sketch plan / vicinity map',
-            'required' => true,
-            'section' => 'main',
-            'description' => ''
-        ],
-        [
-            'id' => 6,
-            'name' => '6. Barangay clearance',
+            'name' => '5. Barangay clearance',
             'required' => true,
             'section' => 'main',
             'description' => ''
