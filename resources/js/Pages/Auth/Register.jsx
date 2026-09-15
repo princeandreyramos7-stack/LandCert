@@ -52,6 +52,7 @@ export default function Register() {
         email: '',
         // The address is picked, not typed (see PhilippineAddressFields); the
         // server composes the one line stored on the account from these.
+        address_region_code: '',
         address_province_code: '',
         address_city_code: '',
         address_barangay_code: '',

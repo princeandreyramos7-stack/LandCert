@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from "react";
+﻿import React, { useMemo, useState } from "react";
 import { Link, router } from "@inertiajs/react";
 import { Button } from "@/Components/ui/button";
 import { journeyOf, bucketOf, TONES } from "@/lib/applicantJourney";
 import { JourneyTrack, followAction } from "@/Components/Applicant/JourneyPanel";
 import {
-    Search, MapPin, Calendar, Printer, Eye, ArrowRight, FilePlus, Inbox, AlertCircle, ExternalLink,
+    Search, MapPin, Calendar, Printer, Eye, ArrowRight, FilePlus, Inbox, AlertCircle, ExternalLink, CheckCircle2,
 } from "lucide-react";
 
 const fmtDate = (ds) => (ds ? new Date(ds).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—");

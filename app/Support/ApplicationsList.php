@@ -18,17 +18,30 @@ use Illuminate\Support\Facades\DB;
  */
 class ApplicationsList
 {
-    public static function rows(): Collection
+    /**
+     * Get the applications list rows, optionally filtered by user role.
+     * 
+     * @param string|null $role The user role ('admin' or 'super_admin')
+     * @return Collection
+     */
+    public static function rows(?string $role = null): Collection
     {
-        return RequestModel::query()
+        $query = RequestModel::query()
             ->leftJoin('reports', 'requests.id', '=', 'reports.request_id')
             ->leftJoin('applicants', 'requests.applicant_id', '=', 'applicants.id')
             ->leftJoin('normalized_corporations', 'applicants.id', '=', 'normalized_corporations.applicant_id')
             ->leftJoin('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
             ->leftJoin('locations', 'requests.id', '=', 'locations.request_id')
             ->leftJoin('users', 'requests.user_id', '=', 'users.id')
-            ->whereNull('requests.deleted_at')
-            ->select([
+            ->whereNull('requests.deleted_at');
+        
+        // Super Admin should not see applications in "pending" or "for_verification" status
+        // Those are for the Zoning Officer to process first
+        if ($role === 'super_admin') {
+            $query->whereNotIn('requests.status', ['pending', 'for_verification']);
+        }
+        
+        return $query->select([
                 'requests.id',
                 'requests.id as application_id',
                 'requests.user_id',

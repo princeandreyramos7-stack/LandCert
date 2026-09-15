@@ -11,7 +11,6 @@ import FitToWidth, { suspendFit } from "@/Components/FitToWidth";
 export default function GenerateOrderOfPayment({ application, payment, reviewer, zoningAdministrator, paymentAmount = null }) {
     const paymentRef = useRef(null);
 
-    // This page is opened by admins, super admins and applicants — follow the viewer.
     const userType = usePage().props.auth?.user?.user_type;
     const Layout = userType === 'super_admin' ? SuperAdminLayout
         : userType === 'admin' ? AdminLayout
@@ -37,7 +36,7 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
         const filename = `OrderOfPayment_${application.application_number || 'Payment'}.pdf`;
 
         const opt = {
-            margin: [20, 10, 10, 10],  // Increased top margin even more to prevent CPD number cutoff
+            margin: [20, 10, 10, 10],  
             filename: filename,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: {

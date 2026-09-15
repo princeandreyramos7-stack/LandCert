@@ -68,6 +68,7 @@ Route::middleware(['auth', 'prevent.back'])->group(function () {
  | these in a row and a long barangay list is one request per selection.
  */
 Route::prefix('psgc')->name('psgc.')->middleware('throttle:300,1,files')->group(function () {
+    Route::get('/regions', [\App\Http\Controllers\PsgcController::class, 'regionIndex'])->name('regions.index');
     Route::get('/provinces', [\App\Http\Controllers\PsgcController::class, 'provinceIndex'])->name('provinces.index');
     Route::get('/provinces/{province}/cities', [\App\Http\Controllers\PsgcController::class, 'cities'])->name('cities');
     Route::get('/cities/{city}/barangays', [\App\Http\Controllers\PsgcController::class, 'barangays'])->name('barangays');
@@ -175,6 +176,7 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
 
     // Upload requirement document by super admin
     Route::post('/upload-requirement-document', [\App\Http\Controllers\SuperAdminController::class, 'uploadRequirementDocument'])->name('upload-requirement-document');
+    Route::post('/requests/{id}/verify-requirements', [\App\Http\Controllers\SuperAdminController::class, 'verifyRequirements'])->name('requests.verify-requirements');
     
     // Certificate Management Routes (NEW: Using CertificateController with PDF generation)
     Route::prefix('certificates')->name('certificates.')->group(function () {
@@ -261,6 +263,7 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     
     // Requirement verification toggle
     Route::post('/save-requirement-verification', [AdminController::class, 'saveRequirementVerification'])->name('save-requirement-verification');
+    Route::post('/requests/{id}/verify-requirements', [AdminController::class, 'verifyRequirements'])->name('requests.verify-requirements');
     
     // Upload requirement document by admin
     Route::post('/upload-requirement-document', [AdminController::class, 'uploadRequirementDocument'])->name('upload-requirement-document');

@@ -316,8 +316,9 @@ class SuperAdminController extends Controller
     {
         // One lean query for the list (App\Support\ApplicationsList): only
         // the columns the table shows, not every row with five relations.
+        // Super admin should not see "pending" or "for_verification" status applications
         return Inertia::render('SuperAdmin/Requests', [
-            'requests' => \App\Support\ApplicationsList::rows(),
+            'requests' => \App\Support\ApplicationsList::rows('super_admin'),
         ]);
     }
 
@@ -582,26 +583,24 @@ class SuperAdminController extends Controller
             'requirementDocuments',
         ])->findOrFail($id);
 
-        // The officer reads the Lot Number and Tax Declaration No. off the
-        // applicant's uploads, so every submitted document is listed on this page.
-        // Scoping this to the CZC-only "Right Over Land" group meant a ZC or TUP
-        // application showed nothing at all.
+        // Get full requirements list for this project type
         $requirementList = collect(\App\Constants\ApplicationRequirements::getRequirements(
             $request->project?->project_type ?: 'ZONING CLEARANCE'
         ));
+        
         $documentsByRequirement = $request->requirementDocuments->groupBy('requirement_id');
         $knownIds = $requirementList->pluck('id');
 
-        // Reference order first, then anything filed against a requirement the
-        // current list no longer knows about, so nothing is ever hidden.
+        // Build uploaded requirements with ALL documents (not filtered)
         $uploadedRequirements = $requirementList
             ->reject(fn ($r) => !empty($r['is_group']))
-            ->map(fn ($r) => ['id' => $r['id'], 'name' => $r['name']])
+            ->map(fn ($r) => ['id' => $r['id'], 'name' => $r['name'], 'key' => $r['id']])
             ->concat(
                 $documentsByRequirement->keys()
                     ->reject(fn ($id) => $knownIds->contains($id))
                     ->map(fn ($id) => [
                         'id' => $id,
+                        'key' => $id,
                         'name' => $documentsByRequirement->get($id)->first()->requirement_name
                             ?: "Requirement #{$id}",
                     ])
@@ -613,22 +612,6 @@ class SuperAdminController extends Controller
                         'original_filename' => $doc->original_filename,
                     ])->values()->all(),
             ]))
-            ->values();
-
-        // Only the documents the officer reads while filling in Property Details:
-        // the Title and Tax Declaration carry the lot and tax numbers, and the cost
-        // estimate backs the fee. Matched by name so it works in every category.
-        $wanted = ['title', 'tax declaration', 'estimated project cost', 'bill of materials'];
-        $uploadedRequirements = $uploadedRequirements
-            ->filter(function ($r) use ($wanted) {
-                $name = mb_strtolower($r['name']);
-                foreach ($wanted as $needle) {
-                    if (str_contains($name, $needle)) {
-                        return true;
-                    }
-                }
-                return false;
-            })
             ->values();
 
         $report = $request->reports->first();
@@ -707,6 +690,10 @@ class SuperAdminController extends Controller
             'payment_amount' => $report?->payment_amount,
             'admin_notes' => $report?->admin_notes,
             'application_id' => $request->id,
+            
+            // Full requirements list for the Requirements section
+            'requirements_reference' => $requirementList->toArray(),
+            'verified_requirements' => $request->verified_requirements ?? [],
         ];
         
         return Inertia::render('SuperAdmin/ViewApplication', [
@@ -851,6 +838,47 @@ class SuperAdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to upload document: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Verify requirements for an application
+     */
+    public function verifyRequirements(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'verified_requirements' => 'required|array',
+            'title_number' => 'nullable|string',
+        ]);
+
+        try {
+            $requestModel = RequestModel::findOrFail($id);
+            
+            // Update the request with verified requirements
+            $requestModel->verified_requirements = $validated['verified_requirements'];
+            if (isset($validated['title_number'])) {
+                $requestModel->title_number = $validated['title_number'];
+            }
+            $requestModel->save();
+
+            AuditLogService::logUpdate(
+                'Request',
+                $requestModel->id,
+                ['verified_requirements' => $requestModel->getOriginal('verified_requirements')],
+                ['verified_requirements' => $validated['verified_requirements']],
+                "Updated requirement verification for request #{$requestModel->id}"
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Requirements verification saved successfully',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to save requirements verification: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save verification: ' . $e->getMessage(),
             ], 500);
         }
     }

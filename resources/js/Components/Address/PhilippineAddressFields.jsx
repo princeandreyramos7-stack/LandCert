@@ -5,21 +5,16 @@ import { SearchableSelect } from "@/Components/ui/searchable-select";
 import { MapPin } from "lucide-react";
 
 /**
- * Province → Municipality/City → Barangay → Street.
+ * Region → Province → Municipality/City → Barangay → Street.
  *
  * Each list is fetched only once its parent has been chosen, and choosing a
  * new parent clears everything under it, so an address can never be half of
  * one place and half of another. The street is the one part typed by hand:
  * no list has house numbers in it.
  *
- * Region is not asked for. Every province belongs to exactly one region, so
- * the server reads it off the province (App\Support\PhilippineAddress) and
- * stores it as before; asking for it first only added a step to get wrong.
- * The region is shown beside each province instead, which is also what tells
- * "Isabela" the province from Isabela City.
- *
- * The four values live in the form's own state under `${prefix}_province_code`
- * … `${prefix}_street`, so they post with the rest of the form.
+ * The five values live in the form's own state under `${prefix}_region_code`,
+ * `${prefix}_province_code` … `${prefix}_street`, so they post with the rest
+ * of the form.
  */
 
 // Lists are the same for everyone and change about once a year, so a list
@@ -68,12 +63,12 @@ export function PhilippineAddressFields({
     const field = (part) => `${prefix}_${part}`;
     const valueOf = (part) => values[field(part)] || "";
 
-    const [lists, setLists] = useState({ provinces: [], cities: [], barangays: [] });
-    const [loading, setLoading] = useState({ provinces: true, cities: false, barangays: false });
+    const [lists, setLists] = useState({ regions: [], provinces: [], cities: [], barangays: [] });
+    const [loading, setLoading] = useState({ regions: false, provinces: false, cities: false, barangays: false });
     const [failed, setFailed] = useState(null);
 
     // Guards against a slow reply for a parent the user has since changed.
-    const latest = useRef({ cities: null, barangays: null });
+    const latest = useRef({ regions: null, provinces: null, cities: null, barangays: null });
 
     const load = useCallback(async (level, url, key) => {
         if (level in latest.current) latest.current[level] = key;
@@ -94,12 +89,18 @@ export function PhilippineAddressFields({
         }
     }, []);
 
-    useEffect(() => { load("provinces", route("psgc.provinces.index"), "all"); }, [load]);
+    useEffect(() => { load("regions", route("psgc.regions.index"), "all"); }, [load]);
 
     // Each level follows the one above it — on first render too, so an
     // address already filled in comes back with its lists populated.
+    const region = valueOf("region_code");
     const province = valueOf("province_code");
     const city = valueOf("city_code");
+
+    useEffect(() => {
+        if (!region) { setLists((s) => ({ ...s, provinces: [], cities: [], barangays: [] })); return; }
+        load("provinces", route("psgc.provinces.index") + `?region=${region}`, region);
+    }, [region, load]);
 
     useEffect(() => {
         if (!province) { setLists((s) => ({ ...s, cities: [], barangays: [] })); return; }
@@ -114,6 +115,7 @@ export function PhilippineAddressFields({
     /** Set one level and clear the ones below it. */
     const set = (part, value) => {
         const below = {
+            region_code: ["province_code", "city_code", "barangay_code"],
             province_code: ["city_code", "barangay_code"],
             city_code: ["barangay_code"],
         }[part] || [];
@@ -171,6 +173,18 @@ export function PhilippineAddressFields({
 
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
                 <Row
+                    part="region_code"
+                    label="Region"
+                    options={lists.regions.map((r) => ({
+                        value: r.code,
+                        label: r.name,
+                        hint: r.long_name,
+                    }))}
+                    loadingLevel="regions"
+                    placeholder="Select region"
+                    emptyText="No regions available"
+                />
+                <Row
                     part="province_code"
                     label="Province"
                     options={lists.provinces.map((p) => ({
@@ -180,6 +194,7 @@ export function PhilippineAddressFields({
                     }))}
                     loadingLevel="provinces"
                     placeholder="Select province"
+                    waitingFor={region ? null : "region"}
                     emptyText="No provinces available"
                 />
                 <Row

@@ -1,6 +1,6 @@
-import React from "react";
+﻿import React from "react";
 import { matchesStatusFilter } from "@/lib/applicationStatus";
-import { FileText, FileCheck, Hourglass, Wallet, Award, XCircle } from "lucide-react";
+import { FileText, FileCheck, Hourglass, Wallet, Award, XCircle, RotateCcw } from "lucide-react";
 
 /**
  * The six counts across the top of All Applications, each one a filter for the
@@ -9,12 +9,13 @@ import { FileText, FileCheck, Hourglass, Wallet, Award, XCircle } from "lucide-r
  * the table does.
  */
 const ALL_TILES = [
-    { key: "all",                  label: "All",              sub: "every application",       icon: FileText,  tone: "text-[#0d1f5c]",  ring: "ring-[#0d1f5c]",  wash: "bg-[#0d1f5c]/5",  chip: "bg-[#0d1f5c] text-white", roles: ["admin", "super_admin"] },
-    { key: "pending",              label: "For Verification", sub: "documents to check",      icon: FileCheck, tone: "text-sky-800",    ring: "ring-sky-500",    wash: "bg-sky-50",       chip: "bg-sky-500 text-white", roles: ["admin"] },
-    { key: "reviewed",             label: "For Approval",     sub: "with the administrator",  icon: Hourglass, tone: "text-amber-800",  ring: "ring-amber-500",  wash: "bg-amber-50",     chip: "bg-amber-500 text-white", roles: ["admin", "super_admin"] },
-    { key: "approved",             label: "For Payment",      sub: "approved, fee unpaid",    icon: Wallet,    tone: "text-violet-800", ring: "ring-violet-500", wash: "bg-violet-50",    chip: "bg-violet-500 text-white", roles: ["admin", "super_admin"] },
-    { key: "application_approved", label: "Approved",         sub: "paid, certificate stage", icon: Award,     tone: "text-emerald-800", ring: "ring-emerald-500", wash: "bg-emerald-50", chip: "bg-emerald-500 text-white", roles: ["admin", "super_admin"] },
-    { key: "rejected",             label: "Denied",           sub: "not approved",            icon: XCircle,   tone: "text-rose-800",   ring: "ring-rose-500",   wash: "bg-rose-50",      chip: "bg-rose-500 text-white", roles: ["admin", "super_admin"] },
+    { key: "all",                  label: "All",                 sub: "every application",       icon: FileText,  tone: "text-[#0d1f5c]",  ring: "ring-[#0d1f5c]",  wash: "bg-[#0d1f5c]/5",  chip: "bg-[#0d1f5c] text-white", roles: ["admin", "super_admin"] },
+    { key: "pending",              label: "For Verification",    sub: "documents to check",      icon: FileCheck, tone: "text-sky-800",    ring: "ring-sky-500",    wash: "bg-sky-50",       chip: "bg-sky-500 text-white", roles: ["admin"] },
+    { key: "reviewed",             label: "For Approval",        sub: "with the administrator",  icon: Hourglass, tone: "text-amber-800",  ring: "ring-amber-500",  wash: "bg-amber-50",     chip: "bg-amber-500 text-white", roles: ["admin", "super_admin"] },
+    { key: "approved",             label: "For Payment",         sub: "approved, fee unpaid",    icon: Wallet,    tone: "text-violet-800", ring: "ring-violet-500", wash: "bg-violet-50",    chip: "bg-violet-500 text-white", roles: ["admin", "super_admin"] },
+    { key: "application_approved", label: "Approved",            sub: "paid, certificate stage", icon: Award,     tone: "text-emerald-800", ring: "ring-emerald-500", wash: "bg-emerald-50", chip: "bg-emerald-500 text-white", roles: ["admin", "super_admin"] },
+    { key: "in_applicant",         label: "Returned",            sub: "back to applicant",       icon: RotateCcw, tone: "text-orange-800", ring: "ring-orange-500", wash: "bg-orange-50",    chip: "bg-orange-500 text-white", roles: ["super_admin"] },
+    { key: "rejected",             label: "Denied",              sub: "not approved",            icon: XCircle,   tone: "text-rose-800",   ring: "ring-rose-500",   wash: "bg-rose-50",      chip: "bg-rose-500 text-white", roles: ["admin", "super_admin"] },
 ];
 
 function getTilesForRole(role) {

@@ -21,9 +21,21 @@ class PsgcController extends Controller
     /** How long a browser may keep a list. A day, matching the server-side cache. */
     private const MAX_AGE = 86400;
 
-    /** Every province in the country: the address form starts here. */
-    public function provinceIndex(): JsonResponse
+    /** All regions in the country: the address form starts here now. */
+    public function regionIndex(): JsonResponse
     {
+        return $this->cached(PhilippineAddress::allRegions());
+    }
+
+    /** Every province in the country, or those in a specific region. */
+    public function provinceIndex(Request $request): JsonResponse
+    {
+        $regionCode = $request->query('region');
+        
+        if ($regionCode) {
+            return $this->cached(PhilippineAddress::provincesInRegion($regionCode));
+        }
+        
         return $this->cached(PhilippineAddress::allProvinces());
     }
 

@@ -1,18 +1,5 @@
 import React from "react";
 
-/**
- * The official CPDO letterhead.
- *
- * The Application Form, the Zoning Clearance and the Zoning Certification all
- * open with this exact block, so the three printed documents lead with one
- * header instead of three near-copies. Everything is inline styles — the
- * letterhead has to look the same inside the form (Arial, 8pt) as it does
- * inside the certificates (Times New Roman, 10-11pt), so it sets its own type
- * and colours rather than inheriting the host document's.
- *
- * `code` is the small control number a form carries in the top-right corner
- * (the clearance's "CPD-001-0"); omit it and the corner stays empty.
- */
 export default function OfficialLetterhead({ code = null }) {
     return (
         <div
@@ -28,19 +15,14 @@ export default function OfficialLetterhead({ code = null }) {
                 color: '#000080',
                 background: 'linear-gradient(180deg,#ffffff 0%,#eefdfd 8%,#d9f9fa 25%,#bff5f6 55%,#a8eff1 100%)',
                 borderBottom: '3px solid #2222ff',
-                // The gradient and the blue rule are part of the seal — they
-                // must survive the printer's "ignore backgrounds" default.
+
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact',
             }}
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: '14pt', flex: 1 }}>
                 <div style={{ width: '74pt', height: '74pt', flexShrink: 0 }}>
-                    {/* Real alpha, not mix-blend-mode: html2canvas (behind the
-                        Download PDF button) ignores blend modes, so the JPG's
-                        white box reappeared in every saved PDF. The seal now
-                        sits on the gradient in print, on screen and in the PDF
-                        alike. */}
+
                     <img
                         src="/images/ilagan1logo.png"
                         alt="City of Ilagan"

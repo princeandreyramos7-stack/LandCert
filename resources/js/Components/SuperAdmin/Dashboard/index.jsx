@@ -59,7 +59,7 @@ export function SuperAdminDashboard({ analytics = null, systemStats = {}, adminA
 
             {/* System stat cards — only alongside the analytics view */}
             {showAnalytics && (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     {statCards.map((s, i) => (
                         <Card key={i} className={`border-l-4 ${s.border} bg-white shadow-sm hover:shadow-md transition-shadow`}>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -69,8 +69,8 @@ export function SuperAdminDashboard({ analytics = null, systemStats = {}, adminA
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-black text-[#0d1f5c]">{s.value}</div>
-                                <p className="text-xs text-gray-400 mt-1">{s.sub}</p>
+                                <div className="text-2xl sm:text-3xl font-black text-[#0d1f5c]">{s.value}</div>
+                                <p className="text-xs text-gray-400 mt-1 truncate">{s.sub}</p>
                             </CardContent>
                         </Card>
                     ))}

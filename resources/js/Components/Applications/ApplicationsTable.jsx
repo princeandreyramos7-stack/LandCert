@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { router } from "@inertiajs/react";
 import { Badge } from "@/Components/ui/badge";
 import { Button } from "@/Components/ui/button";
@@ -89,7 +89,7 @@ function menuItems(request, role) {
             {
                 label: "Document Verification",
                 icon: FileCheck,
-                href: route("admin.requests.document-verification", request.id),
+                href: route("admin.requests.view-application", request.id) + "#requirements",
             },
         ];
     }
@@ -102,10 +102,7 @@ function menuItems(request, role) {
         {
             label: "Document Verification",
             icon: ClipboardCheck,
-            href: route(
-                "super-admin.requests.document-verification",
-                request.id,
-            ),
+            href: route("super-admin.requests.view-application", request.id) + "#requirements",
         },
     ];
 }
@@ -132,15 +129,17 @@ function Actions({ request, role }) {
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                    align="end"
                     onClick={(e) => e.stopPropagation()}
-                    className="z-[100]"
+                    align="end"
+                    side="bottom"
+                    sideOffset={8}
+                    className="z-[100] min-w-[200px]"
                 >
                     {menuItems(request, role).map((item) => (
                         <DropdownMenuItem
                             key={item.label}
                             onClick={() => router.visit(item.href)}
-                            className="gap-2 text-sm"
+                            className="gap-2 text-sm cursor-pointer"
                         >
                             <item.icon className="h-4 w-4 text-gray-500" />{" "}
                             {item.label}
@@ -182,13 +181,6 @@ const th =
 export function ApplicationsTable({ requests, role, filtered = false }) {
     if (!requests.length) return <Empty filtered={filtered} />;
 
-    const open = (request) =>
-        router.visit(
-            role === "admin"
-                ? route("admin.requests.view-application", request.id)
-                : route("super-admin.requests.view-application", request.id),
-        );
-
     return (
         <>
             {/* Wide screens */}
@@ -209,8 +201,7 @@ export function ApplicationsTable({ requests, role, filtered = false }) {
                         {requests.map((r) => (
                             <tr
                                 key={r.id}
-                                onClick={() => open(r)}
-                                className="cursor-pointer transition-colors hover:bg-[#0d1f5c]/[0.03]"
+                                className="transition-colors hover:bg-[#0d1f5c]/[0.03]"
                             >
                                 <td className="whitespace-nowrap px-4 py-3 font-mono text-sm font-bold text-[#0d1f5c]">
                                     {r.application_number || `#${r.id}`}
@@ -270,8 +261,7 @@ export function ApplicationsTable({ requests, role, filtered = false }) {
                 {requests.map((r) => (
                     <li
                         key={r.id}
-                        onClick={() => open(r)}
-                        className="cursor-pointer px-4 py-3 active:bg-gray-50"
+                        className="px-4 py-3 active:bg-gray-50"
                     >
                         <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">

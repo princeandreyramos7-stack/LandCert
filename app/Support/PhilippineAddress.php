@@ -33,7 +33,7 @@ use Illuminate\Support\Facades\Cache;
 class PhilippineAddress
 {
     /** The fields that make up one address, in cascade order. */
-    public const PARTS = ['province_code', 'city_code', 'barangay_code', 'street'];
+    public const PARTS = ['region_code', 'province_code', 'city_code', 'barangay_code', 'street'];
 
     /** Validation rules for one address, keyed by full field name. */
     public static function rules(string $prefix, bool $required = true): array
@@ -41,6 +41,7 @@ class PhilippineAddress
         $req = $required ? 'required' : 'nullable';
 
         return [
+            "{$prefix}_region_code" => [$req, 'string', 'size:9'],
             "{$prefix}_province_code" => [$req, 'string', 'size:9', 'exists:psgc_provinces,code'],
             "{$prefix}_city_code" => [$req, 'string', 'size:9', 'exists:psgc_cities_municipalities,code'],
             "{$prefix}_barangay_code" => [$req, 'string', 'size:9', 'exists:psgc_barangays,code'],
@@ -52,6 +53,7 @@ class PhilippineAddress
     public static function attributes(string $prefix, string $label): array
     {
         return [
+            "{$prefix}_region_code" => "{$label} region",
             "{$prefix}_province_code" => "{$label} province",
             "{$prefix}_city_code" => "{$label} city or municipality",
             "{$prefix}_barangay_code" => "{$label} barangay",
@@ -70,12 +72,18 @@ class PhilippineAddress
 
         // Nothing to check until the codes are there and well-formed; the
         // rules above have already said so in that case.
-        if (!$get('province_code') || !$get('city_code') || !$get('barangay_code')) {
+        if (!$get('region_code') || !$get('province_code') || !$get('city_code') || !$get('barangay_code')) {
             return;
         }
 
         $province = Province::find($get('province_code'));
         if (!$province) {
+            return;
+        }
+
+        // Check that province belongs to selected region
+        if ($province->region_code !== $get('region_code')) {
+            $validator->errors()->add("{$prefix}_province_code", "That province is not in the selected region.");
             return;
         }
 
@@ -156,6 +164,78 @@ class PhilippineAddress
             'address_barangay_code' => $resolved['barangay_code'],
             'address_street' => $resolved['street'],
         ];
+    }
+
+    /**
+     * Every region in the country. This is the starting point for the
+     * address picker when region selection is enabled.
+     */
+    public static function allRegions(): array
+    {
+        return Cache::remember('psgc.regions.all', now()->addDay(), function () {
+            // Get distinct regions from provinces, sorted by code
+            $regions = Province::query()
+                ->select('region_code', 'region_name')
+                ->distinct()
+                ->whereNotNull('region_code')
+                ->whereNotNull('region_name')
+                ->orderByRaw("FIELD(region_code, '140000000', '150000000', '160000000') DESC") // NCR, CAR, BARMM first
+                ->orderBy('region_code')
+                ->get();
+
+            // Map region codes to readable names with standard format
+            return $regions->map(function ($r) {
+                // Extract region number/code for display
+                $displayCode = self::formatRegionCode($r->region_code);
+                
+                return [
+                    'code' => $r->region_code,
+                    'name' => $displayCode,
+                    'long_name' => $r->region_name,
+                ];
+            })->all();
+        });
+    }
+
+    /**
+     * All provinces within a specific region.
+     */
+    public static function provincesInRegion(string $regionCode): array
+    {
+        return Cache::remember("psgc.provinces.region.{$regionCode}", now()->addDay(), fn () => Province::query()
+            ->where('region_code', $regionCode)
+            ->orderBy('name')
+            ->get(['code', 'name', 'kind', 'region_name'])
+            ->map(fn ($p) => ['code' => $p->code, 'name' => $p->name, 'kind' => $p->kind, 'region_name' => $p->region_name])
+            ->all());
+    }
+
+    /**
+     * Format region code to readable format (e.g., "010000000" -> "Region I")
+     */
+    private static function formatRegionCode(string $code): string
+    {
+        $regionMap = [
+            '010000000' => 'Region I',
+            '020000000' => 'Region II',
+            '030000000' => 'Region III',
+            '040000000' => 'Region IV-A',
+            '170000000' => 'Region IV-B', // MIMAROPA
+            '050000000' => 'Region V',
+            '060000000' => 'Region VI',
+            '070000000' => 'Region VII',
+            '080000000' => 'Region VIII',
+            '090000000' => 'Region IX',
+            '100000000' => 'Region X',
+            '110000000' => 'Region XI',
+            '120000000' => 'Region XII',
+            '130000000' => 'Region XIII',
+            '140000000' => 'NCR',
+            '150000000' => 'CAR',
+            '160000000' => 'BARMM',
+        ];
+
+        return $regionMap[$code] ?? $code;
     }
 
     /**

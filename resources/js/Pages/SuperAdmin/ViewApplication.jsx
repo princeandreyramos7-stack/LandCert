@@ -1,8 +1,10 @@
-import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
-import { Head } from "@inertiajs/react";
+import AdminLayout from "@/Layouts/AdminLayout";
+import { Head, router } from "@inertiajs/react";
 import { Button } from "@/Components/ui/button";
 import { Badge } from "@/Components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
+import { Switch } from "@/Components/ui/switch";
+import { RequirementsChecklist } from "@/Components/RequirementsTable";
 import {
     User,
     Building2,
@@ -18,59 +20,98 @@ import {
     Save,
     Loader2,
     Printer,
+    FileCheck,
+    ArrowLeft,
+    Sparkles,
+    History,
+    Upload,
+    Download,
+    Eye,
+    X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useToast } from "@/Components/ui/use-toast";
 import { Toaster } from "@/Components/ui/toaster";
 import axios from "axios";
 import { getStatusConfig } from "@/lib/applicationStatus";
 
+/**
+ * Display-only formatting for peso amount fields.
+ */
+const formatAmountForDisplay = (rawValue) => {
+    if (rawValue === null || rawValue === undefined || rawValue === "") return "";
+    const raw = String(rawValue);
+    const [integerPart, ...decimalParts] = raw.split(".");
+    const hasDecimalPoint = raw.includes(".");
+    const groupedInteger = integerPart === "" ? "" : Number(integerPart).toLocaleString("en-US");
+    return hasDecimalPoint ? `${groupedInteger}.${decimalParts.join("")}` : groupedInteger;
+};
+
+/**
+ * Strips the display formatting back down to a plain number string.
+ */
+const parseAmountInput = (displayValue) => {
+    let cleaned = String(displayValue).replace(/[^\d.]/g, "");
+    const firstDot = cleaned.indexOf(".");
+    if (firstDot !== -1) {
+        const integerPart = cleaned.slice(0, firstDot);
+        const decimalPart = cleaned.slice(firstDot + 1).replace(/\./g, "").slice(0, 2);
+        cleaned = `${integerPart}.${decimalPart}`;
+    }
+    return cleaned;
+};
+
+
 export default function ViewApplication({ request, uploadedRequirements = [] }) {
+    const { toast } = useToast();
+    
+    // ============================================
+    // STATE FROM ViewApplication (Application Details)
+    // ============================================
     const [currentStep, setCurrentStep] = useState(1);
-    const [editingProjectType, setEditingProjectType] = useState(false);
-    const [projectType, setProjectType] = useState(request.project_type || '');
-    const [savingProjectType, setSavingProjectType] = useState(false);
-    // Application number and project cost are corrections staff make after the
-    // fact, so each is edited on its own and saved independently.
-    const [editingAppNumber, setEditingAppNumber] = useState(false);
-    const [applicationNumber, setApplicationNumber] = useState(request.application_number || '');
-    const [savingAppNumber, setSavingAppNumber] = useState(false);
     const [editingProjectCost, setEditingProjectCost] = useState(false);
     const [projectCost, setProjectCost] = useState(
         request.project_cost === null || request.project_cost === undefined ? '' : String(request.project_cost)
     );
     const [savingProjectCost, setSavingProjectCost] = useState(false);
-    const { toast } = useToast();
 
-    const handleSaveAppNumber = async () => {
-        setSavingAppNumber(true);
-        try {
-            await axios.post(`/super-admin/requests/${request.id}/application-details`, {
-                application_number: applicationNumber,
-            });
-            request.application_number = applicationNumber;
-            toast({
-                title: "Success!",
-                description: "Application number updated successfully.",
-            });
-            setEditingAppNumber(false);
-        } catch (error) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description:
-                    error.response?.data?.errors?.application_number?.[0] ||
-                    "Failed to update the application number.",
-            });
-        } finally {
-            setSavingAppNumber(false);
-        }
-    };
+    // Confirmation dialog for Mark as Reviewed
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
+    // ============================================
+    // STATE FROM DocumentVerification (Requirements)
+    // ============================================
+    const [selectedRequirements, setSelectedRequirements] = useState(() => {
+        return request.verified_requirements || {};
+    });
+    
+    const [titleNumber, setTitleNumber] = useState(request.title_number || "");
+    const [taxDecNo, setTaxDecNo] = useState(request.tax_declaration_no || "");
+    const [isSaving, setIsSaving] = useState(false);
+    const [isMarking, setIsMarking] = useState(false);
+    const [showAutoFillSuggestion, setShowAutoFillSuggestion] = useState(false);
+
+    // ============================================
+    // COMMON COMPUTED VALUES
+    // ============================================
+    const statusConfig = getStatusConfig(request.status || "pending");
+    const StatusIcon = statusConfig.icon;
+    const isZC = String(request.project_type || "").toUpperCase() === "ZC";
+    
+    const steps = [
+        { number: 1, title: "Applicant Info", icon: User },
+        { number: 2, title: "Project Details", icon: Building2 },
+        ...(isZC ? [] : [{ number: 3, title: "Land Use", icon: Home }]),
+    ];
+
+
+    // ============================================
+    // EVENT HANDLERS - Application Details
+    // ============================================
     const handleSaveProjectCost = async () => {
         setSavingProjectCost(true);
         try {
-            await axios.post(`/super-admin/requests/${request.id}/application-details`, {
+            await axios.post(`/admin/requests/${request.id}/application-details`, {
                 project_cost: projectCost === '' ? null : projectCost,
             });
             request.project_cost = projectCost === '' ? null : projectCost;
@@ -92,46 +133,101 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
         }
     };
 
-    const handleSaveProjectType = async () => {
-        setSavingProjectType(true);
+    // ============================================
+    // EVENT HANDLERS - Requirements Verification
+    // ============================================
+    const handleRequirementChange = async (reqId, reqName, isChecked) => {
+        const updated = { ...selectedRequirements, [reqId]: isChecked };
+        setSelectedRequirements(updated);
+        
+        // Auto-save to database
         try {
-            await axios.post(`/super-admin/update-project-type/${request.id}`, {
-                project_type: projectType
+            await axios.post(`/admin/requests/${request.id}/verify-requirements`, {
+                verified_requirements: updated,
+                title_number: titleNumber,
+                tax_declaration_no: taxDecNo,
             });
+        } catch (error) {
+            console.error('Error saving requirement verification:', error);
+        }
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await axios.post(`/admin/requests/${request.id}/verify-requirements`, {
+                verified_requirements: selectedRequirements,
+                title_number: titleNumber,
+                tax_declaration_no: taxDecNo,
+            });
+            
+            request.verified_requirements_json = JSON.stringify(selectedRequirements);
+            request.title_number = titleNumber;
+            request.tax_declaration_no = taxDecNo;
+
             toast({
-                title: "Success!",
-                description: "Application type updated successfully.",
+                title: "Saved!",
+                description: "Requirements verification data saved successfully.",
             });
-            setEditingProjectType(false);
-            request.project_type = projectType;
         } catch (error) {
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: "Failed to update project type.",
+                description: error.response?.data?.message || "Failed to save requirements data.",
             });
         } finally {
-            setSavingProjectType(false);
+            setIsSaving(false);
         }
     };
 
-    // Status badge: the derived status can be any step of the lifecycle.
-    const statusConfig = getStatusConfig(request.status || "pending");
-    const StatusIcon = statusConfig.icon;
+    const handleMarkAsReviewed = async () => {
+        if (!titleNumber || !taxDecNo) {
+            toast({
+                variant: "destructive",
+                title: "Missing Required Fields",
+                description: "Title Number and Tax Declaration No. are required before marking as reviewed.",
+            });
+            return;
+        }
 
-    // A Zoning Certification never fills in the project or land-use steps, so
-    // it has nothing to show on Land Use.
-    const isZC = String(request.project_type || "").toUpperCase() === "ZC";
+        // Close dialog first
+        setShowConfirmDialog(false);
 
-    const steps = [
-        { number: 1, title: "Applicant Info", icon: User },
-        { number: 2, title: "Project Details", icon: Building2 },
-        ...(isZC ? [] : [{ number: 3, title: "Land Use", icon: Home }]),
-    ];
+        setIsMarking(true);
+        try {
+            await axios.post('/super-admin/review-application', {
+                request_id: request.id,
+                action: 'reviewed',
+                payment_amount: 0, // Default to 0, admin can set later
+                admin_notes: '', // Optional notes
+            });
 
+            toast({
+                title: "Marked as Reviewed!",
+                description: "Application has been marked as reviewed and moved forward.",
+            });
+
+            setTimeout(() => {
+                router.visit("/super-admin/requests");
+            }, 1500);
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: error.response?.data?.message || "Failed to mark as reviewed.",
+            });
+        } finally {
+            setIsMarking(false);
+        }
+    };
+
+
+    // ============================================
+    // RENDER
+    // ============================================
     return (
-        <SuperAdminLayout 
-            title="View Application" 
+        <AdminLayout 
+            title="View Application"
             breadcrumbs={[
                 { label: "Dashboard", href: "/super-admin/dashboard" },
                 { label: "Applications", href: "/super-admin/requests" },
@@ -140,160 +236,156 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
             <Head title={`View Application ${request.application_number || `TPZ-${request.id}`}`} />
 
             <div className="max-w-7xl mx-auto">
-                {/* Print Form Button - Only show for CZC, TUP, SUP (not for ZC/Locational Clearance) */}
-                {!isZC && (
-                    <div className="mb-4 flex gap-3">
-                        <Button
-                            variant="outline" 
-                            size="sm" 
-                            className="hover:bg-gray-100"
-                            onClick={() => window.open(route('super-admin.requests.print', request.id), '_blank')}
-                        >
-                            <Printer className="h-4 w-4 mr-2" />
-                            Print Form
-                        </Button>
-                    </div>
-                )}
+                {/* ============================================ */}
+                {/* SECTION 1: APPLICATION DETAILS */}
+                {/* ============================================ */}
+                <div>
 
-                {/* Application Details Card */}
-                <Card className="mb-6">
-                    <CardHeader className="bg-white border-b">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-100 rounded-full">
-                                    <FileText className="h-6 w-6 text-blue-600" />
-                                </div>
-                                <div>
-                                    {editingAppNumber ? (
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="text"
-                                                value={applicationNumber}
-                                                onChange={(e) => setApplicationNumber(e.target.value)}
-                                                placeholder={`TPZ-${request.id}`}
-                                                className="px-3 py-1.5 text-xl font-semibold text-gray-900 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                            <button
-                                                onClick={handleSaveAppNumber}
-                                                disabled={savingAppNumber}
-                                                className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
-                                            >
-                                                {savingAppNumber ? (
-                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                ) : (
-                                                    <Save className="h-3 w-3" />
-                                                )}
-                                                Save
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setApplicationNumber(request.application_number || '');
-                                                    setEditingAppNumber(false);
-                                                }}
-                                                disabled={savingAppNumber}
-                                                className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
-                                            >
-                                                Cancel
-                                            </button>
+                        {/* Print Form Button - Only show for CZC, TUP, SUP (not for ZC/Locational Clearance) */}
+                        {!isZC && (
+                            <div className="mb-4 flex gap-3">
+                                <Button
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="hover:bg-gray-100"
+                                    onClick={() => window.open(route('admin.requests.print', request.id), '_blank')}
+                                >
+                                    <Printer className="h-4 w-4 mr-2" />
+                                    Print Form
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* Application Details Card */}
+                        <Card className="mb-6">
+                            <CardHeader className="bg-white border-b">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-blue-100 rounded-full">
+                                            <FileText className="h-6 w-6 text-blue-600" />
                                         </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2">
+                                        <div>
                                             <CardTitle className="text-2xl text-gray-900">
-                                                {applicationNumber || `TPZ-${request.id}`}
+                                                {request.application_number || `TPZ-${request.id}`}
                                             </CardTitle>
-                                            <button
-                                                onClick={() => setEditingAppNumber(true)}
-                                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
-                                            >
-                                                <Edit2 className="h-3 w-3" />
-                                                Edit
-                                            </button>
+                                            <p className="text-sm text-gray-600 mt-1">
+                                                Application Type: <span className="font-semibold text-gray-900">{request.application_category || "N/A"}</span>
+                                            </p>
                                         </div>
-                                    )}
-                                    <p className="text-sm text-gray-600 mt-1">
-                                        Application Type: <span className="font-semibold text-gray-900">{request.application_category || "N/A"}</span>
-                                    </p>
+                                    </div>
+                                    <Badge className={`${statusConfig.color} border px-4 py-2 text-sm font-semibold flex items-center gap-2`}>
+                                        <StatusIcon className="h-4 w-4" />
+                                        {statusConfig.label}
+                                    </Badge>
                                 </div>
-                            </div>
-                            <Badge className={`${statusConfig.color} border px-4 py-2 text-sm font-semibold flex items-center gap-2`}>
-                                <StatusIcon className="h-4 w-4" />
-                                {statusConfig.label}
-                            </Badge>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-6 pt-6">
-                        {/* Step Indicator */}
-                        <StepIndicator
-                            steps={steps}
-                            currentStep={currentStep}
-                            onStepClick={setCurrentStep}
-                        />
-
-                        {/* Step Content */}
-                        <div className="mt-8">
-                            {currentStep === 1 && (
-                                <Step1Content request={request} isZC={isZC} />
-                            )}
-                            {currentStep === 2 && (
-                                <Step2Content 
-                                    request={request} 
-                                    uploadedRequirements={uploadedRequirements}
-                                    
-                                    editingProjectType={editingProjectType}
-                                    setEditingProjectType={setEditingProjectType}
-                                    projectType={projectType}
-                                    setProjectType={setProjectType}
-                                    handleSaveProjectType={handleSaveProjectType}
-                                    savingProjectType={savingProjectType}
-                                    editingProjectCost={editingProjectCost}
-                                    setEditingProjectCost={setEditingProjectCost}
-                                    projectCost={projectCost}
-                                    setProjectCost={setProjectCost}
-                                    handleSaveProjectCost={handleSaveProjectCost}
-                                    savingProjectCost={savingProjectCost}
-                                    isZC={isZC}
+                            </CardHeader>
+                            <CardContent className="space-y-6 pt-6">
+                                {/* Step Indicator */}
+                                <StepIndicator
+                                    steps={steps}
+                                    currentStep={currentStep}
+                                    onStepClick={setCurrentStep}
                                 />
-                            )}
-                            {currentStep === 3 && (
-                                <Step3Content request={request} />
-                            )}
-                        </div>
 
-                        {/* Navigation Buttons */}
-                        <div className="flex justify-between pt-6 border-t">
-                            <Button
-                                variant="outline"
-                                onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-                                disabled={currentStep === 1}
-                            >
-                                Previous
-                            </Button>
-                            <div className="text-sm text-gray-500">
-                                Step {currentStep} of {steps.length}
-                            </div>
-                            <Button
-                                onClick={() => setCurrentStep(Math.min(steps.length, currentStep + 1))}
-                                disabled={currentStep === steps.length}
-                            >
-                                Next
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                                {/* Step Content */}
+                                <div className="mt-8">
+                                    {currentStep === 1 && (
+                                        <Step1Content request={request} isZC={isZC} />
+                                    )}
+                                    {currentStep === 2 && (
+                                        <Step2Content 
+                                            request={request} 
+                                            uploadedRequirements={uploadedRequirements}
+                                            editingProjectCost={editingProjectCost}
+                                            setEditingProjectCost={setEditingProjectCost}
+                                            projectCost={projectCost}
+                                            setProjectCost={setProjectCost}
+                                            handleSaveProjectCost={handleSaveProjectCost}
+                                            savingProjectCost={savingProjectCost}
+                                            isZC={isZC}
+                                            titleNumber={titleNumber}
+                                            setTitleNumber={setTitleNumber}
+                                            taxDecNo={taxDecNo}
+                                            setTaxDecNo={setTaxDecNo}
+                                        />
+                                    )}
+                                    {currentStep === 3 && !isZC && (
+                                        <Step3Content request={request} />
+                                    )}
+                                </div>
+
+                                {/* Navigation Buttons */}
+                                <div className="flex justify-between pt-6 border-t">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+                                        disabled={currentStep === 1}
+                                    >
+                                        Previous
+                                    </Button>
+                                    <div className="text-sm text-gray-500">
+                                        Step {currentStep} of {steps.length}
+                                    </div>
+                                    <Button
+                                        onClick={() => setCurrentStep(Math.min(steps.length, currentStep + 1))}
+                                        disabled={currentStep === steps.length}
+                                        className="bg-[#0d1f5c] hover:bg-[#0d1f5c]/90 text-white"
+                                    >
+                                        Next
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                {/* ============================================ */}
+                {/* SECTION 2: REQUIREMENTS VERIFICATION (BOTTOM) */}
+                {/* ============================================ */}
+                <div id="requirements" className="scroll-mt-20">
+                        {/* Requirements Checklist */}
+                        <Card className="mb-6">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <FileCheck className="h-5 w-5" />
+                                    Required Documents
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <RequirementsChecklist request={request} uploadedRequirements={uploadedRequirements} selectedRequirements={selectedRequirements} onRequirementChange={handleRequirementChange} userRole="super_admin" />
+                            </CardContent>
+                        </Card>
+
+                        {/* SuperAdmin: No action buttons - read-only view */}
+                    </div>
+
             </div>
             
+            {/* SuperAdmin: No confirmation dialog needed */}
+            
             <Toaster />
-        </SuperAdminLayout>
+        </AdminLayout>
     );
 }
+
+
+// ============================================================================
+// HELPER COMPONENTS FROM VIEWAPPLICATION.JSX
+// ============================================================================
+
+const RELEASE_MODE_LABELS = {
+    pickup: "Pick up at CPDO office",
+    mail_applicant: "Mail to applicant's address",
+    mail_representative: "Mail to representative's address",
+    mail_other: "Mail to another address",
+};
 
 // Step Indicator Component
 function StepIndicator({ steps, currentStep, onStepClick }) {
     return (
-        <div className="mb-8">
-            <div className="flex items-center justify-between relative">
-                {/* Progress Line */}
-                <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 -z-10">
+        <div className="w-full">
+            <div className="flex items-center justify-between mb-8 relative">
+                {/* Progress Line - Behind the icons */}
+                <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 z-0">
                     <div
                         className="h-full bg-blue-600 transition-all duration-500"
                         style={{
@@ -310,7 +402,7 @@ function StepIndicator({ steps, currentStep, onStepClick }) {
                     return (
                         <div 
                             key={step.number} 
-                            className="flex flex-col items-center flex-1 cursor-pointer"
+                            className="flex flex-col items-center flex-1 cursor-pointer relative z-10"
                             onClick={() => onStepClick(step.number)}
                         >
                             <div
@@ -350,15 +442,57 @@ function StepIndicator({ steps, currentStep, onStepClick }) {
     );
 }
 
+// Section Title Component
+function SectionTitle({ icon: Icon, title }) {
+    return (
+        <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 bg-blue-100 rounded-lg">
+                <Icon className="h-5 w-5 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        </div>
+    );
+}
+
+// Info Field Component
+function InfoField({ label, value, num }) {
+    return (
+        <div className="group">
+            <p className="mb-1.5 flex items-baseline gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {num && (
+                    <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-bold tabular-nums text-gray-600">
+                        {num}
+                    </span>
+                )}
+                <span>{label}</span>
+            </p>
+            <p className="text-sm text-gray-900 font-medium">
+                {value || <span className="text-gray-400 italic">Not provided</span>}
+            </p>
+        </div>
+    );
+}
+
+// Edit Field Component
+function EditField({ label, value, onChange, placeholder }) {
+    return (
+        <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                {label}
+            </p>
+            <input
+                type="text"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                className="w-full px-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+        </div>
+    );
+}
+
 // Step 1: Applicant Information
 function Step1Content({ request, isZC = false }) {
-    // A Zoning Certification is not filed on the CPD-001-0 sheet — it asks for
-    // far less — so it gets its own short sequence rather than the paper form's
-    // numbering with most of the items missing from it.
-    //
-    // Contact number and email are collected by the system but are not items on
-    // the paper form, so on a CZC/TUP/SUP they hang off item 3 rather than
-    // taking 18 and 19 — the sheet already uses 18 for the signatures.
     const n = isZC
         ? { name: "1", address: "2", contact: "3", email: "4" }
         : { name: "1", address: "3", contact: "3a", email: "3b" };
@@ -454,72 +588,18 @@ function Step1Content({ request, isZC = false }) {
 }
 
 // Step 2: Project Details
-function Step2Content({ request, uploadedRequirements = [], editingProjectType, setEditingProjectType, projectType, setProjectType, handleSaveProjectType, savingProjectType, editingProjectCost, setEditingProjectCost, projectCost, setProjectCost, handleSaveProjectCost, savingProjectCost, isZC = false }) {
+function Step2Content({ request, uploadedRequirements = [], editingProjectCost, setEditingProjectCost, projectCost, setProjectCost, handleSaveProjectCost, savingProjectCost, isZC = false, titleNumber, setTitleNumber, taxDecNo, setTaxDecNo }) {
     return (
         <div className="space-y-6">
             <SectionTitle icon={Building2} title="Project Details" />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* EDITABLE LOCATIONAL CLEARANCE */}
-                <div className="group">
-                    <div className="flex items-center justify-between mb-1.5">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 font-bold tabular-nums text-gray-600">{isZC ? "5" : "7"}</span>
-                            Project Type
-                        </p>
-                        {!editingProjectType ? (
-                            <button
-                                onClick={() => setEditingProjectType(true)}
-                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
-                            >
-                                <Edit2 className="h-3 w-3" />
-                                Edit
-                            </button>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={handleSaveProjectType}
-                                    disabled={savingProjectType}
-                                    className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
-                                >
-                                    {savingProjectType ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                        <Save className="h-3 w-3" />
-                                    )}
-                                    Save
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setProjectType(request.project_type || '');
-                                        setEditingProjectType(false);
-                                    }}
-                                    disabled={savingProjectType}
-                                    className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                    {editingProjectType ? (
-                        <select
-                            value={projectType}
-                            onChange={(e) => setProjectType(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            <option value="">N/A</option>
-                            <option value="TUP">TUP (Temporary Use Permit)</option>
-                            <option value="SUP">SUP (Special Use Permit)</option>
-                            <option value="CZC">CZC (Certificate of Zoning Compliance)</option>
-                            <option value="ZC">ZC (Zoning Certification)</option>
-                        </select>
-                    ) : (
-                        <p className="text-sm text-gray-900 font-medium">
-                            {projectType || <span className="text-gray-400 italic">Not set</span>}
-                        </p>
-                    )}
-                </div>
+                {/* READ-ONLY PROJECT TYPE */}
+                <InfoField
+                    num={isZC ? "5" : "7"}
+                    label="Project Type"
+                    value={request.project_type}
+                />
 
                 {!isZC && (
                     <InfoField
@@ -595,9 +675,15 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
 
             <PropertyDetailsEditor
                 request={request}
-                routePrefix="super-admin"
+                routePrefix="admin"
                 uploadedRequirements={uploadedRequirements}
                 isZC={isZC}
+                titleNumber={titleNumber}
+                setTitleNumber={setTitleNumber}
+                taxDecNo={taxDecNo}
+                setTaxDecNo={setTaxDecNo}
+                titleRef={undefined}
+                taxRef={undefined}
             />
 
             {!isZC && (
@@ -623,68 +709,13 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectType, 
                                     <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 font-bold tabular-nums text-gray-600">14</span>
                                     Project Cost/Capitalization (in pesos)
                                 </p>
-                                {!editingProjectCost ? (
-                                    <button
-                                        onClick={() => setEditingProjectCost(true)}
-                                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
-                                    >
-                                        <Edit2 className="h-3 w-3" />
-                                        Edit
-                                    </button>
-                                ) : (
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={handleSaveProjectCost}
-                                            disabled={savingProjectCost}
-                                            className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
-                                        >
-                                            {savingProjectCost ? (
-                                                <Loader2 className="h-3 w-3 animate-spin" />
-                                            ) : (
-                                                <Save className="h-3 w-3" />
-                                            )}
-                                            Save
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setProjectCost(
-                                                    request.project_cost === null || request.project_cost === undefined
-                                                        ? ''
-                                                        : String(request.project_cost)
-                                                );
-                                                setEditingProjectCost(false);
-                                            }}
-                                            disabled={savingProjectCost}
-                                            className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                )}
+                                {/* SuperAdmin: Read-only - No Edit button */}
                             </div>
-                            {editingProjectCost ? (
-                                <div className="relative">
-                                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 select-none text-sm font-semibold text-gray-500">
-                                        ₱
-                                    </span>
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={projectCost}
-                                        onChange={(e) =>
-                                            setProjectCost(e.target.value.replace(/[^\d.]/g, ''))
-                                        }
-                                        placeholder="0.00"
-                                        className="w-full pl-7 pr-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-                            ) : (
-                                <p className="text-sm text-gray-900 font-medium">
-                                    {projectCost !== ''
-                                        ? `₱${parseFloat(projectCost).toLocaleString()}`
-                                        : <span className="text-gray-400 italic">Not set</span>}
-                                </p>
-                            )}
+                            <p className="text-sm text-gray-900 font-medium">
+                                {projectCost !== ''
+                                    ? `₱${parseFloat(projectCost).toLocaleString()}`
+                                    : <span className="text-gray-400 italic">Not set</span>}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -774,7 +805,6 @@ function Step3Content({ request }) {
                         label="Preferred Release Mode"
                         value={RELEASE_MODE_LABELS[request.preferred_release_mode] || request.preferred_release_mode}
                     />
-                    {/* Item 17 on the paper form: "By mail, address to". */}
                     <InfoField
                         num="17"
                         label="Release Address"
@@ -786,104 +816,10 @@ function Step3Content({ request }) {
     );
 }
 
-const RELEASE_MODE_LABELS = {
-    pickup: "Pick up at CPDO office",
-    mail_applicant: "Mail to applicant's address",
-    mail_representative: "Mail to representative's address",
-    mail_other: "Mail to another address",
-};
-
-// Helper Components
-function SectionTitle({ icon: Icon, title }) {
-    return (
-        <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-blue-100 rounded-lg">
-                <Icon className="h-5 w-5 text-blue-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        </div>
-    );
-}
-
-/**
- * `num` is the item's number on the printed CPD-001-0 application form, shown
- * so a reviewer can read this screen against the paper the applicant filled in.
- * Fields the paper form does not have (contact number, email, description) carry
- * no number rather than being renumbered into a sequence of their own.
- */
-function InfoField({ label, value, num }) {
-    return (
-        <div className="group">
-            <p className="mb-1.5 flex items-baseline gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                {num && (
-                    <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-bold tabular-nums text-gray-600">
-                        {num}
-                    </span>
-                )}
-                <span>{label}</span>
-            </p>
-            <p className="text-sm text-gray-900 font-medium">
-                {value || <span className="text-gray-400 italic">Not provided</span>}
-            </p>
-        </div>
-    );
-}
-
-function EditField({ label, value, onChange, placeholder }) {
-    return (
-        <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                {label}
-            </p>
-            <input
-                type="text"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                placeholder={placeholder}
-                className="w-full px-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-        </div>
-    );
-}
-
-// Title Number (TCT/CCT) and Tax Declaration No. are entered by staff here and saved to the
-// property record; both are required before an application can be marked as
-// reviewed. Project Nature is set by the applicant and shown read-only.
+// Property Details Editor Component
+// Property Details Editor Component (SuperAdmin: READ-ONLY)
 function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = [], isZC = false }) {
-    const { toast } = useToast();
-    const [editing, setEditing] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [values, setValues] = useState({
-        lot_number: request.lot_number || "",
-        tax_declaration_no: request.tax_declaration_no || "",
-    });
-
-    const reset = () =>
-        setValues({
-            lot_number: request.lot_number || "",
-            tax_declaration_no: request.tax_declaration_no || "",
-        });
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await axios.post(`/${routePrefix}/requests/${request.id}/certificate-details`, values);
-            request.lot_number = values.lot_number;
-            request.tax_declaration_no = values.tax_declaration_no;
-            toast({ title: "Saved", description: "Property details updated." });
-            setEditing(false);
-        } catch (error) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Failed to save property details.",
-            });
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const missingRequired = !request.lot_number || !request.tax_declaration_no;
+    const missingRequired = !request.lot_number && !request.tax_declaration_no;
 
     return (
         <div className="pt-4 border-t">
@@ -894,100 +830,17 @@ function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = []
                     )}
                     Property Details
                 </h4>
-                {!editing ? (
-                    <button
-                        onClick={() => setEditing(true)}
-                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                        <Edit2 className="h-3 w-3" />
-                        Edit
-                    </button>
-                ) : (
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
-                        >
-                            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                            Save
-                        </button>
-                        <button
-                            onClick={() => { reset(); setEditing(false); }}
-                            disabled={saving}
-                            className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                )}
+                {/* SuperAdmin: Read-only - No Edit button */}
             </div>
 
-            {/* The Title Number (TCT/CCT) and Tax Declaration No. below are read off these
-                documents, so they open straight from here. */}
-            {uploadedRequirements.length > 0 && (
-                <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                        Submitted Requirements
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                        {uploadedRequirements.map((doc) =>
-                            doc.files.length > 0 ? (
-                                doc.files.map((file, index) => (
-                                    <a
-                                        key={file.id}
-                                        href={`/requirements/${file.id}/view`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        title={file.original_filename}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
-                                    >
-                                        <FileText className="h-3.5 w-3.5" />
-                                        {doc.name}
-                                        {doc.files.length > 1 ? ` (${index + 1})` : ''}
-                                    </a>
-                                ))
-                            ) : (
-                                <span
-                                    key={doc.id}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-gray-300 text-gray-400 text-xs font-medium"
-                                >
-                                    <FileText className="h-3.5 w-3.5" />
-                                    {doc.name} — not uploaded
-                                </span>
-                            )
-                        )}
-                    </div>
-                </div>
-            )}
+            {/* SuperAdmin: No blue file shortcut buttons */}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {editing ? (
-                    <>
-                        <EditField
-                            label="Title Number (TCT/CCT)"
-                            value={values.lot_number}
-                            onChange={(v) => setValues({ ...values, lot_number: v })}
-                            placeholder="e.g. T-12345"
-                        />
-                        <EditField
-                            label="Tax Declaration No."
-                            value={values.tax_declaration_no}
-                            onChange={(v) => setValues({ ...values, tax_declaration_no: v })}
-                            placeholder="e.g. 2024-12-0001"
-                        />
-                        {!isZC && <InfoField label="Project Classification" value={request.zone_classification} />}
-                    </>
-                ) : (
-                    <>
-                        <InfoField label="Title Number (TCT/CCT)" value={request.lot_number} />
-                        <InfoField label="Tax Declaration No." value={request.tax_declaration_no} />
-                        {!isZC && <InfoField label="Project Classification" value={request.zone_classification} />}
-                    </>
-                )}
+                <InfoField label="Title Number (TCT/CCT)" value={request.lot_number} />
+                <InfoField label="Tax Declaration No." value={request.tax_declaration_no} />
             </div>
 
-            {missingRequired && !editing && (
+            {missingRequired && (
                 <div className="mt-3 flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
                     <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
                     <span>
@@ -999,3 +852,9 @@ function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = []
         </div>
     );
 }
+
+
+// ============================================================================
+// HELPER COMPONENTS FROM DOCUMENTVERIFICATION.JSX
+// ============================================================================
+

@@ -1068,17 +1068,11 @@ class RequestController extends Controller
 
         // The wizard collects documents against its own generic requirement list,
         // while the reference list above varies by project type — and the project
-        // type is often only set by staff after submission. Prefer the name that
-        // was stored with the document, and append any uploaded requirement that
-        // the reference list does not know about, so nothing is ever hidden.
-        $requirementsReference = collect($requirementsReference)
-            ->map(function ($req) use ($grouped) {
-                $stored = $grouped->get($req['id']);
-                if ($stored && $stored->first()->requirement_name) {
-                    $req['name'] = $stored->first()->requirement_name;
-                }
-                return $req;
-            });
+        // type is often only set by staff after submission. Keep the authoritative
+        // name from the reference list to prevent confusion when a document was
+        // uploaded with the wrong requirement_id. Only use stored names for true
+        // orphans (IDs not in the reference list).
+        $requirementsReference = collect($requirementsReference);
 
         $knownIds = $requirementsReference->pluck('id')->map(fn ($id) => (string) $id);
 
