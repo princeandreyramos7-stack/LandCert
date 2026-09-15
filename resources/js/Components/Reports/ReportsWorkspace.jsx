@@ -366,7 +366,7 @@ function OrderSheet({ order }) {
 function WithSheet({ sheet, children }) {
     if (!sheet) return children;
     return (
-        <div className="grid gap-4 md:grid-cols-[1fr_18rem]">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_18rem]">
             <div className="min-w-0">{children}</div>
             {sheet}
         </div>
@@ -535,7 +535,7 @@ function ApplicationDetail({ app, total, onZoom }) {
                 action={payment?.receipt_url ? <DocLink href={payment.receipt_url}>View receipt</DocLink> : null}
             >
                 {payment ? (
-                    <div className="grid gap-4 md:grid-cols-[1fr_18rem]">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_18rem]">
                         <dl className="divide-y divide-gray-50">
                             <Field label="O.R. Number">{payment.receipt_number}</Field>
                             <Field label="Amount Paid">{peso(payment.amount)}</Field>
