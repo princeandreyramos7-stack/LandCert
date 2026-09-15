@@ -277,8 +277,19 @@ const ClearanceSheet = forwardRef(function ClearanceSheet(
                 <div style={{ width: '45%' }}>
                     <div style={{ marginBottom: '6pt' }}>Prepared &amp; Evaluated by:</div>
                     <SignatureLine
-                        signatureUrl={reviewer?.signature_url}
-                        name={reviewer?.name || 'MARY JANE M. BULAUAN'}
+                        signatureUrl={
+                            // If the reviewer is the same as the Zoning Administrator,
+                            // don't show their signature in the "Prepared by" section
+                            (reviewer?.name === zoningAdministrator?.name) 
+                                ? null 
+                                : reviewer?.signature_url
+                        }
+                        name={
+                            // If the reviewer is the Zoning Administrator, show generic Zoning Officer title
+                            (reviewer?.name === zoningAdministrator?.name)
+                                ? 'Zoning Officer IV'
+                                : (reviewer?.name || 'MARY JANE M. BULAUAN')
+                        }
                         title={<>Zoning Officer IV</>}
                     />
                 </div>
