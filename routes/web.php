@@ -234,7 +234,7 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::get('/dashboard', function (\Illuminate\Http\Request $request) { return redirect('/dashboard-panel' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('dashboard');
     Route::get('/search', [AdminController::class, 'search'])->name('search');
     Route::get('/requests', function (\Illuminate\Http\Request $request) { return redirect('/applications' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('requests');
-    Route::get('/requests/{id}', [AdminController::class, 'viewRequest'])->name('requests.view');
+    Route::get('/requests/{id}', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'view-application', $id)); })->name('requests.view');
     Route::get('/requests/{id}/review', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'review-application', $id)); })->name('requests.review');
     
     // NEW: Split Review Pages
