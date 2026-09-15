@@ -44,21 +44,37 @@ class RegisteredUserController extends Controller
                 : $request->input('email'),
         ]);
 
-        $request->validate([
+        // The address is picked from the PSGC, not typed. It is optional at
+        // sign-up - an account is useful without one - but half an address is
+        // worse than none, so once any part of it is given the rest is
+        // required and has to hang together.
+        $startedAddress = collect(\App\Support\PhilippineAddress::PARTS)
+            ->contains(fn ($part) => filled($request->input("address_{$part}")));
+
+        $validated = $request->validate(array_merge([
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', new LowercaseEmailDomain, 'unique:'.User::class],
-            'address' => 'nullable|string|max:500',
             'contact_number' => 'nullable|string|regex:/^09[0-9]{9}$/|size:11',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ], [
+        ], \App\Support\PhilippineAddress::rules('address', $startedAddress)), [
             'contact_number.regex' => 'Contact number must start with 09 and be exactly 11 digits.',
             'contact_number.size' => 'Contact number must be exactly 11 digits.',
-        ]);
+        ], \App\Support\PhilippineAddress::attributes('address', ''));
 
-        $user = User::create([
+        if ($startedAddress) {
+            $chain = \Illuminate\Support\Facades\Validator::make($request->all(), []);
+            \App\Support\PhilippineAddress::checkChain($chain, 'address');
+            if ($chain->errors()->isNotEmpty()) {
+                throw \Illuminate\Validation\ValidationException::withMessages($chain->errors()->toArray());
+            }
+        }
+
+        // Composed here from the codes, never taken from the browser.
+        $address = \App\Support\PhilippineAddress::resolve($validated, 'address');
+
+        $user = User::create(\App\Support\PhilippineAddress::columns($address, 'address') + [
             'name' => $request->name,
             'email' => $request->email,
-            'address' => $request->address,
             'contact_number' => $request->contact_number,
             'password' => Hash::make($request->password),
         ]);

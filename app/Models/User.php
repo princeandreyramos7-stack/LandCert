@@ -46,6 +46,12 @@ class User extends Authenticatable
         'password',
         'contact_number',
         'address',
+        // The PSGC selections the address line above was composed from.
+        'address_region_code',
+        'address_province_code',
+        'address_city_code',
+        'address_barangay_code',
+        'address_street',
         'user_type',
         'signature_path',
         'avatar_path',

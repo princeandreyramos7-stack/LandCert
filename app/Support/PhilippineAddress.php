@@ -107,7 +107,7 @@ class PhilippineAddress
         }
 
         $barangay = Barangay::find($get('barangay_code'));
-        $city = CityMunicipality::with('province.region')->find($get('city_code'));
+        $city = CityMunicipality::with('province')->find($get('city_code'));
 
         if (!$barangay || !$city) {
             return null;
@@ -124,7 +124,7 @@ class PhilippineAddress
             $street !== '' ? $street : null,
             $barangay->name,
             $city->name,
-            $province && $province->kind === 'province' ? $province->name : optional($province?->region)->name,
+            $province && $province->kind === 'province' ? $province->name : $province?->region_name,
         ];
 
         return [
@@ -159,20 +159,6 @@ class PhilippineAddress
     }
 
     /**
-     * The whole country as one nested list, for the pickers.
-     *
-     * Cached: it is 42,000 barangays that change perhaps once a year, and
-     * rebuilding it per request would be the slowest thing on the form.
-     */
-    public static function regions(): array
-    {
-        return Cache::remember('psgc.regions', now()->addDay(), fn () => \App\Models\Psgc\Region::orderBy('name')
-            ->get(['code', 'name', 'short_name'])
-            ->map(fn ($r) => ['code' => $r->code, 'name' => $r->name, 'short_name' => $r->short_name])
-            ->all());
-    }
-
-    /**
      * Every province-level entry in the country, with the region it belongs
      * to shown beside it so "Isabela" the province is not mistaken for
      * Isabela City.
@@ -180,19 +166,9 @@ class PhilippineAddress
     public static function allProvinces(): array
     {
         return Cache::remember('psgc.provinces.all', now()->addDay(), fn () => Province::query()
-            ->join('psgc_regions', 'psgc_provinces.region_code', '=', 'psgc_regions.code')
-            ->orderBy('psgc_provinces.name')
-            ->get(['psgc_provinces.code', 'psgc_provinces.name', 'psgc_provinces.kind', 'psgc_regions.name as region_name'])
-            ->map(fn ($p) => ['code' => $p->code, 'name' => $p->name, 'kind' => $p->kind, 'region_name' => $p->region_name])
-            ->all());
-    }
-
-    public static function provincesOf(string $regionCode): array
-    {
-        return Cache::remember("psgc.provinces.{$regionCode}", now()->addDay(), fn () => Province::where('region_code', $regionCode)
             ->orderBy('name')
-            ->get(['code', 'name', 'kind'])
-            ->map(fn ($p) => ['code' => $p->code, 'name' => $p->name, 'kind' => $p->kind])
+            ->get(['code', 'name', 'kind', 'region_name'])
+            ->map(fn ($p) => ['code' => $p->code, 'name' => $p->name, 'kind' => $p->kind, 'region_name' => $p->region_name])
             ->all());
     }
 

@@ -44,16 +44,17 @@ class PsgcSeeder extends Seeder
         // Children first, so nothing is left pointing at a parent that has
         // been deleted while this runs.
         Schema::disableForeignKeyConstraints();
-        foreach (['psgc_barangays', 'psgc_cities_municipalities', 'psgc_provinces', 'psgc_regions'] as $table) {
+        foreach (['psgc_barangays', 'psgc_cities_municipalities', 'psgc_provinces'] as $table) {
             DB::table($table)->delete();
         }
 
-        $this->fill('psgc_regions', $data['regions'], fn ($r) => [
-            'code' => $r[0], 'name' => $r[1], 'short_name' => $r[2] ?: null,
-        ]);
+        // Regions are not a table of their own: nothing selects from them,
+        // and the one thing still wanted - the name - rides on the province.
+        $regionNames = array_column($data['regions'], 1, 0);
 
         $this->fill('psgc_provinces', $data['provinces'], fn ($r) => [
-            'code' => $r[0], 'name' => $r[1], 'region_code' => $r[2], 'kind' => $r[3],
+            'code' => $r[0], 'name' => $r[1], 'region_code' => $r[2],
+            'region_name' => $regionNames[$r[2]] ?? null, 'kind' => $r[3],
         ]);
 
         $this->fill('psgc_cities_municipalities', $data['cities'], fn ($r) => [
@@ -66,9 +67,9 @@ class PsgcSeeder extends Seeder
         Schema::enableForeignKeyConstraints();
 
         $this->command?->info(sprintf(
-            'PSGC loaded: %d regions, %d provinces, %d cities/municipalities, %d barangays.',
-            count($data['regions']),
+            'PSGC loaded: %d provinces (across %d regions), %d cities/municipalities, %d barangays.',
             count($data['provinces']),
+            count($data['regions']),
             count($data['cities']),
             count($data['barangays'])
         ));

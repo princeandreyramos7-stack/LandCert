@@ -58,8 +58,14 @@ class HandleInertiaRequests extends Middleware
                     'user_type' => $request->user()->user_type,
                     'roles' => $request->user()->roles,
                     'avatar_url' => $request->user()->avatar_url,
-                    // The application form starts with these filled in.
+                    // The application form starts with these filled in - the
+                    // codes as well as the line, so the address picker opens
+                    // on the applicant's own barangay rather than empty.
                     'address' => $request->user()->address,
+                    'address_province_code' => $request->user()->address_province_code,
+                    'address_city_code' => $request->user()->address_city_code,
+                    'address_barangay_code' => $request->user()->address_barangay_code,
+                    'address_street' => $request->user()->address_street,
                     'contact_number' => $request->user()->contact_number,
                 ] : null,
             ],

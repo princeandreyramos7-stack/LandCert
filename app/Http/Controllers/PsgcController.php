@@ -7,8 +7,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * The address pickers' reference list: the regions, and each level under the
- * one chosen above it.
+ * The address pickers' reference list: every province, and each level under
+ * the one chosen above it.
  *
  * Only a code and a name go out - this is a published government list, not
  * anyone's data, and nothing else about the rows is any of the browser's
@@ -21,22 +21,10 @@ class PsgcController extends Controller
     /** How long a browser may keep a list. A day, matching the server-side cache. */
     private const MAX_AGE = 86400;
 
-    public function regions(): JsonResponse
-    {
-        return $this->cached(PhilippineAddress::regions());
-    }
-
     /** Every province in the country: the address form starts here. */
     public function provinceIndex(): JsonResponse
     {
         return $this->cached(PhilippineAddress::allProvinces());
-    }
-
-    public function provinces(Request $request, string $region): JsonResponse
-    {
-        $this->assertCode($region);
-
-        return $this->cached(PhilippineAddress::provincesOf($region));
     }
 
     public function cities(Request $request, string $province): JsonResponse

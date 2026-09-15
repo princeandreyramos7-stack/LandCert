@@ -100,18 +100,16 @@ abstract class TestCase extends BaseTestCase
      * The five address fields a submission needs, pointing at Alibagu,
      * City of Ilagan.
      *
-     * Only the four PSGC rows that address runs through are inserted, not the
+     * Only the three PSGC rows that address runs through are inserted, not the
      * country's 42,000 barangays: a test that merely has to file an
      * application should not pay for the whole reference list. Tests that are
      * *about* the address seed PsgcSeeder properly (PhilippineAddressTest).
      */
     protected function addressFields(string $prefix = 'applicant_address'): array
     {
-        DB::table('psgc_regions')->insertOrIgnore([
-            'code' => '020000000', 'name' => 'Cagayan Valley', 'short_name' => 'Region II',
-        ]);
         DB::table('psgc_provinces')->insertOrIgnore([
-            'code' => '023100000', 'name' => 'Isabela', 'region_code' => '020000000', 'kind' => 'province',
+            'code' => '023100000', 'name' => 'Isabela', 'region_code' => '020000000',
+            'region_name' => 'Cagayan Valley', 'kind' => 'province',
         ]);
         DB::table('psgc_cities_municipalities')->insertOrIgnore([
             'code' => '023114000', 'name' => 'City of Ilagan', 'province_code' => '023100000', 'is_city' => true,

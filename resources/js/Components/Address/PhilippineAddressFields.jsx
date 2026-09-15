@@ -61,6 +61,8 @@ export function PhilippineAddressFields({
     legend,
     /** The address already on file, when it predates the picker. */
     currentText = "",
+    /** A line under the heading, for when the address is not compulsory. */
+    note = "",
     disabled = false,
 }) {
     const field = (part) => `${prefix}_${part}`;
@@ -150,6 +152,8 @@ export function PhilippineAddressFields({
                     <MapPin className="h-4 w-4 text-[#0d1f5c]" /> {legend} {star}
                 </legend>
             )}
+
+            {note && <p className="mb-3 px-1 text-xs text-gray-500">{note}</p>}
 
             {currentText && (
                 <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">

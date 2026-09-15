@@ -2,7 +2,8 @@ import { useState } from 'react';
 import InputError from '@/Components/InputError';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { User, Mail, MapPin, Phone, Lock, Eye, EyeOff, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { PhilippineAddressFields } from '@/Components/Address/PhilippineAddressFields';
+import { User, Mail, Phone, Lock, Eye, EyeOff, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 
 /* ── Reusable field wrapper ─────────────────────────────────────── */
 function Field({ label, required, hint, error, children }) {
@@ -49,7 +50,12 @@ export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
-        address: '',
+        // The address is picked, not typed (see PhilippineAddressFields); the
+        // server composes the one line stored on the account from these.
+        address_province_code: '',
+        address_city_code: '',
+        address_barangay_code: '',
+        address_street: '',
         contact_number: '',
         password: '',
         password_confirmation: '',
@@ -106,17 +112,17 @@ export default function Register() {
                     </div>
                 </Field>
 
-                {/* Address */}
-                <Field label="Address" error={errors.address}>
-                    <div className="relative">
-                        <div className={iconCls}><MapPin className="h-4 w-4 text-gray-400"/></div>
-                        <input id="address" type="text" name="address" value={data.address}
-                            autoComplete="address"
-                            placeholder="Complete address"
-                            className={inputCls(errors.address)}
-                            onChange={(e) => setData('address', e.target.value)}/>
-                    </div>
-                </Field>
+                {/* Address — optional here, but picked from the official list
+                    when given, so it can start the application form off. */}
+                <PhilippineAddressFields
+                    legend="Address"
+                    prefix="address"
+                    values={data}
+                    errors={errors}
+                    onChange={setData}
+                    required={false}
+                    note="Optional. Filling it in now saves typing it on every application."
+                />
 
                 {/* Contact Number */}
                 <Field label="Contact Number" hint="Format: 09XXXXXXXXX (11 digits)" error={errors.contact_number}>

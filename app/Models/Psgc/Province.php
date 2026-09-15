@@ -3,12 +3,15 @@
 namespace App\Models\Psgc;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A province, or the thing standing in its place: one of Metro Manila's four
  * districts, or a city that reports straight to its region. `kind` says which.
+ *
+ * The region is carried here as a name rather than kept in a table of its
+ * own: nothing selects a region, but the name still labels a province in the
+ * dropdown and stands in for it in a written Metro Manila address.
  */
 class Province extends Model
 {
@@ -17,11 +20,6 @@ class Province extends Model
     protected $keyType = 'string';
     public $incrementing = false;
     public $timestamps = false;
-
-    public function region(): BelongsTo
-    {
-        return $this->belongsTo(Region::class, 'region_code', 'code');
-    }
 
     public function cities(): HasMany
     {

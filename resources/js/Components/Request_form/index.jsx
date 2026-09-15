@@ -55,12 +55,12 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         // free-text value rides along as `_legacy` so an application filed
         // before the picker can still show what is on file while it is
         // being chosen again.
-        applicant_address_province_code: existingApplication?.applicant_address_province_code || "",
-        applicant_address_city_code: existingApplication?.applicant_address_city_code || "",
-        applicant_address_barangay_code: existingApplication?.applicant_address_barangay_code || "",
-        applicant_address_street: existingApplication?.applicant_address_street || "",
+        applicant_address_province_code: existingApplication?.applicant_address_province_code || me.address_province_code || "",
+        applicant_address_city_code: existingApplication?.applicant_address_city_code || me.address_city_code || "",
+        applicant_address_barangay_code: existingApplication?.applicant_address_barangay_code || me.address_barangay_code || "",
+        applicant_address_street: existingApplication?.applicant_address_street || me.address_street || "",
         applicant_address_legacy:
-            existingApplication?.applicant_address_barangay_code
+            existingApplication?.applicant_address_barangay_code || me.address_barangay_code
                 ? ""
                 : existingApplication?.applicant_address || me.address || "",
         corporation_address: existingApplication?.corporation_address || "",

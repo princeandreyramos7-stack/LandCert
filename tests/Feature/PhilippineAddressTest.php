@@ -27,7 +27,6 @@ class PhilippineAddressTest extends TestCase
     private const REGION_CAGAYAN_VALLEY = '020000000';
     private const PROVINCE_ISABELA = '023100000';
     private const CITY_ILAGAN = '023114000';
-    private const REGION_NCR = '130000000';
 
     protected function setUp(): void
     {
@@ -37,7 +36,7 @@ class PhilippineAddressTest extends TestCase
 
     public function test_the_whole_country_is_on_file(): void
     {
-        $this->assertDatabaseCount('psgc_regions', 17);
+        $this->assertDatabaseCount('psgc_provinces', 87);
         $this->assertDatabaseCount('psgc_cities_municipalities', 1634);
         // Every barangay in the Philippines, not a sample.
         $this->assertGreaterThan(41000, \DB::table('psgc_barangays')->count());
@@ -49,21 +48,19 @@ class PhilippineAddressTest extends TestCase
         $this->assertSame(0, \DB::table('psgc_cities_municipalities as c')
             ->leftJoin('psgc_provinces as p', 'c.province_code', '=', 'p.code')
             ->whereNull('p.code')->count(), 'every city belongs to a province-level entry');
-        $this->assertSame(0, \DB::table('psgc_provinces as p')
-            ->leftJoin('psgc_regions as r', 'p.region_code', '=', 'r.code')
-            ->whereNull('r.code')->count(), 'every province belongs to a region');
+        $this->assertSame(0, \DB::table('psgc_provinces')->whereNull('region_name')->count(), 'every province names its region');
     }
 
     public function test_each_list_offers_only_what_sits_under_the_one_above(): void
     {
         $applicant = $this->userOf('applicant');
 
-        $provinces = $this->actingAs($applicant)
-            ->getJson(route('psgc.provinces', self::REGION_CAGAYAN_VALLEY))
-            ->assertOk()->json('data');
+        $provinces = collect($this->actingAs($applicant)
+            ->getJson(route('psgc.provinces.index'))
+            ->assertOk()->json('data'));
         $this->assertEqualsCanonicalizing(
             ['Batanes', 'Cagayan', 'Isabela', 'Nueva Vizcaya', 'Quirino'],
-            array_column($provinces, 'name')
+            $provinces->where('region_name', 'Cagayan Valley')->pluck('name')->all()
         );
 
         $cities = $this->actingAs($applicant)
@@ -87,9 +84,11 @@ class PhilippineAddressTest extends TestCase
         // NCR has no provinces at all. Without something standing in their
         // place the cascade would dead-end and no Manila address could be
         // filed, so its four districts sit at that level.
-        $districts = $this->actingAs($this->userOf('applicant'))
-            ->getJson(route('psgc.provinces', self::REGION_NCR))
-            ->assertOk()->json('data');
+        $districts = collect($this->actingAs($this->userOf('applicant'))
+            ->getJson(route('psgc.provinces.index'))
+            ->assertOk()->json('data'))
+            ->where('region_name', 'NCR')
+            ->values();
 
         $this->assertCount(4, $districts);
         $this->assertSame('district', $districts[0]['kind']);
@@ -117,7 +116,7 @@ class PhilippineAddressTest extends TestCase
     {
         // "12 Mabini St., Barangay 1, City of Manila, First District, NCR" is
         // not how anyone writes their address.
-        $district = PhilippineAddress::provincesOf(self::REGION_NCR)[0];
+        $district = collect(PhilippineAddress::allProvinces())->firstWhere('region_name', 'NCR');
         $city = PhilippineAddress::citiesOf($district['code'])[0];
         $barangay = PhilippineAddress::barangaysOf($city['code'])[0];
 
@@ -215,9 +214,11 @@ class PhilippineAddressTest extends TestCase
             ]);
     }
 
-    public function test_the_lists_are_for_signed_in_people_only(): void
+    public function test_the_lists_are_open_because_create_account_needs_them(): void
     {
-        $this->get(route('psgc.regions'))->assertRedirect('/login');
+        // Create Account asks for an address too, and this is published
+        // government reference data - not anybody's record.
+        $this->getJson(route('psgc.provinces.index'))->assertOk();
     }
 
     public function test_the_province_list_covers_the_whole_country_and_names_its_region(): void
@@ -248,6 +249,76 @@ class PhilippineAddressTest extends TestCase
             ->assertRedirect(route('my-applications'));
 
         $this->assertSame(self::REGION_CAGAYAN_VALLEY, Applicant::latest('id')->first()->address_region_code);
+    }
+
+    public function test_create_account_takes_a_picked_address_and_composes_it(): void
+    {
+        $alibagu = collect(PhilippineAddress::barangaysOf(self::CITY_ILAGAN))->firstWhere('name', 'Alibagu');
+
+        $this->post('/register', [
+            'name' => 'Juan Dela Cruz',
+            'email' => 'juan@example.test',
+            'password' => 'Password-2026!',
+            'password_confirmation' => 'Password-2026!',
+            'address_province_code' => self::PROVINCE_ISABELA,
+            'address_city_code' => self::CITY_ILAGAN,
+            'address_barangay_code' => $alibagu['code'],
+            'address_street' => '9 Bonifacio St.',
+        ])->assertRedirect();
+
+        $user = \App\Models\User::where('email', 'juan@example.test')->firstOrFail();
+        $this->assertSame('9 Bonifacio St., Alibagu, City of Ilagan, Isabela', $user->address);
+        $this->assertSame($alibagu['code'], $user->address_barangay_code);
+        $this->assertSame(self::REGION_CAGAYAN_VALLEY, $user->address_region_code);
+    }
+
+    public function test_create_account_works_without_an_address(): void
+    {
+        // An account is useful without one; it is asked for so an application
+        // can start from it, not because registering depends on it.
+        $this->post('/register', [
+            'name' => 'No Address',
+            'email' => 'noaddress@example.test',
+            'password' => 'Password-2026!',
+            'password_confirmation' => 'Password-2026!',
+        ])->assertRedirect();
+
+        $this->assertNull(\App\Models\User::where('email', 'noaddress@example.test')->firstOrFail()->address);
+    }
+
+    public function test_create_account_refuses_half_an_address(): void
+    {
+        // Half an address is worse than none: once a province is chosen the
+        // rest has to follow, and has to hang together.
+        $this->from('/register')->post('/register', [
+            'name' => 'Half Address',
+            'email' => 'half@example.test',
+            'password' => 'Password-2026!',
+            'password_confirmation' => 'Password-2026!',
+            'address_province_code' => self::PROVINCE_ISABELA,
+        ])->assertRedirect('/register')
+          ->assertSessionHasErrors(['address_city_code', 'address_barangay_code', 'address_street']);
+
+        $this->assertDatabaseMissing('users', ['email' => 'half@example.test']);
+    }
+
+    public function test_create_account_refuses_a_barangay_from_another_city(): void
+    {
+        $elsewhere = \DB::table('psgc_barangays')->where('city_code', '!=', self::CITY_ILAGAN)->value('code');
+
+        $this->from('/register')->post('/register', [
+            'name' => 'Mismatched',
+            'email' => 'mismatch@example.test',
+            'password' => 'Password-2026!',
+            'password_confirmation' => 'Password-2026!',
+            'address_province_code' => self::PROVINCE_ISABELA,
+            'address_city_code' => self::CITY_ILAGAN,
+            'address_barangay_code' => $elsewhere,
+            'address_street' => '1 Test St.',
+        ])->assertRedirect('/register')
+          ->assertSessionHasErrors('address_barangay_code');
+
+        $this->assertDatabaseMissing('users', ['email' => 'mismatch@example.test']);
     }
 
     /** A complete, valid submission; $overrides replaces any part of it. */
