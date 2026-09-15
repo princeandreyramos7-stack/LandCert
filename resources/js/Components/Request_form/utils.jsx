@@ -106,6 +106,8 @@ const validateNumber = (value, fieldName, min = 0, max = null) => {
  * An address picked from the PSGC list: all four codes and the street.
  * The server checks the chain as well (App\Support\PhilippineAddress) —
  * this is only so the applicant is told before the form is sent.
+ * 
+ * Street is always optional - the barangay, city, and province are enough.
  */
 export const validatePhilippineAddress = (data, prefix, label) => {
     const errors = [];
@@ -117,9 +119,9 @@ export const validatePhilippineAddress = (data, prefix, label) => {
 
     for (const [, word] of missing) errors.push(`${label} ${word} is required`);
 
+    // Street is optional - validate only if provided
     const street = String(data[`${prefix}_street`] || "").trim();
-    if (!street) errors.push(`${label} street is required`);
-    else if (street.length > 255) errors.push(`${label} street must not exceed 255`);
+    if (street && street.length > 255) errors.push(`${label} street must not exceed 255 characters`);
 
     return errors;
 };

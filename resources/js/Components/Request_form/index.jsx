@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm, usePage, router } from "@inertiajs/react";
 import { useToast } from "@/Components/ui/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
@@ -36,6 +36,8 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     const [submitErrorKind, setSubmitErrorKind] = useState(null);
     // Inline marks from the step validators, keyed by field (see validateCurrentStep).
     const [stepErrors, setStepErrors] = useState({});
+    // Track previous project type to detect changes
+    const previousProjectType = useRef(existingApplication?.project_type || "");
     const { toast } = useToast();
     const page = usePage();
     const flash = page.props.flash || {};
@@ -163,6 +165,27 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         }
     }, [data.project_type, data.project_nature_duration, data.project_nature_years]);
 
+    // When the project type changes, clear completed steps (except step 1)
+    // so the user must go through validation again for the new application type
+    useEffect(() => {
+        const currentType = String(data.project_type || "").toUpperCase();
+        const prevType = String(previousProjectType.current || "").toUpperCase();
+        
+        // Only reset if the type actually changed and it's not the initial load
+        if (prevType && currentType !== prevType) {
+            // Clear completed steps except step 1 (applicant info is still valid)
+            setCompletedSteps((prev) => prev.filter(step => step === 1));
+            
+            // If currently on step 3 or 4, move back to step 2
+            if (currentStep === 3 || currentStep === 4) {
+                setCurrentStep(2);
+            }
+        }
+        
+        // Update the ref for next comparison
+        previousProjectType.current = data.project_type;
+    }, [data.project_type]);
+
     // A Zoning Certification has no project to describe: the applicant fills in
     // their details and uploads the documents, so steps 2 and 3 drop out.
     const activeSteps = useMemo(
@@ -175,10 +198,19 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     const stepPosition = Math.max(1, activeSteps.indexOf(currentStep) + 1);
 
     // If the category changes to one with fewer steps while standing on a step
-    // that no longer exists, fall back to the last step that does.
+    // that no longer exists, fall back to step 2 (or step 1 if step 2 doesn't exist).
+    // This ensures a smooth transition when switching between ZC and other types.
+    // Also clear completed steps so user must go through validation again.
     useEffect(() => {
         if (!activeSteps.includes(currentStep)) {
-            setCurrentStep(activeSteps[activeSteps.length - 1]);
+            // When switching application types, reset to step 2 if it exists,
+            // otherwise go to the first available step
+            const targetStep = activeSteps.includes(2) ? 2 : activeSteps[0];
+            setCurrentStep(targetStep);
+            
+            // Clear completed steps - user must validate all steps again
+            // Keep only step 1 as completed if it was completed
+            setCompletedSteps((prev) => prev.filter(step => step === 1));
         }
     }, [activeSteps, currentStep]);
 

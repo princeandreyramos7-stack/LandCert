@@ -176,6 +176,7 @@ export function SuperAdminSidebar({ ...props }) {
                                     (currentPath.startsWith(item.url + "/") &&
                                         !group.items.some(
                                             (other) =>
+                                                other.url &&
                                                 other.url !== item.url &&
                                                 other.url.length >
                                                     item.url.length &&
