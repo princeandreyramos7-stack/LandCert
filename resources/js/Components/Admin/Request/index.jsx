@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { useToast } from "@/Components/ui/use-toast";
-import SealWatermark from "@/Components/SealWatermark";
 import { ApplicationsBoard } from "@/Components/Applications/ApplicationsBoard";
 
 /**
@@ -17,9 +16,6 @@ export function AdminRequestList({ requests, flash = {} }) {
     }, [flash, toast]);
 
     return (
-        <div className="relative">
-            <SealWatermark />
-            <ApplicationsBoard requests={requests} role="admin" exportRoute="admin.export.requests" />
-        </div>
+        <ApplicationsBoard requests={requests} role="admin" exportRoute="admin.export.requests" />
     );
 }
