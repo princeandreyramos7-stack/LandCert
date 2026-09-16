@@ -34,6 +34,32 @@ class Report extends Model
     ];
 
     /**
+     * When the Zoning Administrator returns an application, the reason is
+     * kept on the report's admin_notes behind this prefix (see
+     * SuperAdminController::rejectRequest) — the report goes back to
+     * "pending", so the evaluation alone cannot say it came back.
+     */
+    public const RETURNED_NOTE_PREFIX = 'Returned by the Zoning Administrator: ';
+
+    /**
+     * The reason the Administrator sent this application back to the Zoning
+     * Officer, or null if it is not sitting returned right now.
+     */
+    public function returnedReason(): ?string
+    {
+        if ($this->evaluation !== 'pending') {
+            return null;
+        }
+
+        $notes = (string) $this->admin_notes;
+        if (!str_starts_with($notes, self::RETURNED_NOTE_PREFIX)) {
+            return null;
+        }
+
+        return trim(substr($notes, strlen(self::RETURNED_NOTE_PREFIX))) ?: null;
+    }
+
+    /**
      * Get the request that owns the report (using normalized structure).
      */
     public function request(): BelongsTo

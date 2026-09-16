@@ -5,6 +5,7 @@ import { Badge } from "@/Components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Switch } from "@/Components/ui/switch";
 import { RequirementsChecklist } from "@/Components/RequirementsTable";
+import OfficerDecision from "@/Components/Applications/OfficerDecision";
 import {
     User,
     Building2,
@@ -85,21 +86,34 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
     const [projectType, setProjectType] = useState(request.project_type || '');
     const [savingProjectType, setSavingProjectType] = useState(false);
 
-    // Confirmation dialog for Mark as Reviewed
-    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-
     // ============================================
     // STATE FROM DocumentVerification (Requirements)
     // ============================================
     const [selectedRequirements, setSelectedRequirements] = useState(() => {
         return request.verified_requirements || {};
     });
-    
-    const [titleNumber, setTitleNumber] = useState(request.title_number || "");
+
+    // What Property Details saves and what "Mark as Reviewed" needs on the
+    // server: the lot number (the "Title Number (TCT/CCT)" field) and the tax
+    // declaration number. Seeded from lot_number, not title_number — the editor
+    // writes the former, and reading the latter left the decision card claiming
+    // the number was missing right after the officer had saved it.
+    const [titleNumber, setTitleNumber] = useState(request.lot_number || request.title_number || "");
     const [taxDecNo, setTaxDecNo] = useState(request.tax_declaration_no || "");
-    const [isSaving, setIsSaving] = useState(false);
-    const [isMarking, setIsMarking] = useState(false);
     const [showAutoFillSuggestion, setShowAutoFillSuggestion] = useState(false);
+
+    // "Document Verification" in the applications menu and the workflow
+    // notifications land here with ?section=requirements (a query, not a
+    // fragment: the id-bearing link redirects to this clean address, and a
+    // fragment does not survive that under Inertia). The checklist is rendered
+    // by React after load, so the scroll has to happen here, not in the browser.
+    useEffect(() => {
+        const wanted =
+            new URLSearchParams(window.location.search).get("section") === "requirements" ||
+            window.location.hash === "#requirements";
+        if (!wanted) return;
+        document.getElementById("requirements")?.scrollIntoView({ block: "start" });
+    }, []);
 
     // ============================================
     // COMMON COMPUTED VALUES
@@ -169,20 +183,27 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
     const handleSaveProjectType = async () => {
         setSavingProjectType(true);
         try {
-            await axios.post(`/admin/requests/${request.id}/application-details`, {
+            // update-project-type, not application-details: the latter only
+            // knows the application number and project cost and dropped the
+            // type on the floor, so "Mark as Reviewed" kept refusing for want
+            // of an Application Type the officer had just saved.
+            await axios.post(`/admin/update-project-type/${request.id}`, {
                 project_type: projectType,
             });
             request.project_type = projectType;
             toast({
                 title: "Success!",
-                description: "Project type updated successfully.",
+                description: "Application type updated successfully.",
             });
             setEditingProjectType(false);
         } catch (error) {
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: error.response?.data?.message || "Failed to update project type.",
+                description:
+                    error.response?.data?.errors?.project_type?.[0] ||
+                    error.response?.data?.message ||
+                    "Failed to update the application type.",
             });
         } finally {
             setSavingProjectType(false);
@@ -192,88 +213,23 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
     // ============================================
     // EVENT HANDLERS - Requirements Verification
     // ============================================
+    // Each toggle is saved as it is flipped. Only the checklist goes here: the
+    // lot and tax numbers are saved by Property Details (certificate-details).
     const handleRequirementChange = async (reqId, reqName, isChecked) => {
         const updated = { ...selectedRequirements, [reqId]: isChecked };
         setSelectedRequirements(updated);
-        
-        // Auto-save to database
+
         try {
             await axios.post(`/admin/requests/${request.id}/verify-requirements`, {
                 verified_requirements: updated,
-                title_number: titleNumber,
-                tax_declaration_no: taxDecNo,
             });
         } catch (error) {
             console.error('Error saving requirement verification:', error);
-        }
-    };
-
-    const handleSave = async () => {
-        setIsSaving(true);
-        try {
-            await axios.post(`/admin/requests/${request.id}/verify-requirements`, {
-                verified_requirements: selectedRequirements,
-                title_number: titleNumber,
-                tax_declaration_no: taxDecNo,
-            });
-            
-            request.verified_requirements_json = JSON.stringify(selectedRequirements);
-            request.title_number = titleNumber;
-            request.tax_declaration_no = taxDecNo;
-
-            toast({
-                title: "Saved!",
-                description: "Requirements verification data saved successfully.",
-            });
-        } catch (error) {
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: error.response?.data?.message || "Failed to save requirements data.",
+                description: "Failed to save the requirement's verified status.",
             });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleMarkAsReviewed = async () => {
-        if (!titleNumber || !taxDecNo) {
-            toast({
-                variant: "destructive",
-                title: "Missing Required Fields",
-                description: "Title Number and Tax Declaration No. are required before marking as reviewed.",
-            });
-            return;
-        }
-
-        // Close dialog first
-        setShowConfirmDialog(false);
-
-        setIsMarking(true);
-        try {
-            await axios.post('/admin/review-application', {
-                request_id: request.id,
-                action: 'reviewed',
-                payment_amount: 0, // Default to 0, admin can set later
-                admin_notes: '', // Optional notes
-            });
-
-            toast({
-                title: "Marked as Reviewed!",
-                description: "Application has been marked as reviewed and moved forward.",
-            });
-
-            setTimeout(() => {
-                router.visit("/admin/requests");
-            }, 1500);
-        } catch (error) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: error.response?.data?.message || "Failed to mark as reviewed.",
-            });
-        } finally {
-            setIsMarking(false);
         }
     };
 
@@ -460,89 +416,20 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
                             </CardContent>
                         </Card>
 
-                        {/* Action Buttons */}
-                        <div className="flex justify-end items-center gap-4 pb-6">
-                            <Button
-                                onClick={() => setShowConfirmDialog(true)}
-                                disabled={isMarking || !titleNumber || !taxDecNo}
-                                className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                            >
-                                {isMarking ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Marking as Verified...
-                                    </>
-                                ) : (
-                                    <>
-                                        <CheckCircle2 className="h-4 w-4" />
-                                        Mark as Verified
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-
-                        {(!titleNumber || !taxDecNo) && (
-                            <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 flex items-start gap-3 mb-6">
-                                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <h4 className="text-sm font-semibold text-amber-900">Required Fields Missing</h4>
-                                    <p className="text-sm text-amber-800 mt-1">
-                                        Title Number (TCT/CCT) and Tax Declaration No. must be set before this application can be marked as reviewed.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
+                        {/* The Zoning Officer's decision: Mark as Reviewed (with the
+                            Treasury fee) or Denied. See Components/Applications/OfficerDecision. */}
+                        <OfficerDecision
+                            request={request}
+                            projectType={projectType}
+                            lotNumber={titleNumber}
+                            taxDeclarationNo={taxDecNo}
+                            verifiedRequirements={selectedRequirements}
+                            uploadedRequirements={uploadedRequirements}
+                        />
                     </div>
 
             </div>
-            
-            {/* Confirmation Dialog */}
-            {showConfirmDialog && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-                        <div className="p-6">
-                            <div className="flex items-start gap-4">
-                                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                                    <CheckCircle2 className="h-6 w-6 text-green-600" />
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                        Mark as Reviewed?
-                                    </h3>
-                                    <p className="text-sm text-gray-600">
-                                        Are you sure you want to mark this application as reviewed? This will move the application forward in the workflow.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 rounded-b-lg">
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowConfirmDialog(false)}
-                                disabled={isMarking}
-                                className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleMarkAsReviewed}
-                                disabled={isMarking}
-                                className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                                {isMarking ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        Processing...
-                                    </>
-                                ) : (
-                                    'Confirm'
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            
+
             <Toaster />
         </AdminLayout>
     );

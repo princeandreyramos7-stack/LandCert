@@ -34,13 +34,21 @@ class ApplicationsList
             ->leftJoin('locations', 'requests.id', '=', 'locations.request_id')
             ->leftJoin('users', 'requests.user_id', '=', 'users.id')
             ->whereNull('requests.deleted_at');
-        
-        // Super Admin should not see applications in "pending" or "for_verification" status
-        // Those are for the Zoning Officer to process first
+
+        // The status every screen shows: the officer's evaluation while the
+        // application is being decided, the request's own status once it is in
+        // the payment/certificate lifecycle (Request::deriveStatus, in SQL).
+        $derivedStatus = "CASE WHEN requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN requests.status ELSE COALESCE(reports.evaluation, requests.status) END";
+
+        // The Zoning Administrator only sees what the Zoning Officer has
+        // already dealt with. Judged on the derived status, not the raw one:
+        // an application the applicant resubmits after a denial is stored as
+        // in_applicant with its evaluation back to pending, and on the raw
+        // status it slipped into the administrator's list as "Pending Review".
         if ($role === 'super_admin') {
-            $query->whereNotIn('requests.status', ['pending', 'for_verification']);
+            $query->whereRaw("$derivedStatus NOT IN ('pending', 'for_verification')");
         }
-        
+
         return $query->select([
                 'requests.id',
                 'requests.id as application_id',
@@ -62,7 +70,7 @@ class ApplicationsList
                 'locations.province as project_location_province',
                 'users.name as user_name',
                 'users.email as user_email',
-                DB::raw("CASE WHEN requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN requests.status ELSE COALESCE(reports.evaluation, requests.status) END as status"),
+                DB::raw("$derivedStatus as status"),
             ])
             ->orderByDesc('requests.created_at')
             ->get();

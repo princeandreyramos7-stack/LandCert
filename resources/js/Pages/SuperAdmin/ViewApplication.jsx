@@ -5,6 +5,7 @@ import { Badge } from "@/Components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Switch } from "@/Components/ui/switch";
 import { RequirementsChecklist } from "@/Components/RequirementsTable";
+import AdministratorDecision from "@/Components/Applications/AdministratorDecision";
 import {
     User,
     Building2,
@@ -34,6 +35,7 @@ import { useToast } from "@/Components/ui/use-toast";
 import { Toaster } from "@/Components/ui/toaster";
 import axios from "axios";
 import { getStatusConfig } from "@/lib/applicationStatus";
+import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 
 /**
  * Display-only formatting for peso amount fields.
@@ -75,21 +77,30 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
     );
     const [savingProjectCost, setSavingProjectCost] = useState(false);
 
-    // Confirmation dialog for Mark as Reviewed
-    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-
     // ============================================
     // STATE FROM DocumentVerification (Requirements)
     // ============================================
     const [selectedRequirements, setSelectedRequirements] = useState(() => {
         return request.verified_requirements || {};
     });
-    
-    const [titleNumber, setTitleNumber] = useState(request.title_number || "");
+
+    // Seeded from lot_number: that is the column Property Details writes.
+    const [titleNumber, setTitleNumber] = useState(request.lot_number || request.title_number || "");
     const [taxDecNo, setTaxDecNo] = useState(request.tax_declaration_no || "");
-    const [isSaving, setIsSaving] = useState(false);
-    const [isMarking, setIsMarking] = useState(false);
     const [showAutoFillSuggestion, setShowAutoFillSuggestion] = useState(false);
+
+    // "Document Verification" in the applications menu and the workflow
+    // notifications land here with ?section=requirements (a query, not a
+    // fragment: the id-bearing link redirects to this clean address, and a
+    // fragment does not survive that under Inertia). The checklist is rendered
+    // by React after load, so the scroll has to happen here, not in the browser.
+    useEffect(() => {
+        const wanted =
+            new URLSearchParams(window.location.search).get("section") === "requirements" ||
+            window.location.hash === "#requirements";
+        if (!wanted) return;
+        document.getElementById("requirements")?.scrollIntoView({ block: "start" });
+    }, []);
 
     // ============================================
     // COMMON COMPUTED VALUES
@@ -133,91 +144,27 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
         }
     };
 
+
     // ============================================
     // EVENT HANDLERS - Requirements Verification
     // ============================================
+    // Each toggle is saved as it is flipped. Only the checklist goes here: the
+    // lot and tax numbers are saved by Property Details (certificate-details).
     const handleRequirementChange = async (reqId, reqName, isChecked) => {
         const updated = { ...selectedRequirements, [reqId]: isChecked };
         setSelectedRequirements(updated);
-        
-        // Auto-save to database
+
         try {
-            await axios.post(`/admin/requests/${request.id}/verify-requirements`, {
+            await axios.post(`/super-admin/requests/${request.id}/verify-requirements`, {
                 verified_requirements: updated,
-                title_number: titleNumber,
-                tax_declaration_no: taxDecNo,
             });
         } catch (error) {
             console.error('Error saving requirement verification:', error);
-        }
-    };
-
-    const handleSave = async () => {
-        setIsSaving(true);
-        try {
-            await axios.post(`/admin/requests/${request.id}/verify-requirements`, {
-                verified_requirements: selectedRequirements,
-                title_number: titleNumber,
-                tax_declaration_no: taxDecNo,
-            });
-            
-            request.verified_requirements_json = JSON.stringify(selectedRequirements);
-            request.title_number = titleNumber;
-            request.tax_declaration_no = taxDecNo;
-
-            toast({
-                title: "Saved!",
-                description: "Requirements verification data saved successfully.",
-            });
-        } catch (error) {
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: error.response?.data?.message || "Failed to save requirements data.",
+                description: "Failed to save the requirement's verified status.",
             });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleMarkAsReviewed = async () => {
-        if (!titleNumber || !taxDecNo) {
-            toast({
-                variant: "destructive",
-                title: "Missing Required Fields",
-                description: "Title Number and Tax Declaration No. are required before marking as reviewed.",
-            });
-            return;
-        }
-
-        // Close dialog first
-        setShowConfirmDialog(false);
-
-        setIsMarking(true);
-        try {
-            await axios.post('/super-admin/review-application', {
-                request_id: request.id,
-                action: 'reviewed',
-                payment_amount: 0, // Default to 0, admin can set later
-                admin_notes: '', // Optional notes
-            });
-
-            toast({
-                title: "Marked as Reviewed!",
-                description: "Application has been marked as reviewed and moved forward.",
-            });
-
-            setTimeout(() => {
-                router.visit("/super-admin/requests");
-            }, 1500);
-        } catch (error) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: error.response?.data?.message || "Failed to mark as reviewed.",
-            });
-        } finally {
-            setIsMarking(false);
         }
     };
 
@@ -226,7 +173,7 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
     // RENDER
     // ============================================
     return (
-        <AdminLayout 
+        <SuperAdminLayout 
             title="View Application"
             breadcrumbs={[
                 { label: "Dashboard", href: "/super-admin/dashboard" },
@@ -355,15 +302,20 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
                             </CardContent>
                         </Card>
 
-                        {/* SuperAdmin: No action buttons - read-only view */}
+                        {/* The Zoning Administrator's decision: Approve, or return to the
+                            Zoning Officer. Opens only once the officer has marked the
+                            application reviewed. See Components/Applications/AdministratorDecision. */}
+                        <AdministratorDecision
+                            request={request}
+                            verifiedRequirements={selectedRequirements}
+                            uploadedRequirements={uploadedRequirements}
+                        />
                     </div>
 
             </div>
             
-            {/* SuperAdmin: No confirmation dialog needed */}
-            
             <Toaster />
-        </AdminLayout>
+        </SuperAdminLayout>
     );
 }
 

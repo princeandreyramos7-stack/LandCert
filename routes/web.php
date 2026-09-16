@@ -33,15 +33,6 @@ Route::get('/', function () {
 
 Route::get('/dashboard', [RequestController::class, 'dashboard'])->middleware(['auth', 'verified', 'prevent.back'])->name('dashboard');
 
-/*
- | Every page that used to carry a role prefix and a record id, served from a
- | plain address instead. The id-bearing routes further down are the way in:
- | each records what is being opened and forwards here.
- |
- | Kept out of the role-prefixed groups on purpose — the URL is the same
- | whoever is signed in, and CleanPageController hands off to the controller
- | that already builds the page for that role.
- */
 Route::middleware(['auth', 'prevent.back'])->group(function () {
     foreach (\App\Http\Controllers\CleanPageController::slugs() as $cleanSlug) {
         Route::get('/' . $cleanSlug, [\App\Http\Controllers\CleanPageController::class, 'show'])
@@ -191,12 +182,6 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
         Route::delete('/{certificate}', [CertificateController::class, 'destroy'])->name('destroy');
     });
     
-    // Legacy certificate routes (keep for backward compatibility)
-    Route::get('/certificates-old', [\App\Http\Controllers\SuperAdminController::class, 'certificates'])->name('certificates-old');
-    Route::put('/certificates-old/{certificate}', [\App\Http\Controllers\SuperAdminController::class, 'updateCertificate'])->name('certificates-old.update');
-    Route::post('/certificates-old/{certificate}/mark-ready', [\App\Http\Controllers\SuperAdminController::class, 'markCertificateReady'])->name('certificates-old.mark-ready');
-    Route::post('/certificates-old/{certificate}/release', [\App\Http\Controllers\SuperAdminController::class, 'releaseCertificate'])->name('certificates-old.release');
-    
     // SMS Broadcast + Auto-Templates
     Route::get('/sms', function (\Illuminate\Http\Request $request) { return redirect('/sms-broadcast' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('sms.index');
     Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
@@ -251,8 +236,10 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::get('/users', function (\Illuminate\Http\Request $request) { return redirect('/users' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('users');
     Route::put('/users/{userId}', [AdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{userId}', [AdminController::class, 'deleteUser'])->name('users.delete');
-    Route::post('/update-evaluation/{reportId}', [AdminController::class, 'updateEvaluation'])->name('update-evaluation');
-    Route::delete('/delete-request/{requestId}', [AdminController::class, 'deleteRequest'])->name('delete-request');
+    // No direct evaluation, bulk decision or delete here. The decision is the
+    // two-step one on View Application (officer reviews, administrator
+    // approves); an endpoint that let an officer set "approved" on a report
+    // straight - and mail the applicant - stood beside it, unused by any page.
     
     // NEW: Streamlined Review Workflow
     Route::post('/review-application', [AdminController::class, 'reviewApplication'])->name('review-application');
@@ -290,11 +277,6 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
         Route::delete('/{certificate}', [CertificateController::class, 'destroy'])->name('destroy');
     });
     
-    // Legacy certificate routes (keep for backward compatibility)
-    Route::get('/certificates-old', [AdminController::class, 'certificates'])->name('certificates-old');
-    Route::post('/certificates-old/{certificate}/mark-ready', [AdminController::class, 'markCertificateReady'])->name('certificates-old.mark-ready');
-    Route::post('/certificates-old/{certificate}/release', [AdminController::class, 'releaseCertificate'])->name('certificates-old.release');
-    
     // Export routes
     Route::get('/export/requests', [AdminController::class, 'exportRequests'])->name('export.requests');
     Route::get('/export/users', [AdminController::class, 'exportUsers'])->name('export.users');
@@ -312,11 +294,6 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::post('/requests/{id}/certificate-details', [AdminController::class, 'saveCertificateDetails'])->name('certificate-details');
     Route::get('/requests/{id}/generate-clearance', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'generate-clearance', $id)); })->name('generate-clearance');
     Route::get('/requests/{id}/generate-order-of-payment', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'order-of-payment', $id)); })->name('generate-order-of-payment');
-    
-    // Bulk action routes
-    Route::post('/bulk/approve', [AdminController::class, 'bulkApprove'])->name('bulk.approve');
-    Route::post('/bulk/reject', [AdminController::class, 'bulkReject'])->name('bulk.reject');
-    Route::delete('/bulk/delete', [AdminController::class, 'bulkDelete'])->name('bulk.delete');
     
     // Audit log routes
     Route::get('/audit-logs', function (\Illuminate\Http\Request $request) { return redirect('/audit-logs' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('audit-logs');

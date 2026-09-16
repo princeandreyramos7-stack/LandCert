@@ -44,9 +44,12 @@ export default function NotificationBell({ className = "" }) {
     const [items, setItems] = useState([]);
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [navigating, setNavigating] = useState(false);
 
     // Guards against overlapping polls on a slow connection.
     const inFlight = useRef(false);
+    const markingRead = useRef(false);
+    const fetchingList = useRef(false);
 
     // Determine the notification page URL based on user role
     // /notifications is auth-only and renders in the viewer's own layout, so
@@ -71,6 +74,9 @@ export default function NotificationBell({ className = "" }) {
     }, []);
 
     const fetchList = useCallback(async () => {
+        if (fetchingList.current) return;
+        
+        fetchingList.current = true;
         setLoading(true);
         try {
             const { data } = await axios.get("/notifications/list");
@@ -79,6 +85,7 @@ export default function NotificationBell({ className = "" }) {
             setItems([]);
         } finally {
             setLoading(false);
+            fetchingList.current = false;
         }
     }, []);
 
@@ -98,34 +105,62 @@ export default function NotificationBell({ className = "" }) {
     }, [fetchCount]);
 
     const handleOpenChange = (next) => {
+        // Prevent reopening while navigating or marking as read
+        if (navigating || markingRead.current) {
+            return;
+        }
+
         setOpen(next);
         if (next) fetchList();
     };
 
     const openNotification = async (notification) => {
+        // Prevent multiple clicks
+        if (navigating || markingRead.current) {
+            return;
+        }
+
+        setNavigating(true);
         setOpen(false);
 
         if (!notification.read) {
+            markingRead.current = true;
             try {
                 await axios.post("/notifications/mark-read", { id: notification.id });
                 setCount((c) => Math.max(0, c - 1));
             } catch {
                 // Navigating still matters more than the read flag.
+            } finally {
+                markingRead.current = false;
             }
         }
 
         if (notification.link) {
-            router.visit(notification.link);
+            router.visit(notification.link, {
+                onFinish: () => {
+                    setNavigating(false);
+                },
+                onError: () => {
+                    setNavigating(false);
+                }
+            });
+        } else {
+            setNavigating(false);
         }
     };
 
     const markAllRead = async () => {
+        if (markingRead.current) return;
+        
+        markingRead.current = true;
         try {
             await axios.post("/notifications/mark-all-read");
             setCount(0);
             setItems((list) => list.map((n) => ({ ...n, read: true })));
         } catch {
             // Leave the badge as it is; the next poll reports the truth.
+        } finally {
+            markingRead.current = false;
         }
     };
 
@@ -135,7 +170,8 @@ export default function NotificationBell({ className = "" }) {
                 <button
                     type="button"
                     aria-label={count > 0 ? `${count} unread notifications` : "Notifications"}
-                    className={`relative flex h-8 w-8 items-center justify-center rounded-full text-[#0d1f5c] transition-colors hover:bg-[#0d1f5c]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0d1f5c]/30 ${className}`}
+                    disabled={navigating}
+                    className={`relative flex h-8 w-8 items-center justify-center rounded-full text-[#0d1f5c] transition-colors hover:bg-[#0d1f5c]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0d1f5c]/30 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
                 >
                     <Bell className="h-[18px] w-[18px]" />
                     {count > 0 && (
@@ -146,7 +182,14 @@ export default function NotificationBell({ className = "" }) {
                 </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-[22rem] p-0">
+            <DropdownMenuContent 
+                align="end" 
+                className="w-[22rem] p-0"
+                sideOffset={8}
+                collisionPadding={10}
+                avoidCollisions={true}
+                style={{ maxHeight: 'min(80vh, 500px)' }}
+            >
                 <div className="flex items-center justify-between border-b px-3 py-2">
                     <span className="text-sm font-bold text-[#0d1f5c]">
                         Notifications
@@ -182,7 +225,8 @@ export default function NotificationBell({ className = "" }) {
                                 key={notification.id}
                                 type="button"
                                 onClick={() => openNotification(notification)}
-                                className={`flex w-full gap-2.5 border-b border-gray-50 px-3 py-2.5 text-left transition-colors last:border-b-0 hover:bg-gray-50 ${
+                                disabled={navigating}
+                                className={`flex w-full gap-2.5 border-b border-gray-50 px-3 py-2.5 text-left transition-colors last:border-b-0 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed ${
                                     notification.read ? "" : "bg-blue-50/40"
                                 }`}
                             >

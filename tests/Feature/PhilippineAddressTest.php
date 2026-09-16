@@ -201,6 +201,7 @@ class PhilippineAddressTest extends TestCase
         $this->actingAs($applicant)
             ->from('/request')
             ->post('/request', array_merge($this->submission(), [
+                'applicant_address_region_code' => '',
                 'applicant_address_province_code' => '',
                 'applicant_address_city_code' => '',
                 'applicant_address_barangay_code' => '',
@@ -208,9 +209,9 @@ class PhilippineAddressTest extends TestCase
             ]))
             ->assertRedirect('/request')
             ->assertSessionHasErrors([
+                'applicant_address_region_code',
                 'applicant_address_province_code',
                 'applicant_address_barangay_code',
-                'applicant_address_street',
             ]);
     }
 
@@ -240,7 +241,7 @@ class PhilippineAddressTest extends TestCase
         $this->assertSame('Cagayan Valley', $isabela['region_name']);
     }
 
-    public function test_the_region_is_stored_even_though_it_is_never_asked_for(): void
+    public function test_the_region_is_stored_with_the_address(): void
     {
         $alibagu = collect(PhilippineAddress::barangaysOf(self::CITY_ILAGAN))->firstWhere('name', 'Alibagu');
 
@@ -260,6 +261,8 @@ class PhilippineAddressTest extends TestCase
             'email' => 'juan@example.test',
             'password' => 'Password-2026!',
             'password_confirmation' => 'Password-2026!',
+            'contact_number' => '09171234567',
+            'address_region_code' => self::REGION_CAGAYAN_VALLEY,
             'address_province_code' => self::PROVINCE_ISABELA,
             'address_city_code' => self::CITY_ILAGAN,
             'address_barangay_code' => $alibagu['code'],
@@ -281,6 +284,7 @@ class PhilippineAddressTest extends TestCase
             'email' => 'noaddress@example.test',
             'password' => 'Password-2026!',
             'password_confirmation' => 'Password-2026!',
+            'contact_number' => '09171234567',
         ])->assertRedirect();
 
         $this->assertNull(\App\Models\User::where('email', 'noaddress@example.test')->firstOrFail()->address);
@@ -295,9 +299,11 @@ class PhilippineAddressTest extends TestCase
             'email' => 'half@example.test',
             'password' => 'Password-2026!',
             'password_confirmation' => 'Password-2026!',
+            'contact_number' => '09171234567',
+            'address_region_code' => self::REGION_CAGAYAN_VALLEY,
             'address_province_code' => self::PROVINCE_ISABELA,
         ])->assertRedirect('/register')
-          ->assertSessionHasErrors(['address_city_code', 'address_barangay_code', 'address_street']);
+          ->assertSessionHasErrors(['address_city_code', 'address_barangay_code']);
 
         $this->assertDatabaseMissing('users', ['email' => 'half@example.test']);
     }
@@ -311,6 +317,8 @@ class PhilippineAddressTest extends TestCase
             'email' => 'mismatch@example.test',
             'password' => 'Password-2026!',
             'password_confirmation' => 'Password-2026!',
+            'contact_number' => '09171234567',
+            'address_region_code' => self::REGION_CAGAYAN_VALLEY,
             'address_province_code' => self::PROVINCE_ISABELA,
             'address_city_code' => self::CITY_ILAGAN,
             'address_barangay_code' => $elsewhere,
@@ -328,6 +336,7 @@ class PhilippineAddressTest extends TestCase
 
         return array_merge([
             'applicant_name' => 'Juan Dela Cruz',
+            'applicant_address_region_code' => self::REGION_CAGAYAN_VALLEY,
             'applicant_address_province_code' => self::PROVINCE_ISABELA,
             'applicant_address_city_code' => self::CITY_ILAGAN,
             'applicant_address_barangay_code' => $alibagu['code'],

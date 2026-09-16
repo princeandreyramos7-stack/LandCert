@@ -224,7 +224,8 @@ class NotificationService
             'application_returned',
             'Application Returned for Review',
             "Application {$applicationNumber} from {$applicantName} was returned by {$returnerName}. Reason: {$reason}",
-            "/admin/requests/{$request->id}/document-verification",
+            // The merged View Application page, opened on the checklist and decision.
+            "/admin/requests/{$request->id}/view-application?section=requirements",
             [
                 'application_id' => $request->id,
                 'application_number' => $applicationNumber,
@@ -290,7 +291,8 @@ class NotificationService
             'requirement_uploaded',
             'Requirement Document Uploaded',
             "{$applicantName} uploaded \"{$requirementName}\" for application {$applicationNumber}. Please verify.",
-            "/admin/requests/{$request->id}/document-verification",
+            // The merged View Application page, opened on the checklist and decision.
+            "/admin/requests/{$request->id}/view-application?section=requirements",
             [
                 'application_id' => $request->id,
                 'application_number' => $applicationNumber,
@@ -491,7 +493,7 @@ class NotificationService
             'certificate_ready',
             'Certificate Ready for Pickup',
             "Your certificate {$certificate->certificate_number} is now ready for pickup at the CPDO office. Please bring a valid ID.",
-            "/my-applications/{$request->id}",
+            "/my-applications/{$request->id}/details",
             [
                 'request_id' => $request->id,
                 'certificate_id' => $certificate->id,

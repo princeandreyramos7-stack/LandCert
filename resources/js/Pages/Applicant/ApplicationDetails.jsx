@@ -102,11 +102,7 @@ export default function ApplicationDetails({ application, requirements = [], doc
 
     const docsFor = (id) => documents?.[id] || documents?.[String(id)] || [];
 
-    // Once submitted, the application's documents are frozen — the applicant
-    // cannot add or replace anything while it sits with the office. Uploading
-    // only reopens when the office hands it back (in_applicant) or denies it
-    // (rejected). Both actions are gated identically: a missing document is no
-    // more editable than one already on file.
+
     const canUpload = ["in_applicant", "rejected"].includes(statusKey);
     const canReplace = canUpload;
 

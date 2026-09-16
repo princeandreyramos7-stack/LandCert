@@ -89,7 +89,7 @@ function menuItems(request, role) {
             {
                 label: "Document Verification",
                 icon: FileCheck,
-                href: route("admin.requests.view-application", request.id) + "#requirements",
+                href: route("admin.requests.view-application", request.id) + "?section=requirements",
             },
         ];
     }
@@ -102,7 +102,7 @@ function menuItems(request, role) {
         {
             label: "Document Verification",
             icon: ClipboardCheck,
-            href: route("super-admin.requests.view-application", request.id) + "#requirements",
+            href: route("super-admin.requests.view-application", request.id) + "?section=requirements",
         },
     ];
 }

@@ -62,7 +62,7 @@ export default function GuestLayout({ children }) {
                     >
                         <div className="w-14 h-14 rounded-full border-2 border-[#d4a017]/40 bg-white/10 overflow-hidden flex items-center justify-center shrink-0">
                             <img
-                                src="/images/ilagan1.png"
+                                src="/images/ilagan1-192.png"
                                 alt="City of Ilagan"
                                 className="w-full h-full object-cover"
                             />
@@ -167,7 +167,7 @@ export default function GuestLayout({ children }) {
                     <Link href="/" className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full border border-[#0d1f5c]/20 overflow-hidden shrink-0">
                             <img
-                                src="/images/ilagan1.png"
+                                src="/images/ilagan1-192.png"
                                 alt="City of Ilagan"
                                 className="w-full h-full object-cover"
                             />

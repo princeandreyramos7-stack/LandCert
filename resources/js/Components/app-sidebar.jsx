@@ -55,7 +55,7 @@ export function AppSidebar({ ...props }) {
                 <Link href="/dashboard" className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full border-2 border-sidebar-primary/60 bg-sidebar-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
                         <img
-                            src="/images/ilagan1.png"
+                            src="/images/ilagan1-192.png"
                             alt="Ilagan Logo"
                             className="w-full h-full object-cover p-0.5"
                         />

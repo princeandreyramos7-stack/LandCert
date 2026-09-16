@@ -13,9 +13,9 @@
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
         <!-- Favicon -->
-        <link rel="icon" type="image/png" href="{{ asset('images/Ilagan.png') }}">
-        <link rel="shortcut icon" type="image/png" href="{{ asset('images/Ilagan.png') }}">
-        <link rel="apple-touch-icon" href="{{ asset('images/Ilagan.png') }}">
+        <link rel="icon" type="image/png" href="{{ asset('images/Ilagan-64.png') }}">
+        <link rel="shortcut icon" type="image/png" href="{{ asset('images/Ilagan-64.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/Ilagan-64.png') }}">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

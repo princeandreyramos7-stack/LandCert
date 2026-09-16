@@ -949,69 +949,70 @@ class RequestController extends Controller
     }
 
     /**
-     * Print certificate for applicant (standalone page)
+     * The applicant's own copy of the Zoning Certification.
+     *
+     * The same sheet the office issued (CertificateSheet), drawn from the same
+     * data and signed by the same people - the officer who reviewed it and the
+     * Zoning Administrator - so the copy the applicant downloads carries the
+     * e-signatures the issued document does. It used to be a hand-drawn copy
+     * with no signatures, naming whichever staff account came first in the
+     * table as the reviewer.
      */
     public function printCertificate($id)
     {
-        $request = \App\Models\Request::with([
-            'applicant',
-            'project',
-            'property',
-            'location',
-            'payments' => function ($query) {
-                $query->where('payment_status', 'verified')->latest();
-            }
-        ])->findOrFail($id);
-
-        // Check ownership
-        if ($request->user_id !== auth()->id()) {
-            abort(403, 'Unauthorized access to this certificate');
-        }
-
-        // Get the latest verified payment
-        $payment = $request->payments->first();
-
-        // Get reviewer (admin who processed this)
-        $reviewer = \App\Models\User::whereIn('user_type', ['admin', 'super_admin'])->first();
+        [$request, $payment] = $this->releasedDocument($id);
 
         return inertia('Applicant/PrintCertificate', [
-            'application' => $this->formatApplicationData($request),
+            'application' => \App\Services\ApplicationDocuments::issuance($request),
             'payment' => $payment,
-            'reviewer' => $reviewer,
+            'reviewer' => \App\Services\ApplicationDocuments::signer(\App\Services\ApplicationDocuments::reviewer($request->id)),
+            'zoningAdministrator' => \App\Services\ApplicationDocuments::signer(\App\Services\ApplicationDocuments::zoningAdministrator()),
+            // Dated as the office issued it, not the day the applicant prints it.
+            'issuedOn' => optional($request->certificates->sortByDesc('id')->first()?->issued_at ?? $request->released_to_applicant_at)->format('F j, Y'),
         ]);
     }
 
     /**
-     * Print clearance for applicant (standalone page)
+     * The applicant's own copy of the Zoning Clearance / Temporary Use Permit.
+     * See printCertificate: the same sheet and signers as the office's.
      */
     public function printClearance($id)
     {
-        $request = \App\Models\Request::with([
-            'applicant',
-            'project',
-            'property',
-            'location',
-            'payments' => function ($query) {
-                $query->where('payment_status', 'verified')->latest();
-            }
-        ])->findOrFail($id);
-
-        // Check ownership
-        if ($request->user_id !== auth()->id()) {
-            abort(403, 'Unauthorized access to this clearance');
-        }
-
-        // Get the latest verified payment
-        $payment = $request->payments->first();
-
-        // Get reviewer (admin who processed this)
-        $reviewer = \App\Models\User::whereIn('user_type', ['admin', 'super_admin'])->first();
+        [$request, $payment] = $this->releasedDocument($id);
 
         return inertia('Applicant/PrintClearance', [
-            'application' => $this->formatApplicationData($request),
+            'application' => \App\Services\ApplicationDocuments::issuance($request),
             'payment' => $payment,
-            'reviewer' => $reviewer,
+            'reviewer' => \App\Services\ApplicationDocuments::signer(\App\Services\ApplicationDocuments::reviewer($request->id)),
+            'zoningAdministrator' => \App\Services\ApplicationDocuments::signer(\App\Services\ApplicationDocuments::zoningAdministrator()),
         ]);
+    }
+
+    /**
+     * An application whose document the signed-in applicant may print: their
+     * own, and released to them by the office. Until the office releases it
+     * (AdminController::releaseToApplicant) there is nothing to print - the
+     * URL used to hand out a clearance for any approved application, paid or
+     * not, to anyone who typed the address.
+     *
+     * @return array{0: \App\Models\Request, 1: \App\Models\Payment|null}
+     */
+    private function releasedDocument($id): array
+    {
+        $request = \App\Models\Request::with(array_merge(
+            \App\Services\ApplicationDocuments::ISSUANCE_RELATIONS,
+            ['certificates', 'payments' => fn ($query) => $query->where('payment_status', 'verified')->latest()],
+        ))->findOrFail($id);
+
+        if ($request->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized access to this document');
+        }
+
+        if (!$request->released_to_applicant_at) {
+            abort(403, 'This document has not been released by the office yet.');
+        }
+
+        return [$request, $request->payments->first()];
     }
 
     /**
@@ -1088,12 +1089,22 @@ class RequestController extends Controller
 
         $requirementsReference = $requirementsReference->concat($orphans)->values()->all();
 
+        $derivedStatus = RequestModel::deriveStatus($request->status, $report?->evaluation);
+
+        // The officer's note is part of the approval notice, so the applicant
+        // reads it once the Zoning Administrator has approved — the same point
+        // the fee becomes theirs to pay. Before that the field can hold the
+        // Administrator's reason for sending the application back to the
+        // officer, which is the office's business, not the applicant's.
+        $decided = $derivedStatus === 'approved'
+            || in_array($derivedStatus, RequestModel::CERT_LIFECYCLE_STATUSES, true);
+
         return Inertia::render('Applicant/ApplicationDetails', [
             'application' => [
                 'id' => $request->id,
                 'application_number' => $request->application_number,
                 'decision_number' => $request->decision_number,
-                'status' => RequestModel::deriveStatus($request->status, $report?->evaluation),
+                'status' => $derivedStatus,
                 'request_status' => $request->status,
                 // For the "where it stands" panel: the same flags My Applications reads.
                 'released_to_applicant_at' => $request->released_to_applicant_at,
@@ -1154,8 +1165,8 @@ class RequestController extends Controller
                     ?: 'City Planning and Development Office, Ground Floor, City Hall Bldg, City of Ilagan, Isabela',
 
                 'rejection_reason' => $report?->evaluation === 'rejected' ? $report?->description : null,
-                'payment_amount' => $report?->payment_amount,
-                'admin_notes' => $report?->admin_notes,
+                'payment_amount' => $decided ? $report?->payment_amount : null,
+                'admin_notes' => $decided ? $report?->admin_notes : null,
             ],
             'requirements' => $requirementsReference,
             'documents' => $documentsByRequirement,

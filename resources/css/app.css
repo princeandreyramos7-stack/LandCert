@@ -84,6 +84,8 @@
     html,
     body {
         @apply bg-background text-foreground;
+    }
+    body {
         /* Prevent the page from scrolling horizontally on mobile.
            Without this, a single element slightly wider than the viewport
            (e.g. a fixed-width table or badge) can make the whole page
@@ -93,7 +95,17 @@
            clip, not hidden: overflow-x: hidden on <body> makes the body a
            scroll container of its own, and anything position: sticky inside
            it then sticks to the body - which never scrolls - rather than to
-           the page. clip cuts the overflow the same way without doing that. */
+           the page. clip cuts the overflow the same way without doing that.
+
+           On <body> only, never on <html>. The browser hands the viewport
+           <body>'s overflow only while <html>'s is visible. Radix locks the
+           page behind an open dropdown or dialog by putting overflow: hidden
+           on <body>; with clip on <html> that hidden stayed on the body,
+           which made the body a scroll container, and the sticky top bar
+           stuck to the top of the document instead of the screen. Scrolled
+           down, opening the notification bell then sent the bar and its menu
+           off the top of the screen while the page was locked - it looked
+           like the system had hung. */
         overflow-x: clip;
         max-width: 100vw;
     }

@@ -373,7 +373,7 @@
         <div class="header">
             <div class="logos-section">
                 <div class="logo">
-                                        <img src="{{ asset('/images/ilagan.png') }}" alt="City of Ilagan Logo">
+                                        <img src="{{ asset('/images/Ilagan.png') }}" alt="City of Ilagan Logo">
 
                 </div>
                 <div class="header-text">

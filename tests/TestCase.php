@@ -119,6 +119,7 @@ abstract class TestCase extends BaseTestCase
         ]);
 
         return [
+            "{$prefix}_region_code" => '020000000',
             "{$prefix}_province_code" => '023100000',
             "{$prefix}_city_code" => '023114000',
             "{$prefix}_barangay_code" => '023114006',

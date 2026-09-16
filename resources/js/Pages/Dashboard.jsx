@@ -53,7 +53,7 @@ export default function Page({ requests = [] }) {
                     <div className="ml-auto pr-4 flex items-center gap-2">
                         <div ref={setHeaderSlot} className="flex items-center"/>
                         <div className="hidden sm:flex items-center gap-2">
-                            <img src="/images/Ilagan.png" alt="CPDO" className="w-6 h-6 object-contain"/>
+                            <img src="/images/Ilagan-64.png" alt="CPDO" className="w-6 h-6 object-contain"/>
                             <span className="text-[#0d1f5c] text-xs font-black tracking-wide">CPDO</span>
                             <span className="text-gray-300 text-xs">|</span>
                             <span className="text-gray-400 text-xs">City of Ilagan, Isabela</span>

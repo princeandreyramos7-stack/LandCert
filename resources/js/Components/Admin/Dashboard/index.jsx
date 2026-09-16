@@ -41,7 +41,7 @@ export function AdminDashboard({ analytics = null, stats = {}, applications = []
                 <div className="relative z-10 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
                     <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                         <div className="w-16 h-16 rounded-full border-2 border-[#d4a017]/50 bg-white overflow-hidden flex items-center justify-center shrink-0 shadow-lg">
-                            <img src="/images/ilagan1.png" alt="City of Ilagan" className="w-full h-full object-cover" />
+                            <img src="/images/ilagan1-192.png" alt="City of Ilagan" className="w-full h-full object-cover" />
                         </div>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1">
@@ -83,7 +83,7 @@ export function AdminDashboard({ analytics = null, stats = {}, applications = []
                             <div className="flex flex-col md:flex-row items-center gap-8">
                                 {/* Seal */}
                                 <div className="w-32 h-32 rounded-full border-4 border-[#d4a017]/30 overflow-hidden shrink-0 shadow-lg">
-                                    <img src="/images/ilagan1.png" alt="City of Ilagan" className="w-full h-full object-cover" />
+                                    <img src="/images/ilagan1-192.png" alt="City of Ilagan" className="w-full h-full object-cover" />
                                 </div>
 
                                 {/* Copy */}

@@ -155,7 +155,13 @@ class CleanPageController extends Controller
     {
         $request->session()->put(self::SESSION_PREFIX . $slug, $id);
 
-        return '/' . $slug;
+        // The query string comes along (a fragment would not: the browser never
+        // sends it, and Inertia drops it across a redirect). It is how a link
+        // says which part of the page to open on — ?section=requirements takes
+        // the officer straight to the checklist and decision.
+        $query = $request->getQueryString();
+
+        return '/' . $slug . ($query ? '?' . $query : '');
     }
 
     public function show(Request $request, string $slug)

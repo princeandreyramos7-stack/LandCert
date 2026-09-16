@@ -418,6 +418,17 @@ class AdminController extends Controller
             'payment_amount' => $report?->payment_amount,
             'admin_notes' => $report?->admin_notes,
             'application_id' => $request->id,
+
+            // The decision card works on the report: the Administrator's
+            // approve/return routes take the report id, and the banners say
+            // who reviewed it, who approved it, and why it was sent back.
+            'report_id' => $report?->report_id,
+            'evaluation' => $report?->evaluation,
+            'reviewed_by_name' => $report?->issued_by,
+            'reviewed_at' => $report?->date_reported,
+            'approved_by' => $report?->approved_by,
+            'approved_at' => $report?->approved_at,
+            'returned_reason' => $report?->returnedReason(),
         ];
         
         // Add requirements_reference for the Requirements tab
@@ -556,7 +567,7 @@ class AdminController extends Controller
         
         AuditLogService::logUpdate(
             'Report',
-            $report->id,
+            $report->report_id,
             $oldValues,
             $newValues,
             "Updated evaluation status from '{$oldEvaluation}' to '{$report->evaluation}'"
@@ -672,9 +683,6 @@ class AdminController extends Controller
             'rejection_reason' => 'required_if:action,rejected|nullable|string|max:1000'
         ]);
 
-        \Log::info('Review Application - Request Data:', $request->all());
-        \Log::info('Review Application - Validated Data:', $validated);
-
         $requestModel = RequestModel::with(['applicant', 'project', 'user', 'property'])->findOrFail($validated['request_id']);
 
         // Once the SuperAdmin has approved (or the certificate flow has started), the
@@ -731,7 +739,7 @@ class AdminController extends Controller
             // Log the action
             AuditLogService::logCreate(
                 'Report',
-                $report->id,
+                $report->report_id,
                 $report->toArray(),
                 "Admin reviewed application #{$requestModel->id} - Pending SuperAdmin approval"
             );
@@ -744,7 +752,7 @@ class AdminController extends Controller
                     'application_pending_approval',
                     'Application Pending Your Approval',
                     "Application #{$requestModel->id} from " . ($requestModel->applicant->applicant_name ?? 'Applicant') . " has been reviewed and requires your approval. Payment details have been set by admin.",
-                    "/super-admin/requests/{$requestModel->id}/view-application",
+                    "/super-admin/requests/{$requestModel->id}/view-application?section=requirements",
                     [
                         'request_id' => $requestModel->id,
                         'applicant_name' => $requestModel->applicant->applicant_name ?? 'N/A',
@@ -776,7 +784,7 @@ class AdminController extends Controller
             // Log the action
             AuditLogService::logCreate(
                 'Report',
-                $report->id,
+                $report->report_id,
                 $report->toArray(),
                 "Admin denied application #{$requestModel->id}"
             );
@@ -861,7 +869,7 @@ class AdminController extends Controller
             'address' => 'nullable|string',
         ]);
 
-        $user = \App\Models\User::findOrFail($userId);
+        $user = $this->applicantAccount($userId);
         $user->update($validated);
 
         return back()->with('success', 'User updated successfully!');
@@ -872,10 +880,27 @@ class AdminController extends Controller
      */
     public function deleteUser($userId)
     {
-        $user = \App\Models\User::findOrFail($userId);
+        $user = $this->applicantAccount($userId);
         $user->delete();
 
         return back()->with('success', 'User deleted successfully!');
+    }
+
+    /**
+     * The account a Zoning Officer may edit or delete: an applicant's.
+     *
+     * The officer's Users page lists applicants only, but the endpoints took
+     * any id - the Administrator's included. Rewriting her e-mail address and
+     * then using "forgot password" would have handed her account to whoever
+     * held an officer login; deleting it would have locked the office out.
+     */
+    private function applicantAccount($userId): User
+    {
+        $user = User::findOrFail($userId);
+
+        abort_if($user->user_type !== 'applicant', 403, 'Only applicant accounts can be managed here.');
+
+        return $user;
     }
 
     /**
@@ -2318,33 +2343,36 @@ class AdminController extends Controller
     public function updateProjectType(Request $request, $id)
     {
         $validated = $request->validate([
-            'project_type' => 'nullable|string|in:N/A,CZC,TUP,SUP,ZC,Zoning',
+            'project_type' => 'required|string|in:N/A,CZC,TUP,SUP,ZC,Zoning',
         ]);
 
         $requestModel = RequestModel::findOrFail($id);
-        
+        // Required, and the column is NOT NULL: a request without the field
+        // used to pass a nullable rule and then die on the database.
+        $projectType = $validated['project_type'];
+
         // Update the project type in normalized_projects table
         $project = $requestModel->project;
         if ($project) {
             $oldProjectType = $project->project_type;
             $project->update([
-                'project_type' => $validated['project_type'] ?? null
+                'project_type' => $projectType,
             ]);
-            
+
             // Log the update
             AuditLogService::logUpdate(
                 'Project',
                 $project->id,
                 ['project_type' => $oldProjectType],
-                ['project_type' => $validated['project_type']],
-                "Updated project type from '{$oldProjectType}' to '{$validated['project_type']}'"
+                ['project_type' => $projectType],
+                "Updated project type from '{$oldProjectType}' to '{$projectType}'"
             );
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Application type updated successfully',
-            'project_type' => $validated['project_type']
+            'project_type' => $projectType,
         ]);
     }
 
@@ -2509,19 +2537,18 @@ class AdminController extends Controller
      */
     public function verifyRequirements(Request $request, $id)
     {
+        // Only the checklist. The lot and tax numbers live on the property and
+        // are saved by saveCertificateDetails; writing a title_number here put
+        // it on the requests row, which has no such column, so every toggle
+        // failed once the officer had filled the number in.
         $validated = $request->validate([
             'verified_requirements' => 'required|array',
-            'title_number' => 'nullable|string',
         ]);
 
         try {
             $requestModel = RequestModel::findOrFail($id);
-            
-            // Update the request with verified requirements
+
             $requestModel->verified_requirements = $validated['verified_requirements'];
-            if (isset($validated['title_number'])) {
-                $requestModel->title_number = $validated['title_number'];
-            }
             $requestModel->save();
 
             AuditLogService::logUpdate(

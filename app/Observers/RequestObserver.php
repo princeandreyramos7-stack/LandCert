@@ -91,19 +91,14 @@ class RequestObserver
             $request->getChanges(),
             "Updated request for {$applicantName}"
         );
-        
-        // Check if status changed to create appropriate notifications
-        if ($request->isDirty('status')) {
-            $newStatus = $request->status;
-            $oldStatus = $request->getOriginal('status');
-            
-            if ($newStatus === 'approved' && $oldStatus !== 'approved') {
-                NotificationService::applicationApproved($request, auth()->user());
-            } elseif ($newStatus === 'rejected' && $oldStatus !== 'rejected') {
-                $reason = $request->rejection_reason ?? 'Application did not meet the requirements';
-                NotificationService::applicationRejected($request, $reason, auth()->user());
-            }
-        }
+
+        // No decision notices from here. The two places that move a request to
+        // approved or rejected — SuperAdminController::approveRequest and the
+        // officer's denial in AdminController::reviewApplication — tell the
+        // applicant themselves, with the Treasury fee or the actual reason.
+        // Doing it here as well sent every applicant a second notice, and the
+        // denial one always read "did not meet the requirements" because the
+        // reason lives on the report, not on this row.
     }
 
     /**

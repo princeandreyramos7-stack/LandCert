@@ -42,12 +42,12 @@ const navGroups = [
                 url: "/admin/dashboard",
                 icon: LayoutDashboard,
             },
-            { title: "Applications", url: "/admin/requests", icon: FileText },
         ],
     },
     {
         label: "Processing",
         items: [
+            { title: "Applications", url: "/admin/requests", icon: FileText },
             { title: "Payments", url: "/admin/payments", icon: CreditCard },
             { title: "Certificates", url: "/admin/certificates", icon: Award },
         ],
@@ -144,7 +144,9 @@ export function AdminSidebar({ ...props }) {
     // The document-generation pages live under /requests/{id}/... but belong to
     // the Certificates section, so highlight "Certificates" there, not "Applications".
     const currentPath =
-        /\/(generate-certificate|generate-clearance|generate-order-of-payment)$/.test(rawPath)
+        /\/(generate-certificate|generate-clearance|generate-order-of-payment)$/.test(
+            rawPath,
+        )
             ? "/admin/certificates"
             : rawPath;
 
@@ -158,7 +160,7 @@ export function AdminSidebar({ ...props }) {
                 >
                     <div className="w-9 h-9 rounded-full border-2 border-sidebar-primary/60 bg-sidebar-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
                         <img
-                            src="/images/ilagan1.png"
+                            src="/images/ilagan1-192.png"
                             alt="Ilagan Logo"
                             className="w-full h-full object-cover p-0.5"
                         />

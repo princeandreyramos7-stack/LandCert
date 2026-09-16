@@ -690,6 +690,17 @@ class SuperAdminController extends Controller
             'payment_amount' => $report?->payment_amount,
             'admin_notes' => $report?->admin_notes,
             'application_id' => $request->id,
+
+            // The decision card works on the report: the Administrator's
+            // approve/return routes take the report id, and the banners say
+            // who reviewed it, who approved it, and why it was sent back.
+            'report_id' => $report?->report_id,
+            'evaluation' => $report?->evaluation,
+            'reviewed_by_name' => $report?->issued_by,
+            'reviewed_at' => $report?->date_reported,
+            'approved_by' => $report?->approved_by,
+            'approved_at' => $report?->approved_at,
+            'returned_reason' => $report?->returnedReason(),
             
             // Full requirements list for the Requirements section
             'requirements_reference' => $requirementList->toArray(),
@@ -847,19 +858,18 @@ class SuperAdminController extends Controller
      */
     public function verifyRequirements(Request $request, $id)
     {
+        // Only the checklist. The lot and tax numbers live on the property and
+        // are saved by saveCertificateDetails; writing a title_number here put
+        // it on the requests row, which has no such column, so every toggle
+        // failed once the officer had filled the number in.
         $validated = $request->validate([
             'verified_requirements' => 'required|array',
-            'title_number' => 'nullable|string',
         ]);
 
         try {
             $requestModel = RequestModel::findOrFail($id);
-            
-            // Update the request with verified requirements
+
             $requestModel->verified_requirements = $validated['verified_requirements'];
-            if (isset($validated['title_number'])) {
-                $requestModel->title_number = $validated['title_number'];
-            }
             $requestModel->save();
 
             AuditLogService::logUpdate(
@@ -927,7 +937,7 @@ class SuperAdminController extends Controller
         // Log the action
         AuditLogService::logUpdate(
             'Report',
-            $report->id,
+            $report->report_id,
             ['evaluation' => 'reviewed'],
             ['evaluation' => 'approved'],
             "SuperAdmin approved application #{$requestModel->id}"
@@ -1056,14 +1066,14 @@ class SuperAdminController extends Controller
         $report->update([
             'evaluation' => 'pending',
             'description' => $validated['description'],
-            'admin_notes' => 'Returned by the Zoning Administrator: ' . $validated['description'],
+            'admin_notes' => Report::RETURNED_NOTE_PREFIX . $validated['description'],
             'date_reported' => now(),
             'issued_by' => auth()->user()->name,
         ]);
 
         AuditLogService::logUpdate(
             'Report',
-            $report->id,
+            $report->report_id,
             $oldValues,
             ['evaluation' => 'pending'],
             "SuperAdmin returned application #{$report->request_id} to the Zoning Officer — Reason: " . $validated['description']
@@ -1169,6 +1179,14 @@ class SuperAdminController extends Controller
         ];
 
         if (array_key_exists('user_type', $validated)) {
+            // The office must keep an Administrator. Taking the role off the
+            // last super_admin - one's own account included - would leave
+            // nobody able to approve, or to give the role back.
+            $steppingDown = $user->user_type === 'super_admin' && $validated['user_type'] !== 'super_admin';
+            if ($steppingDown && User::where('user_type', 'super_admin')->count() <= 1) {
+                return back()->with('error', 'This is the only Zoning Administrator account. Make another user an administrator before changing this one.');
+            }
+
             $updateData['user_type'] = $validated['user_type'];
         }
 

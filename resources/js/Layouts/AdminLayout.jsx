@@ -59,7 +59,7 @@ export default function AdminLayout({ title, breadcrumbs = [], children }) {
                         <NotificationBell />
                         <div className="hidden sm:flex items-center gap-2">
                             <img
-                                src="/images/Ilagan.png"
+                                src="/images/Ilagan-64.png"
                                 alt="CPDO LC"
                                 className="w-6 h-6 object-contain"
                             />
