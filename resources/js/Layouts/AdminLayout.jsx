@@ -82,7 +82,7 @@ export default function AdminLayout({ title, breadcrumbs = [], children }) {
                     className="relative isolate flex flex-1 flex-col min-h-screen"
                     style={{ background: "#f5f7ff" }}
                 >
-                    <SealWatermark />
+                    <SealWatermark viewport />
                     <div className="flex-1 p-4 sm:p-6">
                         <HeaderSlotProvider slot={headerSlot}>
                             {children}

@@ -15,6 +15,7 @@ import {
 } from "@/Components/ui/sidebar";
 import { Toaster } from "@/Components/ui/toaster";
 import SealWatermark from "@/Components/SealWatermark";
+import NotificationBell from "@/Components/NotificationBell";
 
 /**
  * Shared layout for all applicant pages.
@@ -50,6 +51,9 @@ export default function ApplicantLayout({ title, children }) {
                     <div className="ml-auto flex shrink-0 items-center gap-2 pr-4">
                         {/* Live-refresh status, portalled in by the page */}
                         <div ref={setHeaderSlot} className="flex items-center" />
+                        {/* Same bell as the office's panels: the count is the
+                            applicant's quickest way to know something moved. */}
+                        <NotificationBell />
                         <div className="hidden sm:flex items-center gap-2">
                             <img
                                 src="/images/Ilagan-64.png"
@@ -76,7 +80,7 @@ export default function ApplicantLayout({ title, children }) {
                     className="relative isolate flex flex-1 flex-col min-h-screen overflow-x-clip"
                     style={{ background: "#f5f7ff" }}
                 >
-                    <SealWatermark />
+                    <SealWatermark viewport />
                     <div className="flex-1 p-4 sm:p-6">
                         <HeaderSlotProvider slot={headerSlot}>
                             {children}

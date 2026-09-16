@@ -236,6 +236,12 @@ class ReviewWorkflowTest extends TestCase
                 ->where('application.status', 'reviewed')
                 ->where('application.admin_notes', null)
                 ->where('application.payment_amount', null));
+        // The My Applications card gets neither yet - and never the project
+        // cost in place of the fee.
+        $this->actingAs($applicant)->get('/my-applications')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('applications.data.0.office_note', null)
+                ->where('applications.data.0.report_amount', null));
 
         Mail::fake();
         $this->actingAs($administrator)->post("/super-admin/approve-request/{$report->report_id}");
@@ -246,6 +252,10 @@ class ReviewWorkflowTest extends TestCase
                 ->where('application.status', 'approved')
                 ->where('application.admin_notes', 'Bring two valid IDs.')
                 ->where('application.payment_amount', '3289.00'));
+        $this->actingAs($applicant)->get('/my-applications')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('applications.data.0.office_note', 'Bring two valid IDs.')
+                ->where('applications.data.0.report_amount', '3289.00'));
     }
 
     public function test_resubmitted_application_returns_to_the_officer_not_the_administrator(): void

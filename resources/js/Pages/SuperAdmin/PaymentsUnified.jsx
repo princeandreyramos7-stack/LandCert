@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Head, router } from "@inertiajs/react";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import { PaymentHistoryTable } from "@/Components/Admin/Payments/PaymentHistoryTable";
+import { PaymentStats } from "@/Components/Admin/Payments/PaymentStats";
 import { PaymentDetailsCard } from "@/Components/Admin/Payments/PaymentDetailsCard";
 import { AddReceiptModal } from "@/Components/Admin/Payments/AddReceiptModal";
-import { Card, CardContent } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
 import {
@@ -22,6 +22,7 @@ export default function PaymentsUnified({
     const [isAddReceiptModalOpen, setIsAddReceiptModalOpen] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [statusFilter, setStatusFilter] = useState("all");
 
     // Handle both array and paginated object formats
     const allPaymentsData = Array.isArray(allPayments) ? allPayments : (allPayments.data || []);
@@ -83,7 +84,7 @@ export default function PaymentsUnified({
                             <div>
                                 <h1 className="text-lg font-black text-[#0d1f5c]">Payments Management</h1>
                                 <p className="text-xs text-gray-400 mt-0.5">
-                                    View and manage all payment records
+                                    Every payment on file, and the receipts still waiting on the Zoning Officer
                                 </p>
                             </div>
                         </div>
@@ -92,84 +93,13 @@ export default function PaymentsUnified({
                     </div>
                 </div>
 
-                {/* Statistics Cards */}
-                <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4 mb-5">
-                    <Card className="bg-[#0d1f5c]/5 border-0 shadow-sm">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs text-[#0d1f5c] font-bold mb-1 uppercase tracking-wide">
-                                        Total Payments
-                                    </p>
-                                    <p className="text-2xl font-black text-[#0d1f5c]">
-                                        {allPayments.length}
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-0.5">All records</p>
-                                </div>
-                                <div className="p-2 bg-[#0d1f5c] rounded-lg">
-                                    <DollarSign className="h-5 w-5 text-white"/>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-amber-50 border-0 shadow-sm">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs text-amber-700 font-bold mb-1 uppercase tracking-wide">
-                                        Pending
-                                    </p>
-                                    <p className="text-2xl font-black text-amber-900">
-                                        {pendingCount}
-                                    </p>
-                                    <p className="text-xs text-amber-600 mt-0.5">Awaiting payment</p>
-                                </div>
-                                <div className="p-2 bg-amber-500 rounded-lg">
-                                    <Clock className="h-5 w-5 text-white"/>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-emerald-50 border-0 shadow-sm">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs text-emerald-700 font-bold mb-1 uppercase tracking-wide">
-                                        Verified
-                                    </p>
-                                    <p className="text-2xl font-black text-emerald-900">
-                                        {verifiedCount}
-                                    </p>
-                                    <p className="text-xs text-emerald-600 mt-0.5">Confirmed</p>
-                                </div>
-                                <div className="p-2 bg-emerald-500 rounded-lg">
-                                    <CheckCircle2 className="h-5 w-5 text-white"/>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-rose-50 border-0 shadow-sm">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs text-rose-700 font-bold mb-1 uppercase tracking-wide">
-                                        Denied
-                                    </p>
-                                    <p className="text-2xl font-black text-rose-900">
-                                        {rejectedCount}
-                                    </p>
-                                    <p className="text-xs text-rose-600 mt-0.5">Declined</p>
-                                </div>
-                                <div className="p-2 bg-rose-500 rounded-lg">
-                                    <XCircle className="h-5 w-5 text-white"/>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                {/* Counts, as filters: click one to see just those rows. */}
+                <PaymentStats
+                    payments={allPaymentsData}
+                    awaiting={pendingCount}
+                    active={statusFilter}
+                    onSelect={setStatusFilter}
+                />
 
                 {/* Single Unified Payment Table */}
                 <PaymentHistoryTable
@@ -177,6 +107,8 @@ export default function PaymentsUnified({
                     onViewDetails={handleViewDetails}
                     onAddReceipt={handleAddReceipt}
                     routePrefix="super-admin"
+                    statusFilter={statusFilter}
+                    onStatusFilterChange={setStatusFilter}
                     canVerify={false}
                 />
 

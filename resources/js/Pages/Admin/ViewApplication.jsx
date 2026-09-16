@@ -1,4 +1,4 @@
-﻿import AdminLayout from "@/Layouts/AdminLayout";
+import AdminLayout from "@/Layouts/AdminLayout";
 import { Head, router } from "@inertiajs/react";
 import { Button } from "@/Components/ui/button";
 import { Badge } from "@/Components/ui/badge";
@@ -764,7 +764,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectCost, 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InfoField
                             num="10"
-                            label="Project Area â€” Lot (sqm)"
+                            label="Project Area — Lot (sqm)"
                             value={
                                 request.lot_area_sqm
                                     ? `${parseFloat(request.lot_area_sqm).toLocaleString()} sqm`
@@ -773,7 +773,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectCost, 
                         />
                         <InfoField
                             num="10"
-                            label="Project Area â€” Bldg. Improvement (sqm)"
+                            label="Project Area — Bldg. Improvement (sqm)"
                             value={
                                 request.bldg_improvement_sqm
                                     ? `${parseFloat(request.bldg_improvement_sqm).toLocaleString()} sqm`
@@ -817,7 +817,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectCost, 
                         {request.project_nature_years && (
                             <InfoField
                                 num="12"
-                                label="Tenure â€” Specify Years"
+                                label="Tenure — Specify Years"
                                 value={`${request.project_nature_years} ${Number(request.project_nature_years) === 1 ? "year" : "years"}`}
                             />
                         )}
@@ -869,7 +869,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectCost, 
                             {editingProjectCost ? (
                                 <div className="relative">
                                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 select-none text-sm font-semibold text-gray-500">
-                                        â‚±
+                                        ₱
                                     </span>
                                     <input
                                         type="text"
@@ -885,7 +885,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectCost, 
                             ) : (
                                 <p className="text-sm text-gray-900 font-medium">
                                     {projectCost !== ''
-                                        ? `â‚±${parseFloat(projectCost).toLocaleString()}`
+                                        ? `₱${parseFloat(projectCost).toLocaleString()}`
                                         : <span className="text-gray-400 italic">Not set</span>}
                                 </p>
                             )}
@@ -978,11 +978,6 @@ function Step3Content({ request }) {
                         label="Preferred Release Mode"
                         value={RELEASE_MODE_LABELS[request.preferred_release_mode] || request.preferred_release_mode}
                     />
-                    <InfoField
-                        num="17"
-                        label="Release Address"
-                        value={request.release_address}
-                    />
                 </div>
             </div>
         </div>
@@ -1069,13 +1064,16 @@ function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = []
                 )}
             </div>
 
-            {uploadedRequirements.length > 0 && (
+            {uploadedRequirements.some((doc) => /\b(title|tax declaration)\b/i.test(doc.name || "")) && (
                 <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Submitted Requirements
                     </p>
                     <div className="flex flex-wrap gap-2">
-                        {uploadedRequirements.map((doc) =>
+                        {/* Only what Property Details is filled in from: the
+                            title carries the lot number, the tax declaration
+                            its number. The full list is the checklist below. */}
+                        {uploadedRequirements.filter((doc) => /\b(title|tax declaration)\b/i.test(doc.name || "")).map((doc) =>
                             doc.files.length > 0 ? (
                                 doc.files.map((file, index) => (
                                     <a
@@ -1097,7 +1095,7 @@ function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = []
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-gray-300 text-gray-400 text-xs font-medium"
                                 >
                                     <FileText className="h-3.5 w-3.5" />
-                                    {doc.name} â€” not uploaded
+                                    {doc.name} — not uploaded
                                 </span>
                             )
                         )}

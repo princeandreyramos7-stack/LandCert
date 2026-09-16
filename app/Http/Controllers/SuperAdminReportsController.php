@@ -68,11 +68,15 @@ class SuperAdminReportsController extends Controller
         // Applicants, by the name on the application rather than the account -
         // one household account can file under several applicant names.
         $applicants = RequestModel::with('applicant:id,applicant_name')
-            ->get(['id', 'applicant_id'])
+            ->get(['id', 'applicant_id', 'application_number', 'created_at'])
             ->groupBy(fn ($request) => $request->applicant?->applicant_name ?: 'Unnamed applicant')
             ->map(fn ($group, $name) => [
                 'name' => $name,
                 'applications' => $group->count(),
+                // Enough to tell two applicants of the same name apart and to
+                // find one by application number.
+                'numbers' => $group->sortByDesc('created_at')->pluck('application_number')->filter()->values()->all(),
+                'latest_filed' => optional($group->max('created_at'))->toDateString(),
             ])
             ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
@@ -86,6 +90,7 @@ class SuperAdminReportsController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'reviewed' => \App\Models\Report::where('reviewed_by', $user->id)->whereIn('evaluation', ['reviewed', 'approved'])->count(),
                 ])
             : collect();
 

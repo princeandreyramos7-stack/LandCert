@@ -283,6 +283,10 @@ class CertificateService
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('certificate_number', 'like', "%{$search}%")
+                    ->orWhereHas('request', function ($q2) use ($search) {
+                        $q2->where('application_number', 'like', "%{$search}%")
+                            ->orWhere('decision_number', 'like', "%{$search}%");
+                    })
                     ->orWhereHas('request.applicant', function ($q2) use ($search) {
                         $q2->where('applicant_name', 'like', "%{$search}%");
                     });

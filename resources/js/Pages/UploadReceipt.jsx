@@ -1,19 +1,8 @@
 import { useState } from 'react';
 import { csrfHeaders, hasCsrfToken } from '@/lib/csrf';
 import { Head, router } from '@inertiajs/react';
-import { AppSidebar } from '@/Components/app-sidebar';
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbList,
-    BreadcrumbPage,
-} from '@/Components/ui/breadcrumb';
-import { Separator } from '@/Components/ui/separator';
-import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from '@/Components/ui/sidebar';
+import ApplicantLayout from '@/Layouts/ApplicantLayout';
+import { getStatusConfig } from '@/lib/applicationStatus';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -40,8 +29,6 @@ import {
     DialogTitle,
 } from '@/Components/ui/dialog';
 import { useToast } from '@/Components/ui/use-toast';
-import { Toaster } from '@/Components/ui/toaster';
-import SealWatermark from "@/Components/SealWatermark";
 
 /**
  * Display-only formatting for peso amount fields.
@@ -258,28 +245,12 @@ export default function UploadReceipt({ application, existingPayment }) {
         );
     };
 
+    const statusLabel = getStatusConfig(application.status || "pending").label;
+
     return (
-        <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-                <Head title="Upload Payment Receipt" />
-
-                {/* Header */}
-                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                    <SidebarTrigger className="-ml-1" />
-                    <Separator orientation="vertical" className="mr-2 h-4" />
-                    <Breadcrumb>
-                        <BreadcrumbList>
-                            <BreadcrumbItem>
-                                <BreadcrumbPage>Upload Payment Receipt</BreadcrumbPage>
-                            </BreadcrumbItem>
-                        </BreadcrumbList>
-                    </Breadcrumb>
-                </header>
-
-                {/* Main Content - Responsive padding */}
-                <div data-page-body className="relative isolate flex flex-1 flex-col gap-3 sm:gap-4 p-3 sm:p-4">
-                    <SealWatermark />
+        <ApplicantLayout title="Upload Payment Receipt">
+            <Head title="Upload Payment Receipt" />
+            <div className="mx-auto w-full max-w-5xl space-y-3 sm:space-y-4">
                     {/* Application Info - Responsive */}
                     <Card>
                         <CardHeader>
@@ -310,7 +281,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                 </div>
                                 <div>
                                     <p className="text-gray-500">Application Status</p>
-                                    <Badge variant="secondary">{application.status}</Badge>
+                                    <Badge variant="secondary">{statusLabel}</Badge>
                                 </div>
                             </div>
                         </CardContent>
@@ -328,7 +299,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                         : 'You can record your payment once your application has been approved by the Zoning Administrator.'}
                                     </p>
                                     <p className="mt-2 text-sm">
-                                    Current status: <strong>{application.status}</strong>
+                                    Current status: <strong>{statusLabel}</strong>
                                 </p>
                             </AlertDescription>
                         </Alert>
@@ -350,7 +321,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                     )}
                                 </div>
                                 {existingPayment.payment_status === 'pending' && (
-                                    <p className="mt-2 text-xs">Your payment receipt is pending verification by the admin. You will be notified once it's reviewed.</p>
+                                    <p className="mt-2 text-xs">Your receipt is with the Zoning Office for verification. You will be notified once it has been checked.</p>
                                 )}
                                 {existingPayment.payment_status === 'verified' && (
                                     <p className="mt-2 text-xs">Your payment has been verified! Your certificate will be prepared soon.</p>
@@ -372,7 +343,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                     <li>Upload a clear photo or scan of your official receipt</li>
                                     <li>Make sure the receipt number, date, and amount are visible</li>
                                     <li>Accepted formats: JPG, PNG, or PDF (max 5MB)</li>
-                                    <li>Your payment will be verified by an admin within 1-2 business days</li>
+                                    <li>The Zoning Office verifies payments within 1–2 business days</li>
                                 </ul>
                             </AlertDescription>
                         </Alert>
@@ -421,7 +392,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                                 </div>
                                                 <p className="text-xs text-gray-500 flex items-center gap-1.5">
                                                     <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
-                                                    This amount was set by the admin. Just upload your receipt below.
+                                                    This is the fee set by the Zoning Office. Just upload your receipt below.
                                                 </p>
                                             </>
                                         ) : (
@@ -758,9 +729,6 @@ export default function UploadReceipt({ application, existingPayment }) {
                         </div>
                     </DialogContent>
                 </Dialog>
-
-                <Toaster />
-            </SidebarInset>
-        </SidebarProvider>
+        </ApplicantLayout>
     );
 }

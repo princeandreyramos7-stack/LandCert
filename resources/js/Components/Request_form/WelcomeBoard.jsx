@@ -46,6 +46,7 @@ const CATEGORIES = [
             "   Showing project site, lot area boundaries & dimension of proposed improvements",
             "   - For local significance projects: need not be drawn to scale",
             "5. ESTIMATED PROJECT COST / BILL OF MATERIALS",
+            "6. BARANGAY CLEARANCE",
             "Additional Requirements",
             "   1. For Tenanted Rice/Corn Lands:",
             "      - Endorsement/recommendation from Department of Agrarian Reform",
@@ -59,7 +60,6 @@ const CATEGORIES = [
             "   4. AFFIDAVIT OF NO OBJECTION",
             "   5. ENVIRONMENTAL COMPLIANCE CERTIFICATE (ECC) / CERTIFICATE OF NON-COVERAGE (CNC)",
             "   6. Certification of road right-of-way from DPWH (if project is within National Road)",
-            "   7. Barangay Clearance",
         ],
     },
     {
@@ -91,6 +91,7 @@ const CATEGORIES = [
             "   Showing project site, lot area boundaries & dimension of proposed improvements",
             "   - For local significance projects: need not be drawn to scale",
             "5. ESTIMATED PROJECT COST / BILL OF MATERIALS",
+            "6. BARANGAY CLEARANCE",
             "Additional Requirements",
             "   1. For Tenanted Rice/Corn Lands:",
             "      - Endorsement/recommendation from Department of Agrarian Reform",
@@ -104,7 +105,6 @@ const CATEGORIES = [
             "   4. AFFIDAVIT OF NO OBJECTION",
             "   5. ENVIRONMENTAL COMPLIANCE CERTIFICATE (ECC) / CERTIFICATE OF NON-COVERAGE (CNC)",
             "   6. Certification of road right-of-way from DPWH (if project is within National Road)",
-            "   7. Barangay Clearance",
         ],
     },
     {
@@ -136,6 +136,7 @@ const CATEGORIES = [
             "   Showing project site, lot area boundaries & dimension of proposed improvements",
             "   - For local significance projects: need not be drawn to scale",
             "5. ESTIMATED PROJECT COST / BILL OF MATERIALS",
+            "6. BARANGAY CLEARANCE",
             "Additional Requirements",
             "   1. For Tenanted Rice/Corn Lands:",
             "      - Endorsement/recommendation from Department of Agrarian Reform",
@@ -149,7 +150,6 @@ const CATEGORIES = [
             "   4. AFFIDAVIT OF NO OBJECTION",
             "   5. ENVIRONMENTAL COMPLIANCE CERTIFICATE (ECC) / CERTIFICATE OF NON-COVERAGE (CNC)",
             "   6. Certification of road right-of-way from DPWH (if project is within National Road)",
-            "   7. Barangay Clearance",
         ],
     },
     {

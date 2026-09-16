@@ -50,3 +50,24 @@ export const formatCurrency = (amount) => {
         maximumFractionDigits: 2,
     })}`;
 };
+
+/**
+ * A payment's status as the office reads it. "pending" is a receipt the
+ * applicant uploaded that nobody has checked yet - the Zoning Officer's next
+ * job - so it is named for that rather than left as a bare word.
+ */
+export const PAYMENT_STATUS = {
+    pending:  { label: "Needs verification", cls: "bg-amber-50 text-amber-800 border-amber-200",       dot: "bg-amber-500" },
+    verified: { label: "Verified",           cls: "bg-emerald-50 text-emerald-800 border-emerald-200", dot: "bg-emerald-500" },
+    rejected: { label: "Denied",             cls: "bg-rose-50 text-rose-800 border-rose-200",          dot: "bg-rose-500" },
+};
+
+export function PaymentStatusBadge({ status, className = "" }) {
+    const cfg = PAYMENT_STATUS[status] || PAYMENT_STATUS.pending;
+    return (
+        <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-bold ${cfg.cls} ${className}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+            {cfg.label}
+        </span>
+    );
+}

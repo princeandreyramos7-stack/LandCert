@@ -28,15 +28,16 @@ class SmsController extends Controller
      * gets applicants only. Enforced here rather than in the page, so hiding a
      * tab is not the only thing standing between a role and a broadcast.
      */
+    /**
+     * Who each role may text. The Zoning Officer texts applicants; the Zoning
+     * Administrator texts the officers and nobody else. The keys are what the
+     * page's audience picker and send() agree on.
+     */
     private function audiences(): array
     {
-        $audiences = ['applicants' => 'applicant'];
-
-        if (auth()->user()?->user_type === 'super_admin') {
-            $audiences['officers'] = 'admin';
-        }
-
-        return $audiences;
+        return auth()->user()?->user_type === 'super_admin'
+            ? ['officers' => 'admin']
+            : ['applicants' => 'applicant'];
     }
 
     public function index(Request $request): Response
@@ -71,8 +72,8 @@ class SmsController extends Controller
             'stats'         => $stats,
             'audiences'     => array_keys($audiences),
             'broadcastTpls' => $this->broadcastTemplatesByAudience(),
-            // Only super-admins receive the editable auto-templates
-            'autoTemplates' => auth()->user()?->user_type === 'super_admin'
+            // The automatic notices are the Zoning Officer's to word.
+            'autoTemplates' => auth()->user()?->user_type === 'admin'
                 ? SmsTemplate::orderBy('id')->get()
                 : [],
         ]);
@@ -147,8 +148,19 @@ class SmsController extends Controller
 
     /* ── Auto-template update ────────────────────────────────── */
 
+    /**
+     * The wording is the Zoning Officer's. Checked here as well as by the
+     * route group, because the Administrator may open officer routes in
+     * general and this is the one thing that is not hers.
+     */
+    private function officerOnly(): void
+    {
+        abort_unless(auth()->user()?->user_type === 'admin', 403, 'Only the Zoning Officer edits the automatic notices.');
+    }
+
     public function updateTemplate(Request $request, int $id)
     {
+        $this->officerOnly();
         $tpl = SmsTemplate::findOrFail($id);
 
         $validated = $request->validate([
@@ -178,6 +190,7 @@ class SmsController extends Controller
 
     public function resetTemplate(int $id)
     {
+        $this->officerOnly();
         $tpl = SmsTemplate::findOrFail($id);
 
         $defaults = $this->defaultMessages();

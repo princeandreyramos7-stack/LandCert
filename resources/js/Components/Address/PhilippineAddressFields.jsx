@@ -217,8 +217,12 @@ export function PhilippineAddressFields({
                 />
 
                 <div className="space-y-1.5">
+                    {/* The picked parts are what the office needs; the house
+                        number is welcome but never required (the rules leave
+                        it nullable). The project location on Step 2 is a
+                        different field with its own, required, street. */}
                     <Label htmlFor={field("street")} className="text-xs font-medium text-gray-700">
-                        Street / House No. {star}
+                        Street / House No. <span className="font-normal text-gray-400">(optional)</span>
                     </Label>
                     <Input
                         id={field("street")}

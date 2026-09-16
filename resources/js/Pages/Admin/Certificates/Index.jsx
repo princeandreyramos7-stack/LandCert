@@ -29,8 +29,31 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
     const handlePreview = (certificate) => { window.open(route(`${routePrefix}.certificates.preview`, certificate.id), '_blank'); };
     const handleUploadCertificate = (certificate) => { setSelectedCertificate(certificate); setShowUploadModal(true); };
     const handleRefresh = () => { router.reload({ only: ['certificates'] }); };
+    // The rows on screen, as a spreadsheet. (This button used to open the
+    // payments report - a different list altogether.)
     const handleExport = () => {
-        window.open(route(`${routePrefix}.export.payments`) + '?format=pdf', '_blank');
+        const rows = certificates?.data || [];
+        const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+        const lines = [
+            ["Certificate No.", "Application No.", "Decision No.", "Applicant", "Type", "Issued", "Status", "Released to applicant"].map(cell).join(","),
+            ...rows.map((c) => [
+                c.certificate_number,
+                c.request?.application_number || `#${c.request_id}`,
+                c.request?.decision_number || "",
+                c.request?.applicant?.applicant_name || "",
+                c.request?.project?.project_type || c.request?.project_type || "",
+                c.issued_at ? new Date(c.issued_at).toLocaleDateString("en-US") : "",
+                c.request?.released_to_applicant_at ? "Released" : "Preparing",
+                c.request?.released_to_applicant_at ? new Date(c.request.released_to_applicant_at).toLocaleDateString("en-US") : "",
+            ].map(cell).join(",")),
+        ];
+        const blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `certificates-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     return (
@@ -48,7 +71,11 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
                             </div>
                             <div>
                                 <h1 className="text-lg font-black text-[#0d1f5c]">Certificate Management</h1>
-                                <p className="text-xs text-gray-400 mt-0.5">View, download, and manage issued certificates</p>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                    {isSuperAdmin
+                                        ? "Every certificate and clearance on file, and whether the applicant has it yet"
+                                        : "Generate and print each document, then release it so the applicant can download it"}
+                                </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -58,7 +85,7 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
                             </Button>
                             <Button variant="outline" onClick={handleExport}
                                 className="border-gray-200 text-[#0d1f5c] hover:border-[#d4a017] gap-2 text-sm">
-                                <FileDown className="h-4 w-4"/> Export
+                                <FileDown className="h-4 w-4"/> Export CSV
                             </Button>
                         </div>
                     </div>

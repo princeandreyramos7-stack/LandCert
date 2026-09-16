@@ -5,6 +5,7 @@ import {
     FileText,
     Clock,
     CheckCircle,
+    CheckCircle2,
     XCircle,
     AlertCircle,
     TrendingUp,
@@ -59,6 +60,16 @@ function StatusBadge({ journey }) {
         <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset ${tone.badge}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${tone.bar}`}/>
             {journey.label}
+        </span>
+    );
+}
+
+/** Shown beside the status from approval on, as on My Applications. */
+function AccessVerifiedBadge({ journey }) {
+    if (journey.stage < 3 || journey.failed) return null;
+    return (
+        <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+            <CheckCircle2 className="h-3 w-3"/> Access Verified
         </span>
     );
 }
@@ -227,10 +238,18 @@ export function Dashboard({ requests }) {
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate text-sm font-bold text-gray-900">{app.project_nature || "Application"}</p>
                                         <p className={`truncate text-xs ${journey.needsAction ? `font-semibold ${tone.text}` : "text-gray-500"}`}>{journey.headline}</p>
+                                        {app.office_note && (
+                                            <p className="mt-0.5 truncate text-xs text-gray-600" title={app.office_note}>
+                                                <span className="font-semibold text-[#0d1f5c]">Note from the Zoning Office: </span>{app.office_note}
+                                            </p>
+                                        )}
                                     </div>
                                     {/* Status + action */}
                                     <div className="flex items-center justify-between gap-3 sm:justify-end">
-                                        <StatusBadge journey={journey}/>
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            <StatusBadge journey={journey}/>
+                                            <AccessVerifiedBadge journey={journey}/>
+                                        </div>
                                         {journey.action && (
                                             <button
                                                 type="button"

@@ -4,6 +4,7 @@ import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
 import { Input } from "@/Components/ui/input";
 import { Badge } from "@/Components/ui/badge";
 import {
@@ -39,7 +40,9 @@ function UserRow({ user, selected, onToggle }) {
             </td>
             <td className="px-4 py-3 font-mono text-sm text-gray-600">{user.contact_number}</td>
             <td className="px-4 py-3">
-                <Badge className="bg-[#0d1f5c]/10 text-[#0d1f5c] border-[#0d1f5c]/20 text-xs">{user.user_type}</Badge>
+                <Badge className="bg-[#0d1f5c]/10 text-[#0d1f5c] border-[#0d1f5c]/20 text-xs">
+                    {{ admin: "Zoning Officer", super_admin: "Zoning Administrator", applicant: "Applicant" }[user.user_type] || user.user_type}
+                </Badge>
             </td>
         </tr>
     );
@@ -170,6 +173,8 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = {}, a
 
     const flash = usePage().props.flash;
 
+    // Both roles broadcast - the officer to applicants, the Administrator to
+    // the officers. The automatic notices' wording is the officer's tab.
     const [activeTab,       setActiveTab]       = useState("broadcast");
     const [search,          setSearch]          = useState("");
     const [showBroadcastTpl,setShowBroadcastTpl]= useState(false);
@@ -201,10 +206,13 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = {}, a
 
     const allSelected = filtered.length > 0 && filtered.every(u => data.user_ids.includes(u.id));
 
-    const toggleUser = id => setData("user_ids", data.user_ids.includes(id)
-        ? data.user_ids.filter(x => x !== id)
-        : [...data.user_ids, id]
-    );
+    const toggleUser = id => setData((current) => ({
+        ...current,
+        recipients: "selected",
+        user_ids: current.user_ids.includes(id)
+            ? current.user_ids.filter(x => x !== id)
+            : [...current.user_ids, id],
+    }));
 
     const toggleAll = () => {
         if (allSelected) {
@@ -224,16 +232,23 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = {}, a
     const audienceTotal = stats.with_phone_by_audience?.[data.audience] ?? inAudience.length;
     const recipientCount = data.recipients === "all" ? audienceTotal : data.user_ids.length;
 
+    const [confirmOpen, setConfirmOpen] = useState(false);
+
     const submit = e => {
         e.preventDefault();
         if (!data.message.trim() || (data.recipients === "selected" && data.user_ids.length === 0)) return;
-        post(route(`${prefix}.sms.send`));
+        setConfirmOpen(true);
+    };
+
+    const confirmSend = () => {
+        setConfirmOpen(false);
+        post(route(`${prefix}.sms.send`), { preserveScroll: true });
     };
 
     return (
         <>
             <Head title="SMS — CPDO"/>
-            <Layout title="SMS Notifications" breadcrumbs={breadcrumbs}>
+            <Layout title={isSuperAdmin ? "SMS to Officers" : "SMS Broadcast"} breadcrumbs={breadcrumbs}>
 
                 {/* Flash */}
                 {flash?.success && (
@@ -255,8 +270,8 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = {}, a
                                 <MessageSquare className="h-6 w-6 text-[#d4a017]"/>
                             </div>
                             <div>
-                                <h1 className="text-lg font-black text-[#0d1f5c]">SMS Notifications</h1>
-                                <p className="text-xs text-gray-400 mt-0.5">Broadcast messages &amp; manage auto-notification templates</p>
+                                <h1 className="text-lg font-black text-[#0d1f5c]">{isSuperAdmin ? "SMS to Officers" : "SMS Broadcast"}</h1>
+                                <p className="text-xs text-gray-400 mt-0.5">{isSuperAdmin ? "Text the Zoning Officers - all of them, or the ones you pick" : "Text applicants, and set the wording of the notices the system sends on its own"}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -271,11 +286,11 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = {}, a
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex gap-2 mb-5">
+                {/* Tabs - only when there is more than one to choose from. */}
+                <div className={`mb-5 gap-2 ${isSuperAdmin ? "hidden" : "flex"}`}>
                     {[
-                        { key: "broadcast", label: "Broadcast SMS",              icon: Send },
-                        ...(isSuperAdmin ? [{ key: "templates", label: "Auto-Notification Templates", icon: Settings }] : []),
+                        { key: "broadcast", label: "Broadcast SMS", icon: Send },
+                        ...(isSuperAdmin ? [] : [{ key: "templates", label: "Auto-Notification Templates", icon: Settings }]),
                     ].map(tab => (
                         <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                             className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold border-2 transition-all ${
@@ -427,6 +442,12 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = {}, a
                                                 </div>
                                             )}
 
+                                            {!stats.sms_enabled && (
+                                                <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0"/>
+                                                    <span><span className="font-semibold">SMS is switched off on this server.</span> Nothing will be delivered until it is turned on, and the broadcast will report every recipient as failed.</span>
+                                                </p>
+                                            )}
                                             <Button type="submit"
                                                 disabled={processing || !data.message.trim() || (data.recipients === "selected" && data.user_ids.length === 0)}
                                                 className="w-full gap-2 font-bold text-white disabled:opacity-50"
@@ -448,7 +469,9 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = {}, a
 
                                 {/* Right: User selector */}
                                 <div>
-                                    <Card className={`bg-white shadow-sm border border-gray-100 overflow-hidden ${data.recipients === "all" ? "opacity-60 pointer-events-none" : ""}`}>
+                                    {/* Never inert: ticking a person here is how "Selected
+                                        Users" gets chosen, so the list stays live in All mode. */}
+                                    <Card className={`bg-white shadow-sm border border-gray-100 overflow-hidden transition-opacity ${data.recipients === "all" ? "opacity-75" : ""}`}>
                                         <CardHeader className="border-b border-gray-50 px-5 py-4">
                                             <div className="flex items-center justify-between gap-3">
                                                 <CardTitle className="text-sm font-bold text-[#0d1f5c] uppercase tracking-wide flex items-center gap-2">
@@ -497,7 +520,7 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = {}, a
                                         </CardContent>
                                     </Card>
                                     {data.recipients === "all" && (
-                                        <p className="mt-2 text-xs text-gray-400 text-center">Switch to "Selected Users" to pick individual recipients</p>
+                                        <p className="mt-2 text-xs text-gray-400 text-center">Going to everyone with a number. Tick a person to text only the people you choose.</p>
                                     )}
                                 </div>
                             </div>
@@ -509,7 +532,7 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = {}, a
                     TAB: AUTO-NOTIFICATION TEMPLATES
                    ══════════════════════════════════════════════ */}
                 {/* Templates tab — super admin only */}
-                {activeTab === "templates" && isSuperAdmin && (
+                {activeTab === "templates" && !isSuperAdmin && (
                     <div className="space-y-4">
                         <div className="bg-[#0d1f5c]/[0.03] border border-[#0d1f5c]/10 rounded-xl p-4 flex items-start gap-3">
                             <AlertCircle className="w-5 h-5 text-[#0d1f5c] shrink-0 mt-0.5"/>
@@ -533,6 +556,30 @@ export default function SmsIndex({ users = [], stats = {}, broadcastTpls = {}, a
                     </div>
                 )}
             </Layout>
+
+            <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <DialogContent className="max-w-md rounded-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-[#0d1f5c] font-black">Send this text to {recipientCount} recipient{recipientCount !== 1 ? "s" : ""}?</DialogTitle>
+                        <DialogDescription>
+                            A broadcast cannot be recalled once it is sent. Each recipient receives the message below with their own name.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="rounded-lg border border-[#0d1f5c]/10 bg-[#0d1f5c]/[0.03] p-3">
+                        <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-[#0d1f5c]">Preview</p>
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">{data.message.replace(/{name}/g, "Juan Dela Cruz")}</p>
+                        <p className="mt-2 text-xs text-gray-500">
+                            To: {data.recipients === "all" ? `every ${data.audience === "officers" ? "officer" : "applicant"} with a mobile number` : `${data.user_ids.length} selected`} · <CharCount text={data.message}/>
+                        </p>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)} className="border-gray-200">Cancel</Button>
+                        <Button type="button" onClick={confirmSend} disabled={processing} className="gap-2 font-bold text-white" style={{ background: "linear-gradient(90deg,#0d1f5c,#1a3a8f)" }}>
+                            <Send className="w-4 h-4"/> Send now
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { matchesStatusFilter } from "@/lib/applicationStatus";
 import { FileText, FileCheck, Hourglass, Wallet, Award, XCircle, RotateCcw } from "lucide-react";
 

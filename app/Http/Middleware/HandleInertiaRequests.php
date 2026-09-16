@@ -62,6 +62,10 @@ class HandleInertiaRequests extends Middleware
                     // codes as well as the line, so the address picker opens
                     // on the applicant's own barangay rather than empty.
                     'address' => $request->user()->address,
+                    // The region too: the picker fills top-down, so without it
+                    // the province, city and barangay below had nothing to hang
+                    // from and the form opened blank despite an address on file.
+                    'address_region_code' => $request->user()->address_region_code,
                     'address_province_code' => $request->user()->address_province_code,
                     'address_city_code' => $request->user()->address_city_code,
                     'address_barangay_code' => $request->user()->address_barangay_code,

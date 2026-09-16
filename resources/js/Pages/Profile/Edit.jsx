@@ -1,11 +1,12 @@
 import { Head, Link, useForm, usePage } from "@inertiajs/react";
+import { createPortal } from "react-dom";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import { Transition } from "@headlessui/react";
 import InputError from "@/Components/InputError";
 import AvatarUpload from "@/Components/AvatarUpload";
 import { useRef, useState } from "react";
 import {
-    User, Lock, Trash2, Mail, KeyRound, Eye, EyeOff,
+    User, Lock, Trash2, Mail, Phone, KeyRound, Eye, EyeOff,
     ShieldAlert, CheckCircle2, Save, AlertTriangle,
 } from "lucide-react";
 
@@ -59,6 +60,7 @@ function ProfileInfoForm({ mustVerifyEmail, status }) {
     const { data, setData, patch, errors, processing, recentlySuccessful } = useForm({
         name: user.name,
         email: user.email,
+        contact_number: user.contact_number || "",
     });
 
     return (
@@ -78,6 +80,15 @@ function ProfileInfoForm({ mustVerifyEmail, status }) {
                         <input id="email" type="email" value={data.email} autoComplete="username"
                             onChange={e => setData("email", e.target.value)}
                             className={`${inputCls(errors.email)} pl-10`}/>
+                    </div>
+                </Field>
+                <Field label="Mobile Number" error={errors.contact_number} hint="Text messages about your application go to this number.">
+                    <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"/>
+                        <input id="contact_number" type="tel" inputMode="numeric" value={data.contact_number} autoComplete="tel-national"
+                            placeholder="09XXXXXXXXX" maxLength={11}
+                            onChange={e => setData("contact_number", e.target.value.replace(/\D/g, "").slice(0, 11))}
+                            className={`${inputCls(errors.contact_number)} pl-10`}/>
                     </div>
                 </Field>
             </div>
@@ -215,8 +226,10 @@ function DeleteAccount() {
                 </button>
             </div>
 
-            {open && (
-                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+            {/* Portalled to <body>: the page body is its own stacking context, so
+                an overlay rendered inside it left the top bar and sidebar bright. */}
+            {open && createPortal(
+                <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4"
                     onClick={() => { setOpen(false); clearErrors(); reset(); }}>
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-3 px-6 py-4 border-b border-red-100 bg-red-50 rounded-t-2xl">
@@ -258,7 +271,7 @@ function DeleteAccount() {
                         </form>
                     </div>
                 </div>
-            )}
+            , document.body)}
         </>
     );
 }
@@ -326,7 +339,7 @@ export default function Edit({ mustVerifyEmail, status }) {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Left — Profile Info */}
                         <Section icon={User} title="Profile Information"
-                            desc="Update your name and email address"
+                            desc="Update your name, e-mail and mobile number"
                             accent="border-l-[#0d1f5c]"
                             badge="Personal" badgeColor="bg-[#0d1f5c]/8 text-[#0d1f5c]">
                             <ProfileInfoForm mustVerifyEmail={mustVerifyEmail} status={status}/>

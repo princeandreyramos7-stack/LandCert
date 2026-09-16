@@ -75,7 +75,7 @@ const navGroups = [
                 icon: ScrollText,
             },
             {
-                title: "SMS Broadcast",
+                title: "SMS to Officers",
                 url: "/super-admin/sms",
                 icon: MessageSquare,
             },

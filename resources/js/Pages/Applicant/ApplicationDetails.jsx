@@ -3,6 +3,7 @@ import { Head, router } from "@inertiajs/react";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import SealWatermark from "@/Components/SealWatermark";
 import { JourneyPanel } from "@/Components/Applicant/JourneyPanel";
+import { journeyOf } from "@/lib/applicantJourney";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Badge } from "@/Components/ui/badge";
 import { Button } from "@/Components/ui/button";
@@ -79,6 +80,8 @@ export default function ApplicationDetails({ application, requirements = [], doc
     const [uploadingId, setUploadingId] = useState(null);
 
     const statusKey = String(application.request_status || application.status || "pending").toLowerCase();
+    // Where it stands on the five-step track - the same reading My Applications makes.
+    const journey = journeyOf(application);
     // An unmapped status is shown as itself: reporting an approved application
     // as "Pending Review" is worse than showing an unfamiliar label.
     const status = STATUS_STYLES[statusKey] || {
@@ -289,10 +292,18 @@ export default function ApplicationDetails({ application, requirements = [], doc
                                         </p>
                                     </div>
                                 </div>
-                                <Badge className={`${status.cls} border px-3 py-1.5 text-sm font-semibold flex items-center gap-1.5`}>
-                                    <StatusIcon className="h-4 w-4" />
-                                    {status.label}
-                                </Badge>
+                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                    <Badge className={`${status.cls} border px-3 py-1.5 text-sm font-semibold flex items-center gap-1.5`}>
+                                        <StatusIcon className="h-4 w-4" />
+                                        {status.label}
+                                    </Badge>
+                                    {journey.stage >= 3 && !journey.failed && (
+                                        <Badge className="flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700">
+                                            <CheckCircle2 className="h-4 w-4" />
+                                            Access Verified
+                                        </Badge>
+                                    )}
+                                </div>
                             </div>
 
                             {application.rejection_reason && (

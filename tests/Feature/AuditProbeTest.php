@@ -73,6 +73,72 @@ class AuditProbeTest extends TestCase
         $this->assertSame('Renamed', $applicant->fresh()->name);
     }
 
+    public function test_the_officer_can_add_applicant_accounts_and_only_those(): void
+    {
+        $officer = $this->userOf('admin');
+
+        $this->actingAs($officer)->post('/admin/users', [
+            'name' => 'Counter Applicant',
+            'email' => 'counter@example.test',
+            'contact_number' => '09181234567',
+            'password' => 'Counter12345!',
+            'password_confirmation' => 'Counter12345!',
+            // Ignored: the role is never taken from the request.
+            'user_type' => 'super_admin',
+        ])->assertSessionHasNoErrors();
+
+        $made = User::where('email', 'counter@example.test')->firstOrFail();
+        $this->assertSame('applicant', $made->user_type);
+        $this->assertNotNull($made->email_verified_at);
+        $this->assertNull($made->address);
+
+        // With a picked address the server composes the line, as at sign-up.
+        $this->actingAs($officer)->post('/admin/users', array_merge([
+            'name' => 'With Address', 'email' => 'withaddress@example.test', 'contact_number' => '09181234568',
+            'password' => 'Counter12345!', 'password_confirmation' => 'Counter12345!',
+        ], $this->addressFields('address')))->assertSessionHasNoErrors();
+        $withAddress = User::where('email', 'withaddress@example.test')->firstOrFail();
+        $this->assertSame('1 Test Street, Alibagu, City of Ilagan, Isabela', $withAddress->address);
+        $this->assertSame('023114006', $withAddress->address_barangay_code);
+
+        // Half an address is refused.
+        $this->actingAs($officer)->post('/admin/users', [
+            'name' => 'Half', 'email' => 'half@example.test', 'contact_number' => '09181234569',
+            'password' => 'Counter12345!', 'password_confirmation' => 'Counter12345!',
+            'address_region_code' => '020000000',
+        ])->assertSessionHasErrors(['address_province_code']);
+
+        $this->actingAs($officer)->post('/admin/users', [
+            'name' => 'Bad Number', 'email' => 'bad@example.test', 'contact_number' => '12345',
+            'password' => 'short', 'password_confirmation' => 'short',
+        ])->assertSessionHasErrors(['contact_number', 'password']);
+
+        // Applicants and administrators have no such endpoint.
+        $this->actingAs($this->userOf('applicant'))->post('/admin/users', ['name' => 'x'])->assertForbidden();
+    }
+
+    public function test_who_texts_whom_and_who_words_the_automatic_notices(): void
+    {
+        $administrator = $this->userOf('super_admin');
+        $officer = $this->userOf('admin');
+        $message = ['recipients' => 'all', 'message' => 'Hello {name}'];
+
+        // The Administrator texts the officers and nobody else.
+        $this->actingAs($administrator)->post('/super-admin/sms/send', $message + ['audience' => 'officers'])->assertRedirect();
+        $this->actingAs($administrator)->from('/sms-broadcast')->post('/super-admin/sms/send', $message + ['audience' => 'applicants'])
+            ->assertSessionHasErrors('audience');
+
+        // The officer texts applicants, and words the automatic notices.
+        $this->actingAs($officer)->post('/admin/sms/send', $message + ['audience' => 'applicants'])->assertRedirect();
+        $this->actingAs($officer)->from('/sms-broadcast')->post('/admin/sms/send', $message + ['audience' => 'officers'])
+            ->assertSessionHasErrors('audience');
+        $template = \App\Models\SmsTemplate::create(['event_key' => 'probe', 'event_label' => 'Probe', 'message' => 'Hello {name}', 'enabled' => true, 'variables' => ['name']]);
+        $this->actingAs($administrator)->put("/super-admin/sms/templates/{$template->id}", ['message' => 'Changed by admin', 'enabled' => true])->assertNotFound();
+        $this->actingAs($administrator)->put("/admin/sms/templates/{$template->id}", ['message' => 'Changed by admin', 'enabled' => true])->assertForbidden();
+        $this->actingAs($officer)->put("/admin/sms/templates/{$template->id}", ['message' => 'Changed by officer', 'enabled' => true])->assertRedirect();
+        $this->assertSame('Changed by officer', $template->fresh()->message);
+    }
+
     public function test_nobody_promotes_themselves_through_their_profile(): void
     {
         $applicant = $this->userOf('applicant');

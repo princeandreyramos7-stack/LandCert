@@ -65,7 +65,8 @@ class NotificationService
             $request->user_id,
             'application_submitted',
             'Application Submitted Successfully',
-            "Your application {$applicationNumber} for {$projectType} has been submitted successfully and is now pending review.",
+            // The type is named when it is known; "for application" read oddly.
+            "Your application {$applicationNumber}" . ($projectType !== 'application' ? " ({$projectType})" : '') . " has been submitted and is now pending review.",
             "/my-applications",
             [
                 'application_id' => $request->id,

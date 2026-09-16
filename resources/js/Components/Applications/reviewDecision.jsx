@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/Components/ui/button";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
@@ -95,6 +96,10 @@ export function DecisionNotice({ tone = "amber", title, children }) {
  * The "are you sure?" step before a decision is sent. A plain overlay rather
  * than the Radix dialog so it behaves the same as the other confirmations on
  * View Application.
+ *
+ * Portalled to <body>: the page body is its own stacking context (it isolates
+ * the seal watermark), so an overlay rendered inside it sat beneath the sticky
+ * top bar and the sidebar, which stayed bright while the rest dimmed.
  */
 export function ConfirmDecisionDialog({
     open,
@@ -110,8 +115,8 @@ export function ConfirmDecisionDialog({
 
     const isRed = tone === "red";
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
                 <div className="p-6">
                     <div className="flex items-start gap-4">
@@ -153,6 +158,7 @@ export function ConfirmDecisionDialog({
                     </Button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body,
     );
 }

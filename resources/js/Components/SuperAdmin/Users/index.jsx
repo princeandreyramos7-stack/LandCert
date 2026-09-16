@@ -195,14 +195,18 @@ export function SuperAdminUserManagement({ users }) {
             {/* Two across on a phone: four short counts stacked pushed the
                 list itself below the fold on every load. */}
             <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+                {/* Each count is also the filter for that role: click it to see just those accounts. */}
                 {[
-                    { label: "Total Users",   value: stats.total,        icon: Users,  border: "border-l-[#0d1f5c]", iconBg: "bg-[#0d1f5c]/10", iconColor: "text-[#0d1f5c]" },
-                    { label: "Zoning Administrators", value: stats.super_admins, icon: Shield, border: "border-l-[#d4a017]",  iconBg: "bg-[#d4a017]/10",  iconColor: "text-[#d4a017]"  },
-                    { label: "Zoning Officers",       value: stats.admins,       icon: TrendingUp, border: "border-l-blue-500", iconBg: "bg-blue-50", iconColor: "text-blue-600" },
-                    { label: "Applicants",    value: stats.applicants,   icon: Users,  border: "border-l-gray-400",   iconBg: "bg-gray-50",       iconColor: "text-gray-500"   },
-                ].map((s, i) => (
-                    <Card key={i} className={`border-l-4 ${s.border} bg-white shadow-sm hover:shadow-md transition-shadow`}>
-                        <CardContent className="p-4">
+                    { key: "all",         label: "Total Users",          value: stats.total,        icon: Users,      border: "border-l-[#0d1f5c]", iconBg: "bg-[#0d1f5c]/10", iconColor: "text-[#0d1f5c]", ring: "ring-[#0d1f5c]" },
+                    { key: "super_admin", label: "Zoning Administrators", value: stats.super_admins, icon: Shield,     border: "border-l-[#d4a017]", iconBg: "bg-[#d4a017]/10", iconColor: "text-[#d4a017]", ring: "ring-[#d4a017]" },
+                    { key: "admin",       label: "Zoning Officers",       value: stats.admins,       icon: TrendingUp, border: "border-l-blue-500",  iconBg: "bg-blue-50",      iconColor: "text-blue-600",  ring: "ring-blue-500" },
+                    { key: "applicant",   label: "Applicants",            value: stats.applicants,   icon: Users,      border: "border-l-gray-400",  iconBg: "bg-gray-50",      iconColor: "text-gray-500",  ring: "ring-gray-400" },
+                ].map((s) => {
+                    const selected = filterUserType === s.key;
+                    return (
+                    <button key={s.key} type="button" onClick={() => setFilterUserType(selected ? "all" : s.key)} aria-pressed={selected}
+                        className={`rounded-xl border-l-4 ${s.border} bg-white text-left shadow-sm transition-all hover:-translate-y-px hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${s.ring} ${selected ? `ring-2 ${s.ring} ${s.iconBg}` : ""}`}>
+                        <div className="p-4">
                             <div className="flex items-center justify-between gap-2">
                                 <div className="min-w-0">
                                     <p className="mb-1 text-[10px] font-bold uppercase leading-tight tracking-wide text-gray-500 sm:text-xs">{s.label}</p>
@@ -212,9 +216,10 @@ export function SuperAdminUserManagement({ users }) {
                                     <s.icon className={`h-5 w-5 ${s.iconColor}`}/>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                ))}
+                        </div>
+                    </button>
+                    );
+                })}
             </div>
 
             {/* Search and Filter */}
@@ -291,10 +296,17 @@ export function SuperAdminUserManagement({ users }) {
                                             key={user.id}
                                             className="hover:bg-[#0d1f5c]/[0.02] transition-colors"
                                         >
-                                            <TableCell className="font-medium">{user.name}</TableCell>
+                                            <TableCell className="font-medium">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0d1f5c]/10 text-xs font-black text-[#0d1f5c]">
+                                                        {String(user.name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() || "").join("") || "?"}
+                                                    </span>
+                                                    <span className="truncate">{user.name}</span>
+                                                </div>
+                                            </TableCell>
                                             <TableCell>{user.email}</TableCell>
-                                            <TableCell>{user.contact_number || "N/A"}</TableCell>
-                                            <TableCell className="max-w-xs truncate">{user.address || "N/A"}</TableCell>
+                                            <TableCell>{user.contact_number ? <span className="font-mono text-sm">{user.contact_number}</span> : <span className="text-gray-400">—</span>}</TableCell>
+                                            <TableCell className="max-w-xs truncate" title={user.address || ""}>{user.address || <span className="text-gray-400">—</span>}</TableCell>
                                             <TableCell>
                                                 <Badge className={getUserTypeBadge(user.user_type)}>
                                                     {user.user_type === "super_admin" && <Shield className="h-3 w-3 mr-1" />}

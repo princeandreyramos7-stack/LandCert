@@ -1052,7 +1052,10 @@ export default function ReportsWorkspace({
     const filteredApplicants = useMemo(() => {
         const q = applicantSearch.trim().toLowerCase();
         if (!q) return applicants;
-        return applicants.filter((a) => a.name.toLowerCase().includes(q));
+        return applicants.filter((a) =>
+            a.name.toLowerCase().includes(q) ||
+            (a.numbers || []).some((n) => String(n).toLowerCase().includes(q)),
+        );
     }, [applicantSearch, applicants]);
 
     // Overrides let a caller build a report for a subject that is not yet in
@@ -1344,7 +1347,7 @@ export default function ReportsWorkspace({
                                             <Input
                                                 value={applicantSearch}
                                                 onChange={(e) => setApplicantSearch(e.target.value)}
-                                                placeholder="Search applicants…"
+                                                placeholder="Search by name or application number…"
                                                 className="pl-9"
                                             />
                                         </div>
@@ -1370,10 +1373,19 @@ export default function ReportsWorkspace({
                                                                 onChange={(e) => choose(setApplicant)(e.target.value)}
                                                                 className="h-4 w-4 shrink-0 text-[#0d1f5c]"
                                                             />
-                                                            <span className="truncate text-sm text-gray-800">{a.name}</span>
+                                                            <span className="min-w-0">
+                                                                <span className="block truncate text-sm font-medium text-gray-800">{a.name}</span>
+                                                                {(a.numbers?.length > 0 || a.latest_filed) && (
+                                                                    <span className="block truncate font-mono text-[11px] text-gray-400">
+                                                                        {(a.numbers || []).slice(0, 3).join(" · ")}
+                                                                        {a.numbers?.length > 3 ? ` · +${a.numbers.length - 3} more` : ""}
+                                                                    </span>
+                                                                )}
+                                                            </span>
                                                         </span>
-                                                        <span className="shrink-0 text-xs text-gray-400">
-                                                            {a.applications} app{a.applications === 1 ? "" : "s"}
+                                                        <span className="shrink-0 text-right text-xs text-gray-400">
+                                                            <span className="block">{a.applications} application{a.applications === 1 ? "" : "s"}</span>
+                                                            {a.latest_filed && <span className="block">last filed {date(a.latest_filed)}</span>}
                                                         </span>
                                                     </label>
                                                 ))
@@ -1463,7 +1475,9 @@ export default function ReportsWorkspace({
                                 >
                                     <option value="all">All Zoning Officers</option>
                                     {officers.map((o) => (
-                                        <option key={o.id} value={String(o.id)}>{o.name}</option>
+                                        <option key={o.id} value={String(o.id)}>
+                                            {o.name}{o.reviewed !== undefined ? ` — ${o.reviewed} reviewed` : ""}
+                                        </option>
                                     ))}
                                 </select>
                                 <p className="mt-1 text-xs text-gray-400">

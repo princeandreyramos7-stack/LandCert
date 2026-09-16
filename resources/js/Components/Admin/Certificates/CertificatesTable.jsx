@@ -176,6 +176,14 @@ export function CertificatesTable({
         });
     };
 
+    // How long a document has been waiting since it was issued - what the
+    // Preparing badge shows, so the oldest unreleased one stands out.
+    const waitingSince = (date) => {
+        if (!date) return null;
+        const days = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 86400000));
+        return days === 0 ? "issued today" : days === 1 ? "waiting 1 day" : `waiting ${days} days`;
+    };
+
     // Format date
     const formatDate = (date) => {
         if (!date) return "—";
@@ -213,7 +221,7 @@ export function CertificatesTable({
                             <Search className="h-4 w-4 text-slate-400 group-focus-within:text-blue-600" />
                         </div>
                         <Input
-                            placeholder="Search by certificate number or applicant name..."
+                            placeholder="Search by certificate, application or decision number, or applicant..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             onKeyDown={(e) => {
@@ -387,9 +395,15 @@ export function CertificatesTable({
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <Badge className="bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-100">
-                                                    Preparing
-                                                </Badge>
+                                                <div>
+                                                    <Badge className="bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-100">
+                                                        Preparing
+                                                    </Badge>
+                                                    <div className="text-xs text-slate-500 mt-1">
+                                                        {waitingSince(certificate.issued_at)}
+                                                    </div>
+                                                    <div className="text-xs text-slate-400">not yet released</div>
+                                                </div>
                                             )}
                                         </td>
                                         <td className="p-3">
@@ -431,7 +445,10 @@ export function CertificatesTable({
                                     {certificate.request?.released_to_applicant_at ? (
                                         <Badge className="border border-emerald-200 bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Released</Badge>
                                     ) : (
-                                        <Badge className="border border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-100">Preparing</Badge>
+                                        <>
+                                            <Badge className="border border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-100">Preparing</Badge>
+                                            <span>{waitingSince(certificate.issued_at)}</span>
+                                        </>
                                     )}
                                     <span>{formatDate(certificate.issued_at)}</span>
                                 </div>

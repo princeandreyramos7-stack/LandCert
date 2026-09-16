@@ -26,6 +26,18 @@ class ProfileUpdateRequest extends FormRequest
                 new LowercaseEmailDomain,
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            // The number the office texts. Same shape as at sign-up; an
+            // applicant whose number changed had no way to tell the office.
+            'contact_number' => ['required', 'string', 'regex:/^09[0-9]{9}$/', 'size:11'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'contact_number.required' => 'Phone number is required.',
+            'contact_number.regex' => 'Enter an 11-digit mobile number starting with 09.',
+            'contact_number.size' => 'Enter an 11-digit mobile number starting with 09.',
         ];
     }
 

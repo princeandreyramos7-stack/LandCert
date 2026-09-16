@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link, router } from "@inertiajs/react";
 import { Button } from "@/Components/ui/button";
 import { journeyOf, bucketOf, TONES } from "@/lib/applicantJourney";
@@ -43,6 +43,13 @@ function ApplicationCard({ app }) {
                             <span className="rounded-md bg-[#0d1f5c] px-2 py-0.5 font-mono text-[11px] font-bold text-white">{app.application_number || `#${app.id}`}</span>
                             {type && <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-bold text-gray-700" title={TYPE_NAMES[type]}>{type}</span>}
                             <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${tone.badge}`}>{journey.label}</span>
+                            {/* From approval on: the office has checked the
+                                documents and the Administrator has signed off. */}
+                            {journey.stage >= 3 && !journey.failed && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                                    <CheckCircle2 className="h-3 w-3" /> Access Verified
+                                </span>
+                            )}
                         </div>
                         <Link href={details} className="mt-2 block truncate text-base font-black text-[#0d1f5c] hover:underline">
                             {app.project_nature || TYPE_NAMES[type] || "Application"}
@@ -54,9 +61,15 @@ function ApplicationCard({ app }) {
                         </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                        <button type="button" onClick={() => window.open(route("my-applications.print", app.id), "_blank")} title="Print application form" className="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 hover:text-[#0d1f5c]">
-                            <Printer className="h-4 w-4" />
-                        </button>
+                        {/* The form is for filing and notarising. Once the document is
+                            ready to download the form has served its purpose, and a
+                            print button beside "Download" only invites printing the
+                            wrong paper. */}
+                        {journey.stage < 5 && (
+                            <button type="button" onClick={() => window.open(route("my-applications.print", app.id), "_blank")} title="Print application form" className="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 hover:text-[#0d1f5c]">
+                                <Printer className="h-4 w-4" />
+                            </button>
+                        )}
                         <Link href={details} title="View details" className="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 hover:text-[#0d1f5c]">
                             <Eye className="h-4 w-4" />
                         </Link>
@@ -71,6 +84,15 @@ function ApplicationCard({ app }) {
                     <div className="min-w-0 flex-1">
                         <p className={`text-sm font-bold ${journey.needsAction ? tone.text : "text-gray-800"}`}>{journey.headline}</p>
                         <p className="mt-0.5 text-xs text-gray-500">{journey.note}</p>
+                        {/* What the Zoning Office wrote for the applicant when it
+                            reviewed the application; the server hands it over
+                            only once the Administrator has approved. */}
+                        {app.office_note && (
+                            <p className="mt-2 rounded-lg border border-[#0d1f5c]/10 bg-white/80 px-3 py-2 text-xs text-gray-700">
+                                <span className="font-semibold text-[#0d1f5c]">Note from the Zoning Office: </span>
+                                {app.office_note}
+                            </p>
+                        )}
                     </div>
                     <div className="flex shrink-0 flex-wrap gap-2">
                         {journey.secondary && (

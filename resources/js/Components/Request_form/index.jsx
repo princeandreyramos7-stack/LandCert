@@ -329,22 +329,57 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         }
     };
 
-    // Validate current step
-    const validateCurrentStep = () => {
+    /**
+     * The address on the applicant's account, in the form's own field names -
+     * or null when the account has no picked address to offer.
+     */
+    const accountAddress = () => {
+        if (!me.address_region_code || !me.address_province_code || !me.address_city_code || !me.address_barangay_code) {
+            return null;
+        }
+        return {
+            applicant_address_region_code: me.address_region_code,
+            applicant_address_province_code: me.address_province_code,
+            applicant_address_city_code: me.address_city_code,
+            applicant_address_barangay_code: me.address_barangay_code,
+            applicant_address_street: me.address_street || "",
+        };
+    };
+
+    // True while field 3 still reads exactly as the account's address - on a
+    // new application it starts that way, and on Next a blank one is refilled
+    // from it - so the applicant is told where it came from.
+    const addressFromAccount = Boolean(
+        !isEditing &&
+        me.address_barangay_code &&
+        data.applicant_address_barangay_code === me.address_barangay_code &&
+        data.applicant_address_city_code === me.address_city_code &&
+        (data.applicant_address_street || "") === (me.address_street || ""),
+    );
+
+    const applicantAddressIsBlank = (d) =>
+        !d.applicant_address_region_code && !d.applicant_address_province_code &&
+        !d.applicant_address_city_code && !d.applicant_address_barangay_code &&
+        !String(d.applicant_address_street || "").trim();
+
+    // Validate current step. `current` is the data to judge - normally the
+    // form's, but Step 1 may have just filled the address in and setData has
+    // not landed yet.
+    const validateCurrentStep = (current = data) => {
         let validationErrors = [];
 
         switch (currentStep) {
             case 1:
-                validationErrors = validateStep1(data);
+                validationErrors = validateStep1(current);
                 break;
             case 2:
-                validationErrors = validateStep2(data);
+                validationErrors = validateStep2(current);
                 break;
             case 3:
-                validationErrors = validateStep3(data);
+                validationErrors = validateStep3(current);
                 break;
             case 4:
-                validationErrors = validateStep4(data, requirements, existingApplication?.existing_documents || {}, requirementFiles);
+                validationErrors = validateStep4(current, requirements, existingApplication?.existing_documents || {}, requirementFiles);
                 break;
             default:
                 break;
@@ -377,7 +412,23 @@ export default function RequestForm({ isEditing = false, existingApplication = n
 
     // Handle next step
     const handleNext = () => {
-        if (!validateCurrentStep()) {
+        // 3. Address of Applicant left empty: the address on the account is
+        // the applicant's own, so it is used, and the applicant is told so
+        // they can change it here if this application is for somewhere else.
+        let current = data;
+        if (currentStep === 1 && applicantAddressIsBlank(data)) {
+            const fromAccount = accountAddress();
+            if (fromAccount) {
+                current = { ...data, ...fromAccount };
+                setData((prev) => ({ ...prev, ...fromAccount }));
+                toast({
+                    title: "Address filled in from your account",
+                    description: "You left the Address of Applicant blank, so the address on your account was used. Go back to change it if this application needs a different one.",
+                });
+            }
+        }
+
+        if (!validateCurrentStep(current)) {
             return;
         }
 
@@ -772,6 +823,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                                             hasRepresentative={hasRepresentative}
                                             onDataChange={handleDataChange}
                                             onRepresentativeToggle={handleRepresentativeToggle}
+                                            addressFromAccount={addressFromAccount}
                                         />
                                     )}
                                 </div>

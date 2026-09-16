@@ -848,6 +848,12 @@ class AdminController extends Controller
         // cards report 25 users however many were actually registered.
         $users = \App\Models\User::query()
             ->select(['id', 'name', 'email', 'contact_number', 'address', 'user_type', 'created_at'])
+            // How many applications each has filed: the one thing the officer
+            // actually wants to know about an applicant account.
+            ->selectSub(
+                \App\Models\Request::query()->selectRaw('count(*)')->whereColumn('requests.user_id', 'users.id'),
+                'requests_count'
+            )
             ->where('user_type', 'applicant')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -855,6 +861,61 @@ class AdminController extends Controller
         return Inertia::render('Admin/Users', [
             'users' => $users,
         ]);
+    }
+
+    /**
+     * Create an applicant account on someone's behalf - an applicant the
+     * office is helping at the counter, who will then follow the application
+     * online. Applicants only: the role is fixed here, never taken from the
+     * request, so this cannot be used to mint a staff login.
+     */
+    public function storeApplicant(Request $request)
+    {
+        // The address is picked from the PSGC and optional, as at sign-up:
+        // once any part is given the rest must follow and hang together.
+        $startedAddress = collect(\App\Support\PhilippineAddress::PARTS)
+            ->contains(fn ($part) => filled($request->input("address_{$part}")));
+
+        $validated = $request->validate(array_merge([
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'string', 'email', 'max:255', new \App\Rules\LowercaseEmailDomain, 'unique:users,email'],
+            'contact_number' => 'required|string|regex:/^09[0-9]{9}$/|size:11',
+            'password' => ['required', 'confirmed', \Illuminate\Validation\Rules\Password::defaults()],
+        ], \App\Support\PhilippineAddress::rules('address', $startedAddress)), [
+            'contact_number.regex' => 'Enter an 11-digit mobile number starting with 09.',
+            'contact_number.size' => 'Enter an 11-digit mobile number starting with 09.',
+        ], \App\Support\PhilippineAddress::attributes('address', ''));
+
+        if ($startedAddress) {
+            $chain = \Illuminate\Support\Facades\Validator::make($request->all(), []);
+            \App\Support\PhilippineAddress::checkChain($chain, 'address');
+            if ($chain->errors()->isNotEmpty()) {
+                throw \Illuminate\Validation\ValidationException::withMessages($chain->errors()->toArray());
+            }
+        }
+
+        // Composed from the codes, never taken from the browser.
+        $address = \App\Support\PhilippineAddress::resolve($validated, 'address');
+
+        $user = User::create(\App\Support\PhilippineAddress::columns($address, 'address') + [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'contact_number' => $validated['contact_number'],
+            'password' => bcrypt($validated['password']),
+            'user_type' => 'applicant',
+        ]);
+        // Made by the office in person; there is no sign-up e-mail to confirm.
+        // (Not fillable, so set on its own.)
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        AuditLogService::logCreate(
+            'User',
+            $user->id,
+            ['name' => $user->name, 'email' => $user->email, 'user_type' => 'applicant'],
+            "Zoning Officer created applicant account for {$user->name}"
+        );
+
+        return back()->with('success', 'Applicant account created.');
     }
 
     /**

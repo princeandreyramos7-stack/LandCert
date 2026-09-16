@@ -52,6 +52,9 @@ class RequestController extends Controller
                 // Whether the notarized form (requirement #1) is in yet: the
                 // dashboard says the same thing about it as My Applications.
                 DB::raw('EXISTS(SELECT 1 FROM requirement_documents rd WHERE rd.request_id = requests.id AND rd.requirement_id = 1) as has_notarized_form'),
+                // The office's note for the applicant, once approved - the same
+                // one My Applications shows, so the dashboard row says it too.
+                DB::raw("CASE WHEN COALESCE(reports.evaluation, requests.status) = 'approved' OR requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN reports.admin_notes END as office_note"),
                 DB::raw("CASE WHEN requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN requests.status ELSE COALESCE(reports.evaluation, requests.status) END as status")
             )
             ->orderBy('requests.created_at', 'desc')
@@ -133,7 +136,13 @@ class RequestController extends Controller
                 DB::raw('properties.lot_area_sqm as project_area_sqm'),
                 // Report fields
                 'reports.evaluation',
-                'reports.amount as report_amount',
+                // The Treasury fee the officer set and the note for the
+                // applicant - but only once the Administrator has approved,
+                // which is when they become the applicant's business.
+                // (reports.amount is the project cost the resubmit path
+                // writes, not the fee; the card used to show that.)
+                DB::raw("CASE WHEN COALESCE(reports.evaluation, requests.status) = 'approved' OR requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN reports.payment_amount END as report_amount"),
+                DB::raw("CASE WHEN COALESCE(reports.evaluation, requests.status) = 'approved' OR requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN reports.admin_notes END as office_note"),
                 DB::raw("CASE WHEN requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN requests.status ELSE COALESCE(reports.evaluation, requests.status) END as status"),
                 // Requirement #1 (notarized application form) is uploaded after
                 // submission, so the list needs to know whether it is still missing.

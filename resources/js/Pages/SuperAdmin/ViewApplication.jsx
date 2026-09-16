@@ -757,11 +757,6 @@ function Step3Content({ request }) {
                         label="Preferred Release Mode"
                         value={RELEASE_MODE_LABELS[request.preferred_release_mode] || request.preferred_release_mode}
                     />
-                    <InfoField
-                        num="17"
-                        label="Release Address"
-                        value={request.release_address}
-                    />
                 </div>
             </div>
         </div>

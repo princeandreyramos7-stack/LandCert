@@ -25,13 +25,29 @@ function formatDate(ds) {
 }
 
 const TYPE_CFG = {
-    success: { icon: CheckCircle, dot: "bg-green-500",  bg: "bg-green-50",  text: "text-green-700",  border: "border-green-200", label: "Success" },
-    warning: { icon: AlertCircle, dot: "bg-yellow-500", bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200", label: "Warning" },
-    error:   { icon: AlertCircle, dot: "bg-red-500",    bg: "bg-red-50",    text: "text-red-700",    border: "border-red-200",   label: "Error"   },
-    info:    { icon: Info,        dot: "bg-blue-500",   bg: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-200",  label: "Info"    },
+    success: { icon: CheckCircle, dot: "bg-green-500",  bg: "bg-green-50",  text: "text-green-700",  border: "border-green-200", label: "Approved" },
+    payment: { icon: CheckCircle, dot: "bg-violet-500", bg: "bg-violet-50", text: "text-violet-700", border: "border-violet-200", label: "Payment" },
+    ready:   { icon: CheckCircle, dot: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "Certificate" },
+    warning: { icon: AlertCircle, dot: "bg-yellow-500", bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200", label: "Action needed" },
+    error:   { icon: AlertCircle, dot: "bg-red-500",    bg: "bg-red-50",    text: "text-red-700",    border: "border-red-200",   label: "Denied"  },
+    info:    { icon: Info,        dot: "bg-blue-500",   bg: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-200",  label: "Update"  },
 };
 
-function typeCfg(t) { return TYPE_CFG[t] || TYPE_CFG.info; }
+/**
+ * The stored type names the event (application_approved, payment_rejected,
+ * certificate_ready ...). Each maps to one of the looks above, so the badge
+ * says what happened rather than "Info" on every row.
+ */
+function typeCfg(t) {
+    const type = String(t || "").toLowerCase();
+    if (TYPE_CFG[type]) return TYPE_CFG[type];
+    if (/rejected|denied/.test(type)) return TYPE_CFG.error;
+    if (/returned|incomplete|reminder|pending_action/.test(type)) return TYPE_CFG.warning;
+    if (/certificate/.test(type)) return TYPE_CFG.ready;
+    if (/payment|receipt/.test(type)) return TYPE_CFG.payment;
+    if (/approved/.test(type)) return TYPE_CFG.success;
+    return TYPE_CFG.info;
+}
 
 /* ── Notification row ────────────────────────────────────── */
 function NotifRow({ notif, onRead, onDelete }) {
@@ -39,7 +55,7 @@ function NotifRow({ notif, onRead, onDelete }) {
     const Icon = cfg.icon;
     return (
         <div className={`flex items-start gap-4 p-4 rounded-xl border transition-all group
-            ${notif.read ? "bg-white border-gray-100" : "bg-[#0d1f5c]/[0.03] border-[#0d1f5c]/15"}`}>
+            ${notif.read ? "bg-white border-gray-100" : "bg-[#f3f5fb] border-[#0d1f5c]/15"}`}>
             {/* Icon */}
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cfg.bg} ${cfg.border} border`}>
                 <Icon className={`w-5 h-5 ${cfg.text}`}/>
@@ -60,7 +76,7 @@ function NotifRow({ notif, onRead, onDelete }) {
                         </span>
                     </div>
                     {/* Actions */}
-                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 shrink-0 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                         {!notif.read && (
                             <button onClick={() => onRead(notif.id)} title="Mark as read"
                                 className="p-1.5 rounded-lg hover:bg-[#0d1f5c]/5 text-gray-400 hover:text-[#0d1f5c] transition-colors">

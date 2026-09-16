@@ -182,11 +182,10 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
         Route::delete('/{certificate}', [CertificateController::class, 'destroy'])->name('destroy');
     });
     
-    // SMS Broadcast + Auto-Templates
+    // Texts to the Zoning Officers only (SmsController::audiences). The
+    // automatic notices' wording is the officer's (admin.sms.templates.*).
     Route::get('/sms', function (\Illuminate\Http\Request $request) { return redirect('/sms-broadcast' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('sms.index');
     Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
-    Route::put('/sms/templates/{id}', [\App\Http\Controllers\SmsController::class, 'updateTemplate'])->name('sms.templates.update');
-    Route::post('/sms/templates/{id}/reset', [\App\Http\Controllers\SmsController::class, 'resetTemplate'])->name('sms.templates.reset');
 
     // Print form
     Route::get('/requests/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'print-form', $id)); })->name('requests.print');
@@ -234,6 +233,8 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::get('/reports/preview', [\App\Http\Controllers\AdminReportsController::class, 'preview'])->name('reports.preview');
     Route::get('/reports/generate', [\App\Http\Controllers\AdminReportsController::class, 'generate'])->name('reports.generate');
     Route::get('/users', function (\Illuminate\Http\Request $request) { return redirect('/users' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('users');
+    // Applicant accounts only; staff accounts are made by the Administrator.
+    Route::post('/users', [AdminController::class, 'storeApplicant'])->name('users.store');
     Route::put('/users/{userId}', [AdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{userId}', [AdminController::class, 'deleteUser'])->name('users.delete');
     // No direct evaluation, bulk decision or delete here. The decision is the
@@ -282,9 +283,11 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     Route::get('/export/users', [AdminController::class, 'exportUsers'])->name('export.users');
     Route::get('/export/payments', [AdminController::class, 'exportPayments'])->name('export.payments');
 
-    // SMS Broadcast only (admins can broadcast but NOT edit templates)
+    // SMS: broadcasts to applicants, and the wording of the automatic notices.
     Route::get('/sms', function (\Illuminate\Http\Request $request) { return redirect('/sms-broadcast' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('sms.index');
     Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
+    Route::put('/sms/templates/{id}', [\App\Http\Controllers\SmsController::class, 'updateTemplate'])->name('sms.templates.update');
+    Route::post('/sms/templates/{id}/reset', [\App\Http\Controllers\SmsController::class, 'resetTemplate'])->name('sms.templates.reset');
 
     // Print form
     Route::get('/requests/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'print-form', $id)); })->name('requests.print');

@@ -3,6 +3,7 @@ import { Label } from "@/Components/ui/label";
 import { Input } from "@/Components/ui/input";
 import { Textarea } from "@/Components/ui/textarea";
 import { PhilippineAddressFields } from "@/Components/Address/PhilippineAddressFields";
+import { Info } from "lucide-react";
 
 export function Step1ApplicantInfo({
     data,
@@ -10,6 +11,7 @@ export function Step1ApplicantInfo({
     hasRepresentative,
     onDataChange,
     onRepresentativeToggle,
+    addressFromAccount = false,
 }) {
     return (
         <div className="grid gap-4 md:grid-cols-2">
@@ -53,6 +55,18 @@ export function Step1ApplicantInfo({
                     onChange={onDataChange}
                     currentText={data.applicant_address_legacy}
                 />
+                {/* Nothing typed here yet: the address is the one on the
+                    applicant's account, and they are told so, since this
+                    application may be for somewhere else. */}
+                {addressFromAccount && (
+                    <p className="flex items-start gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+                        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>
+                            <span className="font-semibold">Filled in from your account.</span> Leave it if this is
+                            your address, or change it above if this application needs a different one.
+                        </span>
+                    </p>
+                )}
             </div>
 
             <div className="space-y-2 md:col-span-2">

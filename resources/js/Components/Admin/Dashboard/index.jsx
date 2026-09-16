@@ -4,7 +4,11 @@ import { BarChart3, Clock, FileText, CheckCircle2 } from "lucide-react";
 
 import { AnalyticsDashboard } from "@/Components/Admin/Analytics";
 
-export function AdminDashboard({ analytics = null, stats = {}, applications = [] }) {
+export function AdminDashboard({
+    analytics = null,
+    stats = {},
+    applications = [],
+}) {
     const [showAnalytics, setShowAnalytics] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -25,23 +29,48 @@ export function AdminDashboard({ analytics = null, stats = {}, applications = []
             {/* Header banner */}
             <div
                 className="relative overflow-hidden rounded-2xl text-white"
-                style={{ background: "linear-gradient(135deg,#0d1f5c 0%,#1a3a8f 60%,#112068 100%)" }}
+                style={{
+                    background:
+                        "linear-gradient(135deg,#0d1f5c 0%,#1a3a8f 60%,#112068 100%)",
+                }}
             >
-                <svg className="absolute inset-0 w-full h-full opacity-[0.07] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+                <svg
+                    className="absolute inset-0 w-full h-full opacity-[0.07] pointer-events-none"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
                     <defs>
-                        <pattern id="adg" width="48" height="48" patternUnits="userSpaceOnUse">
-                            <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#93c5fd" strokeWidth="0.7" />
+                        <pattern
+                            id="adg"
+                            width="48"
+                            height="48"
+                            patternUnits="userSpaceOnUse"
+                        >
+                            <path
+                                d="M 48 0 L 0 0 0 48"
+                                fill="none"
+                                stroke="#93c5fd"
+                                strokeWidth="0.7"
+                            />
                         </pattern>
                     </defs>
                     <rect width="100%" height="100%" fill="url(#adg)" />
                 </svg>
-                <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none"
-                    style={{ background: "radial-gradient(circle,#d4a017,transparent 70%)" }} />
+                <div
+                    className="absolute bottom-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none"
+                    style={{
+                        background:
+                            "radial-gradient(circle,#d4a017,transparent 70%)",
+                    }}
+                />
 
                 <div className="relative z-10 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
                     <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                         <div className="w-16 h-16 rounded-full border-2 border-[#d4a017]/50 bg-white overflow-hidden flex items-center justify-center shrink-0 shadow-lg">
-                            <img src="/images/ilagan1-192.png" alt="City of Ilagan" className="w-full h-full object-cover" />
+                            <img
+                                src="/images/ilagan1-192.png"
+                                alt="City of Ilagan"
+                                className="w-full h-full object-cover"
+                            />
                         </div>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1">
@@ -50,7 +79,9 @@ export function AdminDashboard({ analytics = null, stats = {}, applications = []
                                     CPDO Zoning Officer
                                 </p>
                             </div>
-                            <h2 className="truncate text-xl font-black text-white sm:text-2xl">Dashboard Overview</h2>
+                            <h2 className="truncate text-xl font-black text-white sm:text-2xl">
+                                Dashboard Overview
+                            </h2>
                             <p className="text-blue-200/70 text-sm mt-0.5">
                                 Comprehensive analytics and insights
                             </p>
@@ -62,7 +93,9 @@ export function AdminDashboard({ analytics = null, stats = {}, applications = []
                         disabled={isTransitioning}
                         className="w-full shrink-0 justify-center gap-2 rounded-xl border-white/20 bg-white/10 text-white transition-all hover:bg-white/20 hover:text-white sm:w-auto"
                     >
-                        <BarChart3 className={`h-4 w-4 transition-transform duration-300 ${isTransitioning ? "rotate-180" : ""}`} />
+                        <BarChart3
+                            className={`h-4 w-4 transition-transform duration-300 ${isTransitioning ? "rotate-180" : ""}`}
+                        />
                         {showAnalytics ? "Hide" : "Show"} Analytics
                     </Button>
                 </div>
@@ -77,13 +110,19 @@ export function AdminDashboard({ analytics = null, stats = {}, applications = []
 
             {/* Summary panel when analytics are hidden */}
             {!showAnalytics && (
-                <div className={`transition-all duration-500 ${isTransitioning ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}>
+                <div
+                    className={`transition-all duration-500 ${isTransitioning ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
+                >
                     <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
                         <div className="p-6 sm:p-10">
                             <div className="flex flex-col md:flex-row items-center gap-8">
                                 {/* Seal */}
                                 <div className="w-32 h-32 rounded-full border-4 border-[#d4a017]/30 overflow-hidden shrink-0 shadow-lg">
-                                    <img src="/images/ilagan1-192.png" alt="City of Ilagan" className="w-full h-full object-cover" />
+                                    <img
+                                        src="/images/ilagan1-192.png"
+                                        alt="City of Ilagan"
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
 
                                 {/* Copy */}
@@ -94,33 +133,47 @@ export function AdminDashboard({ analytics = null, stats = {}, applications = []
                                             Zoning Officer — CPDO Ilagan City
                                         </p>
                                     </div>
-                                    <h3 className="text-2xl font-black text-[#0d1f5c]">Welcome back</h3>
+                                    <h3 className="text-2xl font-black text-[#0d1f5c]">
+                                        Welcome back
+                                    </h3>
                                     <p className="text-gray-500 text-sm max-w-xl mx-auto md:mx-0">
-                                        Analytics are hidden. Turn them back on for
-                                        <span className="font-semibold text-[#0d1f5c]"> submissions</span>,
-                                        payments, certificates and processing-time insights.
+                                        Analytics are hidden. Turn them back on
+                                        for
+                                        <span className="font-semibold text-[#0d1f5c]">
+                                            {" "}
+                                            submissions
+                                        </span>
+                                        , payments, certificates and
+                                        processing-time insights.
                                     </p>
 
                                     {/* Quick facts */}
                                     <div className="flex flex-wrap gap-2 pt-1 justify-center md:justify-start">
                                         {[
-                                            { icon: Clock,        text: `${pending} pending`,             cls: "text-yellow-700 bg-yellow-50 border-yellow-200" },
-                                            { icon: FileText,      text: `${total} total applications`,    cls: "text-blue-700 bg-blue-50 border-blue-200" },
-                                            { icon: CheckCircle2,  text: `${approved} approved`,           cls: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+                                            {
+                                                icon: Clock,
+                                                text: `${pending} pending`,
+                                                cls: "text-yellow-700 bg-yellow-50 border-yellow-200",
+                                            },
+                                            {
+                                                icon: FileText,
+                                                text: `${total} total applications`,
+                                                cls: "text-blue-700 bg-blue-50 border-blue-200",
+                                            },
+                                            {
+                                                icon: CheckCircle2,
+                                                text: `${approved} approved`,
+                                                cls: "text-emerald-700 bg-emerald-50 border-emerald-200",
+                                            },
                                         ].map((f, i) => (
-                                            <span key={i} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold ${f.cls}`}>
+                                            <span
+                                                key={i}
+                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold ${f.cls}`}
+                                            >
                                                 <f.icon className="w-3.5 h-3.5" />
                                                 {f.text}
                                             </span>
                                         ))}
-                                    </div>
-
-                                    <div className="pt-2">
-                                        <Button onClick={handleToggle} disabled={isTransitioning}
-                                            className="gap-2 bg-[#0d1f5c] hover:bg-[#0d1f5c]/90 text-white rounded-xl">
-                                            <BarChart3 className="h-4 w-4" />
-                                            Show Analytics
-                                        </Button>
                                     </div>
                                 </div>
                             </div>

@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { router } from "@inertiajs/react";
 import { Badge } from "@/Components/ui/badge";
 import { Button } from "@/Components/ui/button";

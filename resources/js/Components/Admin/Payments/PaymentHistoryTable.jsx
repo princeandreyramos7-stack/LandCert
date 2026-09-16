@@ -24,7 +24,7 @@ import {
     ThumbsDown,
     Receipt,
 } from "lucide-react";
-import { formatDate, formatCurrency } from "./utils.jsx";
+import { formatDate, formatCurrency, PaymentStatusBadge, PAYMENT_STATUS } from "./utils.jsx";
 import { router } from "@inertiajs/react";
 import { VerifyPaymentDialog } from "./VerifyPaymentDialog";
 
@@ -126,19 +126,36 @@ export function PaymentHistoryTable({
     // Administrator opens this same table for oversight, with verify withheld.
     canVerify = true,
     className = "",
+    // Status filter: "all" | "pending" | "verified" | "rejected". The page's
+    // stat cards drive it when they pass these; otherwise it is the table's own.
+    statusFilter: statusFilterProp,
+    onStatusFilterChange,
 }) {
     const [verifyingPayment, setVerifyingPayment] = useState(null);
     // State for filters
     const [searchTerm, setSearchTerm] = useState("");
     const [filterDate, setFilterDate] = useState("");
+    const [ownStatusFilter, setOwnStatusFilter] = useState("all");
+    const statusFilter = statusFilterProp ?? ownStatusFilter;
+    const setStatusFilter = (value) => { setOwnStatusFilter(value); onStatusFilterChange?.(value); };
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 25;
 
+    const paymentsArray = Array.isArray(payments) ? payments : (payments?.data || []);
+    const countByStatus = useMemo(() => ({
+        all: paymentsArray.length,
+        pending: paymentsArray.filter((p) => p.payment_status === "pending").length,
+        verified: paymentsArray.filter((p) => p.payment_status === "verified").length,
+        rejected: paymentsArray.filter((p) => p.payment_status === "rejected").length,
+    }), [paymentsArray]);
+
     // Filter payments
     const filteredPayments = useMemo(() => {
-        // Handle both array and paginated object
-        const paymentsArray = Array.isArray(payments) ? payments : (payments?.data || []);
         let filtered = [...paymentsArray];
+
+        if (statusFilter !== "all") {
+            filtered = filtered.filter((p) => p.payment_status === statusFilter);
+        }
 
         // Filter by specific date (exact match)
         if (filterDate) {
@@ -154,6 +171,7 @@ export function PaymentHistoryTable({
             filtered = filtered.filter(
                 (p) =>
                     p.receipt_number?.toLowerCase().includes(searchLower) ||
+                    p.application_number?.toLowerCase().includes(searchLower) ||
                     p.request_id?.toString().includes(searchLower) ||
                     p.applicant_name?.toLowerCase().includes(searchLower)
             );
@@ -161,7 +179,8 @@ export function PaymentHistoryTable({
 
         return filtered;
     }, [
-        payments,
+        paymentsArray,
+        statusFilter,
         filterDate,
         searchTerm,
     ]);
@@ -175,12 +194,13 @@ export function PaymentHistoryTable({
     // Reset to page 1 when filters change
     useMemo(() => {
         setCurrentPage(1);
-    }, [filterDate, searchTerm]);
+    }, [filterDate, searchTerm, statusFilter]);
 
     // Clear all filters
     const handleClearFilters = () => {
         setSearchTerm("");
         setFilterDate("");
+        setStatusFilter("all");
         setCurrentPage(1);
     };
 
@@ -234,7 +254,7 @@ export function PaymentHistoryTable({
                                     <Search className="h-4 w-4 text-slate-400 group-focus-within:text-blue-600" />
                                 </div>
                                 <Input
-                                    placeholder="Search by OR Number, Request ID, or Applicant Name..."
+                                    placeholder="Search by OR number, application number or applicant..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="pl-10 h-10 border-slate-200 bg-slate-50/50 focus:bg-white transition-all duration-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -280,6 +300,34 @@ export function PaymentHistoryTable({
                     </div>
                 </div>
 
+                {/* Status */}
+                <div className="flex flex-wrap items-center gap-2">
+                    {[
+                        { key: "all", label: "All" },
+                        { key: "pending", label: PAYMENT_STATUS.pending.label },
+                        { key: "verified", label: PAYMENT_STATUS.verified.label },
+                        { key: "rejected", label: PAYMENT_STATUS.rejected.label },
+                    ].map((option) => {
+                        const active = statusFilter === option.key;
+                        return (
+                            <button
+                                key={option.key}
+                                type="button"
+                                onClick={() => setStatusFilter(option.key)}
+                                aria-pressed={active}
+                                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition-colors ${
+                                    active ? "border-[#0d1f5c] bg-[#0d1f5c] text-white" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                                }`}
+                            >
+                                {option.label}
+                                <span className={`rounded-full px-1.5 text-[10px] ${active ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>
+                                    {countByStatus[option.key]}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+
                 {/* Results Count */}
                 <div className="flex items-center justify-between pt-2 border-t border-slate-200">
                     <p className="text-sm text-slate-600">
@@ -294,7 +342,7 @@ export function PaymentHistoryTable({
                         </span>{" "}
                         payments
                     </p>
-                    {(searchTerm || filterDate) && (
+                    {(searchTerm || filterDate || statusFilter !== "all") && (
                         <Badge variant="outline" className="text-xs">
                             <Filter className="h-3 w-3 mr-1" />
                             Filters Active
@@ -326,6 +374,9 @@ export function PaymentHistoryTable({
                                     Amount
                                 </th>
                                 <th className="text-left p-3 font-semibold text-slate-700 text-sm">
+                                    Status
+                                </th>
+                                <th className="text-left p-3 font-semibold text-slate-700 text-sm">
                                     Date
                                 </th>
                                 <th className="text-left p-3 font-semibold text-slate-700 text-sm">
@@ -340,7 +391,7 @@ export function PaymentHistoryTable({
                             {paginatedPayments.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan="7"
+                                        colSpan="8"
                                         className="p-12 text-center text-slate-500"
                                     >
                                         <div className="flex flex-col items-center justify-center">
@@ -385,14 +436,18 @@ export function PaymentHistoryTable({
                                             </div>
                                         </td>
                                         <td className="p-3">
+                                            <PaymentStatusBadge status={payment.payment_status} />
+                                        </td>
+                                        <td className="p-3">
                                             <div className="text-sm text-slate-600">
                                                 {formatDate(payment.payment_date)}
                                             </div>
                                         </td>
                                         <td className="p-3">
                                             <div className="text-sm text-slate-700">
-                                                {payment.verified_by_name ||
-                                                    "—"}
+                                                {payment.payment_status === "verified" && payment.verified_by_name && payment.verified_by_name !== "N/A"
+                                                    ? payment.verified_by_name
+                                                    : "—"}
                                             </div>
                                         </td>
                                         <td className="p-3">
@@ -454,11 +509,14 @@ export function PaymentHistoryTable({
                                     </div>
                                 </div>
                                 <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                                    <PaymentStatusBadge status={payment.payment_status} />
                                     <span className="flex items-center gap-1">
                                         <Calendar className="h-3 w-3" />
                                         {formatDate(payment.payment_date)}
                                     </span>
-                                    <span>Verified by {payment.verified_by_name || "—"}</span>
+                                    {payment.payment_status === "verified" && payment.verified_by_name && payment.verified_by_name !== "N/A" && (
+                                        <span>Verified by {payment.verified_by_name}</span>
+                                    )}
                                 </div>
                             </li>
                         ))
