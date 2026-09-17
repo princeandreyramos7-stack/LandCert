@@ -85,6 +85,28 @@ export function journeyOf(app) {
     }
 
     if (["approved", "for_payment", "pending_payment"].includes(status)) {
+        // The receipt is in and the office has not yet checked it - the
+        // applicant has done their part, so the card must not ask again.
+        const receipt = lower(app.latest_payment_status);
+        if (receipt === "pending") {
+            return {
+                stage: 3, failed: false, needsAction: false, tone: "sky",
+                label: "Receipt uploaded",
+                headline: "Receipt received — waiting for the office to verify it",
+                note: "The Zoning Office checks your official receipt against the Treasury's records. You will be notified once it is confirmed.",
+                action: { label: "View details", route: "my-applications.show" },
+            };
+        }
+        if (receipt === "rejected") {
+            return {
+                stage: 3, failed: false, needsAction: true, tone: "rose",
+                label: "Receipt not accepted",
+                headline: "The office could not verify your receipt",
+                note: "Open the details to read why, then upload a clear copy of the official receipt again.",
+                action: { label: "Upload receipt again", route: "receipt.upload.page" },
+                secondary: { label: "Order of Payment", route: "my-applications.order-of-payment" },
+            };
+        }
         return {
             stage: 3, failed: false, needsAction: true, tone: "violet",
             label: "Approved — pay the fee",
@@ -92,6 +114,21 @@ export function journeyOf(app) {
             note: "Print the Order of Payment, pay at the City Treasurer's Office, then upload the official receipt here.",
             action: { label: "Upload receipt", route: "receipt.upload.page" },
             secondary: { label: "Order of Payment", route: "my-applications.order-of-payment" },
+        };
+    }
+
+    // Released to the applicant: the document is theirs to download whatever
+    // lifecycle step the office's record sits at. (The release used to leave
+    // the status at payment_confirmed, and this card went on saying "being
+    // prepared" with nothing to download.)
+    if (released && LIFECYCLE.includes(status)) {
+        const isZc = lower(app.project_type) === "zc";
+        return {
+            stage: 5, failed: false, needsAction: true, tone: "emerald",
+            label: "Ready to download",
+            headline: isZc ? "Your Zoning Certification is ready" : "Your clearance is ready",
+            note: "Download and print it. Keep a copy for your records.",
+            action: { label: isZc ? "Download certificate" : "Download clearance", route: isZc ? "print-certificate" : "print-clearance" },
         };
     }
 
@@ -106,16 +143,6 @@ export function journeyOf(app) {
     }
 
     if (status === "certificate_ready" || status === "released") {
-        if (released) {
-            const isZc = lower(app.project_type) === "zc";
-            return {
-                stage: 5, failed: false, needsAction: true, tone: "emerald",
-                label: "Ready to download",
-                headline: isZc ? "Your Zoning Certification is ready" : "Your clearance is ready",
-                note: "Download and print it. Keep a copy for your records.",
-                action: { label: isZc ? "Download certificate" : "Download clearance", route: isZc ? "print-certificate" : "print-clearance", newTab: true },
-            };
-        }
         return {
             stage: 4, failed: false, needsAction: false, tone: "emerald",
             label: "Certificate ready",

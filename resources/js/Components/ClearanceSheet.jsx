@@ -2,6 +2,7 @@ import React, { forwardRef } from "react";
 import OfficialLetterhead from "@/Components/OfficialLetterhead";
 import ESignatureImage from "@/Components/ESignatureImage";
 import TupClearanceLetter from "@/Components/TupClearanceLetter";
+import VerificationQr from "@/Components/VerificationQr";
 import { zoningAdministratorName } from "@/lib/signerName";
 
 /**
@@ -306,11 +307,14 @@ const ClearanceSheet = forwardRef(function ClearanceSheet(
                 </div>
             </div>
 
-            {/* Payment Details - Below signatures on the left */}
-            <div style={{ fontSize: '9pt', marginTop: '10pt', marginBottom: '16pt' }}>
+            {/* Payment Details - Below signatures on the left; the verification QR on the right */}
+            <div style={{ marginTop: '6pt', marginBottom: '4pt', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div style={{ fontSize: '9pt' }}>
                 <div><strong>O.R. No.:</strong> {payment?.receipt_number || 'N/A'}</div>
                 <div><strong>Date Issued:</strong> {payment?.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : application.updated_at ? new Date(application.updated_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}</div>
                 <div><strong>Amount Paid:</strong> ₱{payment?.amount ? Number(payment.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00'}</div>
+            </div>
+            <VerificationQr verification={application.verification} size={46} caption="beside" />
             </div>
             </div>
         </>

@@ -257,7 +257,8 @@ class ApplicationRequirements
         [
             'id' => 10,
             'name' => 'Payment of fees',
-            'required' => true,
+            // Paid after approval, at the Treasury - never a missing upload.
+            'required' => false,
             'section' => 'additional',
             'description' => ''
         ],
@@ -344,7 +345,8 @@ class ApplicationRequirements
         [
             'id' => 9,
             'name' => 'Payment of processing fees',
-            'required' => true,
+            // Paid after approval, at the Treasury - never a missing upload.
+            'required' => false,
             'section' => 'additional',
             'description' => ''
         ],

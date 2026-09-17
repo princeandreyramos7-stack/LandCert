@@ -182,6 +182,36 @@ class NotificationService
     }
 
     /**
+     * Tell the Zoning Officer the Administrator approved the application they
+     * reviewed. Goes to the officer on the report; to every officer when the
+     * report does not say who reviewed it.
+     */
+    public static function officerToldOfApproval(RequestModel $request, ?User $officer, ?User $approvedBy = null): void
+    {
+        self::ensureRelationshipsLoaded($request);
+        $applicantName = self::getApplicantName($request);
+        $approverName = $approvedBy ? $approvedBy->name : 'the Zoning Administrator';
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
+
+        $title = 'Application Approved by the Administrator';
+        $message = "Application {$applicationNumber} from {$applicantName} has been approved by {$approverName}. The applicant has been sent the Order of Payment.";
+        $link = "/admin/requests/{$request->id}/view-application";
+        $data = [
+            'application_id' => $request->id,
+            'application_number' => $applicationNumber,
+            'applicant_name' => $applicantName,
+            'approved_by' => $approverName,
+        ];
+
+        if ($officer && $officer->user_type === 'admin') {
+            Notification::createForUser($officer->id, 'application_final_approved', $title, $message, $link, $data);
+            return;
+        }
+
+        self::notifyRoles(['admin'], 'application_final_approved', $title, $message, $link, $data);
+    }
+
+    /**
      * Create notification when application is denied
      */
     public static function applicationRejected(RequestModel $request, string $reason, ?User $rejectedBy = null)

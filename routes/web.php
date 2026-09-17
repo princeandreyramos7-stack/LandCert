@@ -65,6 +65,22 @@ Route::prefix('psgc')->name('psgc.')->middleware('throttle:300,1,files')->group(
     Route::get('/cities/{city}/barangays', [\App\Http\Controllers\PsgcController::class, 'barangays'])->name('barangays');
 });
 
+/*
+ | Public verification of an issued certificate or clearance.
+ |
+ | The QR printed on every sheet opens /verify/{code}; the bare /verify is the
+ | form for a code typed off the paper. Outside the auth group on purpose: the
+ | reader is another office or a bank holding the document, not a user of this
+ | system. The code is the credential (12 random characters), and the page
+ | shows only what is already printed on the paper. Throttled per address so
+ | the codes cannot be enumerated.
+ */
+Route::middleware('throttle:30,1,verify')->group(function () {
+    Route::get('/verify', [\App\Http\Controllers\VerificationController::class, 'index'])->name('verify.index');
+    Route::post('/verify', [\App\Http\Controllers\VerificationController::class, 'lookup'])->name('verify.lookup');
+    Route::get('/verify/{code}', [\App\Http\Controllers\VerificationController::class, 'show'])->name('verify.show');
+});
+
 // The throttles here carry a key prefix (the third argument) because Laravel
 // otherwise keys every throttle by the user alone: the general limit and the
 // tighter one on filing then share one counter, and a dozen page views used up
@@ -176,6 +192,8 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
         Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
         Route::post('/{certificate}/mark-ready', [CertificateController::class, 'markReady'])->name('mark-ready');
         Route::post('/{certificate}/record-release', [CertificateController::class, 'recordRelease'])->name('record-release');
+        Route::post('/{certificate}/revoke', [CertificateController::class, 'revoke'])->name('revoke');
+        Route::post('/{certificate}/reinstate', [CertificateController::class, 'reinstate'])->name('reinstate');
         Route::post('/upload-softcopy', [CertificateController::class, 'uploadSoftcopy'])->name('upload-softcopy');
         Route::post('/', [CertificateController::class, 'store'])->name('store');
         Route::put('/{certificate}', [CertificateController::class, 'update'])->name('update');
@@ -272,6 +290,8 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
         Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
         Route::post('/{certificate}/mark-ready', [CertificateController::class, 'markReady'])->name('mark-ready');
         Route::post('/{certificate}/record-release', [CertificateController::class, 'recordRelease'])->name('record-release');
+        Route::post('/{certificate}/revoke', [CertificateController::class, 'revoke'])->name('revoke');
+        Route::post('/{certificate}/reinstate', [CertificateController::class, 'reinstate'])->name('reinstate');
         Route::post('/upload-softcopy', [CertificateController::class, 'uploadSoftcopy'])->name('upload-softcopy');
         Route::post('/', [CertificateController::class, 'store'])->name('store');
         Route::put('/{certificate}', [CertificateController::class, 'update'])->name('update');

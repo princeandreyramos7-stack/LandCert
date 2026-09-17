@@ -29,8 +29,12 @@ import {
     Printer,
     Send,
     Undo2,
+    Ban,
+    ShieldCheck,
+    Link2,
 } from "lucide-react";
 import { router } from "@inertiajs/react";
+import { Textarea } from "@/Components/ui/textarea";
 import {
     Dialog,
     DialogContent,
@@ -44,7 +48,11 @@ import {
  * What can be done with one certificate. Shared by the table row and the
  * card that replaces it on a phone.
  */
-function CertificateRowActions({ certificate, routePrefix, onRelease }) {
+function CertificateRowActions({ certificate, routePrefix, onRelease, onRevoke }) {
+    const verifyUrl = certificate.verification_code
+        ? `${window.location.origin}/verify/${certificate.verification_code}`
+        : null;
+
     return (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -118,6 +126,35 @@ function CertificateRowActions({ certificate, routePrefix, onRelease }) {
                                 </p>
                             </div>
                         )}
+
+                        {/* Public verification: the QR on the printed sheet opens this
+                            link. Revoking keeps the record and makes that page say so. */}
+                        <DropdownMenuSeparator />
+                        {verifyUrl && (
+                            <DropdownMenuItem
+                                onClick={() => window.open(verifyUrl, "_blank", "noopener")}
+                            >
+                                <Link2 className="h-4 w-4 mr-2" />
+                                Open verification page
+                            </DropdownMenuItem>
+                        )}
+                        {certificate.revoked_at ? (
+                            <DropdownMenuItem
+                                onClick={() => onRevoke({ certificate, revoke: false })}
+                                className="text-emerald-700 font-medium"
+                            >
+                                <ShieldCheck className="h-4 w-4 mr-2" />
+                                Reinstate Certificate
+                            </DropdownMenuItem>
+                        ) : (
+                            <DropdownMenuItem
+                                onClick={() => onRevoke({ certificate, revoke: true })}
+                                className="text-red-700 font-medium"
+                            >
+                                <Ban className="h-4 w-4 mr-2" />
+                                Revoke Certificate
+                            </DropdownMenuItem>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
     );
@@ -140,6 +177,10 @@ export function CertificatesTable({
     // withdrawing takes a document back they may already have been told about,
     // so both are confirmed rather than fired straight off the menu item.
     const [pendingRelease, setPendingRelease] = useState(null);
+    // { certificate, revoke } — revoking needs a reason (it is shown on the
+    // public verification page), so it goes through a dialog too.
+    const [pendingRevoke, setPendingRevoke] = useState(null);
+    const [revokeReason, setRevokeReason] = useState("");
 
     // Handle certificate data (paginated object)
     const certificatesData = certificates?.data || [];
@@ -380,7 +421,19 @@ export function CertificatesTable({
                                             </div>
                                         </td>
                                         <td className="p-3">
-                                            {certificate.request?.released_to_applicant_at ? (
+                                            {certificate.revoked_at ? (
+                                                <div title={certificate.revocation_reason || "Revoked"}>
+                                                    <Badge className="bg-red-100 text-red-800 border border-red-200 hover:bg-red-100">
+                                                        Revoked
+                                                    </Badge>
+                                                    <div className="text-xs text-slate-500 mt-1 max-w-[180px] truncate">
+                                                        {certificate.revocation_reason || "no reason given"}
+                                                    </div>
+                                                    <div className="text-xs text-slate-400">
+                                                        {formatDate(certificate.revoked_at)}
+                                                    </div>
+                                                </div>
+                                            ) : certificate.request?.released_to_applicant_at ? (
                                                 <div
                                                     title={`Released by ${certificate.request?.releaser?.name || "staff"} on ${formatDate(certificate.request.released_to_applicant_at)}`}
                                                 >
@@ -407,7 +460,7 @@ export function CertificatesTable({
                                             )}
                                         </td>
                                         <td className="p-3">
-                                            <CertificateRowActions certificate={certificate} routePrefix={routePrefix} onRelease={setPendingRelease} />
+                                            <CertificateRowActions certificate={certificate} routePrefix={routePrefix} onRelease={setPendingRelease} onRevoke={setPendingRevoke} />
                                         </td>
                                     </tr>
                                 ))
@@ -439,10 +492,12 @@ export function CertificatesTable({
                                             {certificate.request?.application_number || `#${certificate.request_id}`}
                                         </p>
                                     </div>
-                                    <CertificateRowActions certificate={certificate} routePrefix={routePrefix} onRelease={setPendingRelease} />
+                                    <CertificateRowActions certificate={certificate} routePrefix={routePrefix} onRelease={setPendingRelease} onRevoke={setPendingRevoke} />
                                 </div>
                                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                    {certificate.request?.released_to_applicant_at ? (
+                                    {certificate.revoked_at ? (
+                                        <Badge className="border border-red-200 bg-red-100 text-red-800 hover:bg-red-100">Revoked</Badge>
+                                    ) : certificate.request?.released_to_applicant_at ? (
                                         <Badge className="border border-emerald-200 bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Released</Badge>
                                     ) : (
                                         <>
@@ -486,6 +541,85 @@ export function CertificatesTable({
                     </div>
                 )}
             </div>
+
+            {/* Revoke / reinstate */}
+            <Dialog
+                open={!!pendingRevoke}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setPendingRevoke(null);
+                        setRevokeReason("");
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {pendingRevoke?.revoke ? "Revoke this certificate?" : "Reinstate this certificate?"}
+                        </DialogTitle>
+                        <DialogDescription asChild>
+                            <div className="space-y-2 pt-1 text-sm text-slate-600">
+                                <p>
+                                    Certificate{" "}
+                                    <span className="font-mono font-semibold text-slate-800">
+                                        {pendingRevoke?.certificate?.certificate_number}
+                                    </span>
+                                    {pendingRevoke?.certificate?.request?.applicant?.applicant_name && (
+                                        <> — {pendingRevoke.certificate.request.applicant.applicant_name}</>
+                                    )}
+                                </p>
+                                {pendingRevoke?.revoke ? (
+                                    <>
+                                        <p>
+                                            Anyone who scans the QR code on the printed document will be told it is
+                                            <strong> revoked</strong>, with the reason below. The record is kept and can be
+                                            reinstated later.
+                                        </p>
+                                        <Textarea
+                                            value={revokeReason}
+                                            onChange={(e) => setRevokeReason(e.target.value)}
+                                            placeholder="Reason for revocation (shown on the public verification page)"
+                                            rows={3}
+                                            maxLength={500}
+                                            autoFocus
+                                        />
+                                    </>
+                                ) : (
+                                    <p>The certificate will verify as valid again.</p>
+                                )}
+                            </div>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setPendingRevoke(null);
+                                setRevokeReason("");
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            className={pendingRevoke?.revoke ? "bg-red-600 hover:bg-red-700" : "bg-emerald-600 hover:bg-emerald-700"}
+                            disabled={pendingRevoke?.revoke && !revokeReason.trim()}
+                            onClick={() => {
+                                const { certificate, revoke } = pendingRevoke;
+                                const reason = revokeReason.trim();
+                                setPendingRevoke(null);
+                                setRevokeReason("");
+                                router.post(
+                                    route(`${routePrefix}.certificates.${revoke ? "revoke" : "reinstate"}`, certificate.id),
+                                    revoke ? { reason } : {},
+                                    { preserveScroll: true }
+                                );
+                            }}
+                        >
+                            {pendingRevoke?.revoke ? "Revoke" : "Reinstate"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Release / withdraw confirmation */}
             <Dialog open={!!pendingRelease} onOpenChange={(open) => !open && setPendingRelease(null)}>

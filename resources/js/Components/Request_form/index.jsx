@@ -77,8 +77,11 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             existingApplication?.authorized_representative_address_barangay_code
                 ? ""
                 : existingApplication?.authorized_representative_address || "",
-        authorized_representative_email: "",
+        authorized_representative_email: existingApplication?.authorized_representative_email || "",
         authorization_letter: null,
+        // The letter already on file when a returned application is edited -
+        // not sent back; it says the field is satisfied and names the file.
+        authorization_letter_on_file: existingApplication?.authorization_letter_on_file || null,
 
         // Step 2: Project Details
         project_type: existingApplication?.project_type || "",
@@ -519,15 +522,22 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             formData.append('_method', 'PUT');
             appendCsrfField(formData);
             
-            // Add all text fields
-            Object.keys(data).forEach(key => {
-                // `_legacy` is the old free-text address, shown while the
-                // applicant picks the address again; it is not a form field.
-                if (key !== 'requirement_uploads' && !key.endsWith('_legacy')) {
-                    const value = data[key];
-                    if (value !== null && value !== undefined && value !== '') {
-                        formData.append(key, value);
-                    }
+            // Add all fields. Objects (verified_requirements) go out as array
+            // fields, exactly as the create path sends them - appended whole they
+            // arrive as the string "[object Object]" and the server answers
+            // "must be an array". Files go out as files.
+            Object.keys(data).forEach((key) => {
+                if (key === 'requirement_uploads' || key.endsWith('_legacy') || key.endsWith('_preview') || key === 'authorization_letter_on_file') return;
+                const value = data[key];
+                if (value === null || value === undefined || value === '') return;
+                if (value instanceof File) {
+                    formData.append(key, value, value.name);
+                } else if (typeof value === 'object') {
+                    Object.entries(value).forEach(([k, v]) => {
+                        formData.append(`${key}[${k}]`, v ? '1' : '0');
+                    });
+                } else {
+                    formData.append(key, value);
                 }
             });
             
@@ -571,12 +581,24 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                         window.location.href = route('my-applications.index');
                     }, 1000);
                 } else {
-                    const errorData = await response.json();
-                    console.error('Update failed:', errorData);
-                    
+                    let errorData = null;
+                    try { errorData = await response.json(); } catch (_) { /* not JSON */ }
+                    console.warn('Update failed:', errorData);
+
+                    // Every field message, on the form, the way a new
+                    // application shows them - "(and 2 more errors)" in a toast
+                    // told the applicant nothing they could fix.
+                    const fieldErrors = errorData?.errors || {};
+                    const messages = Object.values(fieldErrors).flat().filter(Boolean);
+                    setSubmitErrors(messages.length ? messages : [errorData?.message || "Failed to update application."]);
+                    setSubmitErrorKind(response.status === 422 ? 'form' : 'server');
+                    setIsConfirmDialogOpen(false);
+
                     toast({
-                        title: "Error",
-                        description: errorData.message || "Failed to update application.",
+                        title: response.status === 422 ? "Please fix the form" : "Error",
+                        description: messages.length
+                            ? (messages.length > 1 ? `${messages[0]} (+${messages.length - 1} more below)` : messages[0])
+                            : (errorData?.message || "Failed to update application."),
                         variant: "destructive",
                     });
                 }
@@ -597,7 +619,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             const formData = new FormData();
 
             Object.keys(data).forEach((key) => {
-                if (key === 'requirement_uploads' || key.endsWith('_legacy')) return;
+                if (key === 'requirement_uploads' || key.endsWith('_legacy') || key.endsWith('_preview') || key === 'authorization_letter_on_file') return;
                 const value = data[key];
                 if (value === null || value === undefined || value === '') return;
                 if (value instanceof File) {

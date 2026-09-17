@@ -6,6 +6,7 @@ import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import DocumentActionBar from "@/Components/DocumentActionBar";
 import FitToWidth from "@/Components/FitToWidth";
+import PrintDocumentStyles from "@/Components/PrintDocumentStyles";
 import ApplicationFormSheet, { FORM_CONTROL_NO } from "@/Components/ApplicationFormSheet";
 
 /* ─── helpers ─────────────────────────────────────── */
@@ -27,80 +28,38 @@ body {
     font-family: Arial, Helvetica, sans-serif;
 }
 
-/* ── print ── */
+/* ── print ──
+   The chrome is taken out of the layout by PrintDocumentStyles (the same
+   rules the clearance and certification print with). The page's own rules
+   used to hide the sidebar and header but leave their boxes in the layout:
+   the sheets were laid out in the narrow column beside the sidebar's gap,
+   the printer shrank the too-wide page to fit, and what was left over ran
+   onto a third, blank sheet. */
 @media print {
-    html, body { 
-        background: #fff !important; 
-        margin: 0 !important; 
-        padding: 0 !important; 
-        overflow: visible !important;
-    }
-    
-    /* Hide sidebar, header, and controls when printing */
-    aside,
-    header,
-    .no-print,
-    [data-sidebar],
-    [data-sidebar-provider],
-    button {
-        display: none !important;
-    }
-    
-    /* Make the main content area full width */
-    main,
-    [data-sidebar-inset] {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100% !important;
-    }
-    
-    /* Show form pages */
     .pf-page {
         display: block !important;
-        visibility: visible !important;
+        width: 100% !important;
+        min-height: 0 !important;
         margin: 0 !important;
         border: none !important;
-        padding: 7mm 8mm !important;
-        width: 100% !important;
-        min-height: auto !important;
         box-shadow: none !important;
-        position: static !important;
-        background: white !important;
-        page-break-inside: avoid !important;
+        padding: 7mm 8mm !important;
+        background: #fff !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
     }
-    
-    .pf-page:first-child {
-        page-break-after: always !important;
+
+    /* The form, then the requirements checklist: two sheets. */
+    .pf-page + .pf-page {
+        break-before: page;
+        page-break-before: always;
     }
-    
-    .pf-page:last-child {
-        page-break-after: avoid !important;
-    }
-    
-    /* Make sure form content is visible */
+
+    /* The yellow highlights print as shown. */
+    .pf-page,
     .pf-page * {
-        visibility: visible !important;
-    }
-    
-    /* Force background colors to print - especially yellow */
-    * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        color-adjust: exact !important;
-    }
-    
-    /* Ensure yellow background stays yellow */
-    [style*="background"][style*="yellow"],
-    [style*="backgroundColor"][style*="FFFF00"],
-    [style*="backgroundColor"][style*="yellow"] {
-        background-color: #FFFF00 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    @page { 
-        size: A4 portrait; 
-        margin: 0;
     }
 }
 `;
@@ -214,6 +173,7 @@ export default function PrintForm({ application: a, auth }) {
         >
             <Head title={`Print — ${ctrlNo}`} />
             <style dangerouslySetInnerHTML={{ __html: CSS }} />
+            <PrintDocumentStyles />
 
             {/* ── controls ── */}
             <DocumentActionBar
@@ -229,9 +189,11 @@ export default function PrintForm({ application: a, auth }) {
                 OFFICIAL FORM — drawn by ApplicationFormSheet,
                 which the applicant report shares.
                ═══════════════════════════════════════════ */}
-            <FitToWidth>
-                <ApplicationFormSheet application={a} />
-            </FitToWidth>
+            <div className="form-print-area print-document-area">
+                <FitToWidth>
+                    <ApplicationFormSheet application={a} />
+                </FitToWidth>
+            </div>
         </Layout>
     );
 }

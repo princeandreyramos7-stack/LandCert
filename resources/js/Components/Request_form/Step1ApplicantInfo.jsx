@@ -140,7 +140,7 @@ export function Step1ApplicantInfo({
                     <div className="space-y-2">
                         <Label htmlFor="authorized_representative_email">
                             Email of Authorized Representative{" "}
-                            <span className="text-red-500">*</span>
+                            <span className="text-xs font-normal text-gray-500">(optional)</span>
                         </Label>
                         <Input
                             id="authorized_representative_email"
@@ -153,7 +153,6 @@ export function Step1ApplicantInfo({
                                 )
                             }
                             placeholder="representative@example.com"
-                            required={hasRepresentative}
                         />
                         {errors.authorized_representative_email && (
                             <p className="text-sm text-red-500">
@@ -213,6 +212,11 @@ export function Step1ApplicantInfo({
                                     >
                                         Remove
                                     </button>
+                                </span>
+                            ) : data.authorization_letter_on_file ? (
+                                <span className="text-sm text-gray-700">
+                                    On file: <span className="font-medium">{data.authorization_letter_on_file}</span>
+                                    <span className="text-gray-500"> — choose a file only to replace it</span>
                                 </span>
                             ) : (
                                 <span className="text-sm text-gray-500">No file chosen</span>

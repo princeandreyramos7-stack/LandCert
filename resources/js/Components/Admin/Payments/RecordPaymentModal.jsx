@@ -374,7 +374,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
             onSuccess: () => {
                 toast({
                     title: "Payment Recorded Successfully!",
-                    description: `Payment for Request #${requestData.request_id || requestData.id} has been verified and recorded.`,
+                    description: `Payment for ${requestData.application_number || `Request #${requestData.request_id || requestData.id}`} has been verified and recorded.`,
                 });
                 setIsProcessing(false);
                 onClose();
@@ -408,7 +408,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
                             </div>
                             <div>
                                 <DialogTitle>
-                                    Record Payment - Request #{requestData.request_id || requestData.id}
+                                    Record Payment — {requestData.application_number || `Request #${requestData.request_id || requestData.id}`}
                                 </DialogTitle>
                                 <DialogDescription>
                                     Verify and record payment received from the Treasury Office
@@ -437,10 +437,10 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
                                         <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
                                         <div>
                                             <p className="text-sm text-gray-500">
-                                                Request ID
+                                                Application No.
                                             </p>
-                                            <p className="font-semibold text-gray-900">
-                                                #{requestData.request_id || requestData.id}
+                                            <p className="font-semibold text-gray-900 font-mono">
+                                                {requestData.application_number || `#${requestData.request_id || requestData.id}`}
                                             </p>
                                         </div>
                                     </div>

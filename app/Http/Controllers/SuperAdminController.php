@@ -964,6 +964,18 @@ class SuperAdminController extends Controller
                 \Log::info('Approval email with details sent to: ' . $requestModel->user->email);
             }
 
+            // The officer who reviewed it hears the decision too.
+            try {
+                $reviewer = $report->resolveReviewer();
+                \App\Services\NotificationService::officerToldOfApproval(
+                    $requestModel,
+                    $reviewer instanceof \App\Models\User ? $reviewer : null,
+                    auth()->user()
+                );
+            } catch (\Exception $e) {
+                \Log::warning('Officer approval notification failed: ' . $e->getMessage());
+            }
+
             // Create notification
             \App\Models\Notification::createForUser(
                 $requestModel->user_id,

@@ -181,7 +181,8 @@ const PROJECT_NATURE_OPTIONS = ["New Const.", "Improvement"];
  * permit itself is issued for a year (see TupClearanceLetter). The tenure
  * fields say so and are not editable for one.
  */
-const isTemporaryUsePermit = (data) => String(data.project_type || "").toUpperCase() === "TUP";
+const isTemporaryUsePermit = (data) =>
+    String(data.project_type || "").toUpperCase() === "TUP";
 
 export function Step2ProjectDetails({ data, errors, onDataChange }) {
     const tup = isTemporaryUsePermit(data);
@@ -429,7 +430,8 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
                 </Select>
                 {tup && (
                     <p className="text-xs text-gray-500">
-                        A Temporary Use Permit is issued for one year, so the tenure is set for you.
+                        A Temporary Use Permit is issued for one year, so the
+                        tenure is set for you.
                     </p>
                 )}
                 {errors.project_nature_duration && (

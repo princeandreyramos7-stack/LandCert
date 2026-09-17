@@ -44,6 +44,7 @@ class CertificateService
             'certificate_number' => $certificateNumber,
             'issued_by'          => auth()->id(),
             'issued_at'          => now(),
+            'valid_until'        => now()->addMonths(self::validityMonths()),
             'status'             => 'preparing',
             'notes'              => 'Auto-generated after payment confirmation',
         ]);
@@ -240,6 +241,91 @@ class CertificateService
                 }
             } catch (\Exception $e) {
                 Log::error("Failed to send certificate released SMS: " . $e->getMessage());
+            }
+
+            return $certificate->fresh();
+        });
+    }
+
+    /**
+     * How long a certificate is good for, from the Certificates settings
+     * (certificate_expiry_months). Twelve months when nothing is set.
+     */
+    public static function validityMonths(): int
+    {
+        try {
+            $months = (int) DB::table('system_settings')->where('key', 'certificate_expiry_months')->value('value');
+        } catch (\Throwable $e) {
+            $months = 0;
+        }
+
+        return $months > 0 ? $months : 12;
+    }
+
+    /**
+     * Withdraw an issued certificate. The record stays - the public
+     * verification page now answers "revoked" for it, with the reason, which
+     * is the whole point: a paper copy in circulation can be checked.
+     */
+    public function revoke(Certificate $certificate, string $reason): Certificate
+    {
+        return DB::transaction(function () use ($certificate, $reason) {
+            $certificate->update([
+                'revoked_at'        => now(),
+                'revoked_by'        => auth()->id(),
+                'revocation_reason' => $reason,
+            ]);
+
+            try {
+                AuditLogService::log(
+                    'certificate_revoked',
+                    "Certificate {$certificate->certificate_number} revoked: {$reason}",
+                    'Certificate',
+                    $certificate->id,
+                    ['revoked_at' => null],
+                    ['revoked_at' => now(), 'revocation_reason' => $reason],
+                    [
+                        'certificate_number' => $certificate->certificate_number,
+                        'request_id'         => $certificate->request_id,
+                        'revoked_by'         => auth()->id(),
+                    ]
+                );
+            } catch (\Exception $e) {
+                Log::warning("Audit log failed for revoke: " . $e->getMessage());
+            }
+
+            return $certificate->fresh();
+        });
+    }
+
+    /** Undo a revocation - the certificate verifies as valid again. */
+    public function reinstate(Certificate $certificate): Certificate
+    {
+        return DB::transaction(function () use ($certificate) {
+            $reason = $certificate->revocation_reason;
+
+            $certificate->update([
+                'revoked_at'        => null,
+                'revoked_by'        => null,
+                'revocation_reason' => null,
+            ]);
+
+            try {
+                AuditLogService::log(
+                    'certificate_reinstated',
+                    "Certificate {$certificate->certificate_number} reinstated",
+                    'Certificate',
+                    $certificate->id,
+                    ['revocation_reason' => $reason],
+                    ['revoked_at' => null],
+                    [
+                        'certificate_number' => $certificate->certificate_number,
+                        'request_id'         => $certificate->request_id,
+                        'reinstated_by'      => auth()->id(),
+                    ]
+                );
+            } catch (\Exception $e) {
+                Log::warning("Audit log failed for reinstate: " . $e->getMessage());
             }
 
             return $certificate->fresh();

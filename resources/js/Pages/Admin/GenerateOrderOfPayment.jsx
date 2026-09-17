@@ -6,6 +6,7 @@ import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import html2pdf from 'html2pdf.js';
 import OrderOfPaymentSheet from "@/Components/OrderOfPaymentSheet";
 import DocumentActionBar from "@/Components/DocumentActionBar";
+import PrintDocumentStyles from "@/Components/PrintDocumentStyles";
 import FitToWidth, { suspendFit } from "@/Components/FitToWidth";
 
 export default function GenerateOrderOfPayment({ application, payment, reviewer, zoningAdministrator, paymentAmount = null }) {
@@ -21,15 +22,12 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
         ? [{ label: "Dashboard", href: "/admin/dashboard" }, { label: "Applications", href: "/admin/requests" }, { label: "Order of Payment" }]
         : [{ label: "My Applications", href: "/my-applications" }, { label: "Order of Payment" }];
 
-    const handlePrint = () => {
-        const printContents = paymentRef.current.innerHTML;
-        const originalContents = document.body.innerHTML;
-
-        document.body.innerHTML = printContents;
-        window.print();
-        document.body.innerHTML = originalContents;
-        window.location.reload();
-    };
+    // Print the page as it stands: PrintDocumentStyles hides everything but
+    // the slip. It used to swap the slip's markup into the body and print
+    // that - which dropped the sheet's stylesheet, so the print came out in
+    // the browser's default font with no yellow behind the title and none
+    // of the letterhead.
+    const handlePrint = () => window.print();
 
     const handleDownload = () => {
         const element = paymentRef.current;
@@ -69,34 +67,9 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
         >
             <Head title={`Order of Payment - ${application.application_number}`} />
 
-            {/* Page rules only — the slip itself, and its styles, live in
-                OrderOfPaymentSheet so the applicant report can show the same
-                document. */}
-            <style dangerouslySetInnerHTML={{ __html: `
-                /* Hide browser print headers/footers */
-                @page {
-                    size: letter;
-                    margin: 0.5in 0.5in 0.5in 0.5in;
-                }
-
-                @media print {
-                    body {
-                        margin: 0;
-                        padding: 0;
-                    }
-                    
-                    /* Ensure content fits on one page */
-                    .payment-page {
-                        page-break-inside: avoid;
-                        page-break-after: avoid;
-                    }
-                }
-
-                body {
-                    margin: 0;
-                    padding: 0;
-                }
-            `}} />
+            {/* The slip itself, and its styles, live in OrderOfPaymentSheet so
+                the applicant report can show the same document. */}
+            <PrintDocumentStyles />
 
             {/* Was a hand-rolled copy of this bar, which never picked up the
                 responsive layout the shared one has. */}
@@ -110,9 +83,11 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
             />
 
             {/* Order of Payment Page */}
+            <div className="payment-print-area print-document-area">
             <FitToWidth>
                 <OrderOfPaymentSheet
                     ref={paymentRef}
+                    className="print-document"
                     application={application}
                     payment={payment}
                     paymentAmount={paymentAmount}
@@ -120,6 +95,7 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
                     zoningAdministrator={zoningAdministrator}
                 />
             </FitToWidth>
+            </div>
         </Layout>
     );
 }

@@ -112,6 +112,26 @@ export function PhilippineAddressFields({
         load("barangays", route("psgc.barangays", city), city);
     }, [city, load]);
 
+    // The address as one line, the way the server will compose it, kept in
+    // the form as `<prefix>_preview` so the summary can show what was picked.
+    // It is never sent: the server composes the stored line from the codes.
+    const barangayCode = valueOf("barangay_code");
+    const street = valueOf("street");
+    useEffect(() => {
+        const name = (list, code) => (list || []).find((item) => String(item.code) === String(code))?.name || "";
+        const provinceRow = (lists.provinces || []).find((p) => String(p.code) === String(province));
+        const line = barangayCode && city
+            ? [
+                street.trim() || null,
+                name(lists.barangays, barangayCode) || null,
+                name(lists.cities, city) || null,
+                provinceRow ? (provinceRow.kind === "province" ? provinceRow.name : provinceRow.region_name) : null,
+            ].filter(Boolean).join(", ")
+            : "";
+        if ((values[field("preview")] || "") !== line) onChange(field("preview"), line);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [barangayCode, city, province, street, lists.barangays, lists.cities, lists.provinces]);
+
     /** Set one level and clear the ones below it. */
     const set = (part, value) => {
         const below = {

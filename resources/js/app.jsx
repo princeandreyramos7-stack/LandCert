@@ -11,6 +11,15 @@ import IdleLogout from '@/Components/IdleLogout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+// Pages a guest may see. /verify is the public certificate check the QR on a
+// printed document opens - the reader is another office, not a user.
+const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify'];
+function isPublicPath(path) {
+    return PUBLIC_PATHS.includes(path)
+        || path.startsWith('/reset-password/')
+        || path.startsWith('/verify/');
+}
+
 // Global component to handle auth state and browser navigation
 function AppWrapper({ children, auth: initialAuth }) {
     // `initialPage` is captured once at setup, so signing in through Inertia —
@@ -32,8 +41,7 @@ function AppWrapper({ children, auth: initialAuth }) {
         // Function to check auth and redirect if needed
         const checkAuth = () => {
             const currentPath = window.location.pathname;
-            const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
-            const isPublicRoute = publicRoutes.some(route => currentPath === route || currentPath.startsWith('/reset-password/'));
+            const isPublicRoute = isPublicPath(currentPath);
             
             // If on a protected route but not authenticated, redirect to login
             if (!isPublicRoute && !auth?.user) {
@@ -60,8 +68,7 @@ function AppWrapper({ children, auth: initialAuth }) {
         const handlePageShow = (event) => {
             if (!event.persisted) return;
             const currentPath = window.location.pathname;
-            const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
-            const isPublicRoute = publicRoutes.some(route => currentPath === route || currentPath.startsWith('/reset-password/'));
+            const isPublicRoute = isPublicPath(currentPath);
             if (isPublicRoute) {
                 checkAuth();
             } else {
@@ -100,8 +107,7 @@ inertiaRouter.on('navigate', (event) => {
     // After navigation, check if we're on a protected route without auth
     setTimeout(() => {
         const currentPath = window.location.pathname;
-        const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
-        const isPublicRoute = publicRoutes.some(route => currentPath === route || currentPath.startsWith('/reset-password/'));
+        const isPublicRoute = isPublicPath(currentPath);
         
         // Check auth data in Inertia page
         const page = event.detail.page;

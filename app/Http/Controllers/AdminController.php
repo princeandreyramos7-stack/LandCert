@@ -2343,7 +2343,21 @@ class AdminController extends Controller
 
         $staff = auth()->user();
 
+        // The status follows the release: a paid application whose document
+        // is handed over is 'released', and taking it back puts it at
+        // 'certificate_ready'. It used to stay at payment_confirmed, so the
+        // applicant's tracker kept saying "being prepared" with no download.
+        $lifecycle = ['payment_confirmed', 'certificate_preparing', 'certificate_ready', 'released'];
+        $status = strtolower((string) $requestModel->status);
+        $newStatus = $status;
+        if ($validated['released'] && in_array($status, $lifecycle, true)) {
+            $newStatus = 'released';
+        } elseif (!$validated['released'] && $status === 'released') {
+            $newStatus = 'certificate_ready';
+        }
+
         $requestModel->update([
+            'status' => $newStatus,
             'released_to_applicant_at' => $validated['released'] ? now() : null,
             // Kept even after a withdrawal — "who last touched this" stays on the
             // record; only the timestamp that gates the applicant's button is cleared.

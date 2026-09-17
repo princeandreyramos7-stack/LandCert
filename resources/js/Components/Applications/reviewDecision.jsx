@@ -57,7 +57,9 @@ export function missingRequirementsText(reference = [], uploaded = [], verified 
     const missing = reference
         // Headings only group the documents beneath them; an optional document
         // that was not filed is not a reason to deny.
-        .filter((req) => !req.is_group && req.required !== false)
+        // The "additional" section is situational - which of them apply is
+        // the officer's judgement, so none is written into a denial for them.
+        .filter((req) => !req.is_group && req.required !== false && req.section !== "additional")
         .filter((req) => !uploadedIds.has(req.id) || !verified[req.id]);
 
     if (missing.length === 0) return "";

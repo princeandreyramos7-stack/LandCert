@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 class Certificate extends Model
 {
@@ -15,10 +16,14 @@ class Certificate extends Model
         'payment_id',
         'user_id',
         'certificate_number',
+        'verification_code',
         'certificate_file_path',
         'issued_by',
         'issued_at',
         'valid_until',
+        'revoked_at',
+        'revoked_by',
+        'revocation_reason',
         'status',
         'notes',
         'ready_at',
@@ -34,6 +39,7 @@ class Certificate extends Model
     protected $casts = [
         'issued_at' => 'datetime',
         'valid_until' => 'date',
+        'revoked_at' => 'datetime',
         'ready_at' => 'datetime',
         'released_at' => 'datetime',
     ];
@@ -41,6 +47,77 @@ class Certificate extends Model
     protected $appends = [
         'has_verified_payment',
     ];
+
+    /* ── Public verification ──────────────────────────────────────────────
+       Every certificate carries a code, printed as a QR on the sheet, that
+       opens the public /verify/{code} page. */
+
+    public const VERIFICATION_VALID = 'valid';
+    public const VERIFICATION_EXPIRED = 'expired';
+    public const VERIFICATION_REVOKED = 'revoked';
+    public const VERIFICATION_CANCELLED = 'cancelled';
+
+    /** Letters and digits that do not get misread when typed off paper. */
+    private const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+    protected static function booted(): void
+    {
+        static::creating(function (Certificate $certificate) {
+            if (empty($certificate->verification_code)) {
+                $certificate->verification_code = static::newVerificationCode();
+            }
+        });
+    }
+
+    /**
+     * A fresh, unused code: 12 characters from the safe alphabet, about 60
+     * bits, so it cannot be guessed and one cannot be turned into another.
+     */
+    public static function newVerificationCode(): string
+    {
+        do {
+            $code = '';
+            for ($i = 0; $i < 12; $i++) {
+                $code .= self::CODE_ALPHABET[random_int(0, strlen(self::CODE_ALPHABET) - 1)];
+            }
+        } while (static::withTrashed()->where('verification_code', $code)->exists());
+
+        return $code;
+    }
+
+    /** The address the QR on the printed sheet opens. */
+    public function verificationUrl(): ?string
+    {
+        return $this->verification_code ? route('verify.show', $this->verification_code) : null;
+    }
+
+    public function isRevoked(): bool
+    {
+        return $this->revoked_at !== null;
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->valid_until !== null && $this->valid_until->lt(Carbon::today());
+    }
+
+    /**
+     * What the public page says about the document: valid, expired, revoked,
+     * or cancelled (the office voided the record before it was ever released).
+     */
+    public function verificationStatus(): string
+    {
+        if ($this->isRevoked()) {
+            return self::VERIFICATION_REVOKED;
+        }
+        if ($this->status === 'cancelled') {
+            return self::VERIFICATION_CANCELLED;
+        }
+        if ($this->isExpired()) {
+            return self::VERIFICATION_EXPIRED;
+        }
+        return self::VERIFICATION_VALID;
+    }
 
     /**
      * Check if the certificate has a verified payment.
@@ -91,6 +168,12 @@ class Certificate extends Model
     public function releasedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'released_by');
+    }
+
+    /** The staff member who revoked the certificate. */
+    public function revokedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'revoked_by');
     }
 
 }

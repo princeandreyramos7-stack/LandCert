@@ -69,7 +69,7 @@ export function ApplicationSummaryModal({
                         <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Applicant Information</h3>
                         <div className="space-y-2 text-sm">
                             <SummaryItem label="Name" value={data.applicant_name} />
-                            <SummaryItem label="Address" value={data.applicant_address} />
+                            <SummaryItem label="Address" value={data.applicant_address_preview || data.applicant_address_legacy || data.applicant_address} />
                             {data.corporation_name && (
                                 <>
                                     <div className="border-t my-3 pt-3">
@@ -85,7 +85,7 @@ export function ApplicationSummaryModal({
                                         <span className="text-xs font-semibold text-gray-700">Authorized Representative</span>
                                     </div>
                                     <SummaryItem label="Representative Name" value={data.authorized_representative_name} />
-                                    <SummaryItem label="Representative Address" value={data.authorized_representative_address} />
+                                    <SummaryItem label="Representative Address" value={data.authorized_representative_address_preview || data.authorized_representative_address_legacy || data.authorized_representative_address} />
                                     <SummaryItem label="Representative Email" value={data.authorized_representative_email} />
                                     <SummaryItem label="Authorization Letter" value={data.authorization_letter ? "Attached" : "Not attached"} />
                                 </>

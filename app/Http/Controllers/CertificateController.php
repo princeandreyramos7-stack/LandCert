@@ -196,6 +196,38 @@ class CertificateController extends Controller
     }
 
     /**
+     * Revoke an issued certificate. The public verification page answers
+     * "revoked" for it from here on; the paper copy is not recalled, it is
+     * simply no longer vouched for.
+     */
+    public function revoke(Request $request, Certificate $certificate)
+    {
+        $validated = $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        if ($certificate->isRevoked()) {
+            return redirect()->back()->with('error', 'This certificate is already revoked.');
+        }
+
+        $this->certificateService->revoke($certificate, $validated['reason']);
+
+        return redirect()->back()->with('success', "Certificate {$certificate->certificate_number} revoked. Anyone scanning its QR code will now be told it is no longer valid.");
+    }
+
+    /** Lift a revocation. */
+    public function reinstate(Certificate $certificate)
+    {
+        if (!$certificate->isRevoked()) {
+            return redirect()->back()->with('error', 'This certificate is not revoked.');
+        }
+
+        $this->certificateService->reinstate($certificate);
+
+        return redirect()->back()->with('success', "Certificate {$certificate->certificate_number} reinstated.");
+    }
+
+    /**
      * Record certificate release/collection.
      */
     public function recordRelease(Request $request, Certificate $certificate)

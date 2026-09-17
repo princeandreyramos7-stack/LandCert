@@ -1,6 +1,7 @@
 import React, { forwardRef } from "react";
 import { zoningAdministratorName } from "@/lib/signerName";
 import ESignatureImage from "@/Components/ESignatureImage";
+import OfficialLetterhead from "@/Components/OfficialLetterhead";
 
 /**
  * The Order of Payment slip itself — the sheet, without the page around it.
@@ -102,7 +103,17 @@ const SHEET_CSS = `
         min-height: 0;
         max-height: 10.5in;
     }
-    
+
+    /* Printed inside the page margin, the sheet keeps its own inner margins
+       only (see PrintDocumentStyles). */
+    .payment-page.print-document {
+        /* 0.5in page margin + 0.25in here = the 0.75in the screen sheet has,
+           so the ruled fields keep the width they were sized for. */
+        padding: 0.25in !important;
+        min-height: 0 !important;
+        height: auto !important;
+    }
+
     @page {
         size: letter;
         margin: 0.5in;
@@ -121,7 +132,7 @@ const SHEET_CSS = `
  * @param compact      drop the letter-height minimum (for previews)
  */
 const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
-    { application, payment, reviewer, zoningAdministrator, paymentAmount = null, compact = false },
+    { application, payment, reviewer, zoningAdministrator, paymentAmount = null, compact = false, className = "" },
     ref
 ) {
     // Fee to charge: an actual payment record wins, otherwise the amount the
@@ -139,7 +150,7 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
 
             <div
                 ref={ref}
-                className={`payment-page${compact ? " payment-page--compact" : ""}`}
+                className={`payment-page${compact ? " payment-page--compact" : ""} ${className}`.trim()}
                 style={{
                     fontSize: '9pt',
                     lineHeight: '1.4',
@@ -147,43 +158,24 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
                     pageBreakInside: 'avoid',
                 }}
             >
-                {/* Header with CPD Number */}
-                <div style={{ position: 'relative', marginBottom: '12pt', paddingTop: '15pt' }}>
-                    {/* CPD Number - Top Right with proper margin */}
-                    <div style={{ 
-                        position: 'absolute', 
-                        top: '0', 
-                        right: '0', 
-                        fontSize: '11pt', 
+                {/* The same letterhead as the clearance and the certification -
+                    seal, office, blue rule - with the form code at its corner. */}
+                <OfficialLetterhead code="CPD-002-0" />
+
+                {/* Title with Yellow Background */}
+                <div style={{ textAlign: 'center', margin: '18pt 0 14pt' }}>
+                    <span style={{
+                        fontSize: '13pt',
                         fontWeight: 'bold',
-                        whiteSpace: 'nowrap'
+                        display: 'inline-block',
+                        backgroundColor: '#FFFF00',
+                        padding: '4pt 12pt',
+                        WebkitPrintColorAdjust: 'exact',
+                        printColorAdjust: 'exact',
                     }}>
-                        CPD-002-0
-                    </div>
-
-                    {/* Centered Header Text */}
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '11pt', marginBottom: '1pt' }}>Republic of the Philippines</div>
-                        <div style={{ fontSize: '12pt', fontWeight: 'bold', marginBottom: '1pt' }}>CITY OF ILAGAN</div>
-                        <div style={{ fontSize: '11pt', marginBottom: '1pt' }}>Province of Isabela</div>
-                        <div style={{ fontSize: '11pt', fontWeight: 'bold', marginBottom: '12pt' }}>CITY PLANNING AND DEVELOPMENT OFFICE</div>
-
-                        {/* Title with Yellow Background */}
-                        <div style={{ 
-                            fontSize: '13pt', 
-                            fontWeight: 'bold', 
-                            marginTop: '8pt', 
-                            display: 'inline-block', 
-                            backgroundColor: '#FFFF00',  /* Changed from 'background' to 'backgroundColor' for better PDF rendering */
-                            padding: '4pt 12pt' 
-                        }}>
-                            ORDER OF PAYMENT
-                        </div>
-                    </div>
+                        ORDER OF PAYMENT
+                    </span>
                 </div>
-
-                {/* Divider Line */}
-                <div style={{ borderTop: '2px solid #000', marginBottom: '12pt' }} />
 
                 {/* Recipient */}
                 <div style={{ fontSize: '11pt', marginBottom: '12pt', fontWeight: 'bold' }}>

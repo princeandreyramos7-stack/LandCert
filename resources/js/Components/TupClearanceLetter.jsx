@@ -1,5 +1,6 @@
 import React from "react";
 import OfficialLetterhead from "@/Components/OfficialLetterhead";
+import VerificationQr from "@/Components/VerificationQr";
 import ESignatureImage from "@/Components/ESignatureImage";
 import { zoningAdministratorName } from "@/lib/signerName";
 
@@ -15,8 +16,14 @@ export default function TupClearanceLetter({ application, payment, zoningAdminis
             : '____________';
 
     const issued = application.updated_at ? new Date(application.updated_at) : new Date();
-    const expiry = new Date(issued);
-    expiry.setFullYear(expiry.getFullYear() + 1);
+    // The expiry the verification page will report, once the certificate is
+    // on record; a year from issue before that.
+    const expiry = application.verification?.valid_until
+        ? new Date(application.verification.valid_until)
+        : new Date(issued);
+    if (!application.verification?.valid_until) {
+        expiry.setFullYear(expiry.getFullYear() + 1);
+    }
 
     // "Mr. Dela Cruz:" — the salutation uses the surname alone.
     const surname = String(application.applicant_name || '')
@@ -139,6 +146,8 @@ export default function TupClearanceLetter({ application, payment, zoningAdminis
                     <div>Expiry Date&nbsp;&nbsp;&nbsp;&nbsp;: {formatDate(expiry)}</div>
                 </div>
             </div>
+
+            <VerificationQr verification={application.verification} style={{ marginTop: '10pt' }} />
         </div>
     );
 }

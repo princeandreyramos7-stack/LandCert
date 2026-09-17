@@ -29,6 +29,31 @@ class ApplicationDocuments
      */
     public static function issuance(RequestModel $request): array
     {
+        // A Zoning Certification has no project step: it certifies the
+        // applicant's own parcel, so when nothing was written to the
+        // locations table (applications filed before it was) the address on
+        // the application stands in.
+        $fallback = ['street' => null, 'barangay' => null, 'city' => null];
+        if (strtoupper((string) $request->project?->project_type) === 'ZC' && $request->applicant) {
+            $applicant = $request->applicant;
+            $barangay = $applicant->address_barangay_code
+                ? \App\Models\Psgc\Barangay::find($applicant->address_barangay_code)?->name
+                : null;
+            $city = $applicant->address_city_code
+                ? \App\Models\Psgc\CityMunicipality::find($applicant->address_city_code)?->name
+                : null;
+            // Before the address picker the line was typed; its first part is
+            // the closest thing to a barangay on file.
+            if (!$barangay && $applicant->applicant_address) {
+                $barangay = trim(explode(',', $applicant->applicant_address)[0]);
+            }
+            $fallback = [
+                'street' => $applicant->address_street,
+                'barangay' => $barangay,
+                'city' => $city ?: 'City of Ilagan',
+            ];
+        }
+
         return [
             'id' => $request->id,
             'application_number' => $request->application_number,
@@ -43,15 +68,43 @@ class ApplicationDocuments
             'project_type' => $request->project?->project_type,
             'project_nature' => $request->project?->project_nature,
             'project_cost' => $request->project?->project_cost,
-            'project_location_street' => $request->location?->street_address,
-            'project_location_barangay' => $request->location?->barangay,
-            'project_location_municipality' => $request->location?->city_municipality,
+            'project_location_street' => $request->location?->street_address ?: $fallback['street'],
+            'project_location_barangay' => $request->location?->barangay ?: $fallback['barangay'],
+            'project_location_municipality' => $request->location?->city_municipality ?: $fallback['city'],
             'right_over_land' => $request->property?->right_over_land,
             'lot_area_sqm' => $request->property?->lot_area_sqm,
             // Filled in by the Zoning Officer at issuance time.
             'lot_number' => $request->property?->lot_number,
             'tax_declaration_no' => $request->property?->tax_declaration_no,
             'zone_classification' => $request->property?->zone_classification ?: $request->property?->existing_land_use,
+            // The QR on the sheet. Nothing until the certificate record exists,
+            // which is when the payment is recorded - the same point at which
+            // the office actually prints and releases the document.
+            'verification' => self::verification($request),
+        ];
+    }
+
+    /**
+     * What the printed sheet needs to carry its verification QR: the code, the
+     * public address it opens, and the dates the page will report - so the
+     * reader can compare the paper with the screen.
+     */
+    public static function verification(RequestModel $request): ?array
+    {
+        $certificate = $request->relationLoaded('certificates')
+            ? $request->certificates->sortByDesc('id')->first()
+            : $request->certificates()->latest('id')->first();
+
+        if (!$certificate || !$certificate->verification_code) {
+            return null;
+        }
+
+        return [
+            'code' => $certificate->verification_code,
+            'url' => $certificate->verificationUrl(),
+            'certificate_number' => $certificate->certificate_number,
+            'issued_at' => $certificate->issued_at?->toDateString(),
+            'valid_until' => $certificate->valid_until?->toDateString(),
         ];
     }
 

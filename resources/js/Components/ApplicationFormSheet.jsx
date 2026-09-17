@@ -863,13 +863,16 @@ export default function ApplicationFormSheet({ application: a, compact = false, 
                         <col style={{ width: "50%" }} />
                     </colgroup>
                     <tbody>
+                        {/* The label sits at the top and the rule at the bottom
+                            of a cell tall enough to sign in; the rule used to
+                            run straight under the label with nowhere to sign. */}
                         <tr className="pf-rule">
-                            <td style={{ padding: "0", border: "none" }}>
+                            <td style={{ padding: "0 0 2pt 0", border: "none", height: "30pt", verticalAlign: "top" }}>
                                 <div style={{ fontSize: "6.5pt", fontWeight: "bold", marginBottom: "0" }}>
                                     18. SIGNATURE OF APPLICANT
                                 </div>
                             </td>
-                            <td style={{ padding: "0", border: "none" }}>
+                            <td style={{ padding: "0 0 2pt 0", border: "none", height: "30pt", verticalAlign: "top" }}>
                                 <div style={{ fontSize: "6.5pt", fontWeight: "bold", marginBottom: "0" }}>
                                     SIGNATURE OF AUTHORIZED REPRESENTATIVE
                                 </div>
@@ -918,7 +921,7 @@ export default function ApplicationFormSheet({ application: a, compact = false, 
                 </div>
 
                 {/* Bottom block — Doc/Page/Book/Series left, Notary Public right */}
-                <div style={{ marginTop: "60pt", marginBottom: "30pt", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                <div style={{ marginTop: "60pt", marginBottom: "8pt", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                     {/* Left: notarial details */}
                     <div style={{ fontSize: "6.5pt", lineHeight: "2.1" }}>
                         <div>

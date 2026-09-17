@@ -55,6 +55,11 @@ class RequestController extends Controller
                 // The office's note for the applicant, once approved - the same
                 // one My Applications shows, so the dashboard row says it too.
                 DB::raw("CASE WHEN COALESCE(reports.evaluation, requests.status) = 'approved' OR requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN reports.admin_notes END as office_note"),
+                // What the applicant last did about the fee: a receipt awaiting
+                // the office (pending), one it refused (rejected), or one it
+                // accepted (verified) - so the tracker can say "receipt uploaded,
+                // awaiting verification" instead of asking them to pay again.
+                DB::raw("(SELECT p.payment_status FROM payments p WHERE p.request_id = requests.id ORDER BY p.id DESC LIMIT 1) as latest_payment_status"),
                 DB::raw("CASE WHEN requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN requests.status ELSE COALESCE(reports.evaluation, requests.status) END as status")
             )
             ->orderBy('requests.created_at', 'desc')
@@ -70,7 +75,71 @@ class RequestController extends Controller
      */
     public function index(): Response
     {
+        self::rememberAddressOnAccount(auth()->user());
+
         return Inertia::render('Request/index');
+    }
+
+    /**
+     * Field 3 of the form starts out as the address on the applicant's
+     * account. An account made before the address picker - or without an
+     * address at sign-up - has nothing to offer, so the address they gave on
+     * their last application is copied onto the account. Filing an
+     * application does the same (see createApplication), so from then on the
+     * form is filled in for them and they only change it when this
+     * application is for somewhere else.
+     */
+    private static function rememberAddressOnAccount(?\App\Models\User $user, ?\App\Models\Applicant $from = null): void
+    {
+        if (!$user || $user->address_barangay_code) {
+            return;
+        }
+
+        $from ??= \App\Models\Applicant::where('user_id', $user->id)
+            ->whereNotNull('address_barangay_code')
+            ->latest('id')
+            ->first();
+
+        if (!$from) {
+            return;
+        }
+
+        $user->forceFill([
+            'address' => $from->applicant_address,
+            'address_region_code' => $from->address_region_code,
+            'address_province_code' => $from->address_province_code,
+            'address_city_code' => $from->address_city_code,
+            'address_barangay_code' => $from->address_barangay_code,
+            'address_street' => $from->address_street,
+        ])->save();
+    }
+
+    /**
+     * The project location a Zoning Certification is issued for.
+     *
+     * A ZC has no project step: it certifies the applicant's own parcel, so
+     * the location is the applicant's address - written to the locations
+     * table like any other application's, so the certificate, the summary and
+     * the reports all find a barangay there.
+     */
+    private static function locationForZoningCertification(array $validated, ?array $applicantAddress): ?array
+    {
+        if (strtoupper(trim((string) ($validated['project_type'] ?? ''))) !== 'ZC' || !$applicantAddress) {
+            return null;
+        }
+        if (filled($validated['project_location_barangay'] ?? null)) {
+            return null;
+        }
+
+        $city = \App\Models\Psgc\CityMunicipality::with('province')->find($applicantAddress['city_code']);
+        $barangay = \App\Models\Psgc\Barangay::find($applicantAddress['barangay_code']);
+
+        return [
+            'street_address' => $applicantAddress['street'] ?? '',
+            'barangay' => $barangay?->name ?? '',
+            'city_municipality' => $city?->name ?? 'City of Ilagan',
+            'province' => $city?->province?->name ?? 'Isabela',
+        ];
     }
 
     /**
@@ -143,6 +212,11 @@ class RequestController extends Controller
                 // writes, not the fee; the card used to show that.)
                 DB::raw("CASE WHEN COALESCE(reports.evaluation, requests.status) = 'approved' OR requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN reports.payment_amount END as report_amount"),
                 DB::raw("CASE WHEN COALESCE(reports.evaluation, requests.status) = 'approved' OR requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN reports.admin_notes END as office_note"),
+                // What the applicant last did about the fee: a receipt awaiting
+                // the office (pending), one it refused (rejected), or one it
+                // accepted (verified) - so the tracker can say "receipt uploaded,
+                // awaiting verification" instead of asking them to pay again.
+                DB::raw("(SELECT p.payment_status FROM payments p WHERE p.request_id = requests.id ORDER BY p.id DESC LIMIT 1) as latest_payment_status"),
                 DB::raw("CASE WHEN requests.status IN ('payment_confirmed','certificate_preparing','certificate_ready','released') THEN requests.status ELSE COALESCE(reports.evaluation, requests.status) END as status"),
                 // Requirement #1 (notarized application form) is uploaded after
                 // submission, so the list needs to know whether it is still missing.
@@ -213,6 +287,12 @@ class RequestController extends Controller
             'authorized_representative_address_city_code' => $request->applicant->primaryRepresentative->address_city_code ?? '',
             'authorized_representative_address_barangay_code' => $request->applicant->primaryRepresentative->address_barangay_code ?? '',
             'authorized_representative_address_street' => $request->applicant->primaryRepresentative->address_street ?? '',
+            'authorized_representative_email' => $request->applicant->primaryRepresentative->representative_email ?? '',
+            // The letter already on file stays unless a new one is chosen, so
+            // the form shows it rather than asking for it again.
+            'authorization_letter_on_file' => $request->applicant->primaryRepresentative?->authorization_letter_path
+                ? basename($request->applicant->primaryRepresentative->authorization_letter_path)
+                : null,
             
             // Project details
             'project_type' => $request->project->project_type ?? '',
@@ -306,6 +386,7 @@ class RequestController extends Controller
             'corporation_name' => 'nullable|string|max:255',
             'corporation_address' => 'nullable|string',
             'authorized_representative_name' => 'nullable|string|max:255',
+            'authorized_representative_email' => 'nullable|email|max:255',
             'authorization_letter' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             
             // Page 2: Project Details
@@ -420,9 +501,11 @@ class RequestController extends Controller
     private function createApplication(array $validated, Request $request): array
     {
         return DB::transaction(function () use ($validated, $request) {
+            $applicantAddress = \App\Support\PhilippineAddress::resolve($validated, 'applicant_address');
+
             // 1. Create Applicant record
             $applicant = \App\Models\Applicant::create(\App\Support\PhilippineAddress::columns(
-                \App\Support\PhilippineAddress::resolve($validated, 'applicant_address'),
+                $applicantAddress,
                 'applicant_address'
             ) + [
                 'applicant_name' => $validated['applicant_name'],
@@ -474,6 +557,12 @@ class RequestController extends Controller
                     'applicant_id' => $applicant->id,
                     'representative_name' => $validated['authorized_representative_name'],
                     'representative_address' => $validated['authorized_representative_address'] ?? '',
+                    'representative_email' => $validated['authorized_representative_email'] ?? null,
+                    // The letter used to be validated and then dropped on the
+                    // floor - nothing ever wrote the path.
+                    'authorization_letter_path' => $request->hasFile('authorization_letter')
+                        ? $request->file('authorization_letter')->store('authorization_letters', 'local')
+                        : null,
                     'is_primary' => true,
                 ]);
             }
@@ -491,8 +580,11 @@ class RequestController extends Controller
                 ]);
             }
 
-            // 6. Create Location record
-            if (isset($validated['project_location_barangay']) || isset($validated['project_location_city'])) {
+            // 6. Create Location record. A Zoning Certification has no project
+            //    step, so its location is the applicant's own address.
+            if ($zcLocation = self::locationForZoningCertification($validated, $applicantAddress)) {
+                \App\Models\Location::create(['request_id' => $newRequest->id] + $zcLocation);
+            } elseif (isset($validated['project_location_barangay']) || isset($validated['project_location_city'])) {
                 \App\Models\Location::create([
                     'request_id' => $newRequest->id,
                     'street_address' => $validated['project_location_street'] ?? '',
@@ -501,6 +593,9 @@ class RequestController extends Controller
                     'province' => $validated['project_location_province'] ?? '',
                 ]);
             }
+
+            // The address given here becomes the account's, if it had none.
+            self::rememberAddressOnAccount(auth()->user(), $applicant);
 
             // 7. Create Property record (includes lot area, land use, right over land)
             \App\Models\Property::create([
@@ -641,7 +736,8 @@ class RequestController extends Controller
             'corporation_name' => 'nullable|string|max:255',
             'corporation_address' => 'nullable|string',
             'authorized_representative_name' => 'nullable|string|max:255',
-            'authorized_representative_email' => 'nullable|email',
+            'authorized_representative_email' => 'nullable|email|max:255',
+            'authorization_letter' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             
             // Step 2
             'project_type' => 'nullable|string|max:255',
@@ -707,9 +803,11 @@ class RequestController extends Controller
                 'input_keys' => array_keys($request->all()),
             ]);
 
+            $applicantAddress = \App\Support\PhilippineAddress::resolve($validated, 'applicant_address');
+
             // Update Applicant
             $existingRequest->applicant->update(\App\Support\PhilippineAddress::columns(
-                \App\Support\PhilippineAddress::resolve($validated, 'applicant_address'),
+                $applicantAddress,
                 'applicant_address'
             ) + [
                 'applicant_name' => $validated['applicant_name'],
@@ -730,14 +828,19 @@ class RequestController extends Controller
                 \App\Models\NormalizedCorporation::where('applicant_id', $existingRequest->applicant_id)->delete();
             }
 
-            // Update Representative
+            // Update Representative. The authorization letter on file is kept
+            // unless a new one was chosen - editing the email used to lose it.
             if (!empty($validated['authorized_representative_name'])) {
+                $letter = $request->hasFile('authorization_letter')
+                    ? ['authorization_letter_path' => $request->file('authorization_letter')->store('authorization_letters', 'local')]
+                    : [];
+
                 \App\Models\Representative::updateOrCreate(
                     ['applicant_id' => $existingRequest->applicant_id, 'is_primary' => true],
                     \App\Support\PhilippineAddress::columns(
                         \App\Support\PhilippineAddress::resolve($validated, 'authorized_representative_address'),
                         'representative_address'
-                    ) + [
+                    ) + $letter + [
                         'representative_name' => $validated['authorized_representative_name'],
                         'representative_address' => $validated['authorized_representative_address'] ?? '',
                         'representative_email' => $validated['authorized_representative_email'] ?? '',
@@ -760,16 +863,18 @@ class RequestController extends Controller
                 ]
             );
 
-            // Update Location
+            // Update Location (a Zoning Certification's is the applicant's address)
             \App\Models\Location::updateOrCreate(
                 ['request_id' => $existingRequest->id],
-                [
+                self::locationForZoningCertification($validated, $applicantAddress) ?? [
                     'street_address' => $validated['project_location_street'] ?? '',
                     'barangay' => $validated['project_location_barangay'] ?? '',
                     'city_municipality' => $validated['project_location_municipality'] ?? '',
                     'province' => $validated['project_location_province'] ?? '',
                 ]
             );
+
+            self::rememberAddressOnAccount(auth()->user(), $existingRequest->applicant);
 
             // Update Property
             \App\Models\Property::updateOrCreate(
@@ -1117,6 +1222,7 @@ class RequestController extends Controller
                 'request_status' => $request->status,
                 // For the "where it stands" panel: the same flags My Applications reads.
                 'released_to_applicant_at' => $request->released_to_applicant_at,
+                'latest_payment_status' => $request->payments->first()?->payment_status,
                 'has_notarized_form' => $request->requirementDocuments->contains(fn ($d) => (int) $d->requirement_id === 1),
                 'created_at' => $request->created_at?->format('F j, Y'),
                 'updated_at' => $request->updated_at?->format('F j, Y'),

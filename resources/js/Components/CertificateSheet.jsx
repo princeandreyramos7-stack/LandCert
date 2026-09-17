@@ -1,6 +1,7 @@
 import React, { forwardRef } from "react";
 import OfficialLetterhead from "@/Components/OfficialLetterhead";
 import ESignatureImage from "@/Components/ESignatureImage";
+import VerificationQr from "@/Components/VerificationQr";
 import { zoningAdministratorName } from "@/lib/signerName";
 
 /**
@@ -68,8 +69,11 @@ function SignatureBlock({ signatureUrl, name, title }) {
 }
 
 
-/** Payment footer. `order` differs between the two official templates. */
-function PaymentFooter({ payment, order }) {
+/**
+ * Payment footer. `order` differs between the two official templates. The
+ * verification QR sits across from it, on the same baseline.
+ */
+function PaymentFooter({ payment, order, verification }) {
     const amount = payment?.amount
         ? `₱${Number(payment.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
         : '';
@@ -93,13 +97,16 @@ function PaymentFooter({ payment, order }) {
     return (
         // The roomy line-height is what keeps the ruled blanks clear of the
         // values in the downloaded PDF — see the note on <Fill>.
-        <div style={{ marginTop: '40pt', fontSize: '10pt', lineHeight: 2 }}>
-            {rows.map(([label, value]) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '6pt' }}>
-                    <span style={{ width: '90pt' }}>{label}</span>
-                    <Fill value={value} width="160pt" />
-                </div>
-            ))}
+        <div style={{ marginTop: '40pt', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div style={{ fontSize: '10pt', lineHeight: 2 }}>
+                {rows.map(([label, value]) => (
+                    <div key={label} style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '6pt' }}>
+                        <span style={{ width: '90pt' }}>{label}</span>
+                        <Fill value={value} width="160pt" />
+                    </div>
+                ))}
+            </div>
+            <VerificationQr verification={verification} />
         </div>
     );
 }
@@ -166,7 +173,8 @@ function ZoningCertification({ application, payment, zoningAdministrator, issued
                 </div>
             </div>
 
-            <div style={{ marginTop: '40pt', fontSize: '10pt', lineHeight: 1.6 }}>
+            <div style={{ marginTop: '40pt', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div style={{ fontSize: '10pt', lineHeight: 1.6 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '4pt' }}>
                     <span style={{ width: '80pt' }}>O.R. No.  :</span>
                     <Fill value={payment?.receipt_number || ''} width="160pt" />
@@ -179,6 +187,8 @@ function ZoningCertification({ application, payment, zoningAdministrator, issued
                     <span style={{ width: '80pt' }}>Amount  :</span>
                     <Fill value={payment?.amount ? `₱${Number(payment.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : ''} width="160pt" />
                 </div>
+            </div>
+            <VerificationQr verification={application.verification} />
             </div>
         </>
     );
@@ -221,7 +231,7 @@ function RoadCertification({ application, payment, zoningAdministrator, issuedOn
                 />
             </div>
 
-            <PaymentFooter payment={payment} order="amountFirst" />
+            <PaymentFooter payment={payment} order="amountFirst" verification={application.verification} />
         </>
     );
 }

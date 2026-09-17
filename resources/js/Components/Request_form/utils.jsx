@@ -159,12 +159,15 @@ export const validateStep1 = (data) => {
         // Representative address (picked from the PSGC list)
         errors.push(...validatePhilippineAddress(data, "authorized_representative_address", "Authorized Representative Address"));
         
-        // Representative email validation
-        const repEmailError = validateEmail(data.authorized_representative_email, "Authorized Representative Email");
-        if (repEmailError) errors.push(repEmailError);
-        
-        // Authorization letter required
-        if (!data.authorization_letter) {
+        // Representative email is optional; when given it has to be an address.
+        if (data.authorized_representative_email && data.authorized_representative_email.trim() !== "") {
+            const repEmailError = validateEmail(data.authorized_representative_email, "Authorized Representative Email");
+            if (repEmailError) errors.push(repEmailError);
+        }
+
+        // Authorization letter required - the one already on file (when a
+        // returned application is being corrected) counts.
+        if (!data.authorization_letter && !data.authorization_letter_on_file) {
             errors.push("Authorization Letter is required when Authorized Representative is provided");
         }
     }
