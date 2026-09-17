@@ -7,7 +7,7 @@
  */
 export const actionTone = (action = "") => {
     const a = String(action).toLowerCase();
-    if (/fail|denied|reject|delete|revoke|withdraw/.test(a)) return "danger";
+    if (/fail|locked|denied|reject|delete|revoke|withdraw/.test(a)) return "danger";
     if (/approve|verified|release|create|register|issued|ready/.test(a)) return "success";
     if (/payment|receipt|order/.test(a)) return "gold";
     if (/login|logout/.test(a)) return "slate";
@@ -77,6 +77,7 @@ export const formatActionLabel = (action) => {
         login:         "Login",
         logout:        "Logout",
         failed_login:  "Failed Login",
+        login_locked:  "Login Locked",
         bulk_created:  "Bulk Create",
         bulk_updated:  "Bulk Update",
         bulk_deleted:  "Bulk Delete",

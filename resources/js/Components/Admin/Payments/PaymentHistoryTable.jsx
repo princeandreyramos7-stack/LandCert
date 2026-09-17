@@ -410,8 +410,7 @@ export function PaymentHistoryTable({
                                 paginatedPayments.map((payment) => (
                                     <tr
                                         key={payment.id}
-                                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors duration-150 cursor-pointer"
-                                        onClick={() => onViewDetails?.(payment)}
+                                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors duration-150"
                                     >
                                         <td className="p-3">
                                             <div className="font-mono text-sm font-semibold text-blue-600">
@@ -479,8 +478,7 @@ export function PaymentHistoryTable({
                         paginatedPayments.map((payment) => (
                             <li
                                 key={payment.id}
-                                onClick={() => onViewDetails?.(payment)}
-                                className="cursor-pointer px-4 py-3 active:bg-slate-50"
+                                className="px-4 py-3"
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">

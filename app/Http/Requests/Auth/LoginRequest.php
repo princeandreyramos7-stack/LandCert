@@ -6,6 +6,7 @@ use App\Services\AuditLogService;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -15,6 +16,9 @@ class LoginRequest extends FormRequest
     /**
      * Determine if the user is authorized to make this request.
      */
+    /** Wrong passwords allowed from one address before the sign-in is locked. */
+    public const MAX_ATTEMPTS = 5;
+
     public function authorize(): bool
     {
         return true;
@@ -73,7 +77,16 @@ class LoginRequest extends FormRequest
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
-            AuditLogService::logFailedLogin($this->string('email'));
+            // The audit trail says which try this was and why it failed; the
+            // form only ever says "these credentials do not match".
+            $account = \App\Models\User::where('email', $this->string('email'))->first();
+            AuditLogService::logFailedLogin(
+                $this->string('email'),
+                RateLimiter::attempts($this->throttleKey()),
+                self::MAX_ATTEMPTS,
+                $account ? 'wrong_password' : 'unknown_email',
+                $account?->id
+            );
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -92,13 +105,27 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), self::MAX_ATTEMPTS)) {
             return;
         }
 
         event(new Lockout($this));
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
+
+        // Logged once, when the lock falls, so the audit trail shows the
+        // string of wrong passwords ending in a lockout - not a line for
+        // every refused try while it lasts.
+        $lockKey = 'login-locked:' . $this->throttleKey();
+        if (! Cache::has($lockKey)) {
+            Cache::put($lockKey, true, now()->addSeconds(max(1, $seconds)));
+            AuditLogService::logLoginLocked(
+                $this->string('email'),
+                RateLimiter::attempts($this->throttleKey()),
+                $seconds,
+                \App\Models\User::where('email', $this->string('email'))->value('id')
+            );
+        }
 
         throw ValidationException::withMessages([
             'email' => trans('auth.throttle', [

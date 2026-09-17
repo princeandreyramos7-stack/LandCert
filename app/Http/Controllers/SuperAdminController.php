@@ -1301,6 +1301,7 @@ class SuperAdminController extends Controller
             'today' => AuditLog::whereDate('created_at', today())->count(),
             'week' => AuditLog::where('created_at', '>=', now()->subDays(7))->count(),
             'failed_logins' => AuditLog::where('action', 'failed_login')->where('created_at', '>=', now()->subDays(7))->count(),
+            'lockouts' => AuditLog::where('action', 'login_locked')->where('created_at', '>=', now()->subDays(7))->count(),
             'active_users' => AuditLog::where('created_at', '>=', now()->subDays(7))->whereNotNull('user_id')->distinct()->count('user_id'),
         ];
 

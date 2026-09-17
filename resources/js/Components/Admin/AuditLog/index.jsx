@@ -72,7 +72,14 @@ export function AuditLogComponent({
         { label: "Today", value: stats.today ?? 0, icon: Zap, tone: "text-[#0d1f5c] bg-[#0d1f5c]/5" },
         { label: "Last 7 days", value: stats.week ?? 0, icon: CalendarDays, tone: "text-[#d4a017] bg-[#d4a017]/10" },
         { label: "Active users (7 days)", value: stats.active_users ?? 0, icon: Users, tone: "text-emerald-700 bg-emerald-50" },
-        { label: "Failed logins (7 days)", value: stats.failed_logins ?? 0, icon: ShieldAlert, tone: (stats.failed_logins ?? 0) > 0 ? "text-rose-700 bg-rose-50" : "text-gray-500 bg-gray-50" },
+        {
+            label: (stats.lockouts ?? 0) > 0
+                ? `Failed logins · ${stats.lockouts} lockout${stats.lockouts === 1 ? "" : "s"}`
+                : "Failed logins (7 days)",
+            value: stats.failed_logins ?? 0,
+            icon: ShieldAlert,
+            tone: (stats.failed_logins ?? 0) > 0 ? "text-rose-700 bg-rose-50" : "text-gray-500 bg-gray-50",
+        },
     ];
 
     const handleClearFilters = () => {

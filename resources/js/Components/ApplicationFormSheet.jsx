@@ -471,7 +471,7 @@ export default function ApplicationFormSheet({ application: a, compact = false, 
                                 <span className="lbl">7. Project Type</span>
                                 <span className="val">{v(a.project_type) || nb}</span>
                             </td>
-                            <td className="nb-t nb-l" style={{ height: "22pt" }}>
+                            <td className="nb-t nb-l" style={{ height: "22pt", paddingBottom: "6pt" }}>
                                 <span className="lbl">8. Project Nature</span>
                                 {/* The paper form ticks one of three; anything
                                     other than the two fixed choices is the
@@ -663,7 +663,7 @@ export default function ApplicationFormSheet({ application: a, compact = false, 
                                 </div>
                             </td>
                             {/* 12 — project nature/status */}
-                            <td className="nb-t nb-l" style={{ height: "26pt", verticalAlign: "top" }}>
+                            <td className="nb-t nb-l" style={{ height: "26pt", verticalAlign: "top", paddingBottom: "6pt" }}>
                                 <span className="lbl">12. Project Tenure</span>
                                 <div style={{ marginTop: "3pt" }}>
                                     <span className="opt">
@@ -687,7 +687,7 @@ export default function ApplicationFormSheet({ application: a, compact = false, 
                 <table>
                     <tbody>
                         <tr className="pf-rule">
-                            <td className="nb-t" style={{ paddingBottom: "4pt" }}>
+                            <td className="nb-t" style={{ paddingBottom: "8pt" }}>
                                 <span className="lbl">13. Existing Land Uses of Project Site</span>
                                 {/* Line 1 */}
                                 <div style={{ marginTop: "3pt", display: "flex", flexWrap: "nowrap", gap: "0 4pt", alignItems: "center" }}>
@@ -733,7 +733,7 @@ export default function ApplicationFormSheet({ application: a, compact = false, 
                 <table>
                     <tbody>
                         <tr className="pf-rule">
-                            <td className="nb-t" style={{ padding: "3pt 4pt" }}>
+                            <td className="nb-t" style={{ padding: "3pt 4pt 7pt" }}>
                                 <span className="lbl">14. Project Cost / Capitalization (in pesos, write in words and figure)</span>
                                 <div style={{ marginTop: "2pt", display: "flex", alignItems: "baseline", gap: "6pt" }}>
                                     <span style={{ fontSize: "9pt", fontWeight: 700 }}>

@@ -144,17 +144,65 @@ class AuditLogService
     /**
      * Log a failed login attempt
      */
-    public static function logFailedLogin(string $email)
+    /**
+     * @param  int         $attempt   Which failed try this is from this address (1-based).
+     * @param  int         $limit     How many are allowed before the sign-in is locked.
+     * @param  string|null $reason    'wrong_password' or 'unknown_email' - the office may
+     *                                see which; the person at the login form is not told.
+     * @param  int|null    $userId    The account the attempt was against, if it exists.
+     */
+    public static function logFailedLogin(string $email, int $attempt = 1, int $limit = 5, ?string $reason = null, ?int $userId = null)
     {
+        $why = match ($reason) {
+            'wrong_password' => 'wrong password',
+            'unknown_email' => 'no account with this email',
+            default => 'invalid credentials',
+        };
+
         $log = new AuditLog();
+        $log->user_id = $userId;
         $log->user_name = $email;
         $log->user_email = $email;
         $log->action = 'failed_login';
-        $log->description = 'Failed login attempt';
+        $log->description = "Failed login attempt for {$email} ({$why}) - attempt {$attempt} of {$limit} from this address";
         $log->ip_address = Request::ip();
         $log->user_agent = Request::userAgent();
         $log->url = Request::fullUrl();
         $log->method = Request::method();
+        $log->metadata = [
+            'email' => $email,
+            'reason' => $reason ?? 'invalid_credentials',
+            'attempt' => $attempt,
+            'limit' => $limit,
+            'remaining' => max(0, $limit - $attempt),
+        ];
+        $log->save();
+
+        return $log;
+    }
+
+    /**
+     * Too many wrong passwords in a row: the sign-in for this email and
+     * address is locked for a while. One entry per lockout, not one per
+     * refused try during it.
+     */
+    public static function logLoginLocked(string $email, int $attempts, int $seconds, ?int $userId = null)
+    {
+        $log = new AuditLog();
+        $log->user_id = $userId;
+        $log->user_name = $email;
+        $log->user_email = $email;
+        $log->action = 'login_locked';
+        $log->description = "Sign-in for {$email} locked for {$seconds} seconds after {$attempts} failed attempts (too many wrong passwords)";
+        $log->ip_address = Request::ip();
+        $log->user_agent = Request::userAgent();
+        $log->url = Request::fullUrl();
+        $log->method = Request::method();
+        $log->metadata = [
+            'email' => $email,
+            'attempts' => $attempts,
+            'locked_for_seconds' => $seconds,
+        ];
         $log->save();
 
         return $log;

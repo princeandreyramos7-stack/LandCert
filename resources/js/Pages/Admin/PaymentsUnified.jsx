@@ -7,11 +7,10 @@ import { RecordPaymentModal } from "@/Components/Admin/Payments/RecordPaymentMod
 import { PaymentDetailsCard } from "@/Components/Admin/Payments/PaymentDetailsCard";
 import { AddReceiptModal } from "@/Components/Admin/Payments/AddReceiptModal";
 import { AddPaymentPickerModal } from "@/Components/Admin/Payments/AddPaymentPickerModal";
-import { Button } from "@/Components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
 import {
     DollarSign, Clock, AlertCircle, CreditCard,
-    CheckCircle2, XCircle, Plus
+    CheckCircle2, XCircle
 } from "lucide-react";
 import { LiveRefresh } from "@/Components/LiveRefresh";
 
@@ -59,8 +58,9 @@ export default function PaymentsUnified({
         setIsRecordModalOpen(true);
     };
 
-    // "Add Payment" button - let admin pick which approved, unpaid
-    // application to manually record a payment (with receipt image) for.
+    // "Record a payment" on the Awaiting payment tile - let the officer pick
+    // which approved, unpaid application to record a payment (with receipt
+    // image) for. The separate Add Payment button did the same and is gone.
     const handleOpenAddPayment = () => {
         setIsAddPaymentPickerOpen(true);
     };
@@ -113,13 +113,6 @@ export default function PaymentsUnified({
                                 </p>
                             </div>
                         </div>
-                        <Button
-                            onClick={handleOpenAddPayment}
-                            className="bg-[#0d1f5c] hover:bg-[#0d1f5c]/90 text-white gap-2"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Payment
-                        </Button>
                     </div>
                 </div>
 
@@ -142,7 +135,7 @@ export default function PaymentsUnified({
                     onStatusFilterChange={setStatusFilter}
                 />
 
-                {/* Add Payment - pick which approved application to record a payment for */}
+                {/* Record a payment - pick which approved application it is for */}
                 <AddPaymentPickerModal
                     isOpen={isAddPaymentPickerOpen}
                     onClose={() => setIsAddPaymentPickerOpen(false)}
@@ -166,9 +159,9 @@ export default function PaymentsUnified({
 
                 {/* Payment Details Modal */}
                 <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-bold text-[#0d1f5c]">
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white px-6 py-6 sm:rounded-2xl">
+                        <DialogHeader className="space-y-0 pb-4 text-left">
+                            <DialogTitle className="text-base font-semibold text-gray-900">
                                 Payment Details
                             </DialogTitle>
                         </DialogHeader>

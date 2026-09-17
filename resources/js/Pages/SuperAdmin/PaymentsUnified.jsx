@@ -121,9 +121,9 @@ export default function PaymentsUnified({
 
                 {/* Payment Details Modal */}
                 <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-bold text-[#0d1f5c]">
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white px-6 py-6 sm:rounded-2xl">
+                        <DialogHeader className="space-y-0 pb-4 text-left">
+                            <DialogTitle className="text-base font-semibold text-gray-900">
                                 Payment Details
                             </DialogTitle>
                         </DialogHeader>
