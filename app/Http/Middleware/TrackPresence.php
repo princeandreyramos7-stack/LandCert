@@ -24,7 +24,7 @@ class TrackPresence
     {
         $user = $request->user();
 
-        if ($user && $request->isMethod('GET')) {
+        if ($user && $request->isMethod('GET') && \App\Support\Presence::available()) {
             $stale = !$user->last_seen_at || $user->last_seen_at->lt(now()->subSeconds(self::EVERY_SECONDS));
             $path = '/' . ltrim($request->path(), '/');
             if ($stale || $user->last_seen_path !== $path) {

@@ -24,7 +24,7 @@ const ago = (iso) => {
 };
 
 export function OnlineNowPanel({ online, className = "" }) {
-    if (!online) return null;
+    if (!online || online.unavailable) return null;
     const users = online.users || [];
     const byRole = online.by_role || {};
 

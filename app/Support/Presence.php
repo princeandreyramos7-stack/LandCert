@@ -45,6 +45,14 @@ class Presence
         '/verify' => 'Certificate verification',
     ];
 
+    /** Whether users.last_seen_at exists yet (one schema check per request). */
+    public static function available(): bool
+    {
+        static $available = null;
+
+        return $available ??= \Illuminate\Support\Facades\Schema::hasColumn('users', 'last_seen_at');
+    }
+
     public static function pageLabel(?string $path): string
     {
         $path = '/' . ltrim((string) $path, '/');
@@ -62,6 +70,12 @@ class Presence
      */
     public static function snapshot(): array
     {
+        // Until the presence migration has run on this database there is
+        // nothing to report - the dashboard must still open.
+        if (!self::available()) {
+            return ['online' => 0, 'by_role' => ['super_admin' => 0, 'admin' => 0, 'applicant' => 0], 'today' => 0, 'window_minutes' => self::ONLINE_MINUTES, 'users' => [], 'unavailable' => true];
+        }
+
         $since = now()->subMinutes(self::ONLINE_MINUTES);
 
         $online = User::query()
