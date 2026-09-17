@@ -8,7 +8,8 @@ export default function AuditLogs({ logs, users, actions, modelTypes, filters, s
         <>
             <Head title="Audit Logs — CPDO Admin"/>
             <AdminLayout title="Audit Logs" breadcrumbs={[{ label: "Dashboard", href: "/admin/dashboard" }]}>
-                <LiveRefresh only={["logs"]} items={logs} label="log entries" className="justify-end mb-4" />
+                {/* New entries and the tiles arrive on their own, keeping filters and page. */}
+                <LiveRefresh only={["logs", "stats"]} items={logs} label="log entries" interval={10000} className="justify-end mb-4" />
                 <AuditLogComponent logs={logs} users={users} actions={actions} modelTypes={modelTypes} filters={filters} stats={stats}/>
             </AdminLayout>
         </>

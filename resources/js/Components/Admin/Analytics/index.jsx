@@ -14,7 +14,8 @@ import {
 } from './utils';
 import { groupStatusCounts } from '@/lib/applicationStatus';
 
-export function AnalyticsDashboard({ analytics }) {
+/** @param afterCards  Rendered between the stat cards and the tabs (the officer's live view). */
+export function AnalyticsDashboard({ analytics, afterCards = null }) {
     if (!analytics) return null;
 
     const {
@@ -56,6 +57,8 @@ export function AnalyticsDashboard({ analytics }) {
                 user_activity_metrics={user_activity_metrics}
                 processing_time_by_status={processing_time_by_status}
             />
+
+            {afterCards}
 
             <Tabs defaultValue="overview" className="space-y-4">
                 <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto sm:grid sm:h-10 sm:grid-cols-6">

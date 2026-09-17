@@ -7,7 +7,6 @@ import { FilterCard } from "./FilterCard";
 import { AuditLogTable } from "./AuditLogTable";
 import { AuditLogPagination } from "./AuditLogPagination";
 import { DetailsDialog } from "./DetailsDialog";
-import { LiveRefresh } from "@/Components/LiveRefresh";
 
 export function AuditLogComponent({
     logs,
@@ -156,10 +155,6 @@ export function AuditLogComponent({
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                            {/* New entries arrive on their own: the list and the
-                                tiles are re-fetched every few seconds, keeping the
-                                filters and the page the reader is on. */}
-                            <LiveRefresh only={["logs", "stats"]} items={logs} label="entries" interval={10000} className="mr-1" />
                             <div className="flex rounded-lg border border-gray-200 p-0.5 text-xs" role="group" aria-label="Date range">
                                 {[["Today", 0], ["7 days", 7], ["30 days", 30], ["All", null]].map(([label, days]) => (
                                     <button

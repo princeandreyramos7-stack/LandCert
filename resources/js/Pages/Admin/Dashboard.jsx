@@ -3,7 +3,6 @@ import { Head } from "@inertiajs/react";
 import { AdminDashboard } from "@/Components/Admin/Dashboard";
 import AdminLayout from "@/Layouts/AdminLayout";
 import { LiveRefresh } from "@/Components/LiveRefresh";
-import { OnlineNowPanel } from "@/Components/OnlineNowPanel";
 
 export default function Page({
     applications = [],
@@ -30,8 +29,8 @@ export default function Page({
                     label="applications"
                     className="justify-end mb-4"
                 />
-                <OnlineNowPanel online={online} className="mb-4" />
                 <AdminDashboard
+                    online={online}
                     applications={applications}
                     stats={stats}
                     analytics={analytics}

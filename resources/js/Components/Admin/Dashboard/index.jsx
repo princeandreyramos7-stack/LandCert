@@ -3,8 +3,10 @@ import { Button } from "@/Components/ui/button";
 import { BarChart3, Clock, FileText, CheckCircle2 } from "lucide-react";
 
 import { AnalyticsDashboard } from "@/Components/Admin/Analytics";
+import { OnlineNowPanel } from "@/Components/OnlineNowPanel";
 
 export function AdminDashboard({
+    online = null,
     analytics = null,
     stats = {},
     applications = [],
@@ -104,7 +106,7 @@ export function AdminDashboard({
             {/* Analytics */}
             {showAnalytics && analytics && (
                 <div className="animate-in fade-in slide-in-from-bottom duration-500">
-                    <AnalyticsDashboard analytics={analytics} />
+                    <AnalyticsDashboard analytics={analytics} afterCards={<OnlineNowPanel online={online} />} />
                 </div>
             )}
 
