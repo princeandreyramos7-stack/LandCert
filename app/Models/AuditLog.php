@@ -35,6 +35,22 @@ class AuditLog extends Model
     public $timestamps = false;
 
     /**
+     * The time of an entry is the application's clock, never the database's.
+     *
+     * created_at used to be left to the column's CURRENT_TIMESTAMP default,
+     * which is the MySQL server's clock in the MySQL server's time zone. The
+     * app runs on Asia/Manila; the live host's MySQL runs on UTC; so every
+     * entry there was stamped eight hours early and the log read "8 hours
+     * ago" for something that had just happened.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (AuditLog $log) {
+            $log->created_at ??= now();
+        });
+    }
+
+    /**
      * Get the user that performed the action
      */
     public function user(): BelongsTo
