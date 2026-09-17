@@ -133,7 +133,7 @@ export function getStatusConfig(status) {
  * Each filter now includes a roles array to control visibility per role.
  */
 export const ALL_STATUS_FILTERS = [
-    { value: "all", label: "All Status of Application", matches: [], roles: ["admin", "super_admin"] },
+    { value: "all", label: "All statuses", matches: [], roles: ["admin", "super_admin"] },
     { value: "pending", label: "For Verification", matches: ["pending", "for_verification"], roles: ["admin"] },
     { value: "reviewed", label: "For Approval", matches: ["reviewed", "pending_superadmin_approval"], roles: ["admin", "super_admin"] },
     { value: "in_applicant", label: "Returned to Applicant", matches: ["in_applicant", "returned"], roles: ["admin", "super_admin"] },

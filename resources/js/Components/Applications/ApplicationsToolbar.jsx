@@ -13,7 +13,7 @@ export const SORT_OPTIONS = [
 ];
 
 const selectClass =
-    "h-10 w-full min-w-0 cursor-pointer rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c]/30 sm:w-auto";
+    "h-10 w-full min-w-0 cursor-pointer rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c]/30 sm:w-auto lg:max-w-[200px] lg:shrink-0";
 
 /**
  * Search, filters, sort and export for All Applications. Filters that are set
@@ -34,8 +34,8 @@ export function ApplicationsToolbar({
 
     return (
         <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                <div className="relative w-full sm:w-64">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:flex-nowrap">
+                <div className="relative w-full sm:w-64 lg:w-auto lg:min-w-[180px] lg:flex-1 lg:max-w-xs">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <Input
                         value={search}
@@ -52,6 +52,7 @@ export function ApplicationsToolbar({
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 sm:contents">
+                    {/* Both selects keep to a fixed width so the row holds on one line. */}
                     <select value={status} onChange={(e) => onStatus(e.target.value)} aria-label="Filter by status" className={selectClass}>
                         {STATUS_FILTERS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                         <option value="archived">Archived{archivedCount ? ` (${archivedCount})` : ""}</option>
@@ -61,7 +62,7 @@ export function ApplicationsToolbar({
                     </select>
                 </div>
 
-                <div className="flex items-center gap-2 sm:ml-auto">
+                <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
                     <label className="relative flex-1 sm:flex-none">
                         <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
                         <select value={sort} onChange={(e) => onSort(e.target.value)} aria-label="Sort" className={`${selectClass} pl-8`}>
