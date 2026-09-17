@@ -30,6 +30,8 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\NoCacheHeaders::class,
+            // When each signed-in user was last here, for the dashboards' live view.
+            \App\Http\Middleware\TrackPresence::class,
         ]);
 
         $middleware->alias([

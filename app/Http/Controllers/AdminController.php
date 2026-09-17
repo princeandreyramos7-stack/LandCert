@@ -98,6 +98,8 @@ class AdminController extends Controller
             'stats' => $stats,
             'analytics' => $analytics,
             'evaluationDistribution' => $evaluationDistribution,
+            // Who is using the system right now (never cached).
+            'online' => \App\Support\Presence::snapshot(),
         ]);
     }
     

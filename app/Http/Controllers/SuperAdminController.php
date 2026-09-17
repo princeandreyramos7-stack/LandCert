@@ -306,6 +306,8 @@ class SuperAdminController extends Controller
             'evaluationDistribution' => $evaluationDistribution,
             'systemStats' => $systemStats,
             'adminActivity' => $adminActivity,
+            // Who is using the system right now (never cached).
+            'online' => \App\Support\Presence::snapshot(),
         ]);
     }
 
