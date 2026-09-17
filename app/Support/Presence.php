@@ -94,7 +94,7 @@ class Presence
             'by_role' => $byRole,
             'today' => User::whereDate('last_seen_at', today())->count(),
             'window_minutes' => self::ONLINE_MINUTES,
-            'users' => $online->take(50)->map(fn (User $user) => [
+            'users' => $online->take(200)->map(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,

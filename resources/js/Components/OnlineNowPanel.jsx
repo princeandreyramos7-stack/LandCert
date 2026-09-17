@@ -1,4 +1,8 @@
-import { Radio, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Radio, Users, ChevronLeft, ChevronRight } from "lucide-react";
+
+/** People shown per page of the list. */
+const PER_PAGE = 6;
 
 /**
  * Who is using the system right now - the dashboards' live view. Everyone
@@ -24,9 +28,16 @@ const ago = (iso) => {
 };
 
 export function OnlineNowPanel({ online, className = "" }) {
+    const users = online?.users || [];
+    const byRole = online?.by_role || {};
+    const [page, setPage] = useState(1);
+    const pages = Math.max(1, Math.ceil(users.length / PER_PAGE));
+
+    // People come and go between polls; never be left on a page that no longer exists.
+    useEffect(() => { if (page > pages) setPage(pages); }, [page, pages]);
+
     if (!online || online.unavailable) return null;
-    const users = online.users || [];
-    const byRole = online.by_role || {};
+    const shown = users.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
     return (
         <div className={`rounded-xl border border-gray-100 bg-white shadow-sm ${className}`}>
@@ -65,7 +76,7 @@ export function OnlineNowPanel({ online, className = "" }) {
                 </p>
             ) : (
                 <ul className="grid gap-x-6 divide-y divide-gray-100 sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-3">
-                    {users.map((u) => {
+                    {shown.map((u) => {
                         const role = ROLE[u.user_type] || { label: u.user_type, chip: "bg-gray-100 text-gray-600" };
                         return (
                             <li key={u.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
@@ -88,6 +99,23 @@ export function OnlineNowPanel({ online, className = "" }) {
                         );
                     })}
                 </ul>
+            )}
+
+            {pages > 1 && (
+                <div className="flex items-center justify-between border-t border-gray-100 px-4 py-2 text-xs text-gray-500 sm:px-5">
+                    <span>
+                        {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, users.length)} of {users.length}
+                    </span>
+                    <span className="flex items-center gap-1">
+                        <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} aria-label="Previous" className="rounded-md border border-gray-200 p-1 hover:bg-gray-50 disabled:opacity-40">
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="px-1 font-semibold text-gray-700">{page} / {pages}</span>
+                        <button type="button" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page === pages} aria-label="Next" className="rounded-md border border-gray-200 p-1 hover:bg-gray-50 disabled:opacity-40">
+                            <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                    </span>
+                </div>
             )}
         </div>
     );

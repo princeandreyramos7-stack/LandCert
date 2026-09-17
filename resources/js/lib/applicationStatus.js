@@ -153,6 +153,10 @@ export const ALL_STATUS_FILTERS = [
         ],
         roles: ["admin", "super_admin"]
     },
+    // The two halves of the paid stage, for the administrator's board:
+    // being prepared, and already handed to the applicant.
+    { value: "certificate_stage", label: "Paid — certificate being prepared", matches: ["payment_confirmed", "approved_with_payment", "certificate_preparing", "certificate_ready"], roles: ["admin", "super_admin"] },
+    { value: "released", label: "Released to applicant", matches: ["released", "collected", "completed"], roles: ["admin", "super_admin"] },
     { value: "rejected", label: "Application Denied", matches: ["rejected"], roles: ["admin", "super_admin"] },
 ];
 

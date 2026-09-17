@@ -1,6 +1,6 @@
 import React from "react";
 import { matchesStatusFilter } from "@/lib/applicationStatus";
-import { FileText, FileCheck, Stamp, Wallet, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
+import { FileText, FileCheck, Stamp, Wallet, CheckCircle2, XCircle, RotateCcw, Send } from "lucide-react";
 
 /**
  * The six counts across the top of All Applications, each one a filter for the
@@ -13,8 +13,9 @@ const ALL_TILES = [
     { key: "pending",              label: "For Verification",    sub: "documents to check",      icon: FileCheck, tone: "text-sky-800",    ring: "ring-sky-500",    wash: "bg-sky-50",       chip: "bg-sky-500 text-white", roles: ["admin"] },
     { key: "reviewed",             label: "For Approval",        sub: "with the administrator",  icon: Stamp, tone: "text-amber-800",  ring: "ring-amber-500",  wash: "bg-amber-50",     chip: "bg-amber-500 text-white", roles: ["admin", "super_admin"] },
     { key: "approved",             label: "For Payment",         sub: "approved, fee unpaid",    icon: Wallet,    tone: "text-violet-800", ring: "ring-violet-500", wash: "bg-violet-50",    chip: "bg-violet-500 text-white", roles: ["admin", "super_admin"] },
-    { key: "application_approved", label: "Approved",            sub: "paid, certificate stage", icon: CheckCircle2,     tone: "text-emerald-800", ring: "ring-emerald-500", wash: "bg-emerald-50", chip: "bg-emerald-500 text-white", roles: ["admin", "super_admin"] },
-    { key: "in_applicant",         label: "Returned",            sub: "back to applicant",       icon: RotateCcw, tone: "text-orange-800", ring: "ring-orange-500", wash: "bg-orange-50",    chip: "bg-orange-500 text-white", roles: ["super_admin"] },
+    { key: "application_approved", label: "Approved",            sub: "paid, certificate stage", icon: CheckCircle2,     tone: "text-emerald-800", ring: "ring-emerald-500", wash: "bg-emerald-50", chip: "bg-emerald-500 text-white", roles: ["admin"] },
+    { key: "certificate_stage",    label: "Approved",            sub: "paid, being prepared",    icon: CheckCircle2, tone: "text-emerald-800", ring: "ring-emerald-500", wash: "bg-emerald-50", chip: "bg-emerald-500 text-white", roles: ["super_admin"] },
+    { key: "released",             label: "Released",            sub: "handed to the applicant", icon: Send,      tone: "text-teal-800",   ring: "ring-teal-500",   wash: "bg-teal-50",      chip: "bg-teal-500 text-white", roles: ["super_admin"] },
     { key: "rejected",             label: "Denied",              sub: "not approved",            icon: XCircle,   tone: "text-rose-800",   ring: "ring-rose-500",   wash: "bg-rose-50",      chip: "bg-rose-500 text-white", roles: ["admin", "super_admin"] },
 ];
 
