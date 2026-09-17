@@ -85,7 +85,7 @@ export default function PrintForm({ application: a, auth }) {
     const layoutBreadcrumbs = isSuperAdmin
         ? [
             { label: "Dashboard", href: "/super-admin/dashboard" },
-            { label: "Applications", href: "/super-admin/requests" },
+            { label: "Reviewed Applications", href: "/super-admin/requests" },
             { label: "Print Form" },
         ]
         : isAdmin

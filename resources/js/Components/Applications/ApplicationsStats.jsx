@@ -19,7 +19,13 @@ const ALL_TILES = [
 ];
 
 function getTilesForRole(role) {
-    return ALL_TILES.filter(tile => tile.roles.includes(role));
+    return ALL_TILES.filter((tile) => tile.roles.includes(role)).map((tile) =>
+        // The administrator's board holds only what the officer has reviewed,
+        // so its "All" is all of those, not every application on file.
+        tile.key === "all" && role === "super_admin"
+            ? { ...tile, label: "All reviewed", sub: "reviewed by the officer" }
+            : tile,
+    );
 }
 
 export function countByFilter(requests, key) {

@@ -239,7 +239,7 @@ export default function DocumentVerification({ request }) {
             title="Document Verification" 
             breadcrumbs={[
                 { label: "Dashboard", href: "/super-admin/dashboard" }, 
-                { label: "Applications", href: "/super-admin/requests" }
+                { label: "Reviewed Applications", href: "/super-admin/requests" }
             ]}
         >
             <Head title={`Document Verification ${request.application_number || `TPZ-${request.id}`}`} />

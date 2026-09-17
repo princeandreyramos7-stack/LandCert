@@ -177,7 +177,7 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
             title="View Application"
             breadcrumbs={[
                 { label: "Dashboard", href: "/super-admin/dashboard" },
-                { label: "Applications", href: "/super-admin/requests" },
+                { label: "Reviewed Applications", href: "/super-admin/requests" },
             ]}
         >
             <Head title={`View Application ${request.application_number || `TPZ-${request.id}`}`} />

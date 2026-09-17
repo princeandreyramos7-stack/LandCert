@@ -44,7 +44,7 @@ const navGroups = [
         label: "Processing",
         items: [
             {
-                title: "Applications",
+                title: "Reviewed Applications",
                 url: "/super-admin/requests",
                 icon: FileText,
             },

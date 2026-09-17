@@ -17,7 +17,7 @@ export default function GenerateOrderOfPayment({ application, payment, reviewer,
         : userType === 'admin' ? AdminLayout
         : ApplicantLayout;
     const breadcrumbs = userType === 'super_admin'
-        ? [{ label: "Dashboard", href: "/super-admin/dashboard" }, { label: "Applications", href: "/super-admin/requests" }, { label: "Order of Payment" }]
+        ? [{ label: "Dashboard", href: "/super-admin/dashboard" }, { label: "Reviewed Applications", href: "/super-admin/requests" }, { label: "Order of Payment" }]
         : userType === 'admin'
         ? [{ label: "Dashboard", href: "/admin/dashboard" }, { label: "Applications", href: "/admin/requests" }, { label: "Order of Payment" }]
         : [{ label: "My Applications", href: "/my-applications" }, { label: "Order of Payment" }];
