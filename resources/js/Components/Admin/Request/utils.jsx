@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, Clock, DollarSign, FileCheck, Hourglass } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, DollarSign, FileCheck, Stamp } from "lucide-react";
 
 /**
  * Get status badge color classes based on status
@@ -45,7 +45,7 @@ export const getStatusIcon = (status) => {
             return <XCircle className="h-4 w-4" />;
         case "reviewed":
             // "For Approval" — waiting on the Zoning Administrator, not a payment step.
-            return <Hourglass className="h-4 w-4" />;
+            return <Stamp className="h-4 w-4" />;
         case "for_payment":
         case "pending_payment":
             return <DollarSign className="h-4 w-4" />;

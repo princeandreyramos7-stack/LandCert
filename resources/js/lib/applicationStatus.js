@@ -3,7 +3,7 @@ import {
     CheckCircle2,
     Clock,
     DollarSign,
-    Hourglass,
+    Stamp,
     XCircle,
 } from "lucide-react";
 
@@ -38,7 +38,7 @@ const STATUS_CONFIGS = {
         label: "Under Review",
     },
     pending_superadmin_approval: {
-        icon: Hourglass,
+        icon: Stamp,
         color: "bg-blue-100 text-blue-800 border-blue-200",
         label: "For Approval",
     },
