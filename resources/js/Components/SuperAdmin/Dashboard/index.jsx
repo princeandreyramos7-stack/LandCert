@@ -9,14 +9,17 @@ import {
     FileText,
     Clock,
     Activity,
+    Radio,
 } from "lucide-react";
 import { AnalyticsDashboard } from "@/Components/Admin/Analytics";
 import { AdminWorkflowTab } from "./AdminWorkflowTab";
+import { OnlineNowPanel } from "@/Components/OnlineNowPanel";
 
 export function SuperAdminDashboard({
     analytics = null,
     systemStats = {},
     adminActivity = {},
+    online = null,
 }) {
     const [showAnalytics, setShowAnalytics] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
@@ -181,7 +184,7 @@ export function SuperAdminDashboard({
             {showAnalytics && (
                 <div className="animate-in fade-in slide-in-from-bottom duration-500">
                     <Tabs defaultValue="analytics" className="space-y-4">
-                        <TabsList className="flex h-auto w-full max-w-md justify-start gap-1 overflow-x-auto sm:grid sm:h-10 sm:grid-cols-2">
+                        <TabsList className="flex h-auto w-full max-w-2xl justify-start gap-1 overflow-x-auto sm:grid sm:h-10 sm:grid-cols-3">
                             <TabsTrigger
                                 value="analytics"
                                 className="shrink-0 gap-2"
@@ -196,6 +199,16 @@ export function SuperAdminDashboard({
                                 <Activity className="h-4 w-4" />
                                 Admin Workflow
                             </TabsTrigger>
+                            <TabsTrigger
+                                value="live"
+                                className="shrink-0 gap-2"
+                            >
+                                <Radio className="h-4 w-4" />
+                                Live
+                                {online?.online > 0 && (
+                                    <span className="rounded-full bg-emerald-500 px-1.5 text-[10px] font-bold text-white">{online.online}</span>
+                                )}
+                            </TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="analytics" className="space-y-4">
@@ -206,6 +219,11 @@ export function SuperAdminDashboard({
 
                         <TabsContent value="workflow" className="space-y-4">
                             <AdminWorkflowTab adminActivity={adminActivity} />
+                        </TabsContent>
+
+                        {/* Who is using the system right now (App\Support\Presence). */}
+                        <TabsContent value="live" className="space-y-4">
+                            <OnlineNowPanel online={online} />
                         </TabsContent>
                     </Tabs>
                 </div>
