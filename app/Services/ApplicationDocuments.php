@@ -175,7 +175,7 @@ class ApplicationDocuments
      * The Zoning Officer who reviewed the application - the "Prepared &
      * Evaluated by" signer - with their e-signature if on file.
      */
-    public static function reviewer(int $requestId): ?User
+    public static function reviewer(int $requestId): ?object
     {
         $report = Report::where('request_id', $requestId)
             ->whereIn('evaluation', ['approved', 'reviewed'])
@@ -185,20 +185,50 @@ class ApplicationDocuments
         return $report?->resolveReviewer();
     }
 
-    /** The Zoning Administrator - the "Approved by" signer. */
-    public static function zoningAdministrator(): ?User
+    /**
+     * The date a document is signed as of: when its certificate was issued,
+     * else when it was released to the applicant, else now (still being
+     * prepared - signed by whoever holds the post today).
+     */
+    public static function issuedAt(RequestModel $request): ?\Carbon\CarbonInterface
     {
-        return User::where('user_type', 'super_admin')
-            ->whereNotNull('signature_path')
-            ->first();
+        $issued = $request->relationLoaded('certificates')
+            ? $request->certificates->sortByDesc('id')->first()?->issued_at
+            : $request->certificates()->latest('id')->value('issued_at');
+
+        return $issued ? \Carbon\Carbon::parse($issued) : $request->released_to_applicant_at;
     }
 
-    /** A signer as the documents print them: name and signature, or nothing. */
-    public static function signer(?User $user): ?array
+    /**
+     * The Zoning Administrator - the "Approved by" signer - as of a date
+     * (see Signatories::zoningAdministrator).
+     */
+    public static function zoningAdministrator(?\Carbon\CarbonInterface $at = null): ?User
     {
-        return $user ? [
-            'name' => $user->name,
-            'signature_url' => $user->signature_url,
-        ] : null;
+        return \App\Support\Signatories::zoningAdministrator($at);
+    }
+
+    /**
+     * A signer as the documents print them: name, signature and position as
+     * of the document's date, or nothing.
+     */
+    public static function signer(?object $user, ?\Carbon\CarbonInterface $at = null): ?array
+    {
+        return \App\Support\Signatories::signer($user, $at);
+    }
+
+    /**
+     * Both signers of an application's documents, as of its issue date.
+     *
+     * @return array{reviewer: ?array, zoningAdministrator: ?array}
+     */
+    public static function signers(RequestModel $request): array
+    {
+        $at = self::issuedAt($request);
+
+        return [
+            'reviewer' => self::signer(self::reviewer($request->id), $at),
+            'zoningAdministrator' => self::signer(self::zoningAdministrator($at), $at),
+        ];
     }
 }

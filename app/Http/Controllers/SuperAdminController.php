@@ -1161,13 +1161,68 @@ class SuperAdminController extends Controller
         // Only the columns the table shows are selected, to keep that honest
         // without sending more than the page needs.
         $users = User::query()
-            ->select(['id', 'name', 'email', 'contact_number', 'address', 'user_type', 'created_at'])
+            ->select(['id', 'name', 'email', 'contact_number', 'address', 'user_type', 'position', 'signature_path', 'created_at'])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function (User $user) {
+                $row = $user->only(['id', 'name', 'email', 'contact_number', 'address', 'user_type', 'position', 'created_at']);
+                // Only staff sign anything; applicants have no signature to show.
+                $row['signature_url'] = in_array($user->user_type, ['admin', 'super_admin'], true) ? $user->signature_url : null;
+                // When it was put in force - not for the first version the
+                // migration dated 2000 to cover everything already issued.
+                $since = $row['signature_url'] ? \App\Support\Signatories::versionAsOf($user->id)?->effective_from : null;
+                $row['signature_since'] = $since && $since->year > 2000 ? $since->toDateString() : null;
+                return $row;
+            });
 
         return Inertia::render('SuperAdmin/Users', [
             'users' => $users,
         ]);
+    }
+
+    /**
+     * Set a staff member's e-signature and/or printed position, in force from
+     * a date. Documents issued before that date keep what they were issued
+     * with; documents from that date on carry the new signature and title.
+     */
+    public function updateSignatory(Request $request, $userId)
+    {
+        $user = User::findOrFail($userId);
+
+        if (!in_array($user->user_type, ['admin', 'super_admin'], true)) {
+            return back()->with('error', 'Only a Zoning Officer or Zoning Administrator signs documents.');
+        }
+
+        $validated = $request->validate([
+            'position' => 'nullable|string|max:150',
+            'signature' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
+            'effective_from' => 'nullable|date',
+        ]);
+
+        if (!$request->hasFile('signature') && trim((string) ($validated['position'] ?? '')) === '') {
+            return back()->withErrors(['position' => 'Set a position, a signature, or both.']);
+        }
+
+        // From today unless a date is given - never before the account existed.
+        $effectiveFrom = !empty($validated['effective_from'])
+            ? \Carbon\Carbon::parse($validated['effective_from'])->startOfDay()
+            : now();
+
+        $version = \App\Support\Signatories::set(
+            $user,
+            $request->file('signature'),
+            $validated['position'] ?? null,
+            $effectiveFrom,
+            auth()->id()
+        );
+
+        AuditLogService::logUpdate('User', $user->id, [], [
+            'position' => $version->position,
+            'signature_path' => $version->signature_path,
+            'effective_from' => $version->effective_from->toDateString(),
+        ], "Signatory settings for {$user->name}: {$version->position}, in force from {$version->effective_from->toDateString()}");
+
+        return back()->with('success', "Signatory settings for {$user->name} saved. Documents issued from {$version->effective_from->format('M j, Y')} carry them.");
     }
 
     /**
@@ -1793,23 +1848,16 @@ class SuperAdminController extends Controller
         $reviewerSignature = $reviewer->signature_url ?? null;
 
         // Signer for the "Approved by" block: the Zoning Administrator.
-        $zoningAdministrator = \App\Models\User::where('user_type', 'super_admin')
-            ->whereNotNull('signature_path')
-            ->first();
+        $zoningAdministrator = \App\Support\Signatories::zoningAdministrator();
 
         $applicationData = \App\Services\ApplicationDocuments::issuance($request);
 
         return \Inertia\Inertia::render('Admin/GenerateCertificate', [
             'application' => $applicationData,
             'payment' => $payment,
-            'reviewer' => $reviewer ? [
-                'name' => $reviewerName,
-                'signature_url' => $reviewerSignature,
-            ] : null,
-            'zoningAdministrator' => $zoningAdministrator ? [
-                'name' => $zoningAdministrator->name,
-                'signature_url' => $zoningAdministrator->signature_url,
-            ] : null,
+            // Signed as of the issue date: an old certificate keeps the
+            // signatures and titles it was issued with (App\Support\Signatories).
+            ...\App\Services\ApplicationDocuments::signers($request),
         ]);
     }
 
@@ -1851,23 +1899,16 @@ class SuperAdminController extends Controller
         $reviewerSignature = $reviewer->signature_url ?? null;
 
         // Signer for the "Approved by" block: the Zoning Administrator.
-        $zoningAdministrator = \App\Models\User::where('user_type', 'super_admin')
-            ->whereNotNull('signature_path')
-            ->first();
+        $zoningAdministrator = \App\Support\Signatories::zoningAdministrator();
 
         $applicationData = \App\Services\ApplicationDocuments::issuance($request);
 
         return \Inertia\Inertia::render('Admin/GenerateClearance', [
             'application' => $applicationData,
             'payment' => $payment,
-            'reviewer' => $reviewer ? [
-                'name' => $reviewerName,
-                'signature_url' => $reviewerSignature,
-            ] : null,
-            'zoningAdministrator' => $zoningAdministrator ? [
-                'name' => $zoningAdministrator->name,
-                'signature_url' => $zoningAdministrator->signature_url,
-            ] : null,
+            // Signed as of the issue date: an old certificate keeps the
+            // signatures and titles it was issued with (App\Support\Signatories).
+            ...\App\Services\ApplicationDocuments::signers($request),
         ]);
     }
 
@@ -1902,23 +1943,16 @@ class SuperAdminController extends Controller
         $reviewerSignature = $reviewer->signature_url ?? null;
 
         // Signer for the "Approved by" block: the Zoning Administrator.
-        $zoningAdministrator = \App\Models\User::where('user_type', 'super_admin')
-            ->whereNotNull('signature_path')
-            ->first();
+        $zoningAdministrator = \App\Support\Signatories::zoningAdministrator();
 
         $applicationData = \App\Services\ApplicationDocuments::issuance($request);
 
         return \Inertia\Inertia::render('Admin/GenerateOrderOfPayment', [
             'application' => $applicationData,
             'payment' => $payment,
-            'reviewer' => $reviewer ? [
-                'name' => $reviewerName,
-                'signature_url' => $reviewerSignature,
-            ] : null,
-            'zoningAdministrator' => $zoningAdministrator ? [
-                'name' => $zoningAdministrator->name,
-                'signature_url' => $zoningAdministrator->signature_url,
-            ] : null,
+            // Signed as of the issue date: an old certificate keeps the
+            // signatures and titles it was issued with (App\Support\Signatories).
+            ...\App\Services\ApplicationDocuments::signers($request),
         ]);
     }
 

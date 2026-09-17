@@ -1021,9 +1021,7 @@ class RequestController extends Controller
         $reviewer = $report?->resolveReviewer();
 
         // "Approved by" is the Zoning Administrator.
-        $zoningAdministrator = \App\Models\User::where('user_type', 'super_admin')
-            ->whereNotNull('signature_path')
-            ->first();
+        $zoningAdministrator = \App\Support\Signatories::zoningAdministrator();
 
         $applicationData = [
             'id' => $request->id,
@@ -1048,14 +1046,9 @@ class RequestController extends Controller
         return \Inertia\Inertia::render('Admin/GenerateOrderOfPayment', [
             'application' => $applicationData,
             'payment' => $payment,
-            'reviewer' => $reviewer ? [
-                'name' => $reviewer->name ?? null,
-                'signature_url' => $reviewer->signature_url ?? null,
-            ] : null,
-            'zoningAdministrator' => $zoningAdministrator ? [
-                'name' => $zoningAdministrator->name,
-                'signature_url' => $zoningAdministrator->signature_url,
-            ] : null,
+            // Signed as of the issue date: an old certificate keeps the
+            // signatures and titles it was issued with (App\Support\Signatories).
+            ...\App\Services\ApplicationDocuments::signers($request),
             // The fee the Zoning Officer set at review time. At "For Payment" there
             // is no Payment record yet, so this is the only source for the amount.
             'paymentAmount' => $payment?->amount ?? $report?->payment_amount,
@@ -1079,8 +1072,7 @@ class RequestController extends Controller
         return inertia('Applicant/PrintCertificate', [
             'application' => \App\Services\ApplicationDocuments::issuance($request),
             'payment' => $payment,
-            'reviewer' => \App\Services\ApplicationDocuments::signer(\App\Services\ApplicationDocuments::reviewer($request->id)),
-            'zoningAdministrator' => \App\Services\ApplicationDocuments::signer(\App\Services\ApplicationDocuments::zoningAdministrator()),
+            ...\App\Services\ApplicationDocuments::signers($request),
             // Dated as the office issued it, not the day the applicant prints it.
             'issuedOn' => optional($request->certificates->sortByDesc('id')->first()?->issued_at ?? $request->released_to_applicant_at)->format('F j, Y'),
         ]);
@@ -1097,8 +1089,7 @@ class RequestController extends Controller
         return inertia('Applicant/PrintClearance', [
             'application' => \App\Services\ApplicationDocuments::issuance($request),
             'payment' => $payment,
-            'reviewer' => \App\Services\ApplicationDocuments::signer(\App\Services\ApplicationDocuments::reviewer($request->id)),
-            'zoningAdministrator' => \App\Services\ApplicationDocuments::signer(\App\Services\ApplicationDocuments::zoningAdministrator()),
+            ...\App\Services\ApplicationDocuments::signers($request),
         ]);
     }
 

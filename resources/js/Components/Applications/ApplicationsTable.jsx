@@ -67,7 +67,7 @@ function Stage({ request, sla }) {
             className={`block text-[11px] ${p.overdue ? "font-semibold text-rose-600" : "text-gray-400"}`}
             title={`${p.days} working ${dayWord} in ${label}; the Citizen's Charter allows ${p.limit}`}
         >
-            {p.overdue ? `${label} ${p.days} ${dayWord} · over the ${p.limit}-day limit` : `${label} ${p.days} of ${p.limit} ${dayWord}`}
+            {p.overdue ? `${label} ${p.days} ${dayWord} · over the ${p.limit}-day limit` : `${label} ${p.days} of ${p.limit} ${p.limit === 1 ? "day" : "days"}`}
         </span>
     );
 }

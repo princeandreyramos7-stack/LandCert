@@ -1,5 +1,5 @@
 import React, { forwardRef } from "react";
-import { zoningAdministratorName } from "@/lib/signerName";
+import { zoningAdministratorName, positionLines, DEFAULT_OFFICER_POSITION, DEFAULT_ADMINISTRATOR_POSITION } from "@/lib/signerName";
 import ESignatureImage from "@/Components/ESignatureImage";
 import OfficialLetterhead from "@/Components/OfficialLetterhead";
 
@@ -251,7 +251,7 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
                             label="Prepared by"
                             signatureUrl={reviewer?.signature_url}
                             name={(reviewer?.name || 'MARY JANE P. BULAUAN').toUpperCase()}
-                            title="Zoning Officer IV"
+                            title={positionLines(reviewer, DEFAULT_OFFICER_POSITION).join(' / ')}
                         />
                     </div>
 
@@ -260,7 +260,7 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
                             label="Approved"
                             signatureUrl={zoningAdministrator?.signature_url}
                             name={zoningAdministratorName(zoningAdministrator?.name)}
-                            title="OIC- CPDC/Zoning Administrator"
+                            title={positionLines(zoningAdministrator, DEFAULT_ADMINISTRATOR_POSITION).join(' / ')}
                         />
                     </div>
                 </div>

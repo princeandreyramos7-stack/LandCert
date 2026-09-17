@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { EditUserModal } from "./EditUserModal";
+import { SignatoryModal } from "./SignatoryModal";
 import {
     MoreVertical,
     Search,
@@ -39,6 +40,7 @@ import {
     Shield,
     Users,
     Pencil,
+    PenLine,
     Trash2,
     User,
     Mail,
@@ -137,6 +139,11 @@ export function SuperAdminUserManagement({ users }) {
 
     // Edited in place rather than on a page of its own: a correction to one row
     // should not cost the list's filters, search and scroll position.
+    // Signatory settings: the e-signature and printed position of a staff
+    // account, in force from a date (SignatoryModal).
+    const [userToSign, setUserToSign] = useState(null);
+    const isStaff = (user) => ["admin", "super_admin"].includes(user?.user_type);
+
     const handleEdit = (user) => {
         setUserToEdit(user);
         setIsEditDialogOpen(true);
@@ -312,6 +319,12 @@ export function SuperAdminUserManagement({ users }) {
                                                     {user.user_type === "super_admin" && <Shield className="h-3 w-3 mr-1" />}
                                                     {getUserTypeLabel(user.user_type)}
                                                 </Badge>
+                                                {isStaff(user) && (
+                                                    <p className="mt-1 max-w-[220px] truncate text-[11px] text-gray-500" title={user.position || ""}>
+                                                        {user.position || <span className="italic text-gray-400">no position set</span>}
+                                                        {user.signature_url ? "" : " · no e-signature"}
+                                                    </p>
+                                                )}
                                             </TableCell>
                                             <TableCell>{formatDate(user.created_at)}</TableCell>
                                             <TableCell className="text-right">
@@ -326,6 +339,12 @@ export function SuperAdminUserManagement({ users }) {
                                                             <Pencil className="mr-2 h-4 w-4" />
                                                             Edit
                                                         </DropdownMenuItem>
+                                                        {isStaff(user) && (
+                                                            <DropdownMenuItem onClick={() => setUserToSign(user)}>
+                                                                <PenLine className="mr-2 h-4 w-4" />
+                                                                Signatory settings
+                                                            </DropdownMenuItem>
+                                                        )}
                                                         <DropdownMenuItem
                                                             onClick={() => handleDelete(user)}
                                                             className="text-red-600"
@@ -376,6 +395,12 @@ export function SuperAdminUserManagement({ users }) {
                                                     <Pencil className="mr-2 h-4 w-4" />
                                                     Edit
                                                 </DropdownMenuItem>
+                                                {isStaff(user) && (
+                                                    <DropdownMenuItem onClick={() => setUserToSign(user)}>
+                                                        <PenLine className="mr-2 h-4 w-4" />
+                                                        Signatory settings
+                                                    </DropdownMenuItem>
+                                                )}
                                                 <DropdownMenuItem onClick={() => handleDelete(user)} className="text-red-600">
                                                     <Trash2 className="mr-2 h-4 w-4" />
                                                     Delete
@@ -403,6 +428,12 @@ export function SuperAdminUserManagement({ users }) {
                 user={userToEdit}
                 isOpen={isEditDialogOpen}
                 onClose={() => setIsEditDialogOpen(false)}
+            />
+
+            <SignatoryModal
+                user={userToSign}
+                isOpen={!!userToSign}
+                onClose={() => setUserToSign(null)}
             />
 
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

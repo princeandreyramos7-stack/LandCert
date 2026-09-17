@@ -71,6 +71,11 @@ class HandleInertiaRequests extends Middleware
                     'address_barangay_code' => $request->user()->address_barangay_code,
                     'address_street' => $request->user()->address_street,
                     'contact_number' => $request->user()->contact_number,
+                    // The e-signature and printed position in force today (staff only).
+                    'position' => $request->user()->position,
+                    'signature_url' => in_array($request->user()->user_type, ['admin', 'super_admin'], true)
+                        ? $request->user()->signature_url
+                        : null,
                 ] : null,
             ],
             /*

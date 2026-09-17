@@ -54,6 +54,7 @@ class User extends Authenticatable
         'address_street',
         'user_type',
         'signature_path',
+        'position',
         'avatar_path',
     ];
 

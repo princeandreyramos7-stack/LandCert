@@ -2,7 +2,7 @@ import React, { forwardRef } from "react";
 import OfficialLetterhead from "@/Components/OfficialLetterhead";
 import ESignatureImage from "@/Components/ESignatureImage";
 import VerificationQr from "@/Components/VerificationQr";
-import { zoningAdministratorName } from "@/lib/signerName";
+import { zoningAdministratorName, positionLines, DEFAULT_ADMINISTRATOR_POSITION } from "@/lib/signerName";
 
 /**
  * The certificate itself — the sheet, without the page around it.
@@ -68,6 +68,12 @@ function SignatureBlock({ signatureUrl, name, title }) {
     );
 }
 
+
+/** The signer's position, one line per part, as the record has it. */
+function TitleLines({ signer, fallback }) {
+    const parts = positionLines(signer, fallback);
+    return <>{parts.map((line, i) => <React.Fragment key={i}>{i > 0 && <br />}{line}</React.Fragment>)}</>;
+}
 
 /**
  * Payment footer. `order` differs between the two official templates. The
@@ -168,8 +174,9 @@ function ZoningCertification({ application, payment, zoningAdministrator, issued
                         <ESignatureImage src={zoningAdministrator?.signature_url} maxHeight="36pt" marginBottom="-2pt" />
                     </div>
                     <div style={{ fontWeight: 'bold', fontSize: '10pt' }}>{zoningAdministratorName(zoningAdministrator?.name)}</div>
-                    <div style={{ fontSize: '10pt' }}>City Planning &amp; Development Coordinator/</div>
-                    <div style={{ fontSize: '10pt' }}>Zoning Administrator</div>
+                    {positionLines(zoningAdministrator, DEFAULT_ADMINISTRATOR_POSITION).map((line) => (
+                        <div key={line} style={{ fontSize: '10pt' }}>{line}</div>
+                    ))}
                 </div>
             </div>
 
@@ -227,7 +234,7 @@ function RoadCertification({ application, payment, zoningAdministrator, issuedOn
                 <SignatureBlock
                     signatureUrl={zoningAdministrator?.signature_url}
                     name={zoningAdministratorName(zoningAdministrator?.name)}
-                    title={<>City Planning &amp; Development Coordinator/<br />Zoning Administrator</>}
+                    title={<TitleLines signer={zoningAdministrator} fallback={DEFAULT_ADMINISTRATOR_POSITION} />}
                 />
             </div>
 

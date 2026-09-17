@@ -2,7 +2,7 @@ import React from "react";
 import OfficialLetterhead from "@/Components/OfficialLetterhead";
 import VerificationQr from "@/Components/VerificationQr";
 import ESignatureImage from "@/Components/ESignatureImage";
-import { zoningAdministratorName } from "@/lib/signerName";
+import { zoningAdministratorName, positionLines, DEFAULT_ADMINISTRATOR_POSITION } from "@/lib/signerName";
 
 /**
  * The Temporary Use Permit decision is not the tabular clearance the other
@@ -116,8 +116,9 @@ export default function TupClearanceLetter({ application, payment, zoningAdminis
                 <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>
                     {zoningAdministratorName(zoningAdministrator?.name)}
                 </div>
-                <div>City Planning &amp; Dev&apos;t. Coordinator/</div>
-                <div>Zoning Administrator</div>
+                {positionLines(zoningAdministrator, DEFAULT_ADMINISTRATOR_POSITION).map((line) => (
+                    <div key={line}>{line}</div>
+                ))}
             </div>
 
             {/* Receipt details on the left, decision details on the right */}

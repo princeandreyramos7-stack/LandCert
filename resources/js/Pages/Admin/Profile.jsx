@@ -7,6 +7,7 @@ import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { User, Mail, Lock, Shield, Save, Eye, EyeOff } from 'lucide-react';
 import AvatarUpload from '@/Components/AvatarUpload';
+import ESignatureCard from '@/Components/ESignatureCard';
 
 export default function Profile({ mustVerifyEmail, status }) {
     const { auth } = usePage().props;
@@ -236,6 +237,9 @@ export default function Profile({ mustVerifyEmail, status }) {
                             </CardContent>
                         </Card>
                     </div>
+
+                    {/* The e-signature printed on the documents this account signs. */}
+                    <ESignatureCard />
                 </div>
             </AdminLayout>
         </>

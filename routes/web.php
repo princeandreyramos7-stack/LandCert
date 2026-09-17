@@ -92,6 +92,8 @@ Route::middleware(['auth', 'throttle:60,1,pages', 'prevent.back'])->group(functi
     // Profile picture — shared by applicant, admin and super-admin profile pages.
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.destroy');
+    // A staff member's own e-signature - in force from the moment it is uploaded.
+    Route::post('/profile/signature', [ProfileController::class, 'updateSignature'])->name('profile.signature.update');
     
     // Request routes
     Route::get('/request', [RequestController::class, 'index'])->name('request.index');
@@ -172,6 +174,8 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::post('/reject-request/{reportId}', [\App\Http\Controllers\SuperAdminController::class, 'rejectRequest'])->name('reject-request');
     Route::post('/create-admin', [\App\Http\Controllers\SuperAdminController::class, 'createAdmin'])->name('create-admin');
     Route::put('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'updateUser'])->name('users.update');
+    // E-signature and printed position of a staff account, from a date (App\Support\Signatories).
+    Route::post('/users/{userId}/signatory', [\App\Http\Controllers\SuperAdminController::class, 'updateSignatory'])->name('users.signatory');
     Route::delete('/users/{userId}', [\App\Http\Controllers\SuperAdminController::class, 'deleteUser'])->name('users.delete');
     
     // Requirement verification toggle

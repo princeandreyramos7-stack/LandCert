@@ -3,7 +3,7 @@ import { getStatusFiltersForRole } from "@/lib/applicationStatus";
 import { CLEARANCE_TYPE_FILTERS } from "@/lib/clearanceTypes";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
-import { Search, Download, X, ArrowUpDown } from "lucide-react";
+import { Search, Download, X, ArrowUpDown, Archive } from "lucide-react";
 
 export const SORT_OPTIONS = [
     { value: "newest", label: "Newest first" },
@@ -77,8 +77,21 @@ export function ApplicationsToolbar({
             </div>
 
             <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>
-                    Showing <span className="font-semibold text-gray-800">{shown}</span> of {total} application{total === 1 ? "" : "s"}
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span>
+                        Showing <span className="font-semibold text-gray-800">{shown}</span> of {total} application{total === 1 ? "" : "s"}
+                    </span>
+                    {/* The archive is also the last entry of the status list; a
+                        link here so it is not only found by scrolling a dropdown. */}
+                    {status === "archived" ? (
+                        <button type="button" onClick={() => onStatus("all")} className="inline-flex items-center gap-1 font-semibold text-[#0d1f5c] hover:underline">
+                            <Archive className="h-3 w-3" /> Back to the live board
+                        </button>
+                    ) : (
+                        <button type="button" onClick={() => onStatus("archived")} className="inline-flex items-center gap-1 font-semibold text-gray-500 hover:text-[#0d1f5c] hover:underline">
+                            <Archive className="h-3 w-3" /> View archive{archivedCount ? ` (${archivedCount})` : ""}
+                        </button>
+                    )}
                 </span>
                 {filtered && (
                     <button type="button" onClick={onClear} className="inline-flex items-center gap-1 font-semibold text-[#0d1f5c] hover:underline">

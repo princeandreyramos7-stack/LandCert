@@ -333,6 +333,8 @@ class SuperAdminReportsController extends Controller
     {
         // Countersigns every issued document, so looked up once rather than
         // once per application.
+        // Per application below, as of each one's issue date; this is the
+        // office's current administrator for anything not yet issued.
         $zoningAdministrator = ApplicationDocuments::signer(ApplicationDocuments::zoningAdministrator());
 
         // The documents are drawn in full, so the relations they read are
@@ -384,8 +386,11 @@ class SuperAdminReportsController extends Controller
                         'payment_date' => $verifiedPayment->payment_date,
                         'receipt_number' => $verifiedPayment->receipt_number,
                     ] : null,
-                    'reviewer' => ApplicationDocuments::signer($reviewer),
-                    'zoning_administrator' => $zoningAdministrator,
+                    // As of this application's own issue date.
+                    'reviewer' => ApplicationDocuments::signer($reviewer, $signedAt = ApplicationDocuments::issuedAt($request)),
+                    'zoning_administrator' => $signedAt
+                        ? ApplicationDocuments::signer(ApplicationDocuments::zoningAdministrator($signedAt), $signedAt)
+                        : $zoningAdministrator,
                 ];
 
                 return [

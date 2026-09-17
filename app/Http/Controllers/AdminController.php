@@ -2728,23 +2728,16 @@ class AdminController extends Controller
         $reviewerSignature = $reviewer->signature_url ?? null;
 
         // Signer for the "Approved by" block: the Zoning Administrator.
-        $zoningAdministrator = \App\Models\User::where('user_type', 'super_admin')
-            ->whereNotNull('signature_path')
-            ->first();
+        $zoningAdministrator = \App\Support\Signatories::zoningAdministrator();
 
         $applicationData = \App\Services\ApplicationDocuments::issuance($request);
 
         return \Inertia\Inertia::render('Admin/GenerateCertificate', [
             'application' => $applicationData,
             'payment' => $payment,
-            'reviewer' => $reviewer ? [
-                'name' => $reviewerName,
-                'signature_url' => $reviewerSignature,
-            ] : null,
-            'zoningAdministrator' => $zoningAdministrator ? [
-                'name' => $zoningAdministrator->name,
-                'signature_url' => $zoningAdministrator->signature_url,
-            ] : null,
+            // Signed as of the issue date: an old certificate keeps the
+            // signatures and titles it was issued with (App\Support\Signatories).
+            ...\App\Services\ApplicationDocuments::signers($request),
         ]);
     }
 
@@ -2786,23 +2779,16 @@ class AdminController extends Controller
         $reviewerSignature = $reviewer->signature_url ?? null;
 
         // Signer for the "Approved by" block: the Zoning Administrator.
-        $zoningAdministrator = \App\Models\User::where('user_type', 'super_admin')
-            ->whereNotNull('signature_path')
-            ->first();
+        $zoningAdministrator = \App\Support\Signatories::zoningAdministrator();
 
         $applicationData = \App\Services\ApplicationDocuments::issuance($request);
 
         return \Inertia\Inertia::render('Admin/GenerateClearance', [
             'application' => $applicationData,
             'payment' => $payment,
-            'reviewer' => $reviewer ? [
-                'name' => $reviewerName,
-                'signature_url' => $reviewerSignature,
-            ] : null,
-            'zoningAdministrator' => $zoningAdministrator ? [
-                'name' => $zoningAdministrator->name,
-                'signature_url' => $zoningAdministrator->signature_url,
-            ] : null,
+            // Signed as of the issue date: an old certificate keeps the
+            // signatures and titles it was issued with (App\Support\Signatories).
+            ...\App\Services\ApplicationDocuments::signers($request),
         ]);
     }
 
@@ -2846,23 +2832,16 @@ class AdminController extends Controller
         $reviewerSignature = $reviewer->signature_url ?? null;
 
         // Signer for the "Approved by" block: the Zoning Administrator.
-        $zoningAdministrator = \App\Models\User::where('user_type', 'super_admin')
-            ->whereNotNull('signature_path')
-            ->first();
+        $zoningAdministrator = \App\Support\Signatories::zoningAdministrator();
 
         $applicationData = \App\Services\ApplicationDocuments::issuance($request);
 
         return \Inertia\Inertia::render('Admin/GenerateOrderOfPayment', [
             'application' => $applicationData,
             'payment' => $payment,
-            'reviewer' => $reviewer ? [
-                'name' => $reviewerName,
-                'signature_url' => $reviewerSignature,
-            ] : null,
-            'zoningAdministrator' => $zoningAdministrator ? [
-                'name' => $zoningAdministrator->name,
-                'signature_url' => $zoningAdministrator->signature_url,
-            ] : null,
+            // Signed as of the issue date: an old certificate keeps the
+            // signatures and titles it was issued with (App\Support\Signatories).
+            ...\App\Services\ApplicationDocuments::signers($request),
         ]);
     }
 

@@ -42,6 +42,31 @@ class ProfileController extends Controller
     }
 
     /**
+     * Replace the signed-in staff member's e-signature. In force from now:
+     * documents issued from today carry it; anything issued before keeps
+     * the signature it was issued with. The position is the
+     * administrator's to set (User Management), not changed here.
+     */
+    public function updateSignature(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless(in_array($user->user_type, ['admin', 'super_admin'], true), 403, 'Only staff sign documents.');
+
+        $request->validate([
+            'signature' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+        ]);
+
+        $version = \App\Support\Signatories::set($user, $request->file('signature'), null, now(), $user->id, 'Replaced from My Profile');
+
+        \App\Services\AuditLogService::logUpdate('User', $user->id, [], [
+            'signature_path' => $version->signature_path,
+            'effective_from' => $version->effective_from->toDateTimeString(),
+        ], "{$user->name} replaced their e-signature");
+
+        return back()->with('status', 'signature-updated')->with('success', 'Your new e-signature is in force from now. Documents already issued keep the signature they were issued with.');
+    }
+
+    /**
      * Upload / replace the signed-in user's profile picture.
      * Shared by the applicant, admin and super-admin profile pages.
      */

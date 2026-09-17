@@ -3,7 +3,7 @@ import OfficialLetterhead from "@/Components/OfficialLetterhead";
 import ESignatureImage from "@/Components/ESignatureImage";
 import TupClearanceLetter from "@/Components/TupClearanceLetter";
 import VerificationQr from "@/Components/VerificationQr";
-import { zoningAdministratorName } from "@/lib/signerName";
+import { zoningAdministratorName, positionLines, DEFAULT_OFFICER_POSITION, DEFAULT_ADMINISTRATOR_POSITION } from "@/lib/signerName";
 
 /**
  * The clearance itself — the decision sheet, or the Temporary Use Permit
@@ -68,6 +68,12 @@ function SignatureLine({ signatureUrl, name, title }) {
             </div>
         </div>
     );
+}
+
+/** The signer's position, one line per part, as the record has it. */
+function TitleLines({ signer, fallback }) {
+    const parts = positionLines(signer, fallback);
+    return <>{parts.map((line, i) => <React.Fragment key={i}>{i > 0 && <br />}{line}</React.Fragment>)}</>;
 }
 
 /** True when the decision is released as the Temporary Use Permit letter. */
@@ -288,10 +294,10 @@ const ClearanceSheet = forwardRef(function ClearanceSheet(
                         name={
                             // If the reviewer is the Zoning Administrator, show generic Zoning Officer title
                             (reviewer?.name === zoningAdministrator?.name)
-                                ? 'Zoning Officer IV'
+                                ? DEFAULT_OFFICER_POSITION
                                 : (reviewer?.name || 'MARY JANE M. BULAUAN')
                         }
-                        title={<>Zoning Officer IV</>}
+                        title={<TitleLines signer={reviewer?.name === zoningAdministrator?.name ? null : reviewer} fallback={DEFAULT_OFFICER_POSITION} />}
                     />
                 </div>
 
@@ -302,7 +308,7 @@ const ClearanceSheet = forwardRef(function ClearanceSheet(
                     <SignatureLine
                         signatureUrl={zoningAdministrator?.signature_url}
                         name={zoningAdministratorName(zoningAdministrator?.name)}
-                        title={<>City Planning &amp; Dev't. Coordinator/<br />Zoning Administrator</>}
+                        title={<TitleLines signer={zoningAdministrator} fallback={DEFAULT_ADMINISTRATOR_POSITION} />}
                     />
                 </div>
             </div>
