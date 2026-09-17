@@ -27,8 +27,9 @@ export function ApplicationsToolbar({
     shown, total,
     onExport, onClear,
     role = "admin",
+    archivedCount = 0,
 }) {
-    const filtered = search || status !== "all" || type !== "all";
+    const filtered = search || (status !== "all" && status !== "archived") || type !== "all";
     const STATUS_FILTERS = getStatusFiltersForRole(role);
 
     return (
@@ -53,6 +54,7 @@ export function ApplicationsToolbar({
                 <div className="grid grid-cols-2 gap-2 sm:contents">
                     <select value={status} onChange={(e) => onStatus(e.target.value)} aria-label="Filter by status" className={selectClass}>
                         {STATUS_FILTERS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        <option value="archived">Archived{archivedCount ? ` (${archivedCount})` : ""}</option>
                     </select>
                     <select value={type} onChange={(e) => onType(e.target.value)} aria-label="Filter by application type" className={selectClass}>
                         {CLEARANCE_TYPE_FILTERS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}

@@ -20,11 +20,15 @@ class ApplicationsList
 {
     /**
      * Get the applications list rows, optionally filtered by user role.
-     * 
+     *
+     * Archived applications (requests.archived_at) are left out unless asked
+     * for: the archive exists so the board only carries what is live.
+     *
      * @param string|null $role The user role ('admin' or 'super_admin')
+     * @param bool $archived Only the archived applications, instead of only the live ones
      * @return Collection
      */
-    public static function rows(?string $role = null): Collection
+    public static function rows(?string $role = null, bool $archived = false): Collection
     {
         $query = RequestModel::query()
             ->leftJoin('reports', 'requests.id', '=', 'reports.request_id')
@@ -33,7 +37,8 @@ class ApplicationsList
             ->leftJoin('normalized_projects', 'requests.id', '=', 'normalized_projects.request_id')
             ->leftJoin('locations', 'requests.id', '=', 'locations.request_id')
             ->leftJoin('users', 'requests.user_id', '=', 'users.id')
-            ->whereNull('requests.deleted_at');
+            ->whereNull('requests.deleted_at')
+            ->{$archived ? 'whereNotNull' : 'whereNull'}('requests.archived_at');
 
         // The status every screen shows: the officer's evaluation while the
         // application is being decided, the request's own status once it is in
@@ -58,6 +63,9 @@ class ApplicationsList
                 'requests.status as request_status',
                 'requests.created_at',
                 'requests.updated_at',
+                // When it entered its current step, for "days in stage".
+                'requests.stage_since',
+                'requests.archived_at',
                 'reports.report_id',
                 'reports.evaluation',
                 'applicants.applicant_name',

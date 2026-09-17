@@ -7,7 +7,7 @@ import { ApplicationsBoard } from "@/Components/Applications/ApplicationsBoard";
  * administrator's page; this wrapper adds the officer's routes and the flash
  * messages the officer's actions come back with.
  */
-export function AdminRequestList({ requests, flash = {} }) {
+export function AdminRequestList({ requests, flash = {}, archived = false, archivedCount = 0, sla }) {
     const { toast } = useToast();
 
     useEffect(() => {
@@ -16,6 +16,6 @@ export function AdminRequestList({ requests, flash = {} }) {
     }, [flash, toast]);
 
     return (
-        <ApplicationsBoard requests={requests} role="admin" exportRoute="admin.export.requests" />
+        <ApplicationsBoard requests={requests} role="admin" exportRoute="admin.export.requests" listRoute="admin.requests" archived={archived} archivedCount={archivedCount} sla={sla} />
     );
 }

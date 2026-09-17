@@ -317,9 +317,44 @@ class SuperAdminController extends Controller
         // One lean query for the list (App\Support\ApplicationsList): only
         // the columns the table shows, not every row with five relations.
         // Super admin should not see "pending" or "for_verification" status applications
+        $archived = $request->boolean('archived');
+
         return Inertia::render('SuperAdmin/Requests', [
-            'requests' => \App\Support\ApplicationsList::rows('super_admin'),
+            'requests' => \App\Support\ApplicationsList::rows('super_admin', $archived),
+            'archived' => $archived,
+            'archivedCount' => \App\Models\Request::whereNotNull('archived_at')->count(),
+            // Working days allowed per step (Citizen's Charter), for "days in stage".
+            'sla' => \App\Support\ProcessingSla::limits(),
         ]);
+    }
+
+    /**
+     * Move a closed application to the archive - off the board, still on
+     * file and still viewable. The monthly applications:archive command does
+     * this for old ones; this is for doing it by hand.
+     */
+    public function archiveRequest($id)
+    {
+        $requestModel = \App\Models\Request::findOrFail($id);
+
+        if (!in_array(\App\Support\ProcessingSla::stageOf(\App\Support\ProcessingSla::derivedStatus($requestModel)), ['closed'], true)) {
+            return back()->with('error', 'Only a released or denied application can be archived.');
+        }
+
+        $requestModel->update(['archived_at' => now(), 'archived_by' => auth()->id()]);
+        AuditLogService::logUpdate('Request', $requestModel->id, ['archived_at' => null], ['archived_at' => now()], "Archived application {$requestModel->application_number}");
+
+        return back()->with('success', "Application {$requestModel->application_number} archived.");
+    }
+
+    /** Bring an archived application back to the board. */
+    public function unarchiveRequest($id)
+    {
+        $requestModel = \App\Models\Request::findOrFail($id);
+        $requestModel->update(['archived_at' => null, 'archived_by' => null]);
+        AuditLogService::logUpdate('Request', $requestModel->id, ['archived_at' => $requestModel->getOriginal('archived_at')], ['archived_at' => null], "Restored application {$requestModel->application_number} from the archive");
+
+        return back()->with('success', "Application {$requestModel->application_number} restored to the board.");
     }
 
     /**

@@ -68,6 +68,23 @@ class Report extends Model
     }
 
     /**
+     * The evaluation is the status the office sees while an application is
+     * being decided (Request::deriveStatus), so a change to it is a status
+     * change of the request - recorded as one.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (Report $report) {
+            if ($report->wasRecentlyCreated || $report->wasChanged('evaluation')) {
+                $request = Request::find($report->request_id);
+                if ($request) {
+                    \App\Support\ProcessingSla::record($request, auth()->id());
+                }
+            }
+        });
+    }
+
+    /**
      * The staff account that reviewed/evaluated this application. This is what
      * decides whose e-signature is stamped on the certificate and clearance.
      */

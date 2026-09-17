@@ -34,16 +34,50 @@ class Request extends Model
         
         // Status
         'status',
+        'stage_since',
         'released_to_applicant_at',
         'released_by',
+        'archived_at',
+        'archived_by',
     ];
 
     protected $casts = [
         'released_to_applicant_at' => 'datetime',
+        'stage_since' => 'datetime',
+        'archived_at' => 'datetime',
         'notice_dates' => 'date',
         'similar_application_dates' => 'date',
         'verified_requirements' => 'array',
     ];
+
+    /**
+     * Every change of status goes into request_status_history (see
+     * App\Support\ProcessingSla) - from here, so that no controller has to
+     * remember to. The Report model does the same for its evaluation, which
+     * is the other half of the status the office sees.
+     */
+    protected static function booted(): void
+    {
+        static::created(function (Request $request) {
+            \App\Support\ProcessingSla::record($request, auth()->id(), $request->created_at);
+        });
+
+        static::saved(function (Request $request) {
+            if ($request->wasChanged('status')) {
+                \App\Support\ProcessingSla::record($request, auth()->id());
+            }
+        });
+    }
+
+    public function statusHistory(): HasMany
+    {
+        return $this->hasMany(RequestStatusHistory::class)->orderBy('changed_at')->orderBy('id');
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived_at !== null;
+    }
 
     /**
      * Statuses that live only on requests.status (set by the payment/certificate

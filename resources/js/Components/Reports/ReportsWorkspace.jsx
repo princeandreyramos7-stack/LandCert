@@ -17,7 +17,7 @@ import {
     FileBarChart, User, CalendarDays, UserCheck,
     FileDown, FileSpreadsheet, Search, Printer, Eye, Loader2,
     FileText, Receipt, Banknote, Paperclip, Award, X, FolderOpen,
-    ArrowUpRight, ChevronDown, ChevronUp,
+    ArrowUpRight, ChevronDown, ChevronUp, Timer,
 } from "lucide-react";
 
 const MONTHS = [
@@ -1011,6 +1011,65 @@ function PrintRows({ rows }) {
  * their documents hang off, both of which the server decides - so the screen
  * takes them as props rather than knowing about roles itself.
  */
+/**
+ * Processing time over the last twelve months, against the Citizen's
+ * Charter (ARTA): how long a released application took end to end, how long
+ * the office took at each of its steps, and how many were finished within
+ * every limit. Working days throughout.
+ */
+function ProcessingTimeStrip({ processing }) {
+    if (!processing) return null;
+    const p = processing;
+    const limits = p.limits || {};
+    const stage = p.average_stage_days || {};
+    const day = (n) => (n === null || n === undefined ? "—" : `${n} ${Number(n) === 1 ? "day" : "days"}`);
+    const onTime = p.on_time_percent;
+    const tiles = [
+        {
+            label: "Average turnaround",
+            value: day(p.average_turnaround_days),
+            note: p.released ? `filed to released · ${p.released} released` : "no application released yet",
+            tone: "text-[#0d1f5c] bg-[#0d1f5c]/5",
+        },
+        {
+            label: "Document verification",
+            value: day(stage.verification),
+            note: `Charter limit ${limits.verification ?? "—"} days`,
+            tone: stage.verification !== null && stage.verification !== undefined && stage.verification > (limits.verification ?? Infinity) ? "text-rose-700 bg-rose-50" : "text-emerald-700 bg-emerald-50",
+        },
+        {
+            label: "Administrator's approval",
+            value: day(stage.approval),
+            note: `Charter limit ${limits.approval ?? "—"} days`,
+            tone: stage.approval !== null && stage.approval !== undefined && stage.approval > (limits.approval ?? Infinity) ? "text-rose-700 bg-rose-50" : "text-emerald-700 bg-emerald-50",
+        },
+        {
+            label: "Within the Charter",
+            value: onTime === null || onTime === undefined ? "—" : `${onTime}%`,
+            note: "released within every step's limit",
+            tone: onTime === null || onTime === undefined ? "text-gray-500 bg-gray-50" : onTime >= 90 ? "text-emerald-700 bg-emerald-50" : "text-amber-700 bg-amber-50",
+        },
+    ];
+
+    return (
+        <div className="mb-4 print:hidden">
+            <div className="mb-2 flex items-center gap-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                <Timer className="h-3.5 w-3.5" />
+                Processing time · last 12 months · working days (ARTA)
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {tiles.map((tile) => (
+                    <div key={tile.label} className="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+                        <p className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${tile.tone}`}>{tile.label}</p>
+                        <p className="mt-2 text-2xl font-black leading-tight text-gray-900">{tile.value}</p>
+                        <p className="mt-0.5 truncate text-xs text-gray-400">{tile.note}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export default function ReportsWorkspace({
     applicants = [],
     officers = [],
@@ -1019,6 +1078,7 @@ export default function ReportsWorkspace({
     currentMonth,
     reportTypes = ["applicant", "period", "officer"],
     routePrefix = "super-admin",
+    processing = null,
 }) {
     const [active, setActive] = useState(reportTypes[0] ?? "applicant");
 
@@ -1264,6 +1324,8 @@ export default function ReportsWorkspace({
                         </div>
                     </div>
                 </div>
+
+                <ProcessingTimeStrip processing={processing} />
 
                 {/* Report chooser */}
                 <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 print:hidden">

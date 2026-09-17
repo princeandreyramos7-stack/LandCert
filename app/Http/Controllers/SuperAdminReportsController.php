@@ -111,6 +111,9 @@ class SuperAdminReportsController extends Controller
             'currentYear' => (int) now()->year,
             'currentMonth' => (int) now()->month,
             'reportTypes' => $this->allowedTypes(),
+            // Processing time over the last twelve months, against the
+            // Citizen's Charter limits (ARTA).
+            'processing' => \App\Support\ProcessingSla::statistics(now()->subMonths(12)->startOfDay()),
         ]);
     }
 

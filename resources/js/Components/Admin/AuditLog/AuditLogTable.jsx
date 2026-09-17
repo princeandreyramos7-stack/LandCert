@@ -54,8 +54,7 @@ export function AuditLogTable({ logs, onViewDetails }) {
                             return (
                                 <tr
                                     key={log.id}
-                                    onClick={() => onViewDetails(log)}
-                                    className={`cursor-pointer border-b border-gray-100 align-top transition-colors hover:bg-[#0d1f5c]/[0.035] ${i % 2 === 1 ? "bg-gray-50/60" : "bg-white"}`}
+                                    className={`border-b border-gray-100 align-top transition-colors hover:bg-[#0d1f5c]/[0.035] ${i % 2 === 1 ? "bg-gray-50/60" : "bg-white"}`}
                                 >
                                     <td className="whitespace-nowrap px-4 py-3 sm:px-3">
                                         <div className="text-xs font-semibold text-gray-900">
@@ -140,10 +139,7 @@ export function AuditLogTable({ logs, onViewDetails }) {
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onViewDetails(log);
-                                            }}
+                                            onClick={() => onViewDetails(log)}
                                             className="h-7 w-7 p-0 text-gray-400 hover:text-[#0d1f5c]"
                                             aria-label="View details"
                                         >
@@ -163,11 +159,7 @@ export function AuditLogTable({ logs, onViewDetails }) {
                     const tone = actionTone(log.action);
                     const role = log.user_type || log.user?.user_type;
                     return (
-                        <li
-                            key={log.id}
-                            onClick={() => onViewDetails(log)}
-                            className="cursor-pointer px-1 py-3 active:bg-gray-50"
-                        >
+                        <li key={log.id} className="px-1 py-3">
                             <div className="flex items-start justify-between gap-2">
                                 <span
                                     className={`inline-flex shrink-0 rounded-md px-2 py-0.5 border text-[11px] font-bold ${toneClasses[tone]}`}
@@ -211,6 +203,13 @@ export function AuditLogTable({ logs, onViewDetails }) {
                                         {log.ip_address}
                                     </span>
                                 )}
+                                <button
+                                    type="button"
+                                    onClick={() => onViewDetails(log)}
+                                    className="ml-auto inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-0.5 text-[11px] font-medium text-gray-600 hover:bg-gray-50 hover:text-[#0d1f5c]"
+                                >
+                                    <Eye className="h-3 w-3" /> Details
+                                </button>
                             </div>
                         </li>
                     );

@@ -31,6 +31,10 @@ Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
 // Schedule automated reminders to run hourly
 Schedule::command('reminders:send')->hourly();
 
+// Closed applications older than the Charter's archive age leave the board
+// (they stay on file). Monthly, in the small hours.
+Schedule::command('applications:archive')->monthlyOn(1, '02:30');
+
 // Database + uploaded files backup, daily or weekly as set on the Backups
 // page (App\Support\BackupSchedule), and a daily prune of old ones. Both
 // with notifications off: those go by mail, and a backup must not depend on

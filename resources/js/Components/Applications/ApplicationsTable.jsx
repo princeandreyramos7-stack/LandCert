@@ -15,32 +15,16 @@ import {
     ClipboardCheck,
     MapPin,
     Inbox,
+    Archive,
+    ArchiveRestore,
 } from "lucide-react";
+import { stageProgress, STAGE_LABEL, stageOf } from "@/lib/processingSla";
 import {
     getStatusColor,
     getStatusIcon,
     getStatusLabel,
     formatDate,
 } from "@/Components/Admin/Request/utils";
-
-const OPEN_STATUSES = [
-    "pending",
-    "for_verification",
-    "reviewed",
-    "pending_superadmin_approval",
-    "in_applicant",
-    "returned",
-];
-
-/** Whole days since the application was filed. */
-export const daysWaiting = (createdAt) => {
-    if (!createdAt) return null;
-    const ms = Date.now() - new Date(createdAt).getTime();
-    return Math.max(0, Math.floor(ms / 86400000));
-};
-
-const waitingLabel = (days) =>
-    days === 0 ? "today" : days === 1 ? "1 day" : `${days} days`;
 
 const TYPE_TONES = {
     CZC: "bg-blue-50 text-blue-700 ring-blue-200",
@@ -64,16 +48,26 @@ export function TypeChip({ type }) {
     );
 }
 
-function Waiting({ request }) {
-    const status = String(request.status || "").toLowerCase();
-    const days = daysWaiting(request.created_at);
-    if (!OPEN_STATUSES.includes(status) || days === null) return null;
-    const slow = days >= 7;
+/**
+ * How long the application has sat at its current step, in working days,
+ * against the Citizen's Charter limit for that step - red once it is over.
+ * Time with the applicant (corrections, the fee) is shown but never counted
+ * against the office.
+ */
+function Stage({ request, sla }) {
+    const p = stageProgress(request, sla);
+    if (!p) return null;
+    const label = STAGE_LABEL[p.stage] || p.stage;
+    const dayWord = p.days === 1 ? "day" : "days";
+    if (!p.office) {
+        return <span className="block text-[11px] text-gray-400">{label} {p.days} {dayWord}</span>;
+    }
     return (
         <span
-            className={`block text-[11px] ${slow ? "font-semibold text-rose-600" : "text-gray-400"}`}
+            className={`block text-[11px] ${p.overdue ? "font-semibold text-rose-600" : "text-gray-400"}`}
+            title={`${p.days} working ${dayWord} in ${label}; the Citizen's Charter allows ${p.limit}`}
         >
-            waiting {waitingLabel(days)}
+            {p.overdue ? `${label} ${p.days} ${dayWord} · over the ${p.limit}-day limit` : `${label} ${p.days} of ${p.limit} ${dayWord}`}
         </span>
     );
 }
@@ -113,7 +107,18 @@ function menuItems(request, role) {
  * inches away, and a row that offers the same thing twice reads as offering
  * two different things.
  */
-function Actions({ request, role }) {
+function Actions({ request, role, archived = false }) {
+    // The administrator keeps the archive: a closed application can be put
+    // in it, and anything in it can be brought back.
+    const closed = stageOf(request.status) === "closed";
+    const archiveItem = role === "super_admin"
+        ? (archived || request.archived_at
+            ? { label: "Restore to board", icon: ArchiveRestore, post: route("super-admin.requests.unarchive", request.id) }
+            : closed
+                ? { label: "Archive", icon: Archive, post: route("super-admin.requests.archive", request.id) }
+                : null)
+        : null;
+
     return (
         <div className="flex items-center justify-end">
             <DropdownMenu>
@@ -145,13 +150,22 @@ function Actions({ request, role }) {
                             {item.label}
                         </DropdownMenuItem>
                     ))}
+                    {archiveItem && (
+                        <DropdownMenuItem
+                            onClick={() => router.post(archiveItem.post, {}, { preserveScroll: true })}
+                            className="gap-2 text-sm cursor-pointer"
+                        >
+                            <archiveItem.icon className="h-4 w-4 text-gray-500" />{" "}
+                            {archiveItem.label}
+                        </DropdownMenuItem>
+                    )}
                 </DropdownMenuContent>
             </DropdownMenu>
         </div>
     );
 }
 
-function Empty({ filtered }) {
+function Empty({ filtered, archived = false }) {
     return (
         <div className="flex flex-col items-center justify-center gap-2 px-6 py-14 text-center">
             <span className="rounded-full bg-gray-50 p-3 text-gray-300">
@@ -160,12 +174,16 @@ function Empty({ filtered }) {
             <p className="text-sm font-semibold text-gray-700">
                 {filtered
                     ? "Nothing matches these filters"
-                    : "No applications yet"}
+                    : archived
+                        ? "The archive is empty"
+                        : "No applications yet"}
             </p>
             <p className="text-xs text-gray-400">
                 {filtered
                     ? "Try a different status, type or search term."
-                    : "New applications appear here the moment they are filed."}
+                    : archived
+                        ? "Released or denied applications are moved here after the archive age set in the Citizen's Charter settings, or by hand from the row menu."
+                        : "New applications appear here the moment they are filed."}
             </p>
         </div>
     );
@@ -178,8 +196,8 @@ const th =
  * All Applications as a table on wide screens and as cards on a phone. A row
  * opens the application; everything else is in the menu on the right.
  */
-export function ApplicationsTable({ requests, role, filtered = false }) {
-    if (!requests.length) return <Empty filtered={filtered} />;
+export function ApplicationsTable({ requests, role, filtered = false, sla, archived = false }) {
+    if (!requests.length) return <Empty filtered={filtered} archived={archived} />;
 
     return (
         <>
@@ -235,7 +253,7 @@ export function ApplicationsTable({ requests, role, filtered = false }) {
                                 </td>
                                 <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
                                     {formatDate(r.created_at)}
-                                    <Waiting request={r} />
+                                    <Stage request={r} sla={sla} />
                                 </td>
                                 <td className="px-4 py-3">
                                     <Badge
@@ -246,9 +264,12 @@ export function ApplicationsTable({ requests, role, filtered = false }) {
                                             {getStatusLabel(r.status)}
                                         </span>
                                     </Badge>
+                                    {r.archived_at && (
+                                        <span className="mt-1 block text-[11px] text-gray-400">archived {formatDate(r.archived_at)}</span>
+                                    )}
                                 </td>
                                 <td className="px-4 py-3">
-                                    <Actions request={r} role={role} />
+                                    <Actions request={r} role={role} archived={archived} />
                                 </td>
                             </tr>
                         ))}
@@ -285,7 +306,7 @@ export function ApplicationsTable({ requests, role, filtered = false }) {
                                 {r.project_location_barangay || "No barangay"}
                             </span>
                             <span>{formatDate(r.created_at)}</span>
-                            <Waiting request={r} />
+                            <Stage request={r} sla={sla} />
                         </div>
                         <div className="mt-2 flex items-center justify-between gap-2">
                             <Badge
@@ -296,7 +317,7 @@ export function ApplicationsTable({ requests, role, filtered = false }) {
                                     {getStatusLabel(r.status)}
                                 </span>
                             </Badge>
-                            <Actions request={r} role={role} />
+                            <Actions request={r} role={role} archived={archived} />
                         </div>
                     </li>
                 ))}

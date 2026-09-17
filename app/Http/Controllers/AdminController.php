@@ -109,8 +109,14 @@ class AdminController extends Controller
     {
         // One lean query for the list (App\Support\ApplicationsList): only
         // the columns the table shows, not every row with five relations.
+        $archived = $request->boolean('archived');
+
         return Inertia::render('Admin/Request', [
-            'requests' => \App\Support\ApplicationsList::rows('admin'),
+            'requests' => \App\Support\ApplicationsList::rows('admin', $archived),
+            'archived' => $archived,
+            'archivedCount' => RequestModel::whereNotNull('archived_at')->count(),
+            // Working days allowed per step (Citizen's Charter), for "days in stage".
+            'sla' => \App\Support\ProcessingSla::limits(),
         ]);
     }
 

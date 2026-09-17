@@ -184,6 +184,10 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     // Upload requirement document by super admin
     Route::post('/upload-requirement-document', [\App\Http\Controllers\SuperAdminController::class, 'uploadRequirementDocument'])->name('upload-requirement-document');
     Route::post('/requests/{id}/verify-requirements', [\App\Http\Controllers\SuperAdminController::class, 'verifyRequirements'])->name('requests.verify-requirements');
+
+    // The archive: closed applications taken off the board (see applications:archive).
+    Route::post('/requests/{id}/archive', [\App\Http\Controllers\SuperAdminController::class, 'archiveRequest'])->name('requests.archive');
+    Route::post('/requests/{id}/unarchive', [\App\Http\Controllers\SuperAdminController::class, 'unarchiveRequest'])->name('requests.unarchive');
     
     // Certificate Management Routes (NEW: Using CertificateController with PDF generation)
     Route::prefix('certificates')->name('certificates.')->group(function () {
