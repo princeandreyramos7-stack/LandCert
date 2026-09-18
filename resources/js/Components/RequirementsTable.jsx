@@ -175,6 +175,16 @@ export function RequirementsChecklist({ request, uploadedRequirements = [], sele
                                         key={file.id}
                                         doc={file}
                                         className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs hover:bg-blue-200"
+                                        // The officer can mark the requirement
+                                        // verified while looking at the scan,
+                                        // instead of closing it and finding the
+                                        // toggle in the row behind. Not offered
+                                        // to the Administrator, whose view of
+                                        // the checklist is read-only.
+                                        verified={isChecked}
+                                        onVerify={isZoningAdministrator
+                                            ? null
+                                            : (next) => handleToggleChange(reqRef.id, reqRef.name, next)}
                                     >
                                         <FileText className="h-3 w-3" />
                                         View

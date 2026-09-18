@@ -13,6 +13,8 @@ import {
     Maximize2,
     ExternalLink,
     Download,
+    Check,
+    CheckCircle2,
 } from "lucide-react";
 
 /**
@@ -52,7 +54,16 @@ function ViewerToolbarButton({ onClick, title, disabled, children }) {
     );
 }
 
-export function DocumentViewerModal({ doc, isOpen, onClose }) {
+/**
+ * @param verified  Whether the requirement this document belongs to is
+ *                  verified. Only meaningful alongside onVerify.
+ * @param onVerify  Called with the new state when the officer marks the
+ *                  requirement verified (or undoes it) from in here. Left
+ *                  out where verifying is not this viewer's business - the
+ *                  applicant's own copies, and the Administrator's read-only
+ *                  view - and then no such control is shown.
+ */
+export function DocumentViewerModal({ doc, isOpen, onClose, verified = false, onVerify = null }) {
     const url = doc ? `/requirements/${doc.id}/view` : null;
     const name = doc?.original_filename || doc?.name || "Document";
     const pdf = isPdf(name, url);
@@ -172,6 +183,33 @@ export function DocumentViewerModal({ doc, isOpen, onClose }) {
                         </div>
 
                         <div className="flex shrink-0 items-center gap-1.5">
+                            {/* Verifying is why the officer opened this at all,
+                                so it is offered here rather than only back in
+                                the checklist behind the modal. */}
+                            {onVerify && (
+                                <>
+                                    {verified ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => onVerify(false)}
+                                            title="Verified — click to undo"
+                                            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                                        >
+                                            <CheckCircle2 className="h-4 w-4" /> Verified
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => onVerify(true)}
+                                            title="Mark this requirement verified"
+                                            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#0d1f5c] px-2.5 text-xs font-semibold text-white hover:bg-[#0d1f5c]/90"
+                                        >
+                                            <Check className="h-4 w-4" /> Mark as verified
+                                        </button>
+                                    )}
+                                    <span className="mx-1 h-5 w-px bg-gray-200" />
+                                </>
+                            )}
                             {!pdf && (
                                 <>
                                     <ViewerToolbarButton onClick={() => turn(-ROTATE_STEP)} title="Rotate left (←)">
@@ -266,7 +304,7 @@ export function DocumentViewerModal({ doc, isOpen, onClose }) {
  * around it wants (className / children); opens the document in the viewer
  * above instead of a browser tab.
  */
-export function DocumentViewLink({ doc, className = "", title, children }) {
+export function DocumentViewLink({ doc, className = "", title, children, verified = false, onVerify = null }) {
     const [open, setOpen] = useState(false);
 
     return (
@@ -274,7 +312,13 @@ export function DocumentViewLink({ doc, className = "", title, children }) {
             <button type="button" onClick={() => setOpen(true)} title={title || doc?.original_filename} className={className}>
                 {children}
             </button>
-            <DocumentViewerModal doc={doc} isOpen={open} onClose={() => setOpen(false)} />
+            <DocumentViewerModal
+                doc={doc}
+                isOpen={open}
+                onClose={() => setOpen(false)}
+                verified={verified}
+                onVerify={onVerify}
+            />
         </>
     );
 }
