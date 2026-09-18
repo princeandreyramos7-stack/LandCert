@@ -21,6 +21,7 @@ import { useToast } from "@/Components/ui/use-toast";
 import { Toaster } from "@/Components/ui/toaster";
 import axios from "axios";
 import { getStatusConfig } from "@/lib/applicationStatus";
+import { DocumentViewLink } from "@/Components/DocumentViewLink";
 
 /**
  * Display-only formatting for peso amount fields.
@@ -906,14 +907,12 @@ function RequirementTableRow({ number, requirement, uploadedGroup, isChecked, on
                                 <div key={doc.id} className="flex items-center gap-2 text-xs text-gray-600">
                                     <FileText className="h-3 w-3" />
                                     <span className="truncate max-w-xs">{doc.original_filename}</span>
-                                    <a
-                                        href={`/requirements/${doc.id}/view`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                    <DocumentViewLink
+                                        doc={doc}
                                         className="text-blue-600 hover:underline whitespace-nowrap"
                                     >
                                         View
-                                    </a>
+                                    </DocumentViewLink>
                                 </div>
                             ))}
                         </div>

@@ -3,6 +3,7 @@ import { FileText, Upload, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/Components/ui/button";
 import { useToast } from "@/Components/ui/use-toast";
 import axios from "axios";
+import { DocumentViewLink } from "@/Components/DocumentViewLink";
 
 /**
  * Requirements Checklist Component
@@ -170,16 +171,14 @@ export function RequirementsChecklist({ request, uploadedRequirements = [], sele
                         {hasUploads && (
                             <div className="flex flex-wrap gap-2 mt-2">
                                 {uploadedGroup.files.map(file => (
-                                    <a
+                                    <DocumentViewLink
                                         key={file.id}
-                                        href={`/requirements/${file.id}/view`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                        doc={file}
                                         className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs hover:bg-blue-200"
                                     >
                                         <FileText className="h-3 w-3" />
                                         View
-                                    </a>
+                                    </DocumentViewLink>
                                 ))}
                             </div>
                         )}

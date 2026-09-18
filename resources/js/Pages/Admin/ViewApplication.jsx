@@ -35,6 +35,7 @@ import { useToast } from "@/Components/ui/use-toast";
 import { Toaster } from "@/Components/ui/toaster";
 import axios from "axios";
 import { getStatusConfig } from "@/lib/applicationStatus";
+import { DocumentViewLink } from "@/Components/DocumentViewLink";
 
 /**
  * Display-only formatting for peso amount fields.
@@ -1076,18 +1077,16 @@ function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = []
                         {uploadedRequirements.filter((doc) => /\b(title|tax declaration)\b/i.test(doc.name || "")).map((doc) =>
                             doc.files.length > 0 ? (
                                 doc.files.map((file, index) => (
-                                    <a
+                                    <DocumentViewLink
                                         key={file.id}
-                                        href={`/requirements/${file.id}/view`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                        doc={file}
                                         title={file.original_filename}
                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
                                     >
                                         <FileText className="h-3.5 w-3.5" />
                                         {doc.name}
                                         {doc.files.length > 1 ? ` (${index + 1})` : ''}
-                                    </a>
+                                    </DocumentViewLink>
                                 ))
                             ) : (
                                 <span

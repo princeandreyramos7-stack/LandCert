@@ -24,6 +24,7 @@ import {
     Package,
     Lock,
 } from "lucide-react";
+import { DocumentViewLink } from "@/Components/DocumentViewLink";
 
 const STATUS_STYLES = {
     pending:               { label: "Pending Review",        cls: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock },
@@ -216,15 +217,13 @@ export default function ApplicationDetails({ application, requirements = [], doc
                                             {(doc.file_size / 1024).toFixed(0)} KB · {doc.uploaded_at}
                                         </p>
                                     </div>
-                                    <a
-                                        href={`/requirements/${doc.id}/view`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                    <DocumentViewLink
+                                        doc={doc}
                                         className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 text-white text-xs font-medium hover:bg-blue-700"
                                     >
                                         <Eye className="h-3.5 w-3.5" />
                                         View
-                                    </a>
+                                    </DocumentViewLink>
                                 </div>
                             ))}
                         </div>

@@ -182,7 +182,6 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::post('/save-requirement-verification', [\App\Http\Controllers\SuperAdminController::class, 'saveRequirementVerification'])->name('save-requirement-verification');
 
     // Streamlined review workflow (same handler as the admin side; the Super Admin
-    // Document Verification page marks an application reviewed here).
     Route::post('/review-application', [AdminController::class, 'reviewApplication'])->name('review-application');
 
     // Upload requirement document by super admin

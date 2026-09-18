@@ -45,6 +45,7 @@ import { Toaster } from "@/Components/ui/toaster";
 import axios from "axios";
 import { getStatusConfig } from "@/lib/applicationStatus";
 import SealWatermark from "@/Components/SealWatermark";
+import { DocumentViewLink } from "@/Components/DocumentViewLink";
 
 export default function SuperAdminReviewRequest({ request }) {
     const [currentStep, setCurrentStep] = useState(1);
@@ -1225,15 +1226,13 @@ function UploadedRequirementGroup({ group, isChecked, onToggle }) {
                             </div>
                             
                             {/* View Button */}
-                            <a
-                                href={`/requirements/${doc.id}/view`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            <DocumentViewLink
+                                doc={doc}
                                 className="px-3 py-1.5 bg-gray-700 hover:bg-gray-800 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
                             >
                                 <FileText className="h-3.5 w-3.5" />
                                 View
-                            </a>
+                            </DocumentViewLink>
                         </div>
                     ))}
                 </div>
