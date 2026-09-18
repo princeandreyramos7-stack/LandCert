@@ -13,9 +13,8 @@ import {
     Maximize2,
     ExternalLink,
     Download,
-    Check,
-    CheckCircle2,
 } from "lucide-react";
+import { Switch } from "@/Components/ui/switch";
 
 /**
  * A requirement document, opened in the app rather than in a browser tab, so
@@ -185,28 +184,22 @@ export function DocumentViewerModal({ doc, isOpen, onClose, verified = false, on
                         <div className="flex shrink-0 items-center gap-1.5">
                             {/* Verifying is why the officer opened this at all,
                                 so it is offered here rather than only back in
-                                the checklist behind the modal. */}
+                                the checklist behind the modal - as the same
+                                switch that column carries, so the two read as
+                                one control rather than two ways to decide. */}
                             {onVerify && (
                                 <>
-                                    {verified ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => onVerify(false)}
-                                            title="Verified — click to undo"
-                                            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                                        >
-                                            <CheckCircle2 className="h-4 w-4" /> Verified
-                                        </button>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            onClick={() => onVerify(true)}
-                                            title="Mark this requirement verified"
-                                            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#0d1f5c] px-2.5 text-xs font-semibold text-white hover:bg-[#0d1f5c]/90"
-                                        >
-                                            <Check className="h-4 w-4" /> Mark as verified
-                                        </button>
-                                    )}
+                                    <label className="inline-flex cursor-pointer select-none items-center gap-2">
+                                        <span className={`text-xs font-semibold ${verified ? "text-blue-700" : "text-gray-600"}`}>
+                                            {verified ? "Verified" : "Mark as verified"}
+                                        </span>
+                                        <Switch
+                                            checked={verified}
+                                            onCheckedChange={onVerify}
+                                            aria-label="Mark as verified"
+                                            className="data-[state=checked]:bg-blue-600"
+                                        />
+                                    </label>
                                     <span className="mx-1 h-5 w-px bg-gray-200" />
                                 </>
                             )}
