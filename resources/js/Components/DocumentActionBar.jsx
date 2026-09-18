@@ -59,7 +59,7 @@ export default function DocumentActionBar({
                 <div className="flex shrink-0 gap-2 sm:gap-3">
                     <Button
                         onClick={onPrint}
-                        title={printLabel}
+                        title={`${printLabel} — printing through the browser to PDF makes a file other programs may re-arrange; use Download PDF to keep this exact layout`}
                         aria-label={printLabel}
                         className="flex-1 bg-[#d4a017] px-3 text-white hover:bg-[#b8910f] sm:flex-none sm:px-4"
                     >
@@ -68,7 +68,7 @@ export default function DocumentActionBar({
                     </Button>
                     <Button
                         onClick={onDownload}
-                        title="Download PDF"
+                        title="Download PDF — a fixed copy of this page, laid out exactly like this in any program that opens it"
                         aria-label="Download PDF"
                         className="flex-1 border-white bg-white px-3 text-[#0d1f5c] hover:bg-gray-100 sm:flex-none sm:px-4"
                     >
