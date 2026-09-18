@@ -21,6 +21,28 @@ class DashboardCacheService
      */
     const CACHE_TTL = 60;
 
+    /** Everything this service keeps, so one change can clear the lot. */
+    public const CACHE_KEYS = [
+        'dashboard.analytics',
+        'dashboard.stats',
+        'dashboard.evaluation_distribution',
+    ];
+
+    /**
+     * Forget the cached figures.
+     *
+     * The dashboards are read while applications are being decided, and a
+     * minute-old picture of them is a picture that disagrees with the board
+     * the officer is looking at - so every status change clears this (see
+     * App\Support\ProcessingSla::record).
+     */
+    public static function flush(): void
+    {
+        foreach (self::CACHE_KEYS as $key) {
+            Cache::forget($key);
+        }
+    }
+
     /**
      * Get dashboard analytics (always fresh)
      */

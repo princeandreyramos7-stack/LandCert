@@ -63,7 +63,7 @@ export default function SidebarUserMenu({
     const trigger = (
         <SidebarMenuButton
             size="lg"
-            className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            className={`text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground ${collapsed ? "mx-auto justify-center" : ""}`}
         >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sidebar-primary/80 text-xs font-black text-sidebar-primary-foreground">
                 {user.avatar_url ? (

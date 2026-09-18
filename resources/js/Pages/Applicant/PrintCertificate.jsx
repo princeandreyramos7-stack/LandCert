@@ -4,6 +4,8 @@ import html2pdf from "html2pdf.js";
 import PrintDocumentStyles from "@/Components/PrintDocumentStyles";
 import FitToWidth, { suspendFit } from "@/Components/FitToWidth";
 import DocumentActionBar from "@/Components/DocumentActionBar";
+import ApplicantLayout from "@/Layouts/ApplicantLayout";
+import SealWatermark from "@/Components/SealWatermark";
 import CertificateSheet, { isZoningCertification } from "@/Components/CertificateSheet";
 
 /**
@@ -41,33 +43,36 @@ export default function PrintCertificate({ application, payment, zoningAdministr
     };
 
     return (
-        <div className="min-h-screen bg-[#f5f7ff] px-4 py-6 sm:px-6">
+        <>
             <Head title={`${title} - ${application.application_number || ""}`} />
-            <PrintDocumentStyles />
+            <ApplicantLayout title={title}>
+                <PrintDocumentStyles />
 
-            <div className="mx-auto max-w-5xl">
-                <DocumentActionBar
-                    eyebrow="Your document"
-                    title={title}
-                    subtitle={`Application No: ${application.application_number || "—"}`}
-                    printLabel="Print Certificate"
-                    onPrint={() => window.print()}
-                    onDownload={handleDownload}
-                />
+                <div className="relative isolate mx-auto max-w-5xl">
+                    <SealWatermark follow />
+                    <DocumentActionBar
+                        eyebrow="Your document"
+                        title={title}
+                        subtitle={`Application No: ${application.application_number || "—"}`}
+                        printLabel="Print Certificate"
+                        onPrint={() => window.print()}
+                        onDownload={handleDownload}
+                    />
 
-                <div className="certificate-print-area print-document-area">
-                    <FitToWidth>
-                        <CertificateSheet
-                            ref={sheetRef}
-                            className="print-document"
-                            application={application}
-                            payment={payment}
-                            zoningAdministrator={zoningAdministrator}
-                            issuedOn={issuedOn || undefined}
-                        />
-                    </FitToWidth>
+                    <div className="certificate-print-area print-document-area">
+                        <FitToWidth>
+                            <CertificateSheet
+                                ref={sheetRef}
+                                className="print-document"
+                                application={application}
+                                payment={payment}
+                                zoningAdministrator={zoningAdministrator}
+                                issuedOn={issuedOn || undefined}
+                            />
+                        </FitToWidth>
+                    </div>
                 </div>
-            </div>
-        </div>
+            </ApplicantLayout>
+        </>
     );
 }

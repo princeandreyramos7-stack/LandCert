@@ -51,7 +51,7 @@ export function AppSidebar({ ...props }) {
         <Sidebar collapsible="icon" {...props}>
 
             {/* ── Header / Logo ──────────────────────────────────── */}
-            <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
+            <SidebarHeader className={`border-b border-sidebar-border py-4 ${collapsed ? "px-0" : "px-3"}`}>
                 <Link href="/dashboard" className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full border-2 border-sidebar-primary/60 bg-sidebar-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
                         <img
@@ -74,7 +74,7 @@ export function AppSidebar({ ...props }) {
             </SidebarHeader>
 
             {/* ── Nav links ──────────────────────────────────────── */}
-            <SidebarContent className="px-2 py-3">
+            <SidebarContent className={`py-3 ${collapsed ? "px-0" : "px-2"}`}>
                 <SidebarGroup>
                     {!collapsed && (
                         <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] font-black tracking-[0.2em] uppercase mb-1 px-2">
@@ -91,11 +91,11 @@ export function AppSidebar({ ...props }) {
                                         asChild
                                         isActive={isActive}
                                         tooltip={item.title}
-                                        className={
+                                        className={`${collapsed ? "mx-auto justify-center" : ""} ${
                                             isActive
                                                 ? "bg-sidebar-primary text-sidebar-primary-foreground font-bold hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
                                                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-semibold"
-                                        }>
+                                        }`}>
                                         <Link href={item.url} className="flex items-center gap-3">
                                             <item.icon className="w-5 h-5 shrink-0"/>
                                             <span>{item.title}</span>
@@ -109,7 +109,7 @@ export function AppSidebar({ ...props }) {
             </SidebarContent>
 
             {/* ── Footer / User ──────────────────────────────────── */}
-            <SidebarFooter className="border-t border-sidebar-border px-2 py-3">
+            <SidebarFooter className={`border-t border-sidebar-border py-3 ${collapsed ? "px-0" : "px-2"}`}>
                 <SidebarUserMenu
                     user={user}
                     initials={initials}

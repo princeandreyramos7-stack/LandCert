@@ -161,6 +161,27 @@ export const ALL_STATUS_FILTERS = [
 ];
 
 /**
+ * The stages a chart counts applications into: one bucket per stage, and
+ * no status in two of them.
+ *
+ * The filter list above is deliberately not exclusive - "Application
+ * Approved (paid)" covers everything from payment to release, because that
+ * is what someone filtering the board means by it. Counting with that list
+ * put every released application in the paid bucket and left "Released to
+ * applicant" reading zero however many had been handed over.
+ */
+export const STATUS_CHART_BUCKETS = [
+    { key: "pending", label: "For Verification", matches: ["pending", "for_verification"] },
+    { key: "reviewed", label: "For Approval", matches: ["reviewed", "pending_superadmin_approval"] },
+    { key: "in_applicant", label: "Returned to Applicant", matches: ["in_applicant", "returned"] },
+    { key: "approved", label: "Approved — For Payment", matches: ["approved"] },
+    { key: "for_payment", label: "For Payment", matches: ["for_payment", "pending_payment"] },
+    { key: "certificate_stage", label: "Paid — certificate stage", matches: ["payment_confirmed", "approved_with_payment", "certificate_preparing", "certificate_ready"] },
+    { key: "released", label: "Released to applicant", matches: ["released", "collected", "completed"] },
+    { key: "rejected", label: "Application Denied", matches: ["rejected"] },
+];
+
+/**
  * Get status filters filtered by role
  */
 export function getStatusFiltersForRole(role = "admin") {
@@ -201,11 +222,11 @@ export const STATUS_COLORS = {
  * @returns {Array<{key: string, name: string, value: number, color: string}>}
  */
 export function groupStatusCounts(rows = []) {
-    const buckets = ALL_STATUS_FILTERS.filter((entry) => entry.value !== "all").map((entry) => ({
-        key: entry.value,
+    const buckets = STATUS_CHART_BUCKETS.map((entry) => ({
+        key: entry.key,
         name: entry.label,
         value: 0,
-        color: STATUS_COLORS[entry.value] ?? STATUS_COLORS.other,
+        color: STATUS_COLORS[entry.key] ?? STATUS_COLORS.other,
     }));
 
     let other = 0;
@@ -215,10 +236,9 @@ export function groupStatusCounts(rows = []) {
         const count = Number(row?.count) || 0;
         if (!count) continue;
 
-        const bucket = buckets.find((entry) => {
-            const option = ALL_STATUS_FILTERS.find((filter) => filter.value === entry.key);
-            return option?.matches.includes(status);
-        });
+        const bucket = buckets.find((entry) =>
+            STATUS_CHART_BUCKETS.find((b) => b.key === entry.key)?.matches.includes(status),
+        );
 
         if (bucket) bucket.value += count;
         else other += count;

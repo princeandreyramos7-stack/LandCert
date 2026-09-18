@@ -135,6 +135,9 @@ class ProcessingSla
         // that called us.
         DB::table('requests')->where('id', $request->id)->update(['stage_since' => $at]);
 
+        // The dashboards count by status, so their figures are now stale.
+        \App\Services\DashboardCacheService::flush();
+
         return $row;
     }
 

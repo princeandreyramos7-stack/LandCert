@@ -98,9 +98,11 @@ function NavGroup({ group, currentPath, collapsed }) {
                                 isActive={isActive}
                                 tooltip={item.title}
                                 className={
-                                    isActive
-                                        ? "bg-sidebar-primary text-sidebar-primary-foreground font-bold hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
-                                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-semibold"
+                                    `${collapsed ? "mx-auto justify-center" : ""} ${
+                                        isActive
+                                            ? "bg-sidebar-primary text-sidebar-primary-foreground font-bold hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
+                                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-semibold"
+                                    }`
                                 }
                             >
                                 <Link
@@ -153,10 +155,10 @@ export function AdminSidebar({ ...props }) {
     return (
         <Sidebar collapsible="icon" {...props}>
             {/* ── Header ─────────────────────────────────────── */}
-            <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
+            <SidebarHeader className={`border-b border-sidebar-border py-4 ${collapsed ? "px-0" : "px-3"}`}>
                 <Link
                     href="/admin/dashboard"
-                    className="flex items-center gap-3"
+                    className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}
                 >
                     <div className="w-9 h-9 rounded-full border-2 border-sidebar-primary/60 bg-sidebar-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
                         <img
@@ -179,7 +181,7 @@ export function AdminSidebar({ ...props }) {
             </SidebarHeader>
 
             {/* ── Nav ────────────────────────────────────────── */}
-            <SidebarContent className="px-2 py-3 space-y-1">
+            <SidebarContent className={`py-3 space-y-1 ${collapsed ? "px-0" : "px-2"}`}>
                 {navGroups.map((group) => (
                     <NavGroup
                         key={group.label}
@@ -191,7 +193,7 @@ export function AdminSidebar({ ...props }) {
             </SidebarContent>
 
             {/* ── Footer / User ──────────────────────────────── */}
-            <SidebarFooter className="border-t border-sidebar-border px-2 py-3">
+            <SidebarFooter className={`border-t border-sidebar-border py-3 ${collapsed ? "px-0" : "px-2"}`}>
                 <SidebarUserMenu
                     user={user}
                     initials={initials}
