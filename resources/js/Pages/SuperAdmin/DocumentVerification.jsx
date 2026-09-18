@@ -883,6 +883,10 @@ function RequirementTableRow({ number, requirement, uploadedGroup, isChecked, on
                                     <DocumentViewLink
                                         doc={doc}
                                         className="text-blue-600 hover:underline whitespace-nowrap"
+                                        // The same decision as the row's switch,
+                                        // offered while the scan is on screen.
+                                        verified={isChecked}
+                                        onVerify={uploadedGroup && onToggle ? onToggle : null}
                                     >
                                         View
                                     </DocumentViewLink>
