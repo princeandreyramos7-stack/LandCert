@@ -188,20 +188,30 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
                 {/* ============================================ */}
                 <div>
 
-                        {/* Print Form Button - Only show for CZC, TUP, SUP (not for ZC/Locational Clearance) */}
-                        {!isZC && (
-                            <div className="mb-4 flex gap-3">
+                        {/* The application form: printed, or saved as a file
+                            that keeps this layout wherever it is opened. */}
+                            <div className="mb-4 flex flex-wrap gap-3">
                                 <Button
-                                    variant="outline" 
-                                    size="sm" 
+                                    variant="outline"
+                                    size="sm"
                                     className="hover:bg-gray-100"
                                     onClick={() => window.open(route('admin.requests.print', request.id), '_blank')}
                                 >
                                     <Printer className="h-4 w-4 mr-2" />
                                     Print Form
                                 </Button>
+                                {/* The same page, told to save itself: the file
+                                    it writes keeps this layout in any program. */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="hover:bg-gray-100"
+                                    onClick={() => window.open(route('admin.requests.print', request.id) + '?download=1', '_blank')}
+                                >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Form
+                                </Button>
                             </div>
-                        )}
 
                         {/* Application Details Card */}
                         <Card className="mb-6">

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Head } from "@inertiajs/react";
 import html2pdf from 'html2pdf.js';
 import AdminLayout from "@/Layouts/AdminLayout";
@@ -166,6 +166,21 @@ export default function PrintForm({ application: a, auth }) {
     };
 
 
+    /**
+     * Opened as "Download Form" from elsewhere (?download=1): save the file
+     * and leave the page open, rather than making the officer find the
+     * button once they are here. Guarded so a re-render cannot fire twice.
+     */
+    const autoSaved = useRef(false);
+    useEffect(() => {
+        if (autoSaved.current) return;
+        if (typeof window === "undefined") return;
+        if (!new URLSearchParams(window.location.search).has("download")) return;
+        autoSaved.current = true;
+        // A beat, so the sheet and its images are on screen before capture.
+        const timer = setTimeout(handleSaveForm, 600);
+        return () => clearTimeout(timer);
+    }, []);
     return (
         <Layout
             title="Print Application Form"
