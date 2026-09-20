@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Head } from "@inertiajs/react";
+import { Head, router } from "@inertiajs/react";
 import html2pdf from "html2pdf.js";
 import PrintDocumentStyles from "@/Components/PrintDocumentStyles";
 import FitToWidth, { suspendFit } from "@/Components/FitToWidth";
@@ -7,6 +7,8 @@ import DocumentActionBar from "@/Components/DocumentActionBar";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import SealWatermark from "@/Components/SealWatermark";
 import CertificateSheet, { isZoningCertification } from "@/Components/CertificateSheet";
+import { Button } from "@/Components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 /**
  * The applicant's copy of their Zoning Certification.
@@ -50,6 +52,20 @@ export default function PrintCertificate({ application, payment, zoningAdministr
 
                 <div className="relative isolate mx-auto max-w-5xl">
                     <SealWatermark follow />
+                    
+                    {/* Back Button */}
+                    <div className="mb-4 print:hidden">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="hover:bg-gray-100"
+                            onClick={() => router.visit(route('my-applications.show', application.id))}
+                        >
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Back to Application Details
+                        </Button>
+                    </div>
+                    
                     <DocumentActionBar
                         eyebrow="Your document"
                         title={title}

@@ -66,7 +66,15 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             existingApplication?.applicant_address_barangay_code || me.address_barangay_code
                 ? ""
                 : existingApplication?.applicant_address || me.address || "",
-        corporation_address: existingApplication?.corporation_address || "",
+        corporation_address_region_code: existingApplication?.corporation_address_region_code || "",
+        corporation_address_province_code: existingApplication?.corporation_address_province_code || "",
+        corporation_address_city_code: existingApplication?.corporation_address_city_code || "",
+        corporation_address_barangay_code: existingApplication?.corporation_address_barangay_code || "",
+        corporation_address_street: existingApplication?.corporation_address_street || "",
+        corporation_address_legacy:
+            existingApplication?.corporation_address_barangay_code
+                ? ""
+                : existingApplication?.corporation_address || "",
         authorized_representative_name: existingApplication?.authorized_representative_name || "",
         authorized_representative_address_region_code: existingApplication?.authorized_representative_address_region_code || "",
         authorized_representative_address_province_code: existingApplication?.authorized_representative_address_province_code || "",

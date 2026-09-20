@@ -8,6 +8,7 @@ import { Label } from '@/Components/ui/label';
 import { User, Mail, Lock, Shield, Save, Eye, EyeOff } from 'lucide-react';
 import AvatarUpload from '@/Components/AvatarUpload';
 import ESignatureCard from '@/Components/ESignatureCard';
+import { PhilippineAddressFields } from '@/Components/Address/PhilippineAddressFields';
 
 export default function Profile({ mustVerifyEmail, status }) {
     const { auth } = usePage().props;
@@ -17,6 +18,11 @@ export default function Profile({ mustVerifyEmail, status }) {
     const { data: profileData, setData: setProfileData, patch: patchProfile, errors: profileErrors, processing: profileProcessing, recentlySuccessful: profileSuccess } = useForm({
         name: user.name,
         email: user.email,
+        address_region_code: user.address_region_code || '',
+        address_province_code: user.address_province_code || '',
+        address_city_code: user.address_city_code || '',
+        address_barangay_code: user.address_barangay_code || '',
+        address_street: user.address_street || '',
     });
 
     // Password Update Form
@@ -116,6 +122,17 @@ export default function Profile({ mustVerifyEmail, status }) {
                                         {profileErrors.email && (
                                             <p className="text-sm text-red-600">{profileErrors.email}</p>
                                         )}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <PhilippineAddressFields
+                                            legend="Address"
+                                            prefix="address"
+                                            values={profileData}
+                                            errors={profileErrors}
+                                            onChange={(field, value) => setProfileData(field, value)}
+                                            required={false}
+                                        />
                                     </div>
 
                                     <div className="flex items-center justify-between pt-4">

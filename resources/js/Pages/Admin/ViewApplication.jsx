@@ -67,6 +67,15 @@ const parseAmountInput = (displayValue) => {
 export default function ViewApplication({ request, uploadedRequirements = [] }) {
     const { toast } = useToast();
     
+    // Auto-refresh every 30 seconds to show new uploads/changes
+    useEffect(() => {
+        const interval = setInterval(() => {
+            router.reload({ only: ['request', 'uploadedRequirements'], preserveScroll: true });
+        }, 30000); // 30 seconds
+
+        return () => clearInterval(interval);
+    }, []);
+    
     // ============================================
     // STATE FROM ViewApplication (Application Details)
     // ============================================
@@ -257,6 +266,15 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
                         {/* The application form: printed, or saved as a file
                             that keeps this layout wherever it is opened. */}
                             <div className="mb-4 flex flex-wrap gap-3">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="hover:bg-gray-100"
+                                    onClick={() => router.visit(route('admin.requests'))}
+                                >
+                                    <ArrowLeft className="h-4 w-4 mr-2" />
+                                    Back to Applications
+                                </Button>
                                 <Button
                                     variant="outline"
                                     size="sm"

@@ -141,7 +141,9 @@ export default function ApplicationDetails({ application, requirements = [], doc
         const files = docsFor(req.id);
         const uploaded = files.length > 0;
         const busy = uploadingId === req.id;
-        const allowed = uploaded ? canReplace : canUpload;
+        // Special case: notarized APPLICATION FORM can always be uploaded
+        const isNotarizedForm = req.name && req.name.toLowerCase().includes('application form');
+        const allowed = isNotarizedForm || (uploaded ? canReplace : canUpload);
 
         return (
             <div

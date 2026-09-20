@@ -137,10 +137,11 @@ function Actions({ request, role, archived = false }) {
                     onClick={(e) => e.stopPropagation()}
                     align="end"
                     side="bottom"
-                    sideOffset={8}
-                    className="z-[9999] min-w-[200px] bg-white shadow-lg border border-gray-200"
-                    avoidCollisions={true}
-                    collisionPadding={10}
+                    sideOffset={5}
+                    className="min-w-[200px]"
+                    style={{
+                        transform: 'translateX(-20px)'
+                    }}
                 >
                     {menuItems(request, role).map((item) => (
                         <DropdownMenuItem

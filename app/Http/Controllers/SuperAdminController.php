@@ -846,7 +846,7 @@ class SuperAdminController extends Controller
     public function uploadRequirementDocument(Request $request)
     {
         $validated = $request->validate([
-            'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240', // 10MB max
+            'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:20480', // 20MB max
             'request_id' => 'required|exists:requests,id',
             'requirement_id' => 'required',
             'requirement_name' => 'required|string',

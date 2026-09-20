@@ -4,6 +4,7 @@ import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import { Transition } from "@headlessui/react";
 import InputError from "@/Components/InputError";
 import AvatarUpload from "@/Components/AvatarUpload";
+import { PhilippineAddressFields } from "@/Components/Address/PhilippineAddressFields";
 import { useRef, useState } from "react";
 import {
     User, Lock, Trash2, Mail, Phone, KeyRound, Eye, EyeOff,
@@ -61,6 +62,11 @@ function ProfileInfoForm({ mustVerifyEmail, status }) {
         name: user.name,
         email: user.email,
         contact_number: user.contact_number || "",
+        address_region_code: user.address_region_code || "",
+        address_province_code: user.address_province_code || "",
+        address_city_code: user.address_city_code || "",
+        address_barangay_code: user.address_barangay_code || "",
+        address_street: user.address_street || "",
     });
 
     return (
@@ -91,6 +97,18 @@ function ProfileInfoForm({ mustVerifyEmail, status }) {
                             className={`${inputCls(errors.contact_number)} pl-10`}/>
                     </div>
                 </Field>
+            </div>
+
+            <div className="space-y-4">
+                <PhilippineAddressFields
+                    legend="Address"
+                    prefix="address"
+                    values={data}
+                    errors={errors}
+                    onChange={(field, value) => setData(field, value)}
+                    required={false}
+                    note="Your address helps pre-fill application forms"
+                />
             </div>
 
             {mustVerifyEmail && user.email_verified_at === null && (

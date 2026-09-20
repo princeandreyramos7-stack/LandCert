@@ -139,6 +139,7 @@ export default function SidebarUserMenu({
                         sideOffset={8}
                         collisionPadding={12}
                         className="w-56 max-w-[calc(100vw-1.5rem)] rounded-xl shadow-xl"
+                        style={{ zIndex: 99999 }}
                     >
                         <div className="border-b border-gray-100 px-3 py-2">
                             {identity}

@@ -25,6 +25,17 @@
 </IfModule>
 
 # ─────────────────────────────────────────────────────────────────────
+# PHP Configuration for File Uploads
+# ─────────────────────────────────────────────────────────────────────
+<IfModule mod_php.c>
+    php_value upload_max_filesize 20M
+    php_value post_max_size 25M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+    php_value memory_limit 256M
+</IfModule>
+
+# ─────────────────────────────────────────────────────────────────────
 # How long the browser may keep the things that never change.
 #
 # Nothing here was cached before, so every visit re-fetched the whole

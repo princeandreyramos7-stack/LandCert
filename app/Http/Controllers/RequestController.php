@@ -440,9 +440,11 @@ class RequestController extends Controller
             'verified_requirements' => 'nullable|array',
         ],
             \App\Support\PhilippineAddress::rules('applicant_address'),
+            \App\Support\PhilippineAddress::rules('corporation_address', false),
             \App\Support\PhilippineAddress::rules('authorized_representative_address', $hasRepresentative)
         ), [], array_merge(
             \App\Support\PhilippineAddress::attributes('applicant_address', 'applicant'),
+            \App\Support\PhilippineAddress::attributes('corporation_address', 'corporation'),
             \App\Support\PhilippineAddress::attributes('authorized_representative_address', 'representative')
         ));
 
@@ -450,6 +452,7 @@ class RequestController extends Controller
         // ever offers valid combinations; a request made by hand does not.
         $chain = \Illuminate\Support\Facades\Validator::make($request->all(), []);
         \App\Support\PhilippineAddress::checkChain($chain, 'applicant_address');
+        \App\Support\PhilippineAddress::checkChain($chain, 'corporation_address');
         if ($hasRepresentative) {
             \App\Support\PhilippineAddress::checkChain($chain, 'authorized_representative_address');
         }
@@ -458,6 +461,7 @@ class RequestController extends Controller
         }
 
         $validated['applicant_address'] = \App\Support\PhilippineAddress::resolve($validated, 'applicant_address')['line'] ?? '';
+        $validated['corporation_address'] = \App\Support\PhilippineAddress::resolve($validated, 'corporation_address')['line'] ?? '';
         $validated['authorized_representative_address'] = \App\Support\PhilippineAddress::resolve($validated, 'authorized_representative_address')['line'] ?? null;
 
         // Use a database transaction to ensure all records are created together.
@@ -524,16 +528,18 @@ class RequestController extends Controller
     {
         return DB::transaction(function () use ($validated, $request) {
             $applicantAddress = \App\Support\PhilippineAddress::resolve($validated, 'applicant_address');
+            $corporationAddress = \App\Support\PhilippineAddress::resolve($validated, 'corporation_address');
 
             // 1. Create Applicant record
-            $applicant = \App\Models\Applicant::create(\App\Support\PhilippineAddress::columns(
-                $applicantAddress,
-                'applicant_address'
-            ) + [
-                'applicant_name' => $validated['applicant_name'],
-                'applicant_address' => $validated['applicant_address'],
-                'applicant_type' => isset($validated['corporation_name']) ? 'corporate' : 'individual',
-            ]);
+            $applicant = \App\Models\Applicant::create(array_merge(
+                \App\Support\PhilippineAddress::columns($applicantAddress, 'applicant_address'),
+                \App\Support\PhilippineAddress::columns($corporationAddress, 'corporation_address'),
+                [
+                    'applicant_name' => $validated['applicant_name'],
+                    'applicant_address' => $validated['applicant_address'],
+                    'applicant_type' => isset($validated['corporation_name']) ? 'corporate' : 'individual',
+                ]
+            ));
 
             // 2. Create the Request record
             $newRequest = RequestModel::create([

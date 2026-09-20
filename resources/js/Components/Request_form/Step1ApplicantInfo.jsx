@@ -70,16 +70,15 @@ export function Step1ApplicantInfo({
             </div>
 
             <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="corporation_address">4. Address of Corporation</Label>
-                <Textarea
-                    id="corporation_address"
-                    value={data.corporation_address}
-                    onChange={(e) => onDataChange("corporation_address", e.target.value)}
-                    placeholder="Enter corporation address or type N/A"
+                <PhilippineAddressFields
+                    legend="4. Address of Corporation"
+                    prefix="corporation_address"
+                    values={data}
+                    errors={errors}
+                    onChange={onDataChange}
+                    currentText={data.corporation_address_legacy}
+                    note="Leave blank and type N/A if not applicable"
                 />
-                {errors.corporation_address && (
-                    <p className="text-sm text-red-500">{errors.corporation_address}</p>
-                )}
             </div>
 
             {/* Has Authorized Representative Checkbox */}

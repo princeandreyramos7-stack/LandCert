@@ -12,14 +12,19 @@ import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import { useToast } from "@/Components/ui/use-toast";
-import { User, Mail, Key, Phone, MapPin, Loader2 } from "lucide-react";
+import { User, Mail, Key, Phone, Loader2 } from "lucide-react";
+import { PhilippineAddressFields } from "@/Components/Address/PhilippineAddressFields";
 
 const BLANK = {
     name: "",
     email: "",
     password: "",
     contact_number: "",
-    address: "",
+    address_region_code: "",
+    address_province_code: "",
+    address_city_code: "",
+    address_barangay_code: "",
+    address_street: "",
 };
 
 /**
@@ -50,7 +55,11 @@ export function EditUserModal({ user, isOpen, onClose }) {
             email: user.email || "",
             password: "",
             contact_number: user.contact_number || "",
-            address: user.address || "",
+            address_region_code: user.address_region_code || "",
+            address_province_code: user.address_province_code || "",
+            address_city_code: user.address_city_code || "",
+            address_barangay_code: user.address_barangay_code || "",
+            address_street: user.address_street || "",
         });
         setErrors({});
     }, [user]);
@@ -174,17 +183,14 @@ export function EditUserModal({ user, isOpen, onClose }) {
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="edit-address" className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-blue-600" />
-                            Address
-                        </Label>
-                        <Input
-                            id="edit-address"
-                            value={form.address}
-                            onChange={(e) => set("address")(e.target.value)}
-                            placeholder="Complete address"
+                        <PhilippineAddressFields
+                            legend="Address"
+                            prefix="address"
+                            values={form}
+                            errors={errors}
+                            onChange={(field, value) => setForm(f => ({ ...f, [field]: value }))}
+                            required={false}
                         />
-                        {errors.address && <p className="text-xs text-red-600">{errors.address}</p>}
                     </div>
 
                     <DialogFooter className="gap-2 sm:gap-0">

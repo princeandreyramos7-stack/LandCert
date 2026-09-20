@@ -56,7 +56,7 @@ class RequirementDocumentController extends Controller
     {
         $request->validate([
             'application_id' => 'required|exists:requests,id',
-            'documents.*.*' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120', // 5MB max per file
+            'documents.*.*' => 'required|file|mimes:jpg,jpeg,png,pdf|max:20480', // 20MB max per file
             'requirement_ids' => 'required|array',
             'requirement_ui_ids' => 'nullable|array',
             'requirement_names' => 'nullable|array',
@@ -187,10 +187,25 @@ class RequirementDocumentController extends Controller
         $validated = $request->validate([
             'requirement_id' => 'required',
             'requirement_name' => 'nullable|string|max:255',
-            'document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:20480', // 20MB max
         ]);
 
-        $this->assertApplicantMayUpload(RequestModel::findOrFail($id));
+        $requestModel = RequestModel::findOrFail($id);
+        
+        // Check if this is the notarized application form (requirement #1)
+        $isNotarizedForm = $validated['requirement_id'] == self::NOTARIZED_APPLICATION_FORM_ID;
+        
+        // Allow notarized form upload regardless of status, but check status for other requirements
+        if (!$isNotarizedForm) {
+            $this->assertApplicantMayUpload($requestModel);
+        } else {
+            // For notarized form, only check ownership
+            $currentUser = auth()->user();
+            if (!in_array($currentUser->user_type, ['admin', 'super_admin'])
+                && $requestModel->user_id !== $currentUser->id) {
+                abort(403, 'You are not authorized to upload documents for this application.');
+            }
+        }
 
         return $this->storeApplicantRequirement(
             $request,
@@ -237,7 +252,7 @@ class RequirementDocumentController extends Controller
     private function storeApplicantRequirement(Request $request, $id, $requirementId, string $requirementName, string $successMessage)
     {
         $request->validate([
-            'document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:20480', // 20MB max
         ]);
 
         $requestModel = RequestModel::findOrFail($id);

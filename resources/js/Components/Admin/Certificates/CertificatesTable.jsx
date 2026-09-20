@@ -64,7 +64,15 @@ function CertificateRowActions({ certificate, routePrefix, onRelease, onRevoke }
                             <MoreVertical className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuContent 
+                        align="end"
+                        side="bottom"
+                        sideOffset={5}
+                        className="w-56"
+                        style={{
+                            transform: 'translateX(-20px)'
+                        }}
+                    >
                         {/* The controller only generates for an approved application or a later
                             certificate-lifecycle stage; denied / pre-approval requests are blocked
                             server-side and would silently redirect back, so don't offer the action. */}

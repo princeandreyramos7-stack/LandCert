@@ -95,6 +95,32 @@ export default function Register({ legal = [], legalVersion }) {
 
             <form onSubmit={submit} className="space-y-4">
 
+                {/* Global errors display */}
+                {Object.keys(errors).length > 0 && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                                <svg className="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-sm font-semibold text-red-800">
+                                    Please fix the following errors:
+                                </h3>
+                                <ul className="mt-2 space-y-1 text-sm text-red-700">
+                                    {Object.entries(errors).map(([key, message]) => (
+                                        <li key={key} className="flex items-start gap-2">
+                                            <span className="text-red-500 font-bold">•</span>
+                                            <span>{message}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Full Name */}
                 <Field label="Full Name" required error={errors.name}>
                     <div className="relative">
@@ -260,15 +286,26 @@ export default function Register({ legal = [], legalVersion }) {
                 </div>
 
                 {/* Submit */}
-                <button type="submit" disabled={processing}
+                <button 
+                    type="submit" 
+                    disabled={processing || !data.consent}
                     className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg text-white font-bold text-sm shadow-md transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:brightness-110 active:scale-[0.98] mt-2"
-                    style={{ background: "linear-gradient(90deg,#0d1f5c,#1a3a8f)" }}>
+                    style={{ background: "linear-gradient(90deg,#0d1f5c,#1a3a8f)" }}
+                    title={!data.consent ? "Please agree to Terms and Conditions first" : ""}
+                >
                     {processing ? (
                         <><Loader2 className="h-4 w-4 animate-spin"/><span>Creating account...</span></>
                     ) : (
                         <><span>Create Account</span><ArrowRight className="h-4 w-4"/></>
                     )}
                 </button>
+
+                {/* Show message when button is disabled due to consent */}
+                {!data.consent && !processing && (
+                    <p className="text-center text-xs text-amber-600 -mt-1">
+                        Please read and agree to the Terms and Conditions to continue
+                    </p>
+                )}
 
                 {/* Divider */}
                 <div className="relative my-1">

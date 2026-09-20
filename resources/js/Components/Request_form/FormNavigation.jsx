@@ -35,7 +35,8 @@ export function FormNavigation({
                     type="button"
                     onClick={onNext}
                     disabled={processing}
-                    className="gap-1 sm:gap-2 h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm"
+                    className="gap-1 sm:gap-2 h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm text-white"
+                    style={{ background: "linear-gradient(90deg, #0d1f5c, #1a3a8f)" }}
                 >
                     Next
                     <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />

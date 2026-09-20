@@ -133,3 +133,13 @@ input[type="password"]::-webkit-caps-lock-indicator {
     margin: 0;
     width: 0;
 }
+
+/* Force dropdown menus to appear above all other content */
+[data-radix-popper-content-wrapper] {
+    z-index: 99999 !important;
+}
+
+[role="menu"],
+[role="dialog"] {
+    z-index: 99999 !important;
+}
