@@ -356,6 +356,14 @@ class RequestController extends Controller
      */
     public function store(Request $request)
     {
+        // Log the submission attempt for debugging
+        \Log::info('Application submission started', [
+            'user_id' => auth()->id(),
+            'user_email' => auth()->user()->email,
+            'has_declaration' => $request->has('declaration'),
+            'declaration_value' => $request->input('declaration'),
+        ]);
+
         // Catch a double submission — the same form sent twice from a
         // double-click or a retry — without refusing a genuine second
         // application. The old check blocked *any* filing within five minutes
@@ -371,6 +379,7 @@ class RequestController extends Controller
             ->exists();
 
         if ($recentDuplicate) {
+            \Log::warning('Duplicate submission blocked', ['user_id' => auth()->id()]);
             return back()->withErrors(['duplicate' => 'This application was already submitted a moment ago. Check My Applications before filing it again.']);
         }
 
@@ -472,6 +481,7 @@ class RequestController extends Controller
                         'user_id' => auth()->id(),
                         'attempt' => $attempts,
                         'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
                     ]);
 
                     return back()
@@ -480,6 +490,12 @@ class RequestController extends Controller
                 }
             }
         }
+
+        \Log::info('Application submission successful', [
+            'user_id' => auth()->id(),
+            'application_id' => $result['request']->id ?? 'N/A',
+            'application_number' => $result['request']->application_number ?? 'N/A',
+        ]);
 
         return $this->finishSubmission($result);
     }
