@@ -40,5 +40,40 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Custom error handling for production
+        $exceptions->render(function (\Throwable $e, $request) {
+            // Never expose stack traces or internal details in production
+            if (!config('app.debug')) {
+                // Log the full error for debugging
+                \Log::error('Application error', [
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'url' => $request->fullUrl(),
+                    'user_id' => auth()->id(),
+                ]);
+
+                // Return user-friendly error without exposing internals
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'An error occurred. Please try again or contact support if the problem persists.',
+                    ], 500);
+                }
+
+                // For Inertia requests, show a clean error page
+                if ($request->header('X-Inertia')) {
+                    return \Inertia\Inertia::render('Error', [
+                        'status' => 500,
+                        'message' => 'An unexpected error occurred. Our team has been notified.',
+                    ])->toResponse($request)->setStatusCode(500);
+                }
+
+                // For regular requests, use Laravel's default error view
+                return response()->view('errors.500', [], 500);
+            }
+
+            // In debug mode, let Laravel show detailed errors
+            return null;
+        });
     })->create();

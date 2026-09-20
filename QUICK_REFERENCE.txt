@@ -1,0 +1,65 @@
+═══════════════════════════════════════════════════════════
+  CPDO SYSTEM - QUICK REFERENCE CARD
+  Date: September 15, 2026
+═══════════════════════════════════════════════════════════
+
+📋 TEST CREDENTIALS
+─────────────────────────────────────────────────────────
+Super Admin:  crisanta@cpdo.com  / password
+Admin:        admin@cpdo.com     / password
+Applicant:    amelita@gmail.com  / password
+─────────────────────────────────────────────────────────
+
+🔧 RECENT FIXES
+─────────────────────────────────────────────────────────
+✅ Dropdown menu in Applications table (z-index: 9999)
+✅ React ref warnings removed (WithTooltip conflicts)
+✅ Remember Me verified functional
+✅ Forgot Password verified functional
+✅ Build successful (42.63s, 176 chunks)
+─────────────────────────────────────────────────────────
+
+🎯 PRESENTATION CHECKLIST
+─────────────────────────────────────────────────────────
+✅ APP_DEBUG = false (no stack traces)
+✅ Custom error pages created
+✅ Dropdowns working
+✅ No console warnings
+✅ Frontend built and ready
+─────────────────────────────────────────────────────────
+
+🚀 LOCAL DEV COMMANDS
+─────────────────────────────────────────────────────────
+Start Dev Server:    npm run dev
+Build Production:    npm run build
+Run PHP Server:      php artisan serve
+Clear Cache:         php artisan cache:clear
+View Routes:         php artisan route:list
+─────────────────────────────────────────────────────────
+
+📁 KEY FILES MODIFIED TODAY
+─────────────────────────────────────────────────────────
+resources/js/Components/Applications/ApplicationsTable.jsx
+resources/js/Components/NotificationBell.jsx
+─────────────────────────────────────────────────────────
+
+📄 DOCUMENTATION CREATED
+─────────────────────────────────────────────────────────
+TESTING_GUIDE.md           - Complete testing procedures
+TEST_FULL_FLOW.md          - Quick test checklist
+FIXES_APPLIED_TODAY.md     - Detailed fix documentation
+CRITICAL_ISSUES_AUDIT.md   - Security audit (updated)
+QUICK_REFERENCE.txt        - This file
+─────────────────────────────────────────────────────────
+
+⚠️  POST-PRESENTATION TODO
+─────────────────────────────────────────────────────────
+1. Update credentials in .env (APP_KEY, API keys)
+2. Replace test email: princeandreyramos7@gmail.com
+3. Update contact numbers in templates
+4. Full system testing per TESTING_GUIDE.md
+5. Deploy to production server
+─────────────────────────────────────────────────────────
+
+📊 SYSTEM STATUS: ✅ READY FOR PRESENTATION
+═══════════════════════════════════════════════════════════

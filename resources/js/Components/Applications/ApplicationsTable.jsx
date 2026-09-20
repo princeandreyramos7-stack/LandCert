@@ -1,4 +1,3 @@
-import { WithTooltip } from "@/Components/ui/icon-button";
 import React from "react";
 import { router } from "@inertiajs/react";
 import { Badge } from "@/Components/ui/badge";
@@ -124,10 +123,6 @@ function Actions({ request, role, archived = false }) {
         <div className="flex items-center justify-end">
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <WithTooltip
-                    label="Actions"
-                    hint="View, review, print or export this application"
-                  >
                     <Button
                         variant="ghost"
                         size="icon"
@@ -137,14 +132,15 @@ function Actions({ request, role, archived = false }) {
                     >
                         <MoreVertical className="h-4 w-4" />
                     </Button>
-                  </WithTooltip>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                     onClick={(e) => e.stopPropagation()}
                     align="end"
                     side="bottom"
                     sideOffset={8}
-                    className="z-[100] min-w-[200px]"
+                    className="z-[9999] min-w-[200px] bg-white shadow-lg border border-gray-200"
+                    avoidCollisions={true}
+                    collisionPadding={10}
                 >
                     {menuItems(request, role).map((item) => (
                         <DropdownMenuItem

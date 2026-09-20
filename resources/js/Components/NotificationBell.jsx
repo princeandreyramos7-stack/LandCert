@@ -8,7 +8,6 @@ import {
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
 import { SkeletonNotifications } from "@/Components/ui/skeletons";
-import { WithTooltip } from "@/Components/ui/icon-button";
 
 /**
  * Unread-notification bell for the staff top bars.
@@ -187,14 +186,10 @@ export default function NotificationBell({ className = "" }) {
     return (
         <DropdownMenu open={open} onOpenChange={handleOpenChange}>
             <DropdownMenuTrigger asChild>
-              <WithTooltip
-                label="Notifications"
-                hint={count > 0 ? `${count} unread` : "Nothing new"}
-                side="bottom"
-              >
                 <button
                     type="button"
                     aria-label={count > 0 ? `${count} unread notifications` : "Notifications"}
+                    title={count > 0 ? `${count} unread` : "Notifications"}
                     disabled={navigating}
                     className={`relative flex h-8 w-8 items-center justify-center rounded-full text-[#0d1f5c] transition-colors hover:bg-[#0d1f5c]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0d1f5c]/30 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
                 >
@@ -205,7 +200,6 @@ export default function NotificationBell({ className = "" }) {
                         </span>
                     )}
                 </button>
-              </WithTooltip>
             </DropdownMenuTrigger>
 
             <DropdownMenuContent 

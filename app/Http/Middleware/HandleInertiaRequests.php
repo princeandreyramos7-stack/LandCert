@@ -48,7 +48,7 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        return [
+        $sharedData = [
             ...parent::share($request),
             'auth' => [
                 'user' => $request->user() ? [
@@ -98,6 +98,16 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
         ];
+
+        // SECURITY: Remove sensitive config in production
+        if (!config('app.debug')) {
+            // Strip any accidental exposure of environment variables
+            unset($sharedData['app']);
+            unset($sharedData['config']);
+            unset($sharedData['env']);
+        }
+
+        return $sharedData;
     }
     /**
      * A php.ini size such as "40M" as a plain byte count.
