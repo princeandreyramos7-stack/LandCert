@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Link, usePage } from "@inertiajs/react";
+import { activeNavUrl } from "@/lib/sidebarActive";
 import {
     LayoutDashboard,
     FilePlus,
@@ -25,7 +26,7 @@ import {
 const navItems = [
     { title: "Dashboard",       url: "/dashboard",       icon: LayoutDashboard },
     { title: "New Application", url: "/request",         icon: FilePlus },
-    { title: "My Applications", url: "/my-applications", icon: FolderOpen },
+    { title: "My Applications", url: "/my-applications", icon: FolderOpen, matches: ["/application-details", "/print-form", "/order-of-payment", "/receipt"] },
     { title: "Notifications",   url: "/notifications",   icon: Bell },
 ];
 
@@ -46,6 +47,8 @@ export function AppSidebar({ ...props }) {
 
     // Detect active path
     const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+    // One flat list here, wrapped so the shared matcher can read it.
+    const activeUrl = activeNavUrl([{ items: navItems }], currentPath);
 
     return (
         <Sidebar collapsible="icon" {...props}>
@@ -83,8 +86,7 @@ export function AppSidebar({ ...props }) {
                     )}
                     <SidebarMenu>
                         {navItems.map((item) => {
-                            const isActive = currentPath === item.url ||
-                                (item.url !== "/dashboard" && currentPath.startsWith(item.url));
+                            const isActive = item.url === activeUrl;
                             return (
                                 <SidebarMenuItem key={item.url}>
                                     <SidebarMenuButton

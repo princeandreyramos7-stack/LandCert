@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Link, usePage } from "@inertiajs/react";
+import { activeNavUrl } from "@/lib/sidebarActive";
 import {
     LayoutDashboard,
     FileText,
@@ -33,13 +34,18 @@ import {
 } from "@/Components/ui/collapsible";
 
 /* ── Nav structure ──────────────────────────────────────────────── */
+/*
+ * Each entry links to the address the page is actually served at (the
+ * /admin/... routes only redirect there), and names the detail pages that
+ * belong under it so they keep their section lit. See lib/sidebarActive.
+ */
 const navGroups = [
     {
         label: "Officer Panel",
         items: [
             {
                 title: "Dashboard",
-                url: "/admin/dashboard",
+                url: "/dashboard-panel",
                 icon: LayoutDashboard,
             },
         ],
@@ -47,27 +53,25 @@ const navGroups = [
     {
         label: "Processing",
         items: [
-            { title: "Applications", url: "/admin/requests", icon: FileText },
-            { title: "Payments", url: "/admin/payments", icon: CreditCard },
-            { title: "Certificates", url: "/admin/certificates", icon: Award },
+            { title: "Applications", url: "/applications", icon: FileText, matches: ["/view-application", "/application-details", "/review-application", "/document-verification", "/edit-application", "/print-form"] },
+            { title: "Payments", url: "/payments", icon: CreditCard, matches: ["/payment-details", "/receipt"] },
+            { title: "Certificates", url: "/certificates", icon: Award, matches: ["/generate-certificate", "/generate-clearance", "/order-of-payment"] },
         ],
     },
     {
         label: "Management",
         items: [
-            { title: "Users", url: "/admin/users", icon: Users },
+            { title: "Users", url: "/users", icon: Users },
             { title: "Reports", url: "/reports", icon: FileBarChart },
-            { title: "Audit Logs", url: "/admin/audit-logs", icon: Activity },
-            { title: "SMS Broadcast", url: "/admin/sms", icon: MessageSquare },
+            { title: "Audit Logs", url: "/audit-logs", icon: Activity },
+            { title: "SMS Broadcast", url: "/sms-broadcast", icon: MessageSquare },
         ],
     },
 ];
 
 /* ── Nav group (collapsible) ────────────────────────────────────── */
-function NavGroup({ group, currentPath, collapsed }) {
-    const hasActive = group.items.some(
-        (i) => currentPath === i.url || currentPath.startsWith(i.url + "/"),
-    );
+function NavGroup({ group, activeUrl, collapsed }) {
+    const hasActive = group.items.some((i) => i.url === activeUrl);
     const [open, setOpen] = React.useState(
         hasActive || group.label === "Zoning Officer Panel",
     );
@@ -81,16 +85,7 @@ function NavGroup({ group, currentPath, collapsed }) {
             )}
             <SidebarMenu>
                 {group.items.map((item) => {
-                    const isActive =
-                        currentPath === item.url ||
-                        (currentPath.startsWith(item.url + "/") &&
-                            // Prevent shorter URLs matching longer ones (e.g. /payments matching /payments/pending)
-                            !group.items.some(
-                                (other) =>
-                                    other.url !== item.url &&
-                                    other.url.length > item.url.length &&
-                                    currentPath.startsWith(other.url),
-                            ));
+                    const isActive = item.url === activeUrl;
                     return (
                         <SidebarMenuItem key={item.url}>
                             <SidebarMenuButton
@@ -140,24 +135,16 @@ export function AdminSidebar({ ...props }) {
         .join("")
         .toUpperCase();
 
-    const rawPath =
-        typeof window !== "undefined" ? window.location.pathname : "";
-
-    // The document-generation pages live under /requests/{id}/... but belong to
-    // the Certificates section, so highlight "Certificates" there, not "Applications".
     const currentPath =
-        /\/(generate-certificate|generate-clearance|generate-order-of-payment)$/.test(
-            rawPath,
-        )
-            ? "/admin/certificates"
-            : rawPath;
+        typeof window !== "undefined" ? window.location.pathname : "";
+    const activeUrl = activeNavUrl(navGroups, currentPath);
 
     return (
         <Sidebar collapsible="icon" {...props}>
             {/* ── Header ─────────────────────────────────────── */}
             <SidebarHeader className={`border-b border-sidebar-border py-4 ${collapsed ? "px-0" : "px-3"}`}>
                 <Link
-                    href="/admin/dashboard"
+                    href="/dashboard-panel"
                     className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}
                 >
                     <div className="w-9 h-9 rounded-full border-2 border-sidebar-primary/60 bg-sidebar-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
@@ -186,7 +173,7 @@ export function AdminSidebar({ ...props }) {
                     <NavGroup
                         key={group.label}
                         group={group}
-                        currentPath={currentPath}
+                        activeUrl={activeUrl}
                         collapsed={collapsed}
                     />
                 ))}

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Link, usePage } from "@inertiajs/react";
+import { activeNavUrl } from "@/lib/sidebarActive";
 import {
     LayoutDashboard,
     FileText,
@@ -29,13 +30,18 @@ import {
     useSidebar,
 } from "@/Components/ui/sidebar";
 
+/*
+ * Each entry links to the address the page is actually served at (the
+ * /super-admin/... routes only redirect there), and names the detail pages
+ * that belong under it so they keep their section lit. See lib/sidebarActive.
+ */
 const navGroups = [
     {
         label: "Administrator Panel",
         items: [
             {
                 title: "Dashboard",
-                url: "/super-admin/dashboard",
+                url: "/dashboard-panel",
                 icon: LayoutDashboard,
             },
         ],
@@ -45,25 +51,28 @@ const navGroups = [
         items: [
             {
                 title: "Reviewed Applications",
-                url: "/super-admin/requests",
+                url: "/applications",
                 icon: FileText,
+                matches: ["/view-application", "/application-details", "/review-application", "/document-verification", "/edit-application", "/print-form"],
             },
             {
                 title: "Payments",
-                url: "/super-admin/payments",
+                url: "/payments",
                 icon: CreditCard,
+                matches: ["/payment-details", "/receipt"],
             },
             {
                 title: "Certificates",
-                url: "/super-admin/certificates",
+                url: "/certificates",
                 icon: Award,
+                matches: ["/generate-certificate", "/generate-clearance", "/order-of-payment"],
             },
         ],
     },
     {
         label: "Management",
         items: [
-            { title: "Users", url: "/super-admin/users", icon: Users },
+            { title: "Users", url: "/users", icon: Users },
             {
                 title: "Reports",
                 url: "/reports",
@@ -71,12 +80,12 @@ const navGroups = [
             },
             {
                 title: "Audit Logs",
-                url: "/super-admin/audit-logs",
+                url: "/audit-logs",
                 icon: ScrollText,
             },
             {
                 title: "SMS to Officers",
-                url: "/super-admin/sms",
+                url: "/sms-broadcast",
                 icon: MessageSquare,
             },
             {
@@ -107,24 +116,16 @@ export function SuperAdminSidebar({ ...props }) {
         .slice(0, 2)
         .join("")
         .toUpperCase();
-    const rawPath =
-        typeof window !== "undefined" ? window.location.pathname : "";
-
-    // The document-generation pages live under /requests/{id}/... but belong to
-    // the Certificates section, so highlight "Certificates" there, not "Applications".
     const currentPath =
-        /\/(generate-certificate|generate-clearance|generate-order-of-payment)$/.test(
-            rawPath,
-        )
-            ? "/super-admin/certificates"
-            : rawPath;
+        typeof window !== "undefined" ? window.location.pathname : "";
+    const activeUrl = activeNavUrl(navGroups, currentPath);
 
     return (
         <Sidebar collapsible="icon" {...props}>
             {/* Header */}
             <SidebarHeader className={`border-b border-sidebar-border py-4 ${collapsed ? "px-0" : "px-3"}`}>
                 <Link
-                    href="/super-admin/dashboard"
+                    href="/dashboard-panel"
                     className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}
                 >
                     <div className="w-9 h-9 rounded-full border-2 border-sidebar-primary/60 bg-sidebar-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
@@ -175,19 +176,7 @@ export function SuperAdminSidebar({ ...props }) {
                                         </SidebarMenuItem>
                                     );
                                 }
-                                const isActive =
-                                    currentPath === item.url ||
-                                    (currentPath.startsWith(item.url + "/") &&
-                                        !group.items.some(
-                                            (other) =>
-                                                other.url &&
-                                                other.url !== item.url &&
-                                                other.url.length >
-                                                    item.url.length &&
-                                                currentPath.startsWith(
-                                                    other.url,
-                                                ),
-                                        ));
+                                const isActive = item.url === activeUrl;
                                 return (
                                     <SidebarMenuItem key={item.url}>
                                         <SidebarMenuButton
