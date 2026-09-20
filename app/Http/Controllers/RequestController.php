@@ -573,11 +573,14 @@ class RequestController extends Controller
 
             // 3. Create Corporation record if applicable
             if (isset($validated['corporation_name']) && !empty($validated['corporation_name'])) {
-                \App\Models\NormalizedCorporation::create([
-                    'applicant_id' => $applicant->id,
-                    'corporation_name' => $validated['corporation_name'],
-                    'corporation_address' => $validated['corporation_address'] ?? '',
-                ]);
+                \App\Models\NormalizedCorporation::create(array_merge(
+                    \App\Support\PhilippineAddress::columns($corporationAddress, 'corporation_address'),
+                    [
+                        'applicant_id' => $applicant->id,
+                        'corporation_name' => $validated['corporation_name'],
+                        'corporation_address' => $validated['corporation_address'] ?? '',
+                    ]
+                ));
             }
 
             // 4. Create Representative record if applicable

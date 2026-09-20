@@ -16,6 +16,12 @@ class NormalizedCorporation extends Model
         'applicant_id',
         'corporation_name',
         'corporation_address',
+        // PSGC address parts for corporation
+        'corporation_region_code',
+        'corporation_province_code',
+        'corporation_city_code',
+        'corporation_barangay_code',
+        'corporation_street',
         'registration_number',
         'tin',
     ];
