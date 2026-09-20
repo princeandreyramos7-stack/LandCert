@@ -1,3 +1,4 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/Components/ui/tooltip";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
     Dialog,
@@ -39,17 +40,29 @@ const isPdf = (name = "", url = "") => /\.pdf(\?|$)/i.test(String(name)) || /\.p
 const ANGLE_LABEL = { 0: "upright", 90: "turned right", 180: "upside down", 270: "turned left" };
 
 function ViewerToolbarButton({ onClick, title, disabled, children }) {
-    return (
+    const button = (
         <button
             type="button"
             onClick={onClick}
-            title={title}
             aria-label={title}
             disabled={disabled}
             className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:text-[#0d1f5c] disabled:cursor-not-allowed disabled:opacity-40"
         >
             {children}
         </button>
+    );
+
+    return (
+        <Tooltip>
+            {/* A disabled button receives no hover, so it cannot open a
+                tooltip of its own - but "why is zoom out greyed out" is
+                exactly when the label is wanted. The span takes the hover
+                on its behalf. */}
+            <TooltipTrigger asChild>
+                {disabled ? <span className="inline-flex">{button}</span> : button}
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{title}</TooltipContent>
+        </Tooltip>
     );
 }
 

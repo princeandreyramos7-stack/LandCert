@@ -74,7 +74,31 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Vite::prefetch(concurrency: 3);
+        /*
+         * Vite::prefetch() is deliberately not called here.
+         *
+         * It fetches every chunk in the build after the page loads, so
+         * that later navigations are instant. Measured on this build
+         * that is 177 files and 4.4 MB on the first page - including
+         * the 958 KB PDF library that six pages use and the 619 KB
+         * reports workspace that one does - against 37 files and
+         * 578 KB for the page actually asked for.
+         *
+         * On the office LAN that trade is free. On an applicant's
+         * mobile connection it is most of a minute of downloading
+         * before anything they came for is usable, and it competes for
+         * the same bandwidth as the page itself. A government service
+         * is judged by the worst connection that has to use it.
+         *
+         * What replaces it: the build output is now cached for a year
+         * (public/.htaccess - every filename carries a content hash,
+         * so it is safe), and a page whose chunk has not been fetched
+         * yet shows the shape of itself while it arrives rather than
+         * sitting still (Components/PageSkeleton). The cost of not
+         * prefetching is one small request the first time each kind of
+         * page is opened after a deploy.
+         */
+
 
         // See App\Mail\Transport\DeferredTransport: mail is sent once the
         // response is out, through whichever transport MAIL_MAILER names.

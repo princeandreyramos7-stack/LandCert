@@ -1,3 +1,4 @@
+import { WithTooltip } from "@/Components/ui/icon-button";
 import React from "react";
 import { getStatusFiltersForRole } from "@/lib/applicationStatus";
 import { CLEARANCE_TYPE_FILTERS } from "@/lib/clearanceTypes";
@@ -69,11 +70,16 @@ export function ApplicationsToolbar({
                             {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
                     </label>
-                    <Button type="button" variant="outline" onClick={onExport} className="h-10 shrink-0 gap-2 border-gray-200 text-gray-700 hover:bg-gray-50">
-                        <Download className="h-4 w-4" />
-                        <span className="hidden sm:inline">Export Excel</span>
-                        <span className="sm:hidden">Excel</span>
-                    </Button>
+                    <WithTooltip
+                        label="Export to Excel"
+                        hint="Downloads the applications matching the filters above, not just this page"
+                    >
+                        <Button type="button" variant="outline" onClick={onExport} className="h-10 shrink-0 gap-2 border-gray-200 text-gray-700 hover:bg-gray-50">
+                            <Download className="h-4 w-4" />
+                            <span className="hidden sm:inline">Export Excel</span>
+                            <span className="sm:hidden">Excel</span>
+                        </Button>
+                    </WithTooltip>
                 </div>
             </div>
 

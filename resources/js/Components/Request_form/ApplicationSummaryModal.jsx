@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
     Dialog,
     DialogContent,
@@ -7,7 +7,7 @@ import {
     DialogTitle,
 } from "@/Components/ui/dialog";
 import { Button } from "@/Components/ui/button";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, ShieldCheck } from "lucide-react";
 
 export function ApplicationSummaryModal({
     isOpen,
@@ -21,6 +21,20 @@ export function ApplicationSummaryModal({
     requirementFiles = {},
     requirements = [],
 }) {
+    /*
+     * The declaration is a separate act from the consent given at sign-up:
+     * that one covers the handling of personal information, this one is the
+     * applicant certifying that what they are about to file is true. Filing
+     * a falsified document with a government office is a criminal matter, so
+     * it is stated plainly and ticked deliberately - and reset every time the
+     * modal opens, so a second application cannot inherit the first one tick.
+     */
+    const [declared, setDeclared] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) setDeclared(false);
+    }, [isOpen]);
+
     // A Zoning Certification skips the project and land-use steps, so its
     // summary skips those sections too.
     const isZC = String(data.project_type || "").toUpperCase() === "ZC";
@@ -199,14 +213,61 @@ export function ApplicationSummaryModal({
                         </div>
                     </div>
 
-                    {/* Important Notice */}
+                    {/* What happens next */}
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <p className="text-sm font-semibold text-gray-900 mb-2">Important:</p>
                         <ul className="text-xs text-gray-700 space-y-1 list-disc list-inside">
                             <li>Once submitted, you cannot edit this application</li>
                             <li>You will receive a confirmation email with your application details</li>
-                            <li>The CPDO admin will review your application and notify you of their decision</li>
+                            <li>The CPDO will review your application and notify you of the decision</li>
                         </ul>
+                    </div>
+
+                    {/* Declaration - required before the form can be filed */}
+                    <div className="rounded-lg border-2 border-[#0d1f5c]/15 bg-[#0d1f5c]/[0.03] p-4">
+                        <div className="mb-2.5 flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4 text-[#0d1f5c]" aria-hidden="true" />
+                            <p className="text-sm font-bold text-[#0d1f5c]">Declaration</p>
+                        </div>
+
+                        <label htmlFor="declaration" className="flex cursor-pointer gap-3">
+                            <input
+                                id="declaration"
+                                type="checkbox"
+                                checked={declared}
+                                onChange={(e) => setDeclared(e.target.checked)}
+                                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-[#0d1f5c] focus:ring-2 focus:ring-[#d4a017]"
+                            />
+                            <span className="text-xs leading-relaxed text-gray-700">
+                                I certify that the information in this application is true and
+                                correct, and that every document I have uploaded is genuine. I
+                                understand that filing a falsified document with a government
+                                office is punishable under the Revised Penal Code, and that an
+                                application or certificate obtained through false information may
+                                be denied or revoked. I consent to the City Planning and
+                                Development Office processing these details in order to act on
+                                this application, as set out in the{" "}
+                                <a href="/legal/privacy" target="_blank" rel="noopener noreferrer"
+                                    className="font-semibold text-[#0d1f5c] underline underline-offset-2">
+                                    Privacy Policy
+                                </a>{" "}
+                                and the{" "}
+                                <a href="/legal/terms" target="_blank" rel="noopener noreferrer"
+                                    className="font-semibold text-[#0d1f5c] underline underline-offset-2">
+                                    Terms and Conditions
+                                </a>.
+                            </span>
+                        </label>
+
+                        <p className="mt-2.5 pl-7 text-[11px] text-gray-500">
+                            Fees are paid at the City Treasurer&apos;s Office against the Order of
+                            Payment this application will produce. See the{" "}
+                            <a href="/legal/refund" target="_blank" rel="noopener noreferrer"
+                                className="underline underline-offset-2 hover:text-[#0d1f5c]">
+                                Refund Policy
+                            </a>{" "}
+                            for when a fee can be refunded.
+                        </p>
                     </div>
                 </div>
 
@@ -223,9 +284,10 @@ export function ApplicationSummaryModal({
                     </Button>
                     <Button
                         type="button"
-                        onClick={onConfirm}
-                        disabled={processing}
-                        className="gap-2 bg-blue-600 hover:bg-blue-700 px-6"
+                        onClick={() => onConfirm({ declared })}
+                        disabled={processing || !declared}
+                        title={declared ? undefined : "Tick the declaration above to submit"}
+                        className="gap-2 bg-blue-600 hover:bg-blue-700 px-6 disabled:cursor-not-allowed"
                     >
                         {processing ? (
                             <>

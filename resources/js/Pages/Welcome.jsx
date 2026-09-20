@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Head, Link } from "@inertiajs/react";
 import {
     LayoutDashboard,
@@ -733,28 +734,29 @@ export default function Welcome() {
                             Development Office — City of Ilagan, Isabela. All
                             rights reserved.
                         </p>
-                        <div className="flex items-center gap-5 text-blue-400/50 text-xs">
-                            <a
-                                href="#"
-                                className="hover:text-[#d4a017] transition-colors"
-                            >
-                                FAQs
-                            </a>
-                            <span>|</span>
-                            <a
-                                href="#"
-                                className="hover:text-[#d4a017] transition-colors"
-                            >
-                                Terms and Conditions
-                            </a>
-                            <span>|</span>
-                            <a
-                                href="#contact"
-                                className="hover:text-[#d4a017] transition-colors"
-                            >
-                                Contact Us
-                            </a>
-                        </div>
+                        <nav
+                            aria-label="Policies"
+                            className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-blue-400/60 text-xs"
+                        >
+                            {[
+                                ["Privacy Policy", "/legal/privacy"],
+                                ["Terms and Conditions", "/legal/terms"],
+                                ["Cookie Policy", "/legal/cookies"],
+                                ["Refund Policy", "/legal/refund"],
+                                ["Verify a Document", "/verify"],
+                                ["Contact Us", "#contact"],
+                            ].map(([label, href], i) => (
+                                <Fragment key={href}>
+                                    {i > 0 && <span aria-hidden="true">|</span>}
+                                    <a
+                                        href={href}
+                                        className="hover:text-[#d4a017] transition-colors"
+                                    >
+                                        {label}
+                                    </a>
+                                </Fragment>
+                            ))}
+                        </nav>
                     </div>
                 </div>
             </footer>

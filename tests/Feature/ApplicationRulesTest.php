@@ -19,6 +19,9 @@ class ApplicationRulesTest extends TestCase
     private function submission(array $extra = []): array
     {
         return array_merge($this->addressFields(), [
+            // Ticked in the summary dialog before the form can be
+            // filed, and required by the server. See LegalDocuments.
+            'declaration' => '1',
             'applicant_name' => 'Juan Dela Cruz',
             'project_nature' => 'New Residential House',
             'project_location_street' => 'Purok 1',

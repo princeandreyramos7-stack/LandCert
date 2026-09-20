@@ -16,6 +16,8 @@ import {
 import { Toaster } from "@/Components/ui/toaster";
 import NotificationBell from "@/Components/NotificationBell";
 import SealWatermark from "@/Components/SealWatermark";
+import PageSkeleton from "@/Components/PageSkeleton";
+import { WithTooltip } from "@/Components/ui/icon-button";
 
 export default function SuperAdminLayout({
     title,
@@ -32,7 +34,9 @@ export default function SuperAdminLayout({
             <SidebarInset>
                 <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 bg-white border-b border-gray-100 shadow-sm ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
                     <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
-                        <SidebarTrigger className="-ml-1 text-[#0d1f5c] hover:bg-[#0d1f5c]/5" />
+                        <WithTooltip label="Show or hide the menu" side="bottom">
+                            <SidebarTrigger className="-ml-1 text-[#0d1f5c] hover:bg-[#0d1f5c]/5" />
+                        </WithTooltip>
                         <Separator
                             orientation="vertical"
                             className="mr-2 h-4 bg-gray-200"
@@ -77,7 +81,9 @@ export default function SuperAdminLayout({
                     <SealWatermark viewport />
                     <div className="flex-1 p-4 sm:p-6">
                         <HeaderSlotProvider slot={headerSlot}>
-                            {children}
+                            {/* Shows the shape of the page being fetched once
+                                the wait is long enough to notice. */}
+                            <PageSkeleton>{children}</PageSkeleton>
                         </HeaderSlotProvider>
                     </div>
                 </div>

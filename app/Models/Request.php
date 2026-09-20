@@ -14,6 +14,10 @@ class Request extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        // When the applicant certified the form, and against which
+        // edition of the published notices. See LegalDocuments.
+        'declared_at',
+        'declaration_version',
         // Core request fields
         'application_number',
         'decision_number',

@@ -23,3 +23,71 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# ─────────────────────────────────────────────────────────────────────
+# How long the browser may keep the things that never change.
+#
+# Nothing here was cached before, so every visit re-fetched the whole
+# front end - about 1.5 MB of JavaScript - or at best asked the server
+# about each file and waited for a 304. On the office LAN that is
+# invisible. On an applicant's mobile data it is most of the wait before
+# the page appears, on every single page.
+#
+# The build output is safe to keep for a year because Vite puts a hash
+# of the contents into every filename: app-C8M2GTZl.js is that exact
+# build of that exact file, and a new build produces a new name rather
+# than changing this one. `immutable` tells the browser not even to
+# revalidate. The manifest is the one file in there with a fixed name -
+# it is the index that maps to the hashed names - so it must never be
+# cached, or a browser would keep pointing at the previous build's
+# files after a deploy and get 404s.
+#
+# HTML is excluded throughout: pages carry signed-in content and are
+# already sent no-store by the NoCacheHeaders middleware.
+# ─────────────────────────────────────────────────────────────────────
+<IfModule mod_headers.c>
+    # Hashed build output - a year, and no revalidation.
+    <FilesMatch "\.(js|mjs|css)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    # Fonts, same reasoning.
+    <FilesMatch "\.(woff2?|ttf|otf|eot)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+
+    # Images and the seal - not content-hashed, so a week with
+    # revalidation rather than a year of being stuck with an old logo.
+    <FilesMatch "\.(png|jpe?g|gif|svg|webp|ico|avif)$">
+        Header set Cache-Control "public, max-age=604800, must-revalidate"
+    </FilesMatch>
+
+    # The one file in the build directory with a stable name. Caching it
+    # would pin a browser to the previous deploy's asset names.
+    <FilesMatch "^manifest\.json$">
+        Header set Cache-Control "no-store, must-revalidate"
+    </FilesMatch>
+
+    # Security headers for everything served straight off disk. The
+    # application's own responses get these from PerformanceHeaders;
+    # a static file never passes through PHP, so it would get none.
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>
+
+# Compress text on the way out. Roughly a 3x reduction on the
+# JavaScript bundles, which is the difference between a fast page and a
+# slow one on a weak connection.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+    AddOutputFilterByType DEFLATE application/javascript application/x-javascript
+    AddOutputFilterByType DEFLATE application/json application/xml
+    AddOutputFilterByType DEFLATE image/svg+xml application/rss+xml
+    AddOutputFilterByType DEFLATE font/ttf font/otf application/vnd.ms-fontobject
+</IfModule>
+
+# Nothing under /storage or /build is a program. Refuse to execute
+# anything there even if something is uploaded that looks executable.
+<IfModule mod_rewrite.c>
+    RewriteRule ^(storage|build)/.*\.(php|phtml|php[0-9]|pl|py|cgi|sh)$ - [F,L,NC]
+</IfModule>

@@ -381,6 +381,12 @@ class RequestController extends Controller
         $hasRepresentative = filled($request->input('authorized_representative_name'));
 
         $validated = $request->validate(array_merge([
+            // The applicant certifies the form is true before it is
+            // filed. Enforced here and not only in the browser: a
+            // declaration that can be skipped by posting the form
+            // directly is not a declaration.
+            'declaration' => ['accepted'],
+
             // Page 1: Applicant Information
             'applicant_name' => 'required|string|max:255',
             'corporation_name' => 'nullable|string|max:255',
@@ -518,6 +524,10 @@ class RequestController extends Controller
                 'user_id' => auth()->id(),
                 'applicant_id' => $applicant->id,
                 'status' => 'pending',
+                // When the declaration above was made, and against
+                // which edition of the published notices.
+                'declared_at' => now(),
+                'declaration_version' => \App\Support\LegalDocuments::VERSION,
                 'has_written_notice' => $validated['has_written_notice'] ?? 'no',
                 'notice_officer_name' => $validated['notice_officer_name'] ?? null,
                 'notice_dates' => $validated['notice_dates'] ?? null,
@@ -731,6 +741,9 @@ class RequestController extends Controller
         $hasRepresentative = filled($request->input('authorized_representative_name'));
 
         $validated = $request->validate(array_merge([
+            // Certified again on resubmission - see store().
+            'declaration' => ['accepted'],
+
             // Step 1
             'applicant_name' => 'required|string|max:255',
             'corporation_name' => 'nullable|string|max:255',

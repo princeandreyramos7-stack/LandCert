@@ -257,6 +257,7 @@ class PhilippineAddressTest extends TestCase
         $alibagu = collect(PhilippineAddress::barangaysOf(self::CITY_ILAGAN))->firstWhere('name', 'Alibagu');
 
         $this->post('/register', [
+            'consent' => '1',
             'name' => 'Juan Dela Cruz',
             'email' => 'juan@example.test',
             'password' => 'Password-2026!',
@@ -280,6 +281,7 @@ class PhilippineAddressTest extends TestCase
         // An account is useful without one; it is asked for so an application
         // can start from it, not because registering depends on it.
         $this->post('/register', [
+            'consent' => '1',
             'name' => 'No Address',
             'email' => 'noaddress@example.test',
             'password' => 'Password-2026!',
@@ -295,6 +297,7 @@ class PhilippineAddressTest extends TestCase
         // Half an address is worse than none: once a province is chosen the
         // rest has to follow, and has to hang together.
         $this->from('/register')->post('/register', [
+            'consent' => '1',
             'name' => 'Half Address',
             'email' => 'half@example.test',
             'password' => 'Password-2026!',
@@ -313,6 +316,7 @@ class PhilippineAddressTest extends TestCase
         $elsewhere = \DB::table('psgc_barangays')->where('city_code', '!=', self::CITY_ILAGAN)->value('code');
 
         $this->from('/register')->post('/register', [
+            'consent' => '1',
             'name' => 'Mismatched',
             'email' => 'mismatch@example.test',
             'password' => 'Password-2026!',
@@ -335,6 +339,8 @@ class PhilippineAddressTest extends TestCase
         $alibagu = collect(PhilippineAddress::barangaysOf(self::CITY_ILAGAN))->firstWhere('name', 'Alibagu');
 
         return array_merge([
+            // Ticked in the summary dialog, and required by the server.
+            'declaration' => '1',
             'applicant_name' => 'Juan Dela Cruz',
             'applicant_address_region_code' => self::REGION_CAGAYAN_VALLEY,
             'applicant_address_province_code' => self::PROVINCE_ISABELA,

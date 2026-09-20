@@ -21,13 +21,17 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
-        <!-- Leaflet.js (Free OpenStreetMap) -->
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
-              integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
-              crossorigin=""/>
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
-                integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
-                crossorigin=""></script>
+        {{-- Leaflet used to be pulled from unpkg.com here. Nothing in
+             the application draws a map: no component references L or
+             imports leaflet, so this was 144 KB of JavaScript and a
+             stylesheet fetched from a third party on every page load,
+             for nothing. It also meant every visitor's browser
+             contacted an address outside the office's control, which
+             is a supply-chain surface and a thing the Cookie Policy
+             would have had to account for. Removed.
+
+             If a map is added later, import leaflet from the bundle
+             (it is already in package.json) rather than from a CDN. --}}
 
         <!-- Scripts -->
         @routes

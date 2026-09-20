@@ -66,6 +66,18 @@ Route::prefix('psgc')->name('psgc.')->middleware('throttle:300,1,files')->group(
 });
 
 /*
+ | The published notices: privacy, terms, cookies, refunds.
+ |
+ | Outside the auth group on purpose, and this is not incidental: somebody
+ | deciding whether to create an account has to be able to read what they
+ | would be agreeing to before they agree to it. A privacy notice behind a
+ | sign-in is not a notice. Throttled only to the extent every page is.
+ */
+Route::get('/legal/{document}', [\App\Http\Controllers\LegalController::class, 'show'])
+    ->whereIn('document', \App\Support\LegalDocuments::keys())
+    ->name('legal.show');
+
+/*
  | Public verification of an issued certificate or clearance.
  |
  | The QR printed on every sheet opens /verify/{code}; the bare /verify is the

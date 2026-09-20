@@ -189,8 +189,23 @@ export default function GuestLayout({ children }) {
                         {children}
                     </div>
 
-                    {/* Mobile footer */}
-                    <div className="lg:hidden mt-6 text-center text-xs text-gray-400">
+                    {/* The published notices, on every guest screen */}
+                    <nav
+                        aria-label="Policies"
+                        className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs text-gray-400"
+                    >
+                        <a href="/legal/privacy" className="hover:text-[#0d1f5c] hover:underline underline-offset-2">Privacy</a>
+                        <span aria-hidden="true">·</span>
+                        <a href="/legal/terms" className="hover:text-[#0d1f5c] hover:underline underline-offset-2">Terms</a>
+                        <span aria-hidden="true">·</span>
+                        <a href="/legal/cookies" className="hover:text-[#0d1f5c] hover:underline underline-offset-2">Cookies</a>
+                        <span aria-hidden="true">·</span>
+                        <a href="/legal/refund" className="hover:text-[#0d1f5c] hover:underline underline-offset-2">Refunds</a>
+                        <span aria-hidden="true">·</span>
+                        <a href="/verify" className="hover:text-[#0d1f5c] hover:underline underline-offset-2">Verify a document</a>
+                    </nav>
+
+                    <div className="mt-3 text-center text-xs text-gray-400">
                         &copy; {new Date().getFullYear()} CPDO Ilagan City. All
                         rights reserved.
                     </div>

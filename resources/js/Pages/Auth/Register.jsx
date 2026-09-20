@@ -46,7 +46,7 @@ function getStrength(pw) {
     ][s];
 }
 
-export default function Register() {
+export default function Register({ legal = [], legalVersion }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
@@ -60,6 +60,10 @@ export default function Register() {
         contact_number: '',
         password: '',
         password_confirmation: '',
+        // Sent, checked and stored. The server records which edition of
+        // the notices was agreed to, so the record stays meaningful after
+        // the text has moved on.
+        consent: false,
     });
     const [showPw, setShowPw] = useState(false);
     const [showCpw, setShowCpw] = useState(false);
@@ -204,6 +208,56 @@ export default function Register() {
                         </div>
                     )}
                 </Field>
+
+                {/* Consent — required, and checked again on the server */}
+                <div className="rounded-lg border border-gray-200 bg-gray-50/70 p-4">
+                    <label htmlFor="consent" className="flex cursor-pointer gap-3">
+                        <input
+                            id="consent"
+                            name="consent"
+                            type="checkbox"
+                            checked={data.consent}
+                            onChange={(e) => setData('consent', e.target.checked)}
+                            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-[#0d1f5c] focus:ring-2 focus:ring-[#d4a017]"
+                            aria-describedby="consent-detail"
+                        />
+                        <span className="text-sm leading-relaxed text-gray-700">
+                            I have read and agree to the{' '}
+                            <a href="/legal/terms" target="_blank" rel="noopener noreferrer"
+                                className="font-semibold text-[#0d1f5c] underline underline-offset-2 hover:text-[#d4a017]">
+                                Terms and Conditions
+                            </a>{' '}
+                            and the{' '}
+                            <a href="/legal/privacy" target="_blank" rel="noopener noreferrer"
+                                className="font-semibold text-[#0d1f5c] underline underline-offset-2 hover:text-[#d4a017]">
+                                Privacy Policy
+                            </a>
+                            <span className="text-red-500">*</span>
+                        </span>
+                    </label>
+
+                    <p id="consent-detail" className="mt-2.5 pl-7 text-xs leading-relaxed text-gray-500">
+                        The City Planning and Development Office will collect and process the
+                        details you give here in order to receive and act on your applications,
+                        as described in the Privacy Policy. You may withdraw this consent, and
+                        exercise your other rights under the Data Privacy Act of 2012, by
+                        writing to the office.
+                    </p>
+
+                    <p className="mt-2 pl-7 text-[11px] text-gray-400">
+                        Also published: {' '}
+                        <a href="/legal/cookies" target="_blank" rel="noopener noreferrer"
+                            className="underline underline-offset-2 hover:text-[#0d1f5c]">Cookie Policy</a>
+                        {' · '}
+                        <a href="/legal/refund" target="_blank" rel="noopener noreferrer"
+                            className="underline underline-offset-2 hover:text-[#0d1f5c]">Refund Policy</a>
+                        {legalVersion && <> · version {legalVersion}</>}
+                    </p>
+
+                    {errors.consent && (
+                        <InputError message={errors.consent} className="mt-2 pl-7 text-xs" />
+                    )}
+                </div>
 
                 {/* Submit */}
                 <button type="submit" disabled={processing}

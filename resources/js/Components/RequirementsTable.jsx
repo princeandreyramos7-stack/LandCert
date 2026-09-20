@@ -4,6 +4,7 @@ import { Button } from "@/Components/ui/button";
 import { useToast } from "@/Components/ui/use-toast";
 import axios from "axios";
 import { DocumentViewLink } from "@/Components/DocumentViewLink";
+import { router } from "@inertiajs/react";
 
 /**
  * Requirements Checklist Component
@@ -118,8 +119,13 @@ export function RequirementsChecklist({ request, uploadedRequirements = [], sele
                 description: "Requirement document uploaded successfully.",
             });
 
-            // Reload the page to show uploaded file
-            window.location.reload();
+            // Ask only for the application again, rather than
+            // reloading the document. A full reload re-downloads and
+            // re-parses the whole front end, throws away the scroll
+            // position and everything the reviewer had open, and on a
+            // slow connection takes seconds - to show one new file in
+            // a list that is already on screen.
+            router.reload({ only: ['request'] });
         } catch (error) {
             toast({
                 variant: "destructive",

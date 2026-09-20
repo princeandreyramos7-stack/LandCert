@@ -1,6 +1,7 @@
 import { Head, router } from "@inertiajs/react";
 import axios from "axios";
-import { useState } from "react";
+// useState is no longer needed here: the list comes from the server prop.
+import { useOptimisticList } from "@/hooks/useOptimistic";
 import ApplicantLayout from "@/Layouts/ApplicantLayout";
 import AdminLayout from "@/Layouts/AdminLayout";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
@@ -120,41 +121,54 @@ export default function NotificationsPage({ notifications, auth }) {
             : ApplicantLayout;
 
     const { toast } = useToast();
-    const [list, setList] = useState(notifications.data || []);
+
+    /**
+     * The list on screen, which may be a step ahead of the server.
+     *
+     * It used to be copied into state once at mount, which had two costs.
+     * The small one: every tick and every delete waited out a round trip
+     * before anything moved. The large one: LiveRefresh below reloads the
+     * `notifications` prop every few seconds, and nothing ever read the new
+     * value - the page sat frozen on whatever had arrived when it opened, so
+     * a notification raised while it was on screen never appeared.
+     *
+     * Reading from the prop fixes the refresh; useOptimisticList keeps the
+     * speed, and puts a row back with an explanation when a change fails.
+     */
+    const { list, patchRow, removeRow, patchAll } = useOptimisticList(
+        notifications.data,
+        { label: "notification" },
+    );
 
     const unreadCount = list.filter(n => !n.read).length;
 
-    const markRead = async (id) => {
-        try {
-            await axios.post("/notifications/mark-read", { id });
-            setList(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-            toast({ title: "Marked as read" });
-        } catch { toast({ title: "Error", variant: "destructive" }); }
-    };
+    const markRead = (id) =>
+        patchRow(id, { read: true }, () =>
+            axios.post("/notifications/mark-read", { id }),
+        );
 
-    const markAllRead = async () => {
-        try {
-            await axios.post("/notifications/mark-all-read");
-            setList(prev => prev.map(n => ({ ...n, read: true })));
-            toast({ title: "All marked as read" });
-        } catch { toast({ title: "Error", variant: "destructive" }); }
-    };
+    const markAllRead = () =>
+        patchAll({ read: true }, () => axios.post("/notifications/mark-all-read"));
 
-    const deleteNotif = async (id) => {
-        try {
-            await axios.delete(`/notifications/${id}`);
-            setList(prev => prev.filter(n => n.id !== id));
-            toast({ title: "Notification deleted" });
-        } catch { toast({ title: "Error", variant: "destructive" }); }
-    };
+    const deleteNotif = (id) =>
+        removeRow(id, () => axios.delete(`/notifications/${id}`));
 
     const clearAll = async () => {
-        if (!confirm("Delete all notifications?")) return;
+        if (!confirm("Delete all notifications? This cannot be undone.")) return;
+
         try {
             await axios.delete("/notifications");
-            setList([]);
+            // Emptying the list is not a row-level change, so the server is
+            // asked for the page again rather than guessed at.
+            router.reload({ only: ["notifications"] });
             toast({ title: "All notifications cleared" });
-        } catch { toast({ title: "Error", variant: "destructive" }); }
+        } catch {
+            toast({
+                variant: "destructive",
+                title: "Could not clear the notifications",
+                description: "Nothing was deleted. Check your connection and try again.",
+            });
+        }
     };
 
     return (

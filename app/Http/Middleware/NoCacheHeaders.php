@@ -35,6 +35,44 @@ class NoCacheHeaders
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
         $response->headers->set('X-XSS-Protection', '1; mode=block');
 
+        /*
+         * Do not leak the address of a page to anywhere it is linked.
+         *
+         * The addresses in this system carry meaning - /verify/{code} is
+         * a document's verification code, and a full Referer would hand
+         * that code to any site linked from the page. Same-origin keeps
+         * the path for our own navigation and sends only the bare origin
+         * outward.
+         */
+        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+        /*
+         * Nothing here needs a camera, a microphone or a location, so
+         * nothing here may ask for one. This closes the door on anything
+         * injected into a page trying to.
+         */
+        $response->headers->set(
+            'Permissions-Policy',
+            'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()'
+        );
+
+        /*
+         * Once a browser has reached the site over HTTPS, never let it
+         * try plain HTTP again - a request over HTTP would carry the
+         * session cookie in the clear for anyone on the same network to
+         * read. Sent only on a secure request: asserting it over plain
+         * HTTP is ignored by browsers, and sending it in local
+         * development would pin localhost to HTTPS in the developer's
+         * browser for a year.
+         *
+         * Not preloaded: that is a one-way commitment for the whole
+         * domain and belongs to whoever administers it, not to this
+         * middleware.
+         */
+        if ($request->secure()) {
+            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        }
+
         return $response;
     }
 

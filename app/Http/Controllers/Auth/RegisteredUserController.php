@@ -24,7 +24,12 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Auth/Register');
+        return Inertia::render('Auth/Register', [
+            // The notices the tick refers to, so the form can link to
+            // the text rather than describe it.
+            'legal' => \App\Support\LegalDocuments::index(),
+            'legalVersion' => \App\Support\LegalDocuments::VERSION,
+        ]);
     }
 
     /**
@@ -56,10 +61,15 @@ class RegisteredUserController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', new LowercaseEmailDomain, 'unique:'.User::class],
             'contact_number' => 'required|string|regex:/^09[0-9]{9}$/|size:11',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            // Checked on the server as well as in the browser: a
+            // consent that can be skipped by posting the form directly
+            // is not a consent the office could stand behind.
+            'consent' => ['accepted'],
         ], \App\Support\PhilippineAddress::rules('address', $startedAddress)), [
             'contact_number.required' => 'Phone number is required.',
             'contact_number.regex' => 'Contact number must start with 09 and be exactly 11 digits.',
             'contact_number.size' => 'Contact number must be exactly 11 digits.',
+            'consent.accepted' => 'Please read and agree to the Terms and Conditions and the Privacy Policy before creating an account.',
         ], \App\Support\PhilippineAddress::attributes('address', ''));
 
         if ($startedAddress) {
@@ -78,6 +88,12 @@ class RegisteredUserController extends Controller
             'email' => $request->email,
             'contact_number' => $request->contact_number,
             'password' => Hash::make($request->password),
+            // What was agreed to, when, and from where. The version is
+            // the point: "they consented" means little if the text has
+            // since changed and nobody can say to what.
+            'consented_at' => now(),
+            'consent_version' => \App\Support\LegalDocuments::VERSION,
+            'consent_ip' => $request->ip(),
         ]);
 
         event(new Registered($user));

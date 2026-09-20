@@ -23,6 +23,8 @@ class RequirementUploadTest extends TestCase
     private function validPayload(): array
     {
         return array_merge($this->addressFields(), [
+            // Ticked in the summary dialog, and required by the server.
+            'declaration' => '1',
             'applicant_name' => 'Test Applicant',
             'project_nature' => 'Residential building',
             'project_location_street' => 'Purok 1',

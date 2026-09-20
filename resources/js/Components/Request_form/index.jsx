@@ -506,7 +506,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     };
 
     // Confirm and submit - USING FETCH API TO BYPASS INERTIA
-    const confirmSubmit = async () => {
+    const confirmSubmit = async ({ declared = false } = {}) => {
         // The dialog deliberately stays open while the request is in flight, so
         // the button can show its spinner. Closing it first left the applicant
         // looking at an unchanged form with no sign anything was happening —
@@ -521,6 +521,9 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             const formData = new FormData();
             formData.append('_method', 'PUT');
             appendCsrfField(formData);
+            // The applicant certifies the resubmitted form afresh; the
+            // server requires it and records when it was made.
+            formData.append('declaration', declared ? '1' : '0');
             
             // Add all fields. Objects (verified_requirements) go out as array
             // fields, exactly as the create path sends them - appended whole they
@@ -617,6 +620,7 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             // they are held outside useForm precisely because setData's cloneDeep
             // would destroy them.
             const formData = new FormData();
+            formData.append('declaration', declared ? '1' : '0');
 
             Object.keys(data).forEach((key) => {
                 if (key === 'requirement_uploads' || key.endsWith('_legacy') || key.endsWith('_preview') || key === 'authorization_letter_on_file') return;

@@ -199,6 +199,7 @@ class SecurityTest extends TestCase
 
         // Nobody registers as staff.
         $this->post('/register', [
+            'consent' => '1',
             'name' => 'Sneaky', 'email' => 'sneaky@example.test', 'password' => 'Password-2026!', 'password_confirmation' => 'Password-2026!',
             'user_type' => 'super_admin', 'role' => 'super_admin',
         ]);

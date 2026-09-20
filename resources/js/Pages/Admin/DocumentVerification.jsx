@@ -78,21 +78,40 @@ export default function DocumentVerification({ request }) {
     const { toast } = useToast();
     
     // Save requirement checks to database
+    /**
+     * Tick the box now, save behind it, and put it back if the save
+     * fails.
+     *
+     * Working down a checklist of a dozen requirements one round trip
+     * at a time is the slowest part of a review, so the mark appears
+     * at once. The rollback is the important half: without it a save
+     * that failed - an expired session, a dropped connection - left a
+     * tick on screen that the database never received, and the officer
+     * carried on believing the document had been verified.
+     */
     const handleToggleRequirement = async (key, name, checked) => {
+        const previous = requirementChecks;
         const updated = { ...requirementChecks, [key]: checked };
         setRequirementChecks(updated);
-        
+
         try {
             await axios.post(route('admin.save-requirement-verification'), {
                 request_id: request.id,
                 verified_requirements: updated
             });
         } catch (error) {
-            console.error('Error saving requirement verification:', error);
+            setRequirementChecks(previous);
+
+            const status = error?.response?.status;
             toast({
                 variant: "destructive",
-                title: "Error",
-                description: "Failed to save requirement verification status"
+                title: checked ? "Not marked as verified" : "Not unmarked",
+                description:
+                    status === 419
+                        ? "Your session expired. Reload the page and sign in again."
+                        : status === 403
+                        ? "You are not allowed to verify this requirement."
+                        : "The change was not saved and has been put back. Check your connection and try again.",
             });
         }
     };
@@ -870,7 +889,10 @@ function RequirementTableRow({ number, requirement, uploadedGroup, isChecked, on
             });
 
             // Reload the page to show the uploaded document
-            window.location.reload();
+            // Only the application, not the whole document: a full
+            // reload re-downloads the front end and loses the
+            // reviewer's place, to show one newly uploaded file.
+            router.reload({ only: ['request'] });
         } catch (error) {
             console.error('Upload error:', error);
             const errorMsg = error.response?.data?.message || 'Failed to upload document';

@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { router, usePage } from "@inertiajs/react";
 import axios from "axios";
-import { Bell, CheckCheck, Loader2 } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
+import { SkeletonNotifications } from "@/Components/ui/skeletons";
+import { WithTooltip } from "@/Components/ui/icon-button";
 
 /**
  * Unread-notification bell for the staff top bars.
@@ -124,12 +126,23 @@ export default function NotificationBell({ className = "" }) {
         setOpen(false);
 
         if (!notification.read) {
+            // Dropped straight away - the applicant is already on their way
+            // to the page and should not watch the badge catch up. Put back
+            // if the server never got it, and the next poll settles it either
+            // way, so a failure here costs nothing but an accurate badge.
             markingRead.current = true;
+            setCount((c) => Math.max(0, c - 1));
+            setItems((list) =>
+                list.map((n) => (n.id === notification.id ? { ...n, read: true } : n)),
+            );
+
             try {
                 await axios.post("/notifications/mark-read", { id: notification.id });
-                setCount((c) => Math.max(0, c - 1));
             } catch {
-                // Navigating still matters more than the read flag.
+                setCount((c) => c + 1);
+                setItems((list) =>
+                    list.map((n) => (n.id === notification.id ? { ...n, read: false } : n)),
+                );
             } finally {
                 markingRead.current = false;
             }
@@ -152,13 +165,20 @@ export default function NotificationBell({ className = "" }) {
     const markAllRead = async () => {
         if (markingRead.current) return;
         
+        // Kept so the rollback restores which ones were actually unread,
+        // rather than marking the lot unread again.
+        const previousItems = items;
+        const previousCount = count;
+
         markingRead.current = true;
+        setCount(0);
+        setItems((list) => list.map((n) => ({ ...n, read: true })));
+
         try {
             await axios.post("/notifications/mark-all-read");
-            setCount(0);
-            setItems((list) => list.map((n) => ({ ...n, read: true })));
         } catch {
-            // Leave the badge as it is; the next poll reports the truth.
+            setItems(previousItems);
+            setCount(previousCount);
         } finally {
             markingRead.current = false;
         }
@@ -167,6 +187,11 @@ export default function NotificationBell({ className = "" }) {
     return (
         <DropdownMenu open={open} onOpenChange={handleOpenChange}>
             <DropdownMenuTrigger asChild>
+              <WithTooltip
+                label="Notifications"
+                hint={count > 0 ? `${count} unread` : "Nothing new"}
+                side="bottom"
+              >
                 <button
                     type="button"
                     aria-label={count > 0 ? `${count} unread notifications` : "Notifications"}
@@ -180,6 +205,7 @@ export default function NotificationBell({ className = "" }) {
                         </span>
                     )}
                 </button>
+              </WithTooltip>
             </DropdownMenuTrigger>
 
             <DropdownMenuContent 
@@ -211,10 +237,9 @@ export default function NotificationBell({ className = "" }) {
 
                 <div className="max-h-80 overflow-y-auto">
                     {loading ? (
-                        <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Loading…
-                        </div>
+                        /* The shape of the list that is coming, rather than
+                           a spinner over an empty panel. */
+                        <SkeletonNotifications count={4} />
                     ) : items.length === 0 ? (
                         <div className="py-8 text-center text-sm text-gray-500">
                             You&apos;re all caught up.

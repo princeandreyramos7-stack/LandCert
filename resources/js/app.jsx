@@ -1,6 +1,7 @@
 import '../css/app.css';
 import './bootstrap';
-import 'leaflet/dist/leaflet.css';
+// The Leaflet stylesheet was imported here for a map that does not exist.
+// Nothing in the application creates one; see resources/views/app.blade.php.
 
 import { createInertiaApp, router as inertiaRouter } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -8,16 +9,22 @@ import { createRoot } from 'react-dom/client';
 import { useEffect, useState } from 'react';
 import { router } from '@inertiajs/react';
 import IdleLogout from '@/Components/IdleLogout';
+import CookieNotice from '@/Components/CookieNotice';
+import { TooltipProvider } from '@/Components/ui/tooltip';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 // Pages a guest may see. /verify is the public certificate check the QR on a
 // printed document opens - the reader is another office, not a user.
+// /legal/* is here for the same reason as /verify: somebody deciding
+// whether to create an account has to be able to read what they would be
+// agreeing to, and a privacy notice behind a sign-in is not a notice.
 const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify'];
 function isPublicPath(path) {
     return PUBLIC_PATHS.includes(path)
         || path.startsWith('/reset-password/')
-        || path.startsWith('/verify/');
+        || path.startsWith('/verify/')
+        || path.startsWith('/legal/');
 }
 
 // Global component to handle auth state and browser navigation
@@ -87,8 +94,11 @@ function AppWrapper({ children, auth: initialAuth }) {
         };
     }, [auth]);
 
+    // One provider for the whole application: a tooltip inside a dialog
+    // or a dropdown renders into a portal, and would have no provider
+    // above it if each page supplied its own.
     return (
-        <>
+        <TooltipProvider delayDuration={300} skipDelayDuration={200}>
             {children}
             {/* Mounted here rather than in the layouts. It was in all three of
                 them, but the application form builds its own chrome from
@@ -98,7 +108,10 @@ function AppWrapper({ children, auth: initialAuth }) {
                 them and lost everything to a 401 on submit. At the root, no
                 page can miss it. */}
             {auth?.user && <IdleLogout />}
-        </>
+            {/* Disclosure, not a consent gate - the system sets no
+                analytics or advertising cookie. See CookieNotice. */}
+            <CookieNotice />
+        </TooltipProvider>
     );
 }
 

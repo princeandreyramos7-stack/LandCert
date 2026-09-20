@@ -58,6 +58,11 @@ class User extends Authenticatable
         'last_seen_at',
         'last_seen_path',
         'avatar_path',
+        // Which edition of the published notices this person agreed
+        // to, and when. See App\Support\LegalDocuments.
+        'consented_at',
+        'consent_version',
+        'consent_ip',
     ];
 
     /**
@@ -121,6 +126,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'last_seen_at' => 'datetime',
+            'consented_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
