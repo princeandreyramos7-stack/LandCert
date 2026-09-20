@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 use App\Mail\ApplicationSubmitted;
 
 class RequestController extends Controller
@@ -380,7 +381,7 @@ class RequestController extends Controller
 
         if ($recentDuplicate) {
             \Log::warning('Duplicate submission blocked', ['user_id' => auth()->id()]);
-            return back()->withErrors(['duplicate' => 'This application was already submitted a moment ago. Check My Applications before filing it again.']);
+            throw ValidationException::withMessages(['duplicate' => 'This application was already submitted a moment ago. Check My Applications before filing it again.']);
         }
 
         // The two addresses are picked from the PSGC list, so what arrives is
@@ -457,7 +458,7 @@ class RequestController extends Controller
             \App\Support\PhilippineAddress::checkChain($chain, 'authorized_representative_address');
         }
         if ($chain->errors()->isNotEmpty()) {
-            return back()->withInput()->withErrors($chain->errors());
+            throw ValidationException::withMessages($chain->errors()->messages());
         }
 
         $validated['applicant_address'] = \App\Support\PhilippineAddress::resolve($validated, 'applicant_address')['line'] ?? '';
@@ -488,9 +489,7 @@ class RequestController extends Controller
                         'trace' => $e->getTraceAsString(),
                     ]);
 
-                    return back()
-                        ->withInput()
-                        ->withErrors(['submit' => 'The system was busy and could not file your application. Nothing was saved — please try again.']);
+                    return $this->refuse($request, 'submit', 'The system was busy and could not file your application. Nothing was saved — please try again.');
                 }
             }
         }
@@ -501,7 +500,7 @@ class RequestController extends Controller
             'application_number' => $result['request']->application_number ?? 'N/A',
         ]);
 
-        return $this->finishSubmission($result);
+        return $this->finishSubmission($request, $result);
     }
 
     /**
@@ -697,7 +696,7 @@ class RequestController extends Controller
      * Notify the applicant and send them to their list. Kept apart from the
      * write so a notification failure can never roll back a filed application.
      */
-    private function finishSubmission(array $result)
+    private function finishSubmission(Request $request, array $result)
     {
         // The e-mail is the RequestObserver's, sent once the application is
         // committed; sending it here as well had the applicant get it twice.
@@ -715,10 +714,44 @@ class RequestController extends Controller
             \Log::error('Failed to send application SMS: ' . $e->getMessage());
         }
 
+        $message = 'Application submitted successfully! Your application number is ' . $result['request']->application_number;
+
+        // The form posts with fetch() and then navigates to My Applications
+        // itself, so it gets a plain answer to act on rather than a redirect
+        // (see refuse()). The flash is kept for that navigation: sent as a
+        // redirect, the fetch followed it and used the flash up, and the page
+        // the applicant actually saw never showed their number.
+        if ($request->expectsJson()) {
+            session()->flash('success', $message);
+
+            return response()->json([
+                'message' => $message,
+                'application_number' => $result['request']->application_number,
+                'redirect' => route('my-applications'),
+            ], 201);
+        }
+
         // Redirect to My Applications page with success message
-        return redirect()->route('my-applications')->with([
-            'success' => 'Application submitted successfully! Your application number is ' . $result['request']->application_number,
-        ]);
+        return redirect()->route('my-applications')->with(['success' => $message]);
+    }
+
+    /**
+     * Turn the submission away with a message the caller can act on.
+     *
+     * The form posts with fetch(), which follows a redirect on its own: a
+     * back()->withErrors() reached it as the form page with a 200, and the
+     * browser read that as success - the applicant was told "Application
+     * Submitted" for an application that was never filed. A caller asking
+     * for JSON gets the failure as one, with a status it can tell apart from
+     * success; a plain form post still gets the redirect and its errors.
+     */
+    private function refuse(Request $request, string $key, string $message)
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $message, 'errors' => [$key => [$message]]], 500);
+        }
+
+        return back()->withInput()->withErrors([$key => $message]);
     }
 
     /**
@@ -759,7 +792,7 @@ class RequestController extends Controller
 
         // Status check - only allow editing denied or returned applications
         if (!in_array($existingRequest->status, ['rejected', 'returned'])) {
-            return back()->withErrors(['error' => 'Only denied or returned applications can be edited.']);
+            throw ValidationException::withMessages(['error' => 'Only denied or returned applications can be edited.']);
         }
 
         // Validate input
@@ -824,7 +857,7 @@ class RequestController extends Controller
             \App\Support\PhilippineAddress::checkChain($chain, 'authorized_representative_address');
         }
         if ($chain->errors()->isNotEmpty()) {
-            return back()->withInput()->withErrors($chain->errors());
+            throw ValidationException::withMessages($chain->errors()->messages());
         }
 
         $validated['applicant_address'] = \App\Support\PhilippineAddress::resolve($validated, 'applicant_address')['line'] ?? '';
@@ -990,12 +1023,33 @@ class RequestController extends Controller
 
             DB::commit();
 
-            return redirect()->route('my-applications.index')->with('success', 'Application updated and resubmitted successfully!');
+            // Same contract as finishSubmission(): the fetch() caller gets a
+            // plain answer and navigates itself, with the flash kept for it.
+            $message = 'Application updated and resubmitted successfully!';
+            if ($request->expectsJson()) {
+                session()->flash('success', $message);
+
+                return response()->json([
+                    'message' => $message,
+                    'redirect' => route('my-applications.index'),
+                ]);
+            }
+
+            return redirect()->route('my-applications.index')->with('success', $message);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
-            return back()->withErrors(['error' => 'Failed to update application: ' . $e->getMessage()])->withInput();
+
+            // Nothing recorded these before - the only trace of a failed
+            // resubmission was whatever the applicant remembered of the toast.
+            \Log::error('Application update failed', [
+                'request_id' => $id,
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->refuse($request, 'error', 'Failed to update application: ' . $e->getMessage());
         }
     }
 

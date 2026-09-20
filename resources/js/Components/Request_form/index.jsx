@@ -577,20 +577,36 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                     body: formData,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
                     },
                 });
                 
                 
-                if (response.ok) {
+                // As in create mode below: only the controller's own answer
+                // counts. A followed redirect is some other page with a 200,
+                // not a confirmation that the resubmission was saved.
+                if (response.ok && !response.redirected) {
+                    let saved = null;
+                    try { saved = await response.json(); } catch (_) { /* not JSON */ }
                     toast({
                         title: "Success!",
                         description: "Application updated and resubmitted for review.",
                     });
-                    
+
                     // Redirect after short delay
                     setTimeout(() => {
-                        window.location.href = route('my-applications.index');
+                        window.location.href = saved?.redirect || route('my-applications.index');
                     }, 1000);
+                } else if (response.redirected) {
+                    console.error('Application update was redirected instead of confirmed:', response.url);
+                    setSubmitErrors(['The server did not confirm that your application was saved. Check My Applications before resubmitting it.']);
+                    setSubmitErrorKind('system');
+                    setIsConfirmDialogOpen(false);
+                    toast({
+                        variant: "destructive",
+                        title: "Resubmission not confirmed",
+                        description: "Check My Applications before resubmitting.",
+                    });
                 } else {
                     let errorData = null;
                     try { errorData = await response.json(); } catch (_) { /* not JSON */ }
@@ -694,13 +710,22 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                     },
                 });
 
-                if (response.ok || response.redirected) {
+                // Filed only when the controller says so: a 201 carrying the
+                // application number. fetch() follows redirects on its own, so
+                // "ok or redirected" also matched a back()->withErrors() - the
+                // form page, served again with a 200 - and announced a success
+                // for an application that was never saved.
+                if (response.ok && !response.redirected) {
+                    let filed = null;
+                    try { filed = await response.json(); } catch (_) { /* not JSON */ }
                     toast({
                         title: "Application Submitted",
-                        description: "Your application has been received.",
+                        description: filed?.application_number
+                            ? 'Your application number is ' + filed.application_number + '.'
+                            : "Your application has been received.",
                     });
                     setTimeout(() => {
-                        window.location.href = route('my-applications');
+                        window.location.href = filed?.redirect || route('my-applications');
                     }, 800);
                     return;
                 }
@@ -709,7 +734,18 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                 let payload = null;
                 try { payload = await response.json(); } catch (_) { /* not JSON */ }
 
-                if (response.status === 422) {
+                if (response.redirected) {
+                    // Sent somewhere else instead of answered: whatever page
+                    // that was, it is not a confirmation that anything was filed.
+                    console.error('Application submission was redirected instead of confirmed:', response.url);
+                    setSubmitErrors(['The server did not confirm that your application was filed. Check My Applications before submitting it again.']);
+                    setSubmitErrorKind('system');
+                    toast({
+                        variant: "destructive",
+                        title: "Submission not confirmed",
+                        description: "Check My Applications before submitting again.",
+                    });
+                } else if (response.status === 422) {
                     // Validation failure - a FORM problem. Show every field message.
                     const fieldErrors = payload?.errors || {};
                     const messages = Object.values(fieldErrors).flat().filter(Boolean);

@@ -42,6 +42,20 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         // Custom error handling for production
         $exceptions->render(function (\Throwable $e, $request) {
+            // Only what Laravel itself would answer with a 500. A refused
+            // form (422), an expired session (401, 419), a missing page
+            // (404), a rate limit (429) and the like carry their own status
+            // and message, which the browser code acts on; answered as 500s
+            // every one of them read as the system failing - a mistyped
+            // password was "An error occurred", and the log filled with
+            // "Application error" for each of them.
+            if ($e instanceof \Illuminate\Validation\ValidationException
+                || $e instanceof \Illuminate\Auth\AuthenticationException
+                || $e instanceof \Illuminate\Auth\Access\AuthorizationException
+                || $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                return null;
+            }
+
             // Never expose stack traces or internal details in production
             if (!config('app.debug')) {
                 // Log the full error for debugging
