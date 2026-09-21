@@ -41,6 +41,9 @@ export function Step1ApplicantInfo({
                 {errors.corporation_name && (
                     <p className="text-sm text-red-500">{errors.corporation_name}</p>
                 )}
+                <p className="text-xs text-gray-500">
+                    Fill this in to enable the corporation address field below
+                </p>
             </div>
 
             {/* 3. Address of Applicant — picked from the PSGC rather than
@@ -78,7 +81,16 @@ export function Step1ApplicantInfo({
                     onChange={onDataChange}
                     currentText={data.corporation_address_legacy}
                     note="Leave blank and type N/A if not applicable"
+                    disabled={!data.corporation_name || data.corporation_name.trim() === '' || data.corporation_name.trim().toLowerCase() === 'n/a'}
                 />
+                {(!data.corporation_name || data.corporation_name.trim() === '' || data.corporation_name.trim().toLowerCase() === 'n/a') && (
+                    <p className="flex items-start gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>
+                            This field is locked. Fill in the <span className="font-semibold">Name of Corporation</span> field above to enable this address field.
+                        </span>
+                    </p>
+                )}
             </div>
 
             {/* Has Authorized Representative Checkbox */}
