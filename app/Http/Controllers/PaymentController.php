@@ -380,9 +380,17 @@ class PaymentController extends Controller
             
             // Send email notification to applicant
             try {
-                \Mail::to($requestModel->user->email)->send(
-                    new \App\Mail\PaymentReceiptSubmitted($payment, $requestModel)
-                );
+                // Ensure user relationship is loaded and email exists
+                if ($requestModel->user && $requestModel->user->email) {
+                    \Mail::to($requestModel->user->email)->send(
+                        new \App\Mail\PaymentReceiptSubmitted($payment, $requestModel)
+                    );
+                } else {
+                    \Log::warning('Cannot send payment receipt email: User not found or email missing', [
+                        'request_id' => $requestModel->id,
+                        'user_id' => $requestModel->user_id
+                    ]);
+                }
             } catch (\Exception $e) {
                 \Log::error('Failed to send payment receipt email: ' . $e->getMessage());
             }
