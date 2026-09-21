@@ -29,6 +29,12 @@ class ProfileUpdateRequest extends FormRequest
             // The number the office texts. Same shape as at sign-up; an
             // applicant whose number changed had no way to tell the office.
             'contact_number' => ['required', 'string', 'regex:/^09[0-9]{9}$/', 'size:11'],
+            // Address fields from the Philippine PSGC picker
+            'address_region_code' => ['nullable', 'string', 'max:10'],
+            'address_province_code' => ['nullable', 'string', 'max:10'],
+            'address_city_code' => ['nullable', 'string', 'max:10'],
+            'address_barangay_code' => ['nullable', 'string', 'max:10'],
+            'address_street' => ['nullable', 'string', 'max:255'],
         ];
     }
 
