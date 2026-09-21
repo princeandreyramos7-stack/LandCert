@@ -308,120 +308,168 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
-        // Whose application it is, before the form is even read: a stranger
-        // is refused outright rather than told what their submission lacked.
-        $owner = \App\Models\Request::where('id', $request->input('request_id'))->value('user_id');
-        if ($owner !== null && auth()->user()->user_type === 'applicant' && $owner !== auth()->id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You are not authorized to upload a receipt for this application.',
-            ], 403);
-        }
-
-        $validated = $request->validate([
-            'request_id' => 'required|exists:requests,id',
-            'or_number' => 'required|string|max:255',
-            'amount' => 'nullable|numeric|min:0',
-            'payment_method' => 'required|in:cash',
-            'receipt' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120', // Max 5MB
-            'payment_date' => 'required|date',
-            'notes' => 'nullable|string',
+        \Log::info('Payment upload started', [
+            'request_id' => $request->input('request_id'),
+            'user_id' => auth()->id(),
+            'has_file' => $request->hasFile('receipt')
         ]);
 
-        $requestModel = \App\Models\Request::findOrFail($validated['request_id']);
-
-        // Payment is only possible once the Zoning Administrator has approved.
-        $payableStatuses = ['approved'];
-        if (!in_array(strtolower((string) $requestModel->status), $payableStatuses, true)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment can only be recorded once the application has been approved by the Zoning Administrator.'
-            ], 403);
-        }
-
-        // Security check: applicants can only upload for their own applications
-        $currentUser = auth()->user();
-        if ($currentUser->user_type === 'applicant' && $requestModel->user_id !== $currentUser->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You are not authorized to upload a receipt for this application.'
-            ], 403);
-        }
-
-        // Handle file upload (stored on the private disk, not publicly web-accessible)
-        if ($request->hasFile('receipt')) {
-            $file = $request->file('receipt');
-            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('receipts', $filename, 'local');
-            $validated['receipt_file_path'] = $path;
-        }
-
-        // The applicant supplies the Official Receipt number from the Treasury.
-        $validated['receipt_number'] = trim($validated['or_number']);
-        unset($validated['or_number']);
-
-        // The fee is whatever the Zoning Officer set at review time — do not trust
-        // an amount coming from the client.
-        $officerFee = optional(
-            \App\Models\Report::where('request_id', $requestModel->id)->orderByDesc('report_id')->first()
-        )->payment_amount;
-        if ($officerFee !== null) {
-            $validated['amount'] = $officerFee;
-        }
-
-        $validated['payment_status'] = 'pending';
-        $validated['user_id'] = auth()->id();
-
-        $payment = Payment::create($validated);
-
-        if ($requestModel) {
-            // Create notification for payment receipt upload
-            NotificationService::paymentReceiptUploaded($requestModel, $payment);
-            
-            // Send email notification to applicant
-            try {
-                // Ensure user relationship is loaded and email exists
-                if ($requestModel->user && $requestModel->user->email) {
-                    \Mail::to($requestModel->user->email)->send(
-                        new \App\Mail\PaymentReceiptSubmitted($payment, $requestModel)
-                    );
-                } else {
-                    \Log::warning('Cannot send payment receipt email: User not found or email missing', [
-                        'request_id' => $requestModel->id,
-                        'user_id' => $requestModel->user_id
-                    ]);
-                }
-            } catch (\Exception $e) {
-                \Log::error('Failed to send payment receipt email: ' . $e->getMessage());
+        try {
+            // Whose application it is, before the form is even read: a stranger
+            // is refused outright rather than told what their submission lacked.
+            $owner = \App\Models\Request::where('id', $request->input('request_id'))->value('user_id');
+            if ($owner !== null && auth()->user()->user_type === 'applicant' && $owner !== auth()->id()) {
+                \Log::warning('Unauthorized payment upload attempt', [
+                    'request_id' => $request->input('request_id'),
+                    'owner_id' => $owner,
+                    'attempted_by' => auth()->id()
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not authorized to upload a receipt for this application.',
+                ], 403);
             }
-            
-            // Notify admins via email about pending payment verification
-            try {
-                $admins = \App\Models\User::where('user_type', 'admin')->get();
-                foreach ($admins as $admin) {
-                    // Create in-app notification
-                    \App\Models\Notification::createForUser(
-                        $admin->id,
-                        'payment_pending_verification',
-                        'Payment Pending Verification',
-                        "A payment receipt has been uploaded for request #{$requestModel->id}. Please verify.",
-                        "/admin/payments",
-                        [
+
+            $validated = $request->validate([
+                'request_id' => 'required|exists:requests,id',
+                'or_number' => 'required|string|max:255',
+                'amount' => 'nullable|numeric|min:0',
+                'payment_method' => 'required|in:cash',
+                'receipt' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120', // Max 5MB
+                'payment_date' => 'required|date',
+                'notes' => 'nullable|string',
+            ]);
+
+            \Log::info('Payment validation passed', ['request_id' => $validated['request_id']]);
+
+            $requestModel = \App\Models\Request::findOrFail($validated['request_id']);
+
+            // Payment is only possible once the Zoning Administrator has approved.
+            $payableStatuses = ['approved'];
+            if (!in_array(strtolower((string) $requestModel->status), $payableStatuses, true)) {
+                \Log::warning('Payment upload for non-approved application', [
+                    'request_id' => $requestModel->id,
+                    'status' => $requestModel->status
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment can only be recorded once the application has been approved by the Zoning Administrator.'
+                ], 403);
+            }
+
+            // Security check: applicants can only upload for their own applications
+            $currentUser = auth()->user();
+            if ($currentUser->user_type === 'applicant' && $requestModel->user_id !== $currentUser->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not authorized to upload a receipt for this application.'
+                ], 403);
+            }
+
+            // Handle file upload (stored on the private disk, not publicly web-accessible)
+            if ($request->hasFile('receipt')) {
+                $file = $request->file('receipt');
+                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('receipts', $filename, 'local');
+                $validated['receipt_file_path'] = $path;
+                \Log::info('Receipt file uploaded', ['path' => $path]);
+            }
+
+            // The applicant supplies the Official Receipt number from the Treasury.
+            $validated['receipt_number'] = trim($validated['or_number']);
+            unset($validated['or_number']);
+
+            // The fee is whatever the Zoning Officer set at review time — do not trust
+            // an amount coming from the client.
+            $officerFee = optional(
+                \App\Models\Report::where('request_id', $requestModel->id)->orderByDesc('report_id')->first()
+            )->payment_amount;
+            if ($officerFee !== null) {
+                $validated['amount'] = $officerFee;
+            }
+
+            $validated['payment_status'] = 'pending';
+            $validated['user_id'] = auth()->id();
+
+            \Log::info('Creating payment record', ['data' => $validated]);
+
+            $payment = Payment::create($validated);
+
+            \Log::info('Payment record created', ['payment_id' => $payment->id]);
+
+            if ($requestModel) {
+                // Create notification for payment receipt upload
+                NotificationService::paymentReceiptUploaded($requestModel, $payment);
+                
+                // Send email notification to applicant
+                try {
+                    // Ensure user relationship is loaded and email exists
+                    if ($requestModel->user && $requestModel->user->email) {
+                        \Mail::to($requestModel->user->email)->send(
+                            new \App\Mail\PaymentReceiptSubmitted($payment, $requestModel)
+                        );
+                    } else {
+                        \Log::warning('Cannot send payment receipt email: User not found or email missing', [
                             'request_id' => $requestModel->id,
-                            'payment_id' => $payment->id,
-                        ]
-                    );
+                            'user_id' => $requestModel->user_id
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send payment receipt email: ' . $e->getMessage());
                 }
-            } catch (\Exception $e) {
-                \Log::error('Failed to notify admins: ' . $e->getMessage());
+                
+                // Notify admins via email about pending payment verification
+                try {
+                    $admins = \App\Models\User::where('user_type', 'admin')->get();
+                    foreach ($admins as $admin) {
+                        // Create in-app notification
+                        \App\Models\Notification::createForUser(
+                            $admin->id,
+                            'payment_pending_verification',
+                            'Payment Pending Verification',
+                            "A payment receipt has been uploaded for request #{$requestModel->id}. Please verify.",
+                            "/admin/payments",
+                            [
+                                'request_id' => $requestModel->id,
+                                'payment_id' => $payment->id,
+                            ]
+                        );
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Failed to notify admins: ' . $e->getMessage());
+                }
             }
-        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Receipt uploaded successfully! Payment is pending verification. You will be notified once verified.',
-            'payment' => $payment
-        ], 201);
+            \Log::info('Payment upload completed successfully', ['payment_id' => $payment->id]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Receipt uploaded successfully! Payment is pending verification. You will be notified once verified.',
+                'payment' => $payment
+            ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Payment validation failed', [
+                'errors' => $e->errors(),
+                'request_data' => $request->except(['receipt'])
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Payment upload failed with exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_id' => $request->input('request_id'),
+                'user_id' => auth()->id()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while uploading the receipt. Please try again.'
+            ], 500);
+        }
     }
 
     /**
