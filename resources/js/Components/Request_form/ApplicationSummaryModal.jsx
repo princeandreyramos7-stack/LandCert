@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -71,9 +72,9 @@ export function ApplicationSummaryModal({
                     <DialogTitle className="text-xl font-semibold text-gray-900">
                         Application Summary
                     </DialogTitle>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <DialogDescription className="text-sm text-gray-600 mt-1">
                         Please review your information before {isEditing ? "resubmitting" : "submitting"} your application
-                    </p>
+                    </DialogDescription>
                 </DialogHeader>
 
                 {/* Content */}
