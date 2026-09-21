@@ -458,6 +458,30 @@ class PaymentController extends Controller
                 'message' => 'Validation failed',
                 'errors' => $e->errors()
             ], 422);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Check for duplicate OR number
+            if ($e->getCode() == 23000 && strpos($e->getMessage(), 'payments_receipt_number_unique') !== false) {
+                \Log::warning('Duplicate OR number attempted', [
+                    'or_number' => $request->input('or_number'),
+                    'request_id' => $request->input('request_id'),
+                    'user_id' => auth()->id()
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This Official Receipt (OR) number has already been used. Please check your OR number and try again.'
+                ], 422);
+            }
+            
+            // Other database errors
+            \Log::error('Database error during payment upload', [
+                'error' => $e->getMessage(),
+                'request_id' => $request->input('request_id'),
+                'user_id' => auth()->id()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'A database error occurred. Please try again or contact support.'
+            ], 500);
         } catch (\Exception $e) {
             \Log::error('Payment upload failed with exception', [
                 'error' => $e->getMessage(),
