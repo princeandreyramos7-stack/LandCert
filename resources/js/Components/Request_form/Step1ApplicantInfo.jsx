@@ -73,24 +73,36 @@ export function Step1ApplicantInfo({
             </div>
 
             <div className="space-y-2 md:col-span-2">
-                <PhilippineAddressFields
-                    legend="4. Address of Corporation"
-                    prefix="corporation_address"
-                    values={data}
-                    errors={errors}
-                    onChange={onDataChange}
-                    currentText={data.corporation_address_legacy}
-                    note="Leave blank and type N/A if not applicable"
-                    disabled={!data.corporation_name || data.corporation_name.trim() === '' || data.corporation_name.trim().toLowerCase() === 'n/a'}
-                />
-                {(!data.corporation_name || data.corporation_name.trim() === '' || data.corporation_name.trim().toLowerCase() === 'n/a') && (
-                    <p className="flex items-start gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                        <span>
-                            This field is locked. Fill in the <span className="font-semibold">Name of Corporation</span> field above to enable this address field.
-                        </span>
-                    </p>
-                )}
+                {(() => {
+                    const corpName = (data.corporation_name || '').trim().toLowerCase();
+                    const isNotApplicable = corpName === '' || corpName === 'n/a' || corpName === 'na' || corpName === 'not applicable';
+                    
+                    return (
+                        <>
+                            <PhilippineAddressFields
+                                legend="4. Address of Corporation"
+                                prefix="corporation_address"
+                                values={data}
+                                errors={errors}
+                                onChange={onDataChange}
+                                currentText={data.corporation_address_legacy}
+                                note="Leave blank and type N/A if not applicable"
+                                disabled={isNotApplicable}
+                            />
+                            {isNotApplicable && (
+                                <p className="flex items-start gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                    <span>
+                                        This field is locked. {corpName === '' 
+                                            ? <>Fill in the <span className="font-semibold">Name of Corporation</span> field above to enable this address field.</>
+                                            : <>You entered "{data.corporation_name.trim()}" which indicates no corporation. Fill in an actual corporation name to enable this field.</>
+                                        }
+                                    </span>
+                                </p>
+                            )}
+                        </>
+                    );
+                })()}
             </div>
 
             {/* Has Authorized Representative Checkbox */}
