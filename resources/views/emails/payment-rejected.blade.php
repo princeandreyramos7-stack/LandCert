@@ -146,7 +146,7 @@
     
     <div class="footer">
         <p>This is an automated message. Please do not reply to this email.</p>
-        <p>&copy; {{ date('Y') }} LandCert. All rights reserved.</p>
+        <p>&copy; {{ date('Y') }} CPDO City of Ilagan. All rights reserved.</p>
     </div>
 </body>
 </html>

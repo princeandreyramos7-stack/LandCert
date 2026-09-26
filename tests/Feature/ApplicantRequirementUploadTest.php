@@ -47,7 +47,7 @@ class ApplicantRequirementUploadTest extends TestCase
             ->post("/my-applications/{$app->id}/requirement-upload", [
                 'requirement_id' => 3,
                 'requirement_name' => '3. VICINITY MAP',
-                'document' => UploadedFile::fake()->create('vicinity.pdf', 50, 'application/pdf'),
+                'document' => $this->fakePdf('vicinity.pdf', 50),
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
@@ -75,7 +75,7 @@ class ApplicantRequirementUploadTest extends TestCase
 
         $this->actingAs($user)
             ->post("/my-applications/{$app->id}/notarized-form", [
-                'document' => UploadedFile::fake()->create('notarized.pdf', 50, 'application/pdf'),
+                'document' => $this->fakePdf('notarized.pdf', 50),
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
@@ -96,7 +96,7 @@ class ApplicantRequirementUploadTest extends TestCase
         $this->actingAs($stranger)
             ->post("/my-applications/{$app->id}/requirement-upload", [
                 'requirement_id' => 2,
-                'document' => UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'),
+                'document' => $this->fakePdf('x.pdf', 10),
             ])
             ->assertForbidden();
 

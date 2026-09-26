@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { router } from '@inertiajs/react';
 import IdleLogout from '@/Components/IdleLogout';
 import CookieNotice from '@/Components/CookieNotice';
+import ErrorBoundary from '@/Components/ErrorBoundary';
 import { TooltipProvider } from '@/Components/ui/tooltip';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -19,7 +20,7 @@ const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 // /legal/* is here for the same reason as /verify: somebody deciding
 // whether to create an account has to be able to read what they would be
 // agreeing to, and a privacy notice behind a sign-in is not a notice.
-const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify'];
+const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify', '/two-factor-challenge'];
 function isPublicPath(path) {
     return PUBLIC_PATHS.includes(path)
         || path.startsWith('/reset-password/')
@@ -99,7 +100,7 @@ function AppWrapper({ children, auth: initialAuth }) {
     // above it if each page supplied its own.
     return (
         <TooltipProvider delayDuration={300} skipDelayDuration={200}>
-            {children}
+            <ErrorBoundary>{children}</ErrorBoundary>
             {/* Mounted here rather than in the layouts. It was in all three of
                 them, but the application form builds its own chrome from
                 SidebarProvider instead of using ApplicantLayout, so it never

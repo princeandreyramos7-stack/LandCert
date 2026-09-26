@@ -5,6 +5,7 @@ import { useToast } from "@/Components/ui/use-toast";
 import axios from "axios";
 import { DocumentViewLink } from "@/Components/DocumentViewLink";
 import { router } from "@inertiajs/react";
+import { withNetworkRetry } from "@/lib/resilientSubmit";
 
 /**
  * Requirements Checklist Component
@@ -110,9 +111,16 @@ export function RequirementsChecklist({ request, uploadedRequirements = [], sele
                 ? '/super-admin/upload-requirement-document' 
                 : '/admin/upload-requirement-document';
             
-            await axios.post(uploadUrl, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            // A dropped connection mid-upload is retried a couple of times
+            // on its own before making the reviewer re-pick the file and
+            // upload it again - the request either never reached the
+            // server (safe to resend) or the server already answered
+            // (resolves normally, no retry either way).
+            await withNetworkRetry(() =>
+                axios.post(uploadUrl, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                })
+            );
 
             toast({
                 title: "Uploaded!",
@@ -130,7 +138,10 @@ export function RequirementsChecklist({ request, uploadedRequirements = [], sele
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: error.response?.data?.message || "Failed to upload document.",
+                description: error.response?.data?.message
+                    || (error instanceof TypeError
+                        ? "Could not reach the server. Check your connection and try again."
+                        : "Failed to upload document."),
             });
         } finally {
             setUploading(prev => ({ ...prev, [reqId]: false }));

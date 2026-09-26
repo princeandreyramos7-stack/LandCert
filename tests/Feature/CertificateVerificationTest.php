@@ -219,4 +219,30 @@ class CertificateVerificationTest extends TestCase
         $this->assertNotNull($certificate->verification_code);
         $this->assertSame(now()->addMonths(12)->toDateString(), $certificate->valid_until->toDateString());
     }
+
+    /**
+     * Regression: autoCreateFromPayment used to read "no certificate yet"
+     * and generate the next number outside any lock, so two calls for the
+     * same request racing each other could both pass that check and both
+     * insert - one certificate silently orphaned, or a 500 from the unique
+     * certificate_number index. Certificate::underIssuanceLock now wraps the
+     * whole read-then-write section; calling it twice in a row (the
+     * sequential case a single PHPUnit process can actually exercise) must
+     * return the same certificate, not create a second one.
+     */
+    public function test_autocreating_a_certificate_twice_for_the_same_request_is_idempotent(): void
+    {
+        $officer = $this->userOf('admin');
+        $applicant = $this->userOf('applicant');
+        $request = $this->application($applicant, 'CZC', 'approved', $officer);
+        $payment = Payment::where('request_id', $request->id)->firstOrFail();
+
+        $service = $this->actingAs($officer)->app->make(\App\Services\CertificateService::class);
+        $first = $service->autoCreateFromPayment($payment);
+        $second = $service->autoCreateFromPayment($payment->fresh());
+
+        $this->assertSame($first->id, $second->id);
+        $this->assertSame($first->certificate_number, $second->certificate_number);
+        $this->assertSame(1, Certificate::where('request_id', $request->id)->count());
+    }
 }

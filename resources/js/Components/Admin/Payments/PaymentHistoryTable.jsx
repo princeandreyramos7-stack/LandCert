@@ -23,6 +23,7 @@ import {
     ThumbsUp,
     ThumbsDown,
     Receipt,
+    Archive,
 } from "lucide-react";
 import {
     formatDate,
@@ -156,6 +157,9 @@ export function PaymentHistoryTable({
     // stat cards drive it when they pass these; otherwise it is the table's own.
     statusFilter: statusFilterProp,
     onStatusFilterChange,
+    archived = false,
+    archivedCount = 0,
+    onToggleArchived,
 }) {
     const [verifyingPayment, setVerifyingPayment] = useState(null);
     // State for filters
@@ -400,12 +404,24 @@ export function PaymentHistoryTable({
                         </span>{" "}
                         payments
                     </p>
-                    {(searchTerm || filterDate || statusFilter !== "all") && (
-                        <Badge variant="outline" className="text-xs">
-                            <Filter className="h-3 w-3 mr-1" />
-                            Filters Active
-                        </Badge>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {(searchTerm || filterDate || statusFilter !== "all") && (
+                            <Badge variant="outline" className="text-xs">
+                                <Filter className="h-3 w-3 mr-1" />
+                                Filters Active
+                            </Badge>
+                        )}
+                        {onToggleArchived && (
+                            <button
+                                type="button"
+                                onClick={onToggleArchived}
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-[#0d1f5c] hover:underline"
+                            >
+                                <Archive className="h-3 w-3" />
+                                {archived ? "Back to live payments" : `View archive${archivedCount ? ` (${archivedCount})` : ""}`}
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 

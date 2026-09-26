@@ -26,13 +26,30 @@
 
 # ─────────────────────────────────────────────────────────────────────
 # PHP Configuration for File Uploads
+#
+# 100M per file is well past any real phone photo (those run 3-15MB even
+# at full resolution) - it exists so a large multi-page scan or a very
+# high-resolution document photo is never the blocker, at the cost of a
+# wider window for someone to send something huge on purpose. The
+# per-file readability check (App\Rules\ReadableDocument) already
+# degrades safely on an oversized image - it skips the pixel checks
+# rather than risk exhausting memory - so this does not risk a crash,
+# only a check that sometimes cannot run.
+#
+# post_max_size covers several requirement files in one submission, not
+# just one - it is not simply upload_max_filesize x expected file count.
+#
+# A host that ignores php_value here (php-fpm instead of mod_php, or a
+# provider that caps the ceiling regardless) will not actually grant
+# these numbers - verify on production after deploying, e.g. via a real
+# large upload or phpinfo().
 # ─────────────────────────────────────────────────────────────────────
 <IfModule mod_php.c>
-    php_value upload_max_filesize 20M
-    php_value post_max_size 25M
+    php_value upload_max_filesize 100M
+    php_value post_max_size 300M
     php_value max_execution_time 300
     php_value max_input_time 300
-    php_value memory_limit 256M
+    php_value memory_limit 512M
 </IfModule>
 
 # ─────────────────────────────────────────────────────────────────────

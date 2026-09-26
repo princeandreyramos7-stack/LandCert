@@ -19,6 +19,11 @@ import {
     FileText, Receipt, Banknote, Paperclip, Award, X, FolderOpen,
     ArrowUpRight, ChevronDown, ChevronUp, Timer,
 } from "lucide-react";
+import {
+    PieChart, Pie, Cell, BarChart, Bar,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from "recharts";
+import { CLEARANCE_TYPES } from "@/lib/clearanceTypes";
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -54,6 +59,21 @@ const REPORTS = [
 
 const REPORT_KEYS = REPORTS.map((r) => r.key);
 
+// Fixed colors for the statuses SuperAdminReportsController::statusLabel()
+// actually produces, so the same stage always reads the same color across
+// reports; anything unrecognized still gets a color from the fallback ring.
+const STATUS_COLORS = {
+    "For Verification": "#f59e0b",
+    "For Approval": "#3b82f6",
+    "Returned to Applicant": "#f97316",
+    "Approved - For Payment": "#6366f1",
+    "For Payment": "#06b6d4",
+    "Application Approved (paid)": "#10b981",
+    "Application Denied": "#ef4444",
+};
+const FALLBACK_COLORS = ["#8b5cf6", "#ec4899", "#14b8a6", "#f43f5e", "#a3e635", "#64748b"];
+const colorAt = (i) => FALLBACK_COLORS[i % FALLBACK_COLORS.length];
+
 const peso = (value) =>
     value === null || value === undefined || value === ""
         ? null
@@ -73,18 +93,20 @@ const titleCase = (value) =>
     value ? String(value).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : null;
 
 /**
- * Resolves once every picture in the printed pack under `root` has either
- * loaded or given up — or after `timeoutMs`, so a single stuck download cannot
- * hold the printer hostage. A picture that fails is printed as the browser's
- * broken-image box, which is honest about what happened; a picture that has
- * not finished yet would print as nothing at all.
+ * Resolves once every picture under `root` has either loaded or given up —
+ * or after `timeoutMs`, so a single stuck download cannot hold the printer
+ * hostage. A picture that fails is printed as the browser's broken-image box,
+ * which is honest about what happened; a picture that has not finished yet
+ * would print as nothing at all — or, for a positioned one like
+ * SealWatermark's seal, as a stray broken-image square wherever it happens to
+ * land, with nothing on screen to explain it.
  *
- * Only the pack's pictures: the on-screen previews load lazily as they scroll
+ * Lazy-loaded images are skipped: the on-screen previews load as they scroll
  * into view, and one that never has would be waited on forever.
  */
 async function waitForImages(root, timeoutMs = 30000) {
     if (!root) return;
-    const images = Array.from(root.querySelectorAll(".pack-page img")).filter((img) => img.loading !== "lazy");
+    const images = Array.from(root.querySelectorAll("img")).filter((img) => img.loading !== "lazy");
     const broken = (img) => img.complete && img.naturalWidth === 0;
     const settle = (img) =>
         new Promise((resolve) => {
@@ -190,6 +212,16 @@ function DocLink({ href, children }) {
 
 function Empty({ children }) {
     return <p className="text-sm italic text-gray-400">{children}</p>;
+}
+
+/** One chart, boxed and titled, for the period report's analytics row. */
+function ChartCard({ title, className = "", children }) {
+    return (
+        <div className={`overflow-hidden rounded-lg border border-gray-100 p-3 ${className}`}>
+            <p className="mb-1 truncate text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</p>
+            {children}
+        </div>
+    );
 }
 
 /**
@@ -1090,6 +1122,7 @@ export default function ReportsWorkspace({
     const [applicantSearch, setApplicantSearch] = useState("");
     const [year, setYear] = useState(String(years[0] ?? currentYear));
     const [month, setMonth] = useState(String(currentMonth ?? 1));
+    const [day, setDay] = useState(() => new Date().toISOString().slice(0, 10));
     const [officer, setOfficer] = useState("all");
 
     const [report, setReport] = useState(null);
@@ -1130,9 +1163,13 @@ export default function ReportsWorkspace({
         const p = new URLSearchParams({ type });
         if (type === "applicant") p.set("applicant", override.applicant ?? applicant);
         if (type === "period") {
-            p.set("year", year);
-            // A whole-year report is every month of it.
-            p.set("month", periodScope === "year" ? "all" : month);
+            if (periodScope === "day") {
+                p.set("day", day);
+            } else {
+                p.set("year", year);
+                // A whole-year report is every month of it.
+                p.set("month", periodScope === "year" ? "all" : month);
+            }
         }
         if (type === "officer") p.set("officer", officer);
         return p;
@@ -1246,6 +1283,56 @@ export default function ReportsWorkspace({
         }
     };
 
+    // The period report's PDF: unlike the applicant pack above (several
+    // documents, one per page), this is one long screenshot of the report
+    // panel — table, summary and analytics charts included — sliced across
+    // as many A4 pages as it takes. A server-rendered PDF cannot carry the
+    // charts (they exist only as SVG in this page), so this report gets the
+    // same screenshot approach the applicant PDF already uses instead.
+    const savePeriodPdf = async () => {
+        setBusy("pdf");
+        try {
+            const root = panelRef.current;
+            if (!root) return;
+            await waitForImages(root);
+
+            const canvas = await html2canvas(root, {
+                scale: 1.5,
+                logging: false,
+                backgroundColor: "#ffffff",
+                // The action buttons (Print/PDF/Excel) and, on an applicant
+                // switch mid-session, any leftover print-only furniture have
+                // no business in a saved file.
+                ignoreElements: (el) => el.classList?.contains("print:hidden"),
+            });
+
+            const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
+            const margin = 10;
+            const pageW = 210 - margin * 2;
+            const pageH = 297 - margin * 2;
+            const imgW = pageW;
+            const imgH = (canvas.height * imgW) / canvas.width;
+            const imgData = canvas.toDataURL("image/jpeg", 0.92);
+
+            let heightLeft = imgH;
+            let position = margin;
+            pdf.addImage(imgData, "JPEG", margin, position, imgW, imgH);
+            heightLeft -= pageH;
+
+            while (heightLeft > 0) {
+                position = margin - (imgH - heightLeft);
+                pdf.addPage();
+                pdf.addImage(imgData, "JPEG", margin, position, imgW, imgH);
+                heightLeft -= pageH;
+            }
+
+            const who = (report?.subtitle || "report").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
+            pdf.save(`cpdo-report-${who}.pdf`);
+        } finally {
+            setBusy(null);
+        }
+    };
+
     // Changing the subject invalidates what is on screen — showing last
     // report's rows under a new heading would be worse than showing nothing.
     const choose = (setter) => (value) => {
@@ -1265,6 +1352,66 @@ export default function ReportsWorkspace({
     const applications = report?.applications ?? [];
     const current = applications[step];
 
+    // Charts for the "By Month & Year" (period) and "By Zoning Officer"
+    // reports: status breakdown, application-type breakdown, and a filing
+    // trend. Both reports share the same row shape (SuperAdminReportsController::rows()).
+    const periodAnalytics = useMemo(() => {
+        if (report?.type !== "period" && report?.type !== "officer") return null;
+        const rows = report.rows || [];
+        if (rows.length === 0) return null;
+
+        const statusData = Object.entries(report.summary?.status_counts || {}).map(([name, value], i) => ({
+            name,
+            value,
+            color: STATUS_COLORS[name] || colorAt(i),
+        }));
+
+        const typeCounts = {};
+        rows.forEach((r) => {
+            const code = String(r.project_type || "Not set").trim().toUpperCase();
+            typeCounts[code] = (typeCounts[code] || 0) + 1;
+        });
+        const typeData = Object.entries(typeCounts).map(([code, value], i) => {
+            const known = CLEARANCE_TYPES.find((t) => t.value === code);
+            return { name: known ? `${code} — ${known.name}` : code, value, color: colorAt(i) };
+        });
+
+        // The period report's trend bucket follows the scope the officer/
+        // administrator actually chose (hourly within one day, daily within
+        // one month, monthly across a whole year). The officer report has no
+        // such scope - a reviewer's history can span any range - so it picks
+        // daily or monthly by how wide the actual result set is.
+        let scope = periodScope;
+        if (report.type === "officer") {
+            const times = rows.map((r) => new Date(r.filed_on).getTime()).filter((t) => !Number.isNaN(t));
+            const spanDays = times.length ? (Math.max(...times) - Math.min(...times)) / 86400000 : 0;
+            scope = spanDays > 366 ? "year" : "month";
+        }
+
+        const buckets = new Map();
+        rows.forEach((r) => {
+            if (!r.filed_on) return;
+            const d = new Date(r.filed_on);
+            let key, label;
+            if (scope === "year") {
+                key = d.getMonth();
+                label = d.toLocaleString("en-US", { month: "short" });
+            } else if (scope === "day") {
+                key = d.getHours();
+                label = d.toLocaleTimeString("en-US", { hour: "numeric" });
+            } else {
+                key = d.toISOString().slice(0, 10);
+                label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            }
+            if (!buckets.has(key)) buckets.set(key, { key, label, value: 0 });
+            buckets.get(key).value += 1;
+        });
+        const trendData = Array.from(buckets.values()).sort((a, b) => (a.key > b.key ? 1 : a.key < b.key ? -1 : 0));
+        const trendLabel = scope === "year" ? "Filings by month" : scope === "day" ? "Filings by hour" : "Filings by day";
+
+        return { statusData, typeData, trendData, trendLabel };
+    }, [report, periodScope]);
+
     return (
         <>
             {/* Print only the report panel: the sidebar, filters and links are
@@ -1279,7 +1426,11 @@ export default function ReportsWorkspace({
                        would anchor beside the sidebar rather than at the top-left
                        of the sheet. */
                     main, [data-page-body] { position: static !important; }
-                    [data-sidebar="sidebar"] { display: none !important; }
+                    /* Every part of the sidebar namespace, not just the panel
+                       itself - the collapse trigger and the resize rail are
+                       separate elements and were slipping through as small
+                       stray squares on the printed page. */
+                    [data-sidebar] { display: none !important; }
 
                     #report-panel {
                         position: absolute !important;
@@ -1469,6 +1620,7 @@ export default function ReportsWorkspace({
                                     className="inline-flex rounded-lg border border-gray-200 p-1"
                                 >
                                     {[
+                                        { key: "day", label: "A single day" },
                                         { key: "month", label: "A single month" },
                                         { key: "year", label: "Whole year" },
                                     ].map((option) => (
@@ -1489,39 +1641,53 @@ export default function ReportsWorkspace({
                                     ))}
                                 </div>
 
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    {periodScope === "month" && (
+                                {periodScope === "day" ? (
+                                    <div className="max-w-[220px]">
+                                        <label className="mb-2 block text-sm font-semibold text-[#0d1f5c]">Date</label>
+                                        <input
+                                            type="date"
+                                            value={day}
+                                            max={new Date().toISOString().slice(0, 10)}
+                                            onChange={(e) => choose(setDay)(e.target.value)}
+                                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017]"
+                                        />
+                                        <p className="mt-1 text-xs text-gray-400">Every application filed on this date.</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        {periodScope === "month" && (
+                                            <div>
+                                                <label className="mb-2 block text-sm font-semibold text-[#0d1f5c]">Month</label>
+                                                <select
+                                                    value={month}
+                                                    onChange={(e) => choose(setMonth)(e.target.value)}
+                                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017]"
+                                                >
+                                                    {MONTHS.map((name, i) => (
+                                                        <option key={name} value={String(i + 1)}>{name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
                                         <div>
-                                            <label className="mb-2 block text-sm font-semibold text-[#0d1f5c]">Month</label>
+                                            <label className="mb-2 block text-sm font-semibold text-[#0d1f5c]">Year</label>
                                             <select
-                                                value={month}
-                                                onChange={(e) => choose(setMonth)(e.target.value)}
+                                                value={year}
+                                                onChange={(e) => choose(setYear)(e.target.value)}
                                                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017]"
                                             >
-                                                {MONTHS.map((name, i) => (
-                                                    <option key={name} value={String(i + 1)}>{name}</option>
+                                                {years.map((y) => (
+                                                    <option key={y} value={String(y)}>{y}</option>
                                                 ))}
                                             </select>
+                                            <p className="mt-1 text-xs text-gray-400">
+                                                {periodScope === "year"
+                                                    ? `Every application filed in ${year}.`
+                                                    : "Only years with applications are listed."}
+                                            </p>
                                         </div>
-                                    )}
-                                    <div>
-                                        <label className="mb-2 block text-sm font-semibold text-[#0d1f5c]">Year</label>
-                                        <select
-                                            value={year}
-                                            onChange={(e) => choose(setYear)(e.target.value)}
-                                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#d4a017] focus:ring-1 focus:ring-[#d4a017]"
-                                        >
-                                            {years.map((y) => (
-                                                <option key={y} value={String(y)}>{y}</option>
-                                            ))}
-                                        </select>
-                                        <p className="mt-1 text-xs text-gray-400">
-                                            {periodScope === "year"
-                                                ? `Every application filed in ${year}.`
-                                                : "Only years with applications are listed."}
-                                        </p>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         )}
 
@@ -1612,13 +1778,21 @@ export default function ReportsWorkspace({
                                 {busy === "print" ? "Preparing…" : "Print"}
                             </Button>
                             <Button
-                                onClick={() => (report.type === "applicant" ? savePack() : download("pdf"))}
+                                onClick={() => {
+                                    if (report.type === "applicant") return savePack();
+                                    if (periodAnalytics) return savePeriodPdf();
+                                    return download("pdf");
+                                }}
                                 disabled={busy !== null}
                                 variant="outline"
                                 className="gap-2 border-gray-200"
                             >
                                 {busy === "pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
-                                <span className="truncate">{busy === "pdf" ? `Page ${progress.done} of ${progress.total}` : "PDF"}</span>
+                                <span className="truncate">
+                                    {busy === "pdf"
+                                        ? (report.type === "applicant" ? `Page ${progress.done} of ${progress.total}` : "Preparing…")
+                                        : "PDF"}
+                                </span>
                             </Button>
                             <Button onClick={() => download("xlsx")} disabled={busy !== null} variant="outline" className="gap-2 border-gray-200">
                                 <FileSpreadsheet className="h-4 w-4" />
@@ -1638,6 +1812,63 @@ export default function ReportsWorkspace({
                                 </span>
                             ))}
                         </div>
+
+                        {periodAnalytics && (
+                            <div className="grid gap-4 border-b border-gray-100 p-4 sm:grid-cols-2 sm:p-6 lg:grid-cols-3">
+                                <ChartCard title="Status Breakdown">
+                                    <ResponsiveContainer width="100%" height={200}>
+                                        <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                            <Pie
+                                                data={periodAnalytics.statusData}
+                                                cx="50%"
+                                                cy="50%"
+                                                outerRadius={65}
+                                                dataKey="value"
+                                            >
+                                                {periodAnalytics.statusData.map((entry) => (
+                                                    <Cell key={entry.name} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip formatter={(value, name) => [`${value} application${value === 1 ? "" : "s"}`, name]} />
+                                            <Legend wrapperStyle={{ fontSize: 10 }} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </ChartCard>
+
+                                <ChartCard title="Application Type">
+                                    <ResponsiveContainer width="100%" height={200}>
+                                        <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                            <Pie
+                                                data={periodAnalytics.typeData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={35}
+                                                outerRadius={65}
+                                                dataKey="value"
+                                            >
+                                                {periodAnalytics.typeData.map((entry) => (
+                                                    <Cell key={entry.name} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip formatter={(value, name) => [`${value} application${value === 1 ? "" : "s"}`, name]} />
+                                            <Legend wrapperStyle={{ fontSize: 10 }} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </ChartCard>
+
+                                <ChartCard title={periodAnalytics.trendLabel} className="sm:col-span-2 lg:col-span-1">
+                                    <ResponsiveContainer width="100%" height={200}>
+                                        <BarChart data={periodAnalytics.trendData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={periodScope === "year" ? 0 : "preserveStartEnd"} />
+                                            <YAxis allowDecimals={false} width={28} tick={{ fontSize: 10 }} />
+                                            <Tooltip />
+                                            <Bar dataKey="value" fill="#0d1f5c" name="Applications" radius={[3, 3, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </ChartCard>
+                            </div>
+                        )}
 
                         <div className="p-4 sm:p-6">
                             {report.type === "applicant" ? (

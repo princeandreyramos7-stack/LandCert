@@ -5,50 +5,13 @@ namespace App\Http\Controllers;
 use App\Constants\ApplicationRequirements;
 use App\Models\Request as RequestModel;
 use App\Models\RequirementDocument;
+use App\Rules\ReadableDocument;
+use App\Support\UploadLimits;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class RequirementDocumentController extends Controller
 {
-    /**
-     * Show the upload requirements page
-     */
-    public function index($requestId): Response
-    {
-        $request = RequestModel::with([
-            'applicant',
-            'project',
-        ])->findOrFail($requestId);
-
-        // Security: applicants can only upload for their own requests
-        $currentUser = auth()->user();
-        if ($currentUser->user_type === 'applicant' && $request->user_id !== $currentUser->id) {
-            abort(403, 'You are not authorized to upload documents for this application.');
-        }
-
-        // Get requirements based on project type
-        $requirements = ApplicationRequirements::getRequirements($request->project?->project_type ?? 'ZONING CLEARANCE');
-
-        // Get already uploaded documents
-        $uploadedDocuments = RequirementDocument::where('request_id', $requestId)
-            ->get();
-
-        $applicationData = [
-            'id' => $request->id,
-            'applicant_name' => $request->applicant?->applicant_name ?? '',
-            'project_type' => $request->project?->project_type ?? '',
-            'project_nature' => $request->project?->project_nature ?? '',
-        ];
-
-        return Inertia::render('UploadRequirements', [
-            'application' => $applicationData,
-            'requirements' => $requirements,
-            'uploadedDocuments' => $uploadedDocuments,
-        ]);
-    }
-
     /**
      * Upload requirement documents
      */
@@ -56,7 +19,7 @@ class RequirementDocumentController extends Controller
     {
         $request->validate([
             'application_id' => 'required|exists:requests,id',
-            'documents.*.*' => 'required|file|mimes:jpg,jpeg,png,pdf|max:20480', // 20MB max per file
+            'documents.*.*' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:' . UploadLimits::MAX_FILE_KB],
             'requirement_ids' => 'required|array',
             'requirement_ui_ids' => 'nullable|array',
             'requirement_names' => 'nullable|array',
@@ -154,6 +117,30 @@ class RequirementDocumentController extends Controller
     }
 
     /**
+     * A no-save check of one file against the same readability rule the
+     * wizard's final submission enforces. Step 4 collects every file in the
+     * browser and only posts them all at the end (there is no application
+     * row yet to attach a real upload to), so without this a bad scan was
+     * not caught until Submit was pressed on the whole form. This runs the
+     * identical rule immediately when the file is attached - nothing here
+     * is written to disk or the database; the file exists only for the
+     * length of this request.
+     *
+     * The size limit matches RequestController::store()'s
+     * requirement_uploads.*.* rule exactly (5MB, not the 20MB a live
+     * application's re-upload allows) - a file that passes this check must
+     * also pass the one at final submission.
+     */
+    public function checkReadability(Request $request)
+    {
+        $request->validate([
+            'document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:' . UploadLimits::MAX_FILE_KB, new ReadableDocument],
+        ]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
      * Upload the notarized application form (requirement #1) after submission.
      *
      * This requirement is deliberately not collected during the application wizard:
@@ -187,7 +174,7 @@ class RequirementDocumentController extends Controller
         $validated = $request->validate([
             'requirement_id' => 'required',
             'requirement_name' => 'nullable|string|max:255',
-            'document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:20480', // 20MB max
+            'document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:' . UploadLimits::MAX_FILE_KB],
         ]);
 
         $requestModel = RequestModel::findOrFail($id);
@@ -238,9 +225,9 @@ class RequirementDocumentController extends Controller
 
         $status = strtolower((string) $requestModel->status);
 
-        if (!in_array($status, ['in_applicant', 'rejected'], true)) {
+        if (!in_array($status, RequestModel::APPLICANT_EDITABLE_STATUSES, true)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'document' => 'Your documents are locked while the office reviews your application. You can upload again once the office returns the application to you.',
+                'document' => 'Your documents are locked: this application has already been decided, so its requirements are now part of that decision and cannot be changed.',
             ]);
         }
     }
@@ -252,7 +239,7 @@ class RequirementDocumentController extends Controller
     private function storeApplicantRequirement(Request $request, $id, $requirementId, string $requirementName, string $successMessage)
     {
         $request->validate([
-            'document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:20480', // 20MB max
+            'document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:' . UploadLimits::MAX_FILE_KB, new ReadableDocument],
         ]);
 
         $requestModel = RequestModel::findOrFail($id);
@@ -265,10 +252,37 @@ class RequirementDocumentController extends Controller
         }
 
         $file = $request->file('document');
+
+        // This endpoint is the "Upload"/"Replace" action for a single
+        // requirement slot: the page offers one file input, so whatever is
+        // already on file for this requirement is what the applicant means
+        // to replace, not add to. Clear it before storing the new one -
+        // otherwise a "Replace" upload was silently kept alongside the old
+        // file (or, for a second raw image, rejected outright even though
+        // there was never a way to attach two images in the same request
+        // through this endpoint to begin with).
+        $existingDocuments = RequirementDocument::where('request_id', $requestModel->id)
+            ->where('requirement_id', $requirementId)
+            ->get();
+
+        foreach ($existingDocuments as $existingDocument) {
+            Storage::disk('local')->delete($existingDocument->file_path);
+            $existingDocument->delete();
+        }
+
         $filename = 'requirement_' . $requestModel->id . '_' . $requirementId . '_' . time() . '_' . uniqid()
             . '.' . $file->getClientOriginalExtension();
 
         $path = $file->storeAs('requirement_documents', $filename, 'local');
+
+        // Ensure MIME type is correctly detected, especially for PDFs
+        $mimeType = $file->getMimeType();
+        $extension = strtolower($file->getClientOriginalExtension());
+        
+        // Override MIME type if extension is PDF but detected as something else
+        if ($extension === 'pdf' && $mimeType !== 'application/pdf') {
+            $mimeType = 'application/pdf';
+        }
 
         RequirementDocument::create([
             'request_id' => $requestModel->id,
@@ -276,7 +290,7 @@ class RequirementDocumentController extends Controller
             'requirement_name' => $requirementName,
             'file_path' => $path,
             'original_filename' => $file->getClientOriginalName(),
-            'mime_type' => $file->getMimeType(),
+            'mime_type' => $mimeType,
             'file_size' => $file->getSize(),
         ]);
 
@@ -358,11 +372,18 @@ class RequirementDocumentController extends Controller
         // bytes. Private: it is one applicant's document, for this viewer.
         foreach (['public', 'local'] as $disk) {
             if (Storage::disk($disk)->exists($document->file_path)) {
-                return \App\Support\CachedFileResponse::make(
+                $response = \App\Support\CachedFileResponse::make(
                     Storage::disk($disk),
                     $document->file_path,
                     $document->original_filename
                 );
+                
+                // Override content type with the stored MIME type to ensure correct rendering
+                if ($document->mime_type) {
+                    $response->headers->set('Content-Type', $document->mime_type);
+                }
+                
+                return $response;
             }
         }
 

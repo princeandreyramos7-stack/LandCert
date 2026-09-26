@@ -73,6 +73,38 @@ class NoCacheHeaders
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }
 
+        /*
+         * A last line of defence against XSS beyond React's own output
+         * escaping: even if something slipped an inline <script> or a
+         * foreign <script src> into a response, the browser would refuse to
+         * run it.
+         *
+         * Skipped in local development: Vite's dev server serves the bundle
+         * (and its hot-reload websocket) from its own origin, http://localhost:5173,
+         * which a same-origin script-src would block outright, and a
+         * relaxed-enough-for-Vite policy would not be the policy production
+         * actually runs under. Everything this app itself loads - the built
+         * JS, its own API calls, and the one external font stylesheet - is
+         * covered below in every other environment.
+         */
+        if (!app()->environment('local')) {
+            $response->headers->set('Content-Security-Policy', implode('; ', [
+                "default-src 'self'",
+                "script-src 'self'",
+                // Tailwind/React inline style attributes and the chart
+                // library's own inline <style>/style= output need this;
+                // there is no inline <script> anywhere in the app to match it.
+                "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
+                "font-src 'self' https://fonts.bunny.net",
+                "img-src 'self' data:",
+                "connect-src 'self'",
+                "object-src 'none'",
+                "base-uri 'self'",
+                "form-action 'self'",
+                "frame-ancestors 'self'",
+            ]));
+        }
+
         return $response;
     }
 

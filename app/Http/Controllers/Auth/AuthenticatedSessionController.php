@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Services\AuditLogService;
+use App\Services\TwoFactorAuthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,33 +33,16 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
-        $request->session()->regenerate();
-
-        // A fresh session gets a fresh history key: the pages the browser
-        // remembers from before this sign-in (the login screen, or another
-        // account's pages) cannot be brought back with the Back button.
-        Inertia::clearHistory();
-
-
-        // Redirect based on user type.
-        //
-        // Staff always land on their dashboard. `intended()` is deliberately not
-        // used for them: it replays whatever page bounced them to the login screen
-        // (typically the requests list), which is not where a fresh session should
-        // start.
+        // The password was right, but the session is not trusted with
+        // anything yet: every sign-in confirms a texted code before it is.
+        // Auth::attempt() inside authenticate() already logged the account
+        // in - undone here rather than never letting it log in, so the rate
+        // limiting and audit logging above stay exactly as they were; only
+        // what happens after a right password changes.
         $user = $request->user();
+        Auth::guard('web')->logout();
 
-        if ($user->user_type === 'super_admin') {
-            $request->session()->forget('url.intended');
-            return redirect()->route('super-admin.dashboard');
-        }
-
-        if ($user->user_type === 'admin') {
-            $request->session()->forget('url.intended');
-            return redirect()->route('admin.dashboard');
-        }
-
-        return redirect()->intended(route('dashboard', absolute: false));
+        return app(TwoFactorAuthService::class)->beginChallenge($request, $user, $request->boolean('remember'));
     }
 
     /**
@@ -69,8 +53,16 @@ class AuthenticatedSessionController extends Controller
         // Log the logout action before invalidating the session
         AuditLogService::logLogout();
 
+        // Captured before logout drops it: nothing else may claim to be
+        // this account's active session once it has signed itself out.
+        $user = $request->user();
+
         // Logout the user
         Auth::guard('web')->logout();
+
+        if ($user) {
+            \App\Support\SingleSession::release($user);
+        }
 
         // Invalidate the session
         $request->session()->invalidate();

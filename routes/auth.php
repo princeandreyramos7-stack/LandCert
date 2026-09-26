@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,6 +26,22 @@ Route::middleware('guest')->group(function () {
         ->name('login');
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
+
+    // The step between a right password and a trusted session: reached only
+    // mid-login, via the pending account id AuthenticatedSessionController
+    // leaves in the session. `guest` still fits here - Auth::check() is
+    // false throughout, since the password step logs the account back out
+    // before this is ever reached.
+    Route::get('two-factor-challenge', [TwoFactorChallengeController::class, 'create'])
+        ->name('two-factor.challenge');
+
+    Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
+        ->middleware('throttle:8,1,2fa-verify')
+        ->name('two-factor.verify');
+
+    Route::post('two-factor-challenge/resend', [TwoFactorChallengeController::class, 'resend'])
+        ->middleware('throttle:3,1,2fa-resend')
+        ->name('two-factor.resend');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');

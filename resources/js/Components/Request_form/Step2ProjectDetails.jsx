@@ -383,6 +383,35 @@ export function Step2ProjectDetails({ data, errors, onDataChange }) {
             </div>
 
             <div className="space-y-2">
+                <Label htmlFor="lot_number">Lot Number</Label>
+                <Input
+                    id="lot_number"
+                    value={data.lot_number}
+                    onChange={(e) => onDataChange("lot_number", e.target.value)}
+                    placeholder="e.g. Lot 4522-F"
+                />
+                <p className="text-xs text-gray-500">
+                    From the Title or Tax Declaration for this lot - not the same as the area above.
+                </p>
+                {errors.lot_number && (
+                    <p className="text-sm text-red-500">{errors.lot_number}</p>
+                )}
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="tax_declaration_no">Tax Declaration No.</Label>
+                <Input
+                    id="tax_declaration_no"
+                    value={data.tax_declaration_no}
+                    onChange={(e) => onDataChange("tax_declaration_no", e.target.value)}
+                    placeholder="As shown on the Tax Declaration"
+                />
+                {errors.tax_declaration_no && (
+                    <p className="text-sm text-red-500">{errors.tax_declaration_no}</p>
+                )}
+            </div>
+
+            <div className="space-y-2">
                 <Label htmlFor="right_over_land">
                     11. Right Over Land <span className="text-red-500">*</span>
                 </Label>

@@ -96,6 +96,23 @@ class Request extends Model
     ];
 
     /**
+     * Statuses at which the applicant may still upload, replace, or remove a
+     * requirement document - anything before the Zoning Administrator's
+     * decision. Once a request leaves this list ('approved' and onward
+     * through CERT_LIFECYCLE_STATUSES), its documents are part of an issued
+     * decision and are frozen - see
+     * RequirementDocumentController::assertApplicantMayUpload, which enforces
+     * this, and ApplicationDetails.jsx, which mirrors it for the UI (a
+     * front-end check alone would not stop a request made by hand).
+     */
+    public const APPLICANT_EDITABLE_STATUSES = [
+        'pending',
+        'in_applicant',
+        'reviewed',
+        'rejected',
+    ];
+
+    /**
      * The status the applicant / officer / administrator should all see: the
      * report evaluation while the application is being decided, then the
      * request status once it enters the payment/certificate lifecycle.

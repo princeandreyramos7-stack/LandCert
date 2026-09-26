@@ -226,8 +226,13 @@ class SecurityTest extends TestCase
         $rules = (new \App\Http\Requests\RecordPaymentRequest())->rules();
         $this->assertContains('mimes:jpg,jpeg,png,pdf', $rules['receipt_file']);
 
+        // The rule became an array (ReadableDocument, see App\Rules, does
+        // not fit Laravel's pipe-delimited string syntax), so this checks
+        // its pieces rather than one exact string.
         $requirements = file_get_contents(app_path('Http/Controllers/RequirementDocumentController.php'));
-        $this->assertStringContainsString("'document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120'", $requirements);
+        $this->assertStringContainsString("'mimes:pdf,jpg,jpeg,png'", $requirements);
+        $this->assertStringContainsString('UploadLimits::MAX_FILE_KB', $requirements);
+        $this->assertStringContainsString('new ReadableDocument', $requirements);
 
         $payments = file_get_contents(app_path('Http/Controllers/PaymentController.php'));
         $this->assertStringContainsString("'receipt' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120'", $payments);
@@ -257,7 +262,9 @@ class SecurityTest extends TestCase
         $this->assertNotNull($cookie);
         $this->assertTrue($cookie->isHttpOnly());
 
-        $login = $this->post('/login', ['email' => $user->email, 'password' => 'a-plain-password-2026'])->assertRedirect();
+        // Regeneration now happens once the texted code is confirmed too -
+        // the password step alone no longer finishes the sign-in.
+        $login = $this->loginThroughTwoFactor($user->email, 'a-plain-password-2026')->assertRedirect();
         $after = collect($login->headers->getCookies())->first(fn ($c) => $c->getName() === config('session.cookie'));
         $this->assertNotNull($after);
         $this->assertNotSame($cookie->getValue(), $after->getValue(), 'the session id must be regenerated at login');

@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Events\TwoFactorCodeIssued;
 use App\Models\Applicant;
 use App\Models\Location;
 use App\Models\NormalizedProject;
@@ -12,11 +13,53 @@ use App\Models\Request as RequestModel;
 use App\Models\RequirementDocument;
 use App\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 
 abstract class TestCase extends BaseTestCase
 {
+    /**
+     * Signs a user in through the real routes - password, then the texted
+     * code - the way a browser does. Event::fake() here only intercepts
+     * TwoFactorCodeIssued (to read the code a phone would have shown);
+     * every other event, including whatever the caller's own test listens
+     * for, still fires normally. Returns the response to the code, i.e. the
+     * one that actually finishes the sign-in.
+     */
+    protected function loginThroughTwoFactor(string $email, string $password): TestResponse
+    {
+        Event::fake([TwoFactorCodeIssued::class]);
+
+        $this->post('/login', ['email' => $email, 'password' => $password]);
+
+        $code = null;
+        Event::assertDispatched(TwoFactorCodeIssued::class, function ($event) use (&$code) {
+            $code = $event->code;
+            return true;
+        });
+
+        return $this->post('/two-factor-challenge', ['code' => $code]);
+    }
+
+    /**
+     * A small but structurally real PDF - not the empty stand-in
+     * UploadedFile::fake()->create() produces when given an integer size (it
+     * writes no bytes at all) - so it passes ReadableDocument's integrity
+     * check the way a genuine upload would. Padded with trailing zeroes to
+     * roughly the requested size; nothing in this suite checks the byte
+     * count precisely.
+     */
+    protected function fakePdf(string $name = 'document.pdf', int $kilobytes = 40): UploadedFile
+    {
+        $pdf = "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF";
+        $content = str_pad($pdf, max(strlen($pdf), $kilobytes * 1024), '0');
+
+        return UploadedFile::fake()->createWithContent($name, $content);
+    }
+
     /** A signed-in account of the given kind. */
     protected function userOf(string $type, array $attributes = []): User
     {

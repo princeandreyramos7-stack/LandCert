@@ -47,7 +47,41 @@ const PROVINCE_LABEL = {
     standalone: "City",
 };
 
-export function PhilippineAddressFields({
+/**
+ * One region/province/city/barangay row. Module-level, not defined inside
+ * PhilippineAddressFields: a component declared inside another component's
+ * body is a new function - a new component *type* - on every render of the
+ * parent, so React unmounts and remounts it (and the SearchableSelect inside
+ * it, with its own open/search state and effects) instead of updating it in
+ * place. That parent re-renders on every keystroke anywhere in the form
+ * (Inertia's setData clones the whole form on each change), so every
+ * dropdown here was being torn down and rebuilt on every keystroke typed
+ * into *any* field, address-related or not - the main cause of the form
+ * feeling laggy.
+ */
+function AddressRow({ id, label, star, value, options, onChange, disabled, loading, placeholder, waitingFor, emptyText, invalid, error }) {
+    return (
+        <div className="space-y-1.5">
+            <Label htmlFor={id} className="text-xs font-medium text-gray-700">
+                {label} {star}
+            </Label>
+            <SearchableSelect
+                id={id}
+                value={value}
+                options={options}
+                onChange={onChange}
+                disabled={disabled || Boolean(waitingFor)}
+                loading={loading}
+                placeholder={waitingFor ? `Select ${waitingFor} first` : placeholder}
+                emptyText={emptyText}
+                invalid={invalid}
+            />
+            {error && <p className="text-xs text-red-500">{error}</p>}
+        </div>
+    );
+}
+
+function PhilippineAddressFieldsBase({
     prefix,
     values = {},
     onChange,
@@ -117,18 +151,28 @@ export function PhilippineAddressFields({
     // It is never sent: the server composes the stored line from the codes.
     const barangayCode = valueOf("barangay_code");
     const street = valueOf("street");
+    // Debounced: `street` changes on every keystroke, and each commit here is
+    // a second full-form update (Inertia's setData clones the whole form) on
+    // top of the one the street input's own onChange already made. Picking a
+    // dropdown value settles a beat later either way, so the extra delay is
+    // never noticed there — only a fast typist stops noticing two clones per
+    // letter.
     useEffect(() => {
-        const name = (list, code) => (list || []).find((item) => String(item.code) === String(code))?.name || "";
-        const provinceRow = (lists.provinces || []).find((p) => String(p.code) === String(province));
-        const line = barangayCode && city
-            ? [
-                street.trim() || null,
-                name(lists.barangays, barangayCode) || null,
-                name(lists.cities, city) || null,
-                provinceRow ? (provinceRow.kind === "province" ? provinceRow.name : provinceRow.region_name) : null,
-            ].filter(Boolean).join(", ")
-            : "";
-        if ((values[field("preview")] || "") !== line) onChange(field("preview"), line);
+        const timer = setTimeout(() => {
+            const name = (list, code) => (list || []).find((item) => String(item.code) === String(code))?.name || "";
+            const provinceRow = (lists.provinces || []).find((p) => String(p.code) === String(province));
+            const line = barangayCode && city
+                ? [
+                    street.trim() || null,
+                    name(lists.barangays, barangayCode) || null,
+                    name(lists.cities, city) || null,
+                    provinceRow ? (provinceRow.kind === "province" ? provinceRow.name : provinceRow.region_name) : null,
+                ].filter(Boolean).join(", ")
+                : "";
+            if ((values[field("preview")] || "") !== line) onChange(field("preview"), line);
+        }, 400);
+
+        return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [barangayCode, city, province, street, lists.barangays, lists.cities, lists.provinces]);
 
@@ -146,26 +190,6 @@ export function PhilippineAddressFields({
 
     const star = required ? <span className="text-red-500">*</span> : null;
     const err = (part) => errors[field(part)];
-
-    const Row = ({ part, label, options, loadingLevel, placeholder, waitingFor, emptyText }) => (
-        <div className="space-y-1.5">
-            <Label htmlFor={field(part)} className="text-xs font-medium text-gray-700">
-                {label} {star}
-            </Label>
-            <SearchableSelect
-                id={field(part)}
-                value={valueOf(part)}
-                options={options}
-                onChange={(v) => set(part, v)}
-                disabled={disabled || Boolean(waitingFor)}
-                loading={loading[loadingLevel]}
-                placeholder={waitingFor ? `Select ${waitingFor} first` : placeholder}
-                emptyText={emptyText}
-                invalid={Boolean(err(part))}
-            />
-            {err(part) && <p className="text-xs text-red-500">{err(part)}</p>}
-        </div>
-    );
 
     return (
         <fieldset className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
@@ -192,48 +216,72 @@ export function PhilippineAddressFields({
             )}
 
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
-                <Row
-                    part="region_code"
+                <AddressRow
+                    id={field("region_code")}
                     label="Region"
+                    star={star}
+                    value={valueOf("region_code")}
                     options={lists.regions.map((r) => ({
                         value: r.code,
                         label: r.name,
                         hint: r.long_name,
                     }))}
-                    loadingLevel="regions"
+                    onChange={(v) => set("region_code", v)}
+                    disabled={disabled}
+                    loading={loading.regions}
                     placeholder="Select region"
                     emptyText="No regions available"
+                    invalid={Boolean(err("region_code"))}
+                    error={err("region_code")}
                 />
-                <Row
-                    part="province_code"
+                <AddressRow
+                    id={field("province_code")}
                     label="Province"
+                    star={star}
+                    value={valueOf("province_code")}
                     options={lists.provinces.map((p) => ({
                         value: p.code,
                         label: p.name,
                         hint: [PROVINCE_LABEL[p.kind], p.region_name].filter(Boolean).join(" · "),
                     }))}
-                    loadingLevel="provinces"
+                    onChange={(v) => set("province_code", v)}
+                    disabled={disabled}
+                    loading={loading.provinces}
                     placeholder="Select province"
                     waitingFor={region ? null : "region"}
                     emptyText="No provinces available"
+                    invalid={Boolean(err("province_code"))}
+                    error={err("province_code")}
                 />
-                <Row
-                    part="city_code"
+                <AddressRow
+                    id={field("city_code")}
                     label="Municipality / City"
+                    star={star}
+                    value={valueOf("city_code")}
                     options={lists.cities.map((c) => ({ value: c.code, label: c.name }))}
-                    loadingLevel="cities"
+                    onChange={(v) => set("city_code", v)}
+                    disabled={disabled}
+                    loading={loading.cities}
                     placeholder="Select municipality or city"
                     waitingFor={province ? null : "province"}
                     emptyText="No municipalities or cities here"
+                    invalid={Boolean(err("city_code"))}
+                    error={err("city_code")}
                 />
-                <Row
-                    part="barangay_code"
+                <AddressRow
+                    id={field("barangay_code")}
                     label="Barangay"
+                    star={star}
+                    value={valueOf("barangay_code")}
                     options={lists.barangays.map((b) => ({ value: b.code, label: b.name }))}
-                    loadingLevel="barangays"
+                    onChange={(v) => set("barangay_code", v)}
+                    disabled={disabled}
+                    loading={loading.barangays}
                     placeholder="Select barangay"
                     waitingFor={city ? null : "municipality or city"}
                     emptyText="No barangays listed here"
+                    invalid={Boolean(err("barangay_code"))}
+                    error={err("barangay_code")}
                 />
 
                 <div className="space-y-1.5">
@@ -258,3 +306,34 @@ export function PhilippineAddressFields({
         </fieldset>
     );
 }
+
+const ADDRESS_PART_KEYS = ["region_code", "province_code", "city_code", "barangay_code", "street", "preview"];
+
+/** Do these two values/errors objects agree on everything this one prefix reads? */
+function samePrefixSlice(prevObj, nextObj, prefix) {
+    return ADDRESS_PART_KEYS.every((part) => (prevObj?.[`${prefix}_${part}`] ?? null) === (nextObj?.[`${prefix}_${part}`] ?? null));
+}
+
+/**
+ * `values` and `errors` are whole-form objects, freshly built by the parent
+ * on every render (Inertia's setData clones the form on each field change,
+ * and `errors={{ ...stepErrors, ...errors }}` is a new object literal every
+ * time regardless) - a plain shallow-prop memo would see a "changed" prop on
+ * every keystroke anywhere in the form and re-render anyway. This instead
+ * compares only the six keys this one address instance actually reads, so
+ * typing in an unrelated field (or in a *different* PhilippineAddressFields
+ * on the same page) does not re-render this one at all. `onChange` is
+ * deliberately left out of the comparison: it is a fresh closure every
+ * render too, and this component only ever calls it, never depends on its
+ * identity.
+ */
+export const PhilippineAddressFields = React.memo(PhilippineAddressFieldsBase, (prev, next) => (
+    prev.prefix === next.prefix &&
+    prev.required === next.required &&
+    prev.legend === next.legend &&
+    prev.currentText === next.currentText &&
+    prev.note === next.note &&
+    prev.disabled === next.disabled &&
+    samePrefixSlice(prev.values, next.values, prev.prefix) &&
+    samePrefixSlice(prev.errors, next.errors, prev.prefix)
+));

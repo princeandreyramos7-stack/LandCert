@@ -30,10 +30,12 @@ export const formatPaymentMethodData = (payment_methods) => {
 };
 
 export const formatStatusData = (status_breakdown) => {
-    return status_breakdown.map(item => ({
-        name: item.evaluation.charAt(0).toUpperCase() + item.evaluation.slice(1),
-        value: item.count
-    }));
+    return status_breakdown
+        .filter(item => item.evaluation)
+        .map(item => ({
+            name: item.evaluation.charAt(0).toUpperCase() + item.evaluation.slice(1),
+            value: item.count
+        }));
 };
 
 export const formatProjectTypeData = (project_types) => {

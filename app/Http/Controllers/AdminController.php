@@ -241,7 +241,7 @@ class AdminController extends Controller
             'project_cost' => $request->project?->project_cost,
             
             // Location info
-            'project_location_number' => null, // Not in normalized structure
+            'project_location_number' => $request->location?->house_number,
             'project_location_street' => $request->location?->street_address,
             'project_location_barangay' => $request->location?->barangay,
             'project_location_municipality' => $request->location?->city_municipality,
@@ -391,7 +391,7 @@ class AdminController extends Controller
             'project_cost' => $request->project?->project_cost,
 
             // Location info
-            'project_location_number' => $request->property?->lot_number,
+            'project_location_number' => $request->location?->house_number,
             'project_location_street' => $request->location?->street_address,
             'project_location_barangay' => $request->location?->barangay,
             'project_location_municipality' => $request->location?->city_municipality,
@@ -977,9 +977,40 @@ class AdminController extends Controller
      */
     public function payments(Request $request): Response
     {
+        // An archived application (App\Console\Commands\ArchiveApplications -
+        // released/denied for years, or approved-and-unpaid for a month) is
+        // off the live board, so its payment rows default off this page too;
+        // the toggle below still reaches them, same as All Applications.
+        $archived = $request->boolean('archived');
+
+        [$approvedRequests, $verifiedPayments, $allPayments] = $this->cacheService->rememberPayments(
+            'admin',
+            $archived,
+            fn () => $this->paymentsPageData($archived)
+        );
+
+        return Inertia::render('Admin/PaymentsUnified', [
+            'pendingPayments' => $approvedRequests, // ALL approved requests (with or without payment)
+            'verifiedPayments' => $verifiedPayments,
+            'allPayments' => $allPayments,
+            'archived' => $archived,
+            'archivedCount' => RequestModel::whereNotNull('archived_at')->count(),
+        ]);
+    }
+
+    /**
+     * The three payments-page queries, run fresh. Kept separate from
+     * payments() so it can be handed to DashboardCacheService::rememberPayments()
+     * as a plain callable - the page's own polling (every 15s per open tab,
+     * see useLiveData) would otherwise re-run all three unpaginated queries
+     * that often per viewer.
+     */
+    private function paymentsPageData(bool $archived): array
+    {
         // Get ALL approved requests (by Super Admin) - these are requests awaiting payment
         $approvedRequests = RequestModel::with(['applicant', 'project', 'location', 'user', 'payments', 'report'])
             ->whereIn('status', ['approved', 'payment_confirmed'])
+            ->{$archived ? 'whereNotNull' : 'whereNull'}('archived_at')
             ->orderBy('updated_at', 'desc')
             ->get()
             ->map(function($request) {
@@ -1008,6 +1039,7 @@ class AdminController extends Controller
         // Get ALL verified payments
         $verifiedPayments = \App\Models\Payment::with(['request.applicant', 'verifiedByUser'])
             ->where('payment_status', 'verified')
+            ->whereHas('request', fn ($q) => $q->{$archived ? 'whereNotNull' : 'whereNull'}('archived_at'))
             ->orderBy('verified_at', 'desc')
             ->get()
             ->map(function($payment) {
@@ -1033,6 +1065,7 @@ class AdminController extends Controller
         
         // Get ALL payments (including pending, verified, denied)
         $allPayments = \App\Models\Payment::with(['request.applicant', 'verifiedByUser'])
+            ->whereHas('request', fn ($q) => $q->{$archived ? 'whereNotNull' : 'whereNull'}('archived_at'))
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function($payment) {
@@ -1058,11 +1091,7 @@ class AdminController extends Controller
                 ];
             });
 
-        return Inertia::render('Admin/PaymentsUnified', [
-            'pendingPayments' => $approvedRequests, // ALL approved requests (with or without payment)
-            'verifiedPayments' => $verifiedPayments,
-            'allPayments' => $allPayments,
-        ]);
+        return [$approvedRequests, $verifiedPayments, $allPayments];
     }
 
     /**
@@ -1701,7 +1730,7 @@ class AdminController extends Controller
                 'authorization_letter_path' => $request->authorization_letter_path,
                 'project_type' => $request->project->project_type ?? 'N/A',
                 'project_nature' => $request->project->project_nature ?? 'N/A',
-                'project_location_number' => $request->location->lot_number ?? null,
+                'project_location_number' => $request->location->house_number ?? null,
                 'project_location_street' => $request->location->street_address ?? null,
                 'project_location_barangay' => $request->location->barangay ?? null,
                 'project_location_municipality' => $request->location->city_municipality ?? null,

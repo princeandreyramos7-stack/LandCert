@@ -14,11 +14,13 @@ import {
 } from "lucide-react";
 import { LiveRefresh } from "@/Components/LiveRefresh";
 
-export default function PaymentsUnified({ 
-    pendingPayments = [], 
-    verifiedPayments = [], 
+export default function PaymentsUnified({
+    pendingPayments = [],
+    verifiedPayments = [],
     allPayments = [],
-    stats = {} 
+    stats = {},
+    archived = false,
+    archivedCount = 0,
 }) {
     const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
     const [isAddReceiptModalOpen, setIsAddReceiptModalOpen] = useState(false);
@@ -90,6 +92,15 @@ export default function PaymentsUnified({
         setSelectedPayment(null);
     };
 
+    // Archived requests (App\Console\Commands\ArchiveApplications - released
+    // or denied for years, or approved-and-unpaid for a month) are off this
+    // page by default, same as All Applications; this switches to the
+    // archive and back with a fresh server request rather than a client
+    // filter, since the archived rows are not sent down otherwise.
+    const toggleArchived = () => {
+        router.get(route("payments"), archived ? {} : { archived: 1 });
+    };
+
     return (
         <>
             <Head title="Payments Management — CPDO Admin"/>
@@ -116,6 +127,17 @@ export default function PaymentsUnified({
                     </div>
                 </div>
 
+                {archived && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-5 text-sm text-amber-900">
+                        <span>
+                            <span className="font-semibold">Archive.</span> Payments tied to an archived application — released/denied for years, or approved-and-unpaid for a month.
+                        </span>
+                        <button type="button" onClick={toggleArchived} className="font-semibold underline-offset-2 hover:underline">
+                            Back to live payments
+                        </button>
+                    </div>
+                )}
+
                 {/* Counts, as filters: click one to see just those rows. */}
                 <PaymentStats
                     payments={allPaymentsData}
@@ -133,6 +155,9 @@ export default function PaymentsUnified({
                     routePrefix="admin"
                     statusFilter={statusFilter}
                     onStatusFilterChange={setStatusFilter}
+                    archived={archived}
+                    archivedCount={archivedCount}
+                    onToggleArchived={toggleArchived}
                 />
 
                 {/* Record a payment - pick which approved application it is for */}

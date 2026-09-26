@@ -171,6 +171,12 @@ class PaymentService
                 'ip_address' => request()->ip(),
             ]);
 
+            // The Payments page (and the dashboard) cache these figures for
+            // a short while (see DashboardCacheService::rememberPayments) -
+            // a payment just recorded at the counter must show up right
+            // away, not up to 20s later.
+            \App\Services\DashboardCacheService::flush();
+
             return $payment;
         });
     }

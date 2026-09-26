@@ -8,7 +8,7 @@ test('login screen can be rendered', function () {
     $response->assertStatus(200);
 });
 
-test('users can authenticate using the login screen', function () {
+test('a right password alone does not sign the user in', function () {
     $user = User::factory()->create();
 
     $response = $this->post('/login', [
@@ -16,8 +16,29 @@ test('users can authenticate using the login screen', function () {
         'password' => 'password',
     ]);
 
+    // The session stays a guest's until the texted code is confirmed too.
+    $this->assertGuest();
+    $response->assertRedirect(route('two-factor.challenge'));
+});
+
+test('users can authenticate using the login screen and its texted code', function () {
+    $user = User::factory()->create();
+
+    $response = $this->loginThroughTwoFactor($user->email, 'password');
+
     $this->assertAuthenticated();
     $response->assertRedirect(route('dashboard', absolute: false));
+});
+
+test('a wrong verification code does not sign the user in', function () {
+    $user = User::factory()->create();
+
+    $this->post('/login', ['email' => $user->email, 'password' => 'password']);
+
+    $response = $this->post('/two-factor-challenge', ['code' => '000000']);
+
+    $this->assertGuest();
+    $response->assertSessionHasErrors('code');
 });
 
 test('users can not authenticate with invalid password', function () {

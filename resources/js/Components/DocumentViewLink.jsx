@@ -1,5 +1,5 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/Components/ui/tooltip";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import {
     Dialog,
     DialogContent,
@@ -310,12 +310,15 @@ export function DocumentViewerModal({ doc, isOpen, onClose, verified = false, on
  * around it wants (className / children); opens the document in the viewer
  * above instead of a browser tab.
  */
-export function DocumentViewLink({ doc, className = "", title, children, verified = false, onVerify = null }) {
+export const DocumentViewLink = forwardRef(function DocumentViewLink(
+    { doc, className = "", title, children, verified = false, onVerify = null },
+    ref
+) {
     const [open, setOpen] = useState(false);
 
     return (
         <>
-            <button type="button" onClick={() => setOpen(true)} title={title || doc?.original_filename} className={className}>
+            <button ref={ref} type="button" onClick={() => setOpen(true)} title={title || doc?.original_filename} className={className}>
                 {children}
             </button>
             <DocumentViewerModal
@@ -327,4 +330,4 @@ export function DocumentViewLink({ doc, className = "", title, children, verifie
             />
         </>
     );
-}
+});

@@ -3,6 +3,7 @@ import { useForm, usePage, router } from "@inertiajs/react";
 import { useToast } from "@/Components/ui/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
 import { FileText } from "lucide-react";
 
 // Local Components
@@ -16,28 +17,12 @@ import { Step4Requirements } from "./Step4Requirements";
 import { FormNavigation } from "./FormNavigation";
 import { ApplicationSummaryModal } from "./ApplicationSummaryModal";
 import { validateStep1, validateStep2, validateStep3, validateStep4 } from "./utils";
-import { fetchWithCsrf, hasCsrfToken, appendCsrfField } from "@/lib/csrf";
+import { hasCsrfToken, appendCsrfField } from "@/lib/csrf";
 import { describeOversizedUpload } from "./uploadLimits";
+import { saveDraftMeta, loadDraftMeta, saveDraftFiles, loadDraftFiles, clearDraft, fetchServerDraft, saveServerDraft, clearServerDraft } from "@/lib/requestDraft";
+import { fetchUntilOnline } from "@/lib/resilientSubmit";
 
 export default function RequestForm({ isEditing = false, existingApplication = null }) {
-    // Welcome/requirements board is shown first; applicants proceed to Step 1 when ready
-    const [showWelcome, setShowWelcome] = useState(!isEditing); // Skip welcome if editing
-    const [currentStep, setCurrentStep] = useState(1);
-    const [completedSteps, setCompletedSteps] = useState([]);
-    const [hasRepresentative, setHasRepresentative] = useState(false);
-    const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-    // The submit goes out through fetch(), not Inertia, so useForm's `processing`
-    // never flips and the spinner it drives never appeared. This tracks the real
-    // request.
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitErrors, setSubmitErrors] = useState([]);
-    // 'form'   -> the messages are validation problems the applicant can fix
-    // 'system' -> the message is a server/system failure, nothing to fix in the form
-    const [submitErrorKind, setSubmitErrorKind] = useState(null);
-    // Inline marks from the step validators, keyed by field (see validateCurrentStep).
-    const [stepErrors, setStepErrors] = useState({});
-    // Track previous project type to detect changes
-    const previousProjectType = useRef(existingApplication?.project_type || "");
     const { toast } = useToast();
     const page = usePage();
     const flash = page.props.flash || {};
@@ -48,7 +33,56 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     // from their account, so the first page is mostly done before they begin.
     const me = page.props.auth?.user || {};
 
-    const { data, setData, post, put, processing, errors, reset } = useForm({
+    // A brand-new application (never one being edited/resubmitted) left
+    // behind by an earlier tab that was refreshed or closed mid-fill: its
+    // typed answers, so the welcome board is skipped and the wizard opens
+    // straight back where it was left, not a blank Step 1. Read
+    // synchronously (sessionStorage allows it) so this never flashes the
+    // welcome board before flipping past it. See resources/js/lib/requestDraft.js.
+    const restoredDraftMeta = useMemo(
+        () => (isEditing ? null : loadDraftMeta(me.id)),
+        // Looked up once, on this page's first render only - not on every
+        // re-render, which an empty dependency array via useMemo(fn, []) gives.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        []
+    );
+
+    // Welcome/requirements board is shown first; applicants proceed to Step 1 when ready
+    const [showWelcome, setShowWelcome] = useState(!isEditing && !restoredDraftMeta); // Skip welcome if editing or resuming
+    const [currentStep, setCurrentStep] = useState(restoredDraftMeta?.currentStep ?? 1);
+    const [completedSteps, setCompletedSteps] = useState(restoredDraftMeta?.completedSteps ?? []);
+    const [hasRepresentative, setHasRepresentative] = useState(restoredDraftMeta?.hasRepresentative ?? false);
+    // True once a draft (this device's or, once fetched, the account's) has
+    // actually been applied to the form - drives the "Apply for New
+    // Application" button, which only makes sense once there is something to
+    // discard.
+    const [draftWasRestored, setDraftWasRestored] = useState(Boolean(restoredDraftMeta));
+    const [isStartNewConfirmOpen, setIsStartNewConfirmOpen] = useState(false);
+    const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+    // The submit goes out through fetch(), not Inertia, so useForm's `processing`
+    // never flips and the spinner it drives never appeared. This tracks the real
+    // request.
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    // 'idle' | 'waiting' | 'retrying' - the connection dropped mid-submit and
+    // this is retrying on its own (see resources/js/lib/resilientSubmit.js).
+    const [connectionState, setConnectionState] = useState('idle');
+    // Lets "Cancel and keep editing" actually stop the retry loop instead of
+    // just hiding it while it keeps trying in the background.
+    const submitAbortRef = useRef(null);
+    const [submitErrors, setSubmitErrors] = useState([]);
+    // 'form'   -> the messages are validation problems the applicant can fix
+    // 'system' -> the message is a server/system failure, nothing to fix in the form
+    const [submitErrorKind, setSubmitErrorKind] = useState(null);
+    // Inline marks from the step validators, keyed by field (see validateCurrentStep).
+    const [stepErrors, setStepErrors] = useState({});
+    // Track previous project type to detect changes
+    const previousProjectType = useRef(existingApplication?.project_type || "");
+
+    // Restored draft answers are applied last: they only override a field
+    // that was actually typed into, so an application/account default this
+    // wizard would otherwise have filled in for a fresh visit still applies
+    // to any field the draft never touched.
+    const initialFormData = {
         // Step 1: Applicant Information
         applicant_name: existingApplication?.applicant_name || me.name || "",
         corporation_name: existingApplication?.corporation_name || "",
@@ -101,6 +135,11 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         project_location_province: existingApplication?.project_location_province || "Isabela",
         lot_area_sqm: existingApplication?.lot_area_sqm || "",
         bldg_improvement_sqm: existingApplication?.bldg_improvement_sqm || "",
+        // The parcel's legal Lot No. and Tax Dec. No. - what the certificate
+        // and printed application form quote by these exact names. Distinct
+        // from project_location_number, which is the street/house number.
+        lot_number: existingApplication?.lot_number || "",
+        tax_declaration_no: existingApplication?.tax_declaration_no || "",
         right_over_land: existingApplication?.right_over_land || "",
         project_nature_duration: existingApplication?.project_nature_duration || "",
         project_nature_years: existingApplication?.project_nature_years || "",
@@ -120,6 +159,11 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         // Step 4: Requirements Upload
         requirement_uploads: {},
         verified_requirements: existingApplication?.verified_requirements || {},
+    };
+
+    const { data, setData, post, put, processing, errors, reset } = useForm({
+        ...initialFormData,
+        ...(restoredDraftMeta?.data || {}),
     });
 
     // Requirement files are held OUTSIDE Inertia's useForm on purpose.
@@ -127,6 +171,95 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     // and cloneDeep destroys File objects — so any File parked in form state is
     // silently shredded by the next setData and never reaches the server.
     const [requirementFiles, setRequirementFiles] = useState({});
+
+    // The rest of a restored draft: its attached files. Unlike the typed
+    // answers above (read synchronously so the welcome board is never shown
+    // then un-shown), IndexedDB can only be read asynchronously - so this
+    // runs once, right after mount, only when there was a draft to resume.
+    useEffect(() => {
+        if (!restoredDraftMeta) return;
+        let cancelled = false;
+
+        (async () => {
+            const { requirementFiles: restoredFiles, authorizationLetter } = await loadDraftFiles(me.id);
+            if (cancelled) return;
+
+            if (Object.keys(restoredFiles).length > 0) {
+                setRequirementFiles(restoredFiles);
+            }
+            if (authorizationLetter) {
+                setData((current) => ({ ...current, authorization_letter: authorizationLetter }));
+            }
+
+            toast({
+                title: "Welcome back",
+                description: "Your in-progress application was restored from before the page refreshed.",
+            });
+        })();
+
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // No draft on this browser - but this account may have one saved from
+    // closing the tab entirely, or from another device (see
+    // ApplicationDraftController). Checked only when the fast, local check
+    // above found nothing, so a same-device refresh never waits on this.
+    // Fields and step only: an account-tied draft never carries files (see
+    // the migration for why), so there is nothing to restore for those -
+    // Step 4 will simply ask for them again.
+    useEffect(() => {
+        if (isEditing || restoredDraftMeta) return;
+        let cancelled = false;
+
+        (async () => {
+            const draft = await fetchServerDraft();
+            if (cancelled || !draft?.data) return;
+
+            setData((current) => ({ ...current, ...draft.data }));
+            if (typeof draft.current_step === 'number') setCurrentStep(draft.current_step);
+            if (Array.isArray(draft.completed_steps)) setCompletedSteps(draft.completed_steps);
+            if (typeof draft.has_representative === 'boolean') setHasRepresentative(draft.has_representative);
+            setShowWelcome(false);
+            setDraftWasRestored(true);
+
+            toast({
+                title: "Welcome back",
+                description: "Your in-progress application was restored. Please re-attach any files - those aren't kept between devices.",
+            });
+        })();
+
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Keep the draft current from here on: every typed answer, which step,
+    // and every attached file. Debounced on the typed side (this would
+    // otherwise write to sessionStorage on every keystroke); the files side
+    // is already a discrete, infrequent event (attach/remove), so it saves
+    // immediately. Both skip while the welcome board is up - nothing worth
+    // saving exists yet - and skip entirely in edit mode, which is never
+    // what this restores.
+    useEffect(() => {
+        if (isEditing || !me.id || showWelcome) return;
+        const timer = setTimeout(() => {
+            // authorization_letter is a File - JSON.stringify turns it into
+            // "{}", which would then read back as a truthy non-null value
+            // no file was ever chosen. It has its own store (see below);
+            // requirement_uploads is unused dead weight (see Step4's own
+            // note on where uploads actually live).
+            const { authorization_letter, requirement_uploads, ...savableData } = data;
+            saveDraftMeta(me.id, { data: savableData, currentStep, completedSteps, hasRepresentative });
+            saveServerDraft({ data: savableData, currentStep, completedSteps, hasRepresentative });
+        }, 600);
+
+        return () => clearTimeout(timer);
+    }, [data, currentStep, completedSteps, hasRepresentative, isEditing, me.id, showWelcome]);
+
+    useEffect(() => {
+        if (isEditing || !me.id || showWelcome) return;
+        saveDraftFiles(me.id, requirementFiles, data.authorization_letter instanceof File ? data.authorization_letter : null);
+    }, [requirementFiles, data.authorization_letter, isEditing, me.id, showWelcome]);
 
     // Define requirements structure (ALL requirements - main + additional).
     // Mirrors app/Constants/ApplicationRequirements.php.
@@ -477,7 +610,36 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         setShowWelcome(false);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
-    
+
+    // Discards a restored draft and starts completely fresh - every typed
+    // answer, every attached file, the step position, all of it. Only ever
+    // offered when a draft was actually restored (see draftWasRestored); a
+    // normal new application never needs this. Confirmed through a dialog,
+    // not window.confirm - the browser's own prompt looks like a security
+    // warning, not part of the app.
+    const handleStartNewApplication = () => {
+        setIsStartNewConfirmOpen(true);
+    };
+
+    const confirmStartNewApplication = () => {
+        setIsStartNewConfirmOpen(false);
+
+        clearDraft(me.id);
+        clearServerDraft();
+
+        setData({ ...initialFormData });
+        setRequirementFiles({});
+        setCurrentStep(1);
+        setCompletedSteps([]);
+        setHasRepresentative(false);
+        setStepErrors({});
+        setSubmitErrors([]);
+        setSubmitErrorKind(null);
+        setDraftWasRestored(false);
+        setShowWelcome(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
     // Handle direct step navigation
     const handleStepClick = (stepNumber) => {
         // When editing, allow free navigation between all steps
@@ -513,6 +675,16 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         setIsConfirmDialogOpen(true);
     };
 
+    // Stops a submission that is stuck retrying for a connection. Nothing was
+    // ever sent while in that state (see fetchUntilOnline), so there is
+    // nothing to undo - the form and every attached file are exactly as they
+    // were, and Submit can be pressed again once the connection is back.
+    const handleCancelSubmit = () => {
+        submitAbortRef.current?.abort();
+        setIsSubmitting(false);
+        setConnectionState('idle');
+    };
+
     // Confirm and submit - USING FETCH API TO BYPASS INERTIA
     const confirmSubmit = async ({ declared = false } = {}) => {
         // The dialog deliberately stays open while the request is in flight, so
@@ -522,6 +694,10 @@ export default function RequestForm({ isEditing = false, existingApplication = n
         setIsSubmitting(true);
         setSubmitErrors([]);
         setSubmitErrorKind(null);
+        setConnectionState('idle');
+        const abortController = new AbortController();
+        submitAbortRef.current = abortController;
+        const onConnectionStateChange = (state) => setConnectionState(state === 'recovered' ? 'idle' : state);
 
         if (isEditing && existingApplication?.id) {
             
@@ -572,16 +748,16 @@ export default function RequestForm({ isEditing = false, existingApplication = n
             
             
             try {
-                const response = await fetchWithCsrf(route('requests.update', existingApplication.id), {
+                const response = await fetchUntilOnline(route('requests.update', existingApplication.id), {
                     method: 'POST',
                     body: formData,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json',
                     },
-                });
-                
-                
+                }, { signal: abortController.signal, onStateChange: onConnectionStateChange });
+
+
                 // As in create mode below: only the controller's own answer
                 // counts. A followed redirect is some other page with a 200,
                 // not a confirmation that the resubmission was saved.
@@ -630,14 +806,22 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                     });
                 }
             } catch (error) {
-                console.error('Fetch error:', error);
-                toast({
-                    title: "Error",
-                    description: "Network error. Please try again.",
-                    variant: "destructive",
-                });
+                if (error.name !== 'AbortError') {
+                    // fetchUntilOnline only throws for a cancelled submission -
+                    // every network failure it retries on its own. Anything
+                    // else reaching here is a genuine bug, not a dropped
+                    // connection.
+                    console.error('Fetch error:', error);
+                    toast({
+                        title: "Error",
+                        description: "Something went wrong. Please try again.",
+                        variant: "destructive",
+                    });
+                }
+            } finally {
+                setConnectionState('idle');
             }
-            
+
         } else {
             // CREATE MODE: Submit new application.
             // Build FormData by hand so the File objects reach the server intact —
@@ -701,14 +885,14 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                     throw new Error('Your session has expired. Please refresh the page and try again.');
                 }
 
-                const response = await fetchWithCsrf("/request", {
+                const response = await fetchUntilOnline("/request", {
                     method: 'POST',
                     body: formData,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json',
                     },
-                });
+                }, { signal: abortController.signal, onStateChange: onConnectionStateChange });
 
                 // Filed only when the controller says so: a 201 carrying the
                 // application number. fetch() follows redirects on its own, so
@@ -718,6 +902,12 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                 if (response.ok && !response.redirected) {
                     let filed = null;
                     try { filed = await response.json(); } catch (_) { /* not JSON */ }
+                    // Filed for real: the draft this refresh-recovery kept
+                    // would otherwise reappear on the next New Application
+                    // visit, offering to "resume" an application already
+                    // sitting in My Applications.
+                    clearDraft(me.id);
+                    clearServerDraft();
                     toast({
                         title: "Application Submitted",
                         description: filed?.application_number
@@ -745,6 +935,24 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                         title: "Submission not confirmed",
                         description: "Check My Applications before submitting again.",
                     });
+                } else if (response.status === 422 && payload?.errors?.duplicate) {
+                    // Not a validation problem: the server's own duplicate
+                    // check (RequestController::store) says this exact
+                    // application was already filed - almost certainly by an
+                    // earlier attempt that reached the server but lost its
+                    // answer on the way back before a retry here resent it.
+                    // Nothing was filed twice; there is just nothing left to
+                    // fix, so this is told the same way a fresh success is.
+                    clearDraft(me.id);
+                    clearServerDraft();
+                    toast({
+                        title: "Application Submitted",
+                        description: "Your application has already been received.",
+                    });
+                    setTimeout(() => {
+                        window.location.href = route('my-applications');
+                    }, 800);
+                    return;
                 } else if (response.status === 422) {
                     // Validation failure - a FORM problem. Show every field message.
                     const fieldErrors = payload?.errors || {};
@@ -789,14 +997,21 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                     });
                 }
             } catch (error) {
-                console.error('Application submission request failed:', error);
-                setSubmitErrors([error.message || 'Check your connection and try again.']);
-                setSubmitErrorKind('system');
-                toast({
-                    variant: "destructive",
-                    title: "Could not reach the server",
-                    description: error.message || 'Check your connection and try again.',
-                });
+                // fetchUntilOnline only throws for a cancelled submission -
+                // every network failure it retries on its own, so nothing
+                // here was actually lost to a dropped connection.
+                if (error.name !== 'AbortError') {
+                    console.error('Application submission request failed:', error);
+                    setSubmitErrors([error.message || 'Something went wrong. Please try again.']);
+                    setSubmitErrorKind('system');
+                    toast({
+                        variant: "destructive",
+                        title: "Could not submit",
+                        description: error.message || 'Something went wrong. Please try again.',
+                    });
+                }
+            } finally {
+                setConnectionState('idle');
             }
         }
 
@@ -862,6 +1077,16 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                                         </p>
                                     </div>
                                 </div>
+                                {!isEditing && draftWasRestored && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleStartNewApplication}
+                                    >
+                                        Apply for New Application
+                                    </Button>
+                                )}
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-8">
@@ -993,8 +1218,30 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                 isEditing={isEditing}
                 requirementFiles={requirementFiles}
                 requirements={requirements}
+                connectionState={connectionState}
+                onCancelSubmit={handleCancelSubmit}
             />
-            
+
+            {/* Confirm before discarding a restored draft */}
+            <Dialog open={isStartNewConfirmOpen} onOpenChange={setIsStartNewConfirmOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Start a new application?</DialogTitle>
+                        <DialogDescription>
+                            Your in-progress answers and attached files will be cleared. This cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setIsStartNewConfirmOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="button" variant="destructive" onClick={confirmStartNewApplication}>
+                            Start New Application
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* Add custom animations */}
             <style>{`
                 @keyframes fadeIn {

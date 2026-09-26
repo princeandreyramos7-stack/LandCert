@@ -37,7 +37,7 @@ class BrowserHistoryTest extends TestCase
     {
         $user = $this->userOf('applicant', ['password' => 'secret-pass-2026']);
 
-        $this->post('/login', ['email' => $user->email, 'password' => 'secret-pass-2026'])
+        $this->loginThroughTwoFactor($user->email, 'secret-pass-2026')
             ->assertRedirect();
 
         // The first page after sign-in clears the old history...

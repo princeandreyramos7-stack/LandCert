@@ -5,7 +5,6 @@ import { PaymentHistoryTable } from "@/Components/Admin/Payments/PaymentHistoryT
 import { PaymentStats } from "@/Components/Admin/Payments/PaymentStats";
 import { PaymentDetailsCard } from "@/Components/Admin/Payments/PaymentDetailsCard";
 import { AddReceiptModal } from "@/Components/Admin/Payments/AddReceiptModal";
-import { Button } from "@/Components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
 import {
     DollarSign, Clock, AlertCircle, CreditCard,
@@ -13,11 +12,13 @@ import {
 } from "lucide-react";
 import { LiveRefresh } from "@/Components/LiveRefresh";
 
-export default function PaymentsUnified({ 
-    pendingPayments = [], 
-    verifiedPayments = [], 
+export default function PaymentsUnified({
+    pendingPayments = [],
+    verifiedPayments = [],
     allPayments = [],
-    stats = {} 
+    stats = {},
+    archived = false,
+    archivedCount = 0,
 }) {
     const [isAddReceiptModalOpen, setIsAddReceiptModalOpen] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState(null);
@@ -65,6 +66,13 @@ export default function PaymentsUnified({
         setSelectedPayment(null);
     };
 
+    // Archived requests (App\Console\Commands\ArchiveApplications - released
+    // or denied for years, or approved-and-unpaid for a month) are off this
+    // page by default, same as All Applications.
+    const toggleArchived = () => {
+        router.get(route("payments"), archived ? {} : { archived: 1 });
+    };
+
     return (
         <>
             <Head title="Payments Management — Zoning Administrator"/>
@@ -93,6 +101,17 @@ export default function PaymentsUnified({
                     </div>
                 </div>
 
+                {archived && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-5 text-sm text-amber-900">
+                        <span>
+                            <span className="font-semibold">Archive.</span> Payments tied to an archived application — released/denied for years, or approved-and-unpaid for a month.
+                        </span>
+                        <button type="button" onClick={toggleArchived} className="font-semibold underline-offset-2 hover:underline">
+                            Back to live payments
+                        </button>
+                    </div>
+                )}
+
                 {/* Counts, as filters: click one to see just those rows. */}
                 <PaymentStats
                     payments={allPaymentsData}
@@ -110,6 +129,9 @@ export default function PaymentsUnified({
                     statusFilter={statusFilter}
                     onStatusFilterChange={setStatusFilter}
                     canVerify={false}
+                    archived={archived}
+                    archivedCount={archivedCount}
+                    onToggleArchived={toggleArchived}
                 />
 
                 {/* Add Receipt Modal */}

@@ -206,7 +206,7 @@ export default function GuestLayout({ children }) {
                     </nav>
 
                     <div className="mt-3 text-center text-xs text-gray-400">
-                        &copy; {new Date().getFullYear()} CPDO Ilagan City. All
+                        &copy; {new Date().getFullYear()} CPDO City of Ilagan. All
                         rights reserved.
                     </div>
                 </div>

@@ -29,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->enforceSessionSecurity();
+        $this->enforceDebugSecurity();
     }
 
     /**
@@ -67,6 +68,42 @@ class AppServiceProvider extends ServiceProvider
                 self::MAX_SESSION_LIFETIME_MINUTES
             ),
         ]);
+
+        // config/session.php reads SESSION_SECURE_COOKIE with no default, so
+        // an unset or false value in the deployed .env (this has happened to
+        // this exact site before) ships the session cookie without the
+        // Secure flag - readable by anyone on the same network the moment
+        // the site is ever reached over plain HTTP. Production here is
+        // always meant to be HTTPS (see NoCacheHeaders' HSTS header), so
+        // this is not a setting a production .env should be able to opt out
+        // of by omission.
+        if ($this->app->environment('production')) {
+            config(['session.secure' => true]);
+        }
+    }
+
+    /**
+     * A production .env with APP_DEBUG left on (or restored from a stale
+     * backup) turns every unhandled error into a page showing the stack
+     * trace, the full SQL query, and the environment's own values to
+     * whoever triggered it - this has happened to this exact deployment
+     * before (see the 2026-09-16 pre-deployment audit). bootstrap/app.php's
+     * exception handler already checks config('app.debug') to decide what
+     * an error page shows, so forcing it off here - the same
+     * cache-cannot-override-this technique enforceSessionSecurity() uses
+     * for the session lifetime - closes the gap regardless of what the
+     * deployed file says, and the log line means it gets noticed and fixed
+     * at the source rather than silently relied on forever.
+     */
+    private function enforceDebugSecurity(): void
+    {
+        if ($this->app->environment('production') && config('app.debug')) {
+            config(['app.debug' => false]);
+
+            report(new \RuntimeException(
+                'APP_DEBUG is true in the production environment - forced off at runtime. Fix the .env on the host.'
+            ));
+        }
     }
 
     /**

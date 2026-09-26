@@ -23,6 +23,7 @@ import {
     Upload,
     Package,
     Lock,
+    Trash2,
 } from "lucide-react";
 import { DocumentViewLink } from "@/Components/DocumentViewLink";
 
@@ -79,6 +80,7 @@ export default function ApplicationDetails({ application, requirements = [], doc
     const { toast } = useToast();
     const fileInputs = useRef({});
     const [uploadingId, setUploadingId] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
 
     const statusKey = String(application.request_status || application.status || "pending").toLowerCase();
     // Where it stands on the five-step track - the same reading My Applications makes.
@@ -107,7 +109,10 @@ export default function ApplicationDetails({ application, requirements = [], doc
     const docsFor = (id) => documents?.[id] || documents?.[String(id)] || [];
 
 
-    const canUpload = ["in_applicant", "rejected"].includes(statusKey);
+    // Anything before the Zoning Administrator's decision - matches
+    // App\Models\Request::APPLICANT_EDITABLE_STATUSES, which is what
+    // actually enforces this; this only controls what the page offers.
+    const canUpload = ["pending", "in_applicant", "reviewed", "rejected"].includes(statusKey);
     const canReplace = canUpload;
 
     const handleUpload = (req, file) => {
@@ -131,9 +136,29 @@ export default function ApplicationDetails({ application, requirements = [], doc
                     title: "Upload failed",
                     description:
                         Object.values(errors || {}).flat().join(" ") ||
-                        "Use a PDF, JPG or PNG under 5MB.",
+                        "Use a PDF, JPG or PNG under 100MB.",
                 }),
             onFinish: () => setUploadingId(null),
+        });
+    };
+
+    const handleDelete = (req, doc) => {
+        if (!window.confirm(`Remove "${doc.original_filename}" from ${req.name}? You can upload a replacement afterward.`)) {
+            return;
+        }
+
+        setDeletingId(doc.id);
+        router.delete(route("requirements.destroy", doc.id), {
+            preserveScroll: true,
+            onSuccess: () =>
+                toast({ title: "Removed", description: `"${doc.original_filename}" has been removed.` }),
+            onError: (errors) =>
+                toast({
+                    variant: "destructive",
+                    title: "Could not remove file",
+                    description: Object.values(errors || {}).flat().join(" ") || "Please try again.",
+                }),
+            onFinish: () => setDeletingId(null),
         });
     };
 
@@ -195,7 +220,7 @@ export default function ApplicationDetails({ application, requirements = [], doc
                         ) : uploaded ? (
                             <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
                                 <Lock className="h-3 w-3" />
-                                Locked while under review
+                                Locked — application already decided
                             </span>
                         ) : null}
                     </div>
@@ -219,13 +244,32 @@ export default function ApplicationDetails({ application, requirements = [], doc
                                             {(doc.file_size / 1024).toFixed(0)} KB · {doc.uploaded_at}
                                         </p>
                                     </div>
-                                    <DocumentViewLink
-                                        doc={doc}
-                                        className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 text-white text-xs font-medium hover:bg-blue-700"
-                                    >
-                                        <Eye className="h-3.5 w-3.5" />
-                                        View
-                                    </DocumentViewLink>
+                                    <div className="flex-shrink-0 flex items-center gap-1">
+                                        <DocumentViewLink
+                                            doc={doc}
+                                            title="View"
+                                            className="inline-flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-200 hover:text-gray-800"
+                                        >
+                                            <Eye className="h-3.5 w-3.5" />
+                                        </DocumentViewLink>
+                                        {/* Deliberately canReplace, not `allowed`: the notarized
+                                            form can be uploaded regardless of status (see
+                                            uploadNotarizedForm), but RequirementDocumentController::destroy()
+                                            has no such exception - offering Remove here whenever
+                                            `allowed` said yes would show an action the backend
+                                            refuses for a status reason unrelated to the form. */}
+                                        {canReplace && (
+                                            <button
+                                                type="button"
+                                                title={deletingId === doc.id ? "Removing…" : "Remove"}
+                                                onClick={() => handleDelete(req, doc)}
+                                                disabled={deletingId === doc.id}
+                                                className="inline-flex h-7 w-7 items-center justify-center rounded text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -394,6 +438,14 @@ export default function ApplicationDetails({ application, requirements = [], doc
                                     <Field label="Project Cost" value={formatPeso(application.project_cost)} />
                                 </>
                             )}
+                            {/* A Zoning Certification has no Step 2 - these were
+                                asked for in Step 1 instead (Property Identification). */}
+                            {isZC && (
+                                <>
+                                    <Field label="Lot Number" value={application.lot_number} />
+                                    <Field label="Tax Declaration No." value={application.tax_declaration_no} />
+                                </>
+                            )}
                         </div>
                     </Section>
 
@@ -402,7 +454,7 @@ export default function ApplicationDetails({ application, requirements = [], doc
                     {/* Location */}
                         <Section icon={MapPin} title="Project Location">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <Field label="Lot / Blk / House No." value={application.lot_number} />
+                                <Field label="No./Blk" value={application.project_location_number} />
                                 <Field label="Street" value={application.project_location_street} />
                                 <Field label="Barangay" value={application.project_location_barangay} />
                                 <Field label="City / Municipality" value={application.project_location_city} />
@@ -415,6 +467,7 @@ export default function ApplicationDetails({ application, requirements = [], doc
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <Field label="Project Area — Lot" value={formatSqm(application.lot_area_sqm)} />
                                 <Field label="Project Area — Bldg. Improvement" value={formatSqm(application.bldg_improvement_sqm)} />
+                                <Field label="Lot Number" value={application.lot_number} />
                                 <Field label="Title Number" value={application.title_number} />
                                 <Field label="Tax Declaration No." value={application.tax_declaration_no} />
                                 <Field label="Zone Classification" value={application.zone_classification} />

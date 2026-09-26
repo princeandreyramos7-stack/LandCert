@@ -32,6 +32,7 @@ class CertificateController extends Controller
             'search' => $request->search ?? null,
             'from_date' => $request->from_date ?? null,
             'to_date' => $request->to_date ?? null,
+            'archived' => $request->boolean('archived'),
         ];
 
         $certificates = $this->certificateService->getAllCertificates($filters);
@@ -40,6 +41,7 @@ class CertificateController extends Controller
             'certificates' => $certificates,
             'filters' => $filters,
             'userType' => Auth::user()->user_type,
+            'archivedCount' => ApplicationRequest::whereNotNull('archived_at')->count(),
         ]);
     }
 

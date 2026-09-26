@@ -128,6 +128,29 @@ class ReportsTest extends TestCase
             ->assertJsonPath('rows.0.reviewed_by', 'Mary Jane P. Bulauan');
     }
 
+    public function test_the_period_report_can_be_scoped_to_a_single_day(): void
+    {
+        $administrator = $this->userOf('super_admin');
+        $officer = $this->userOf('admin');
+        $today = $this->application($this->userOf('applicant'), 'CZC', 'approved', $officer);
+        $yesterday = $this->application($this->userOf('applicant'), 'SUP', 'reviewed', $officer);
+
+        \App\Models\Request::where('id', $yesterday->id)->update(['created_at' => now()->subDay()]);
+
+        $day = now()->toDateString();
+
+        // No year needed — the day stands on its own.
+        $this->actingAs($administrator)
+            ->getJson("/super-admin/reports/preview?type=period&day={$day}")
+            ->assertOk()
+            ->assertJsonPath('summary.applications', 1)
+            ->assertJsonPath('rows.0.application_number', $today->application_number)
+            ->assertJsonPath('subtitle', now()->format('F j, Y'));
+
+        $pdf = $this->actingAs($administrator)->get("/super-admin/reports/generate?type=period&day={$day}&format=pdf");
+        $pdf->assertOk()->assertHeader('content-type', 'application/pdf');
+    }
+
     public function test_the_three_downloads_come_back_as_what_they_say_they_are(): void
     {
         $administrator = $this->userOf('super_admin');

@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             PsgcSeeder::class,
             // DocumentTypeSeeder::class, // REMOVED: document_types table no longer exists (dropped in migration)
             // RequestSeeder::class, // Uncomment to seed 100 test requests
+            // DemoSeeder::class, // Uncomment for realistic demo applications across every status/type - or run `php artisan db:seed --class=DemoSeeder` on its own. Local/demo databases only.
         ]);
     }
 }

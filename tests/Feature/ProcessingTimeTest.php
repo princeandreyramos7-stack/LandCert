@@ -146,6 +146,44 @@ class ProcessingTimeTest extends TestCase
         $this->assertNull($recentReleased->fresh()->archived_at, 'a recently released one stays on the board');
     }
 
+    public function test_the_command_archives_approved_applications_unpaid_for_a_long_time(): void
+    {
+        $officer = $this->userOf('admin');
+        $applicant = $this->userOf('applicant');
+        $abandoned = $this->application($applicant, 'CZC', 'approved', $officer, ['paid' => false]);
+        $recentlyApproved = $this->application($applicant, 'CZC', 'approved', $officer, ['paid' => false]);
+        $paidLongAgo = $this->application($applicant, 'CZC', 'payment_confirmed', $officer);
+
+        RequestModel::where('id', $abandoned->id)->update(['stage_since' => now()->subDays(45)]);
+        // Still within the default 30-day grace period.
+        RequestModel::where('id', $recentlyApproved->id)->update(['stage_since' => now()->subDays(10)]);
+        // Paid, so no longer 'approved' - the unpaid rule never applies,
+        // however long ago that happened.
+        RequestModel::where('id', $paidLongAgo->id)->update(['stage_since' => now()->subDays(45)]);
+
+        $this->artisan('applications:archive')->assertSuccessful();
+
+        $this->assertNotNull($abandoned->fresh()->archived_at);
+        $this->assertNull($recentlyApproved->fresh()->archived_at, 'still within the grace period');
+        $this->assertNull($paidLongAgo->fresh()->archived_at, 'paid - the unpaid rule does not apply');
+    }
+
+    public function test_the_unpaid_archive_threshold_is_configurable(): void
+    {
+        $officer = $this->userOf('admin');
+        $applicant = $this->userOf('applicant');
+        $request = $this->application($applicant, 'CZC', 'approved', $officer, ['paid' => false]);
+        RequestModel::where('id', $request->id)->update(['stage_since' => now()->subDays(20)]);
+
+        // Default 30-day threshold: not old enough yet.
+        $this->artisan('applications:archive')->assertSuccessful();
+        $this->assertNull($request->fresh()->archived_at);
+
+        // A tighter threshold catches it.
+        $this->artisan('applications:archive --unpaid-days=15')->assertSuccessful();
+        $this->assertNotNull($request->fresh()->archived_at);
+    }
+
     public function test_the_reports_page_carries_the_processing_figures(): void
     {
         $administrator = $this->userOf('super_admin');

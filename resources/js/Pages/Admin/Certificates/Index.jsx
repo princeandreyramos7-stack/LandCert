@@ -12,7 +12,7 @@ import { Award, RefreshCw, FileDown } from "lucide-react";
 import { Toaster } from "@/Components/ui/toaster";
 import { LiveRefresh } from "@/Components/LiveRefresh";
 
-export default function CertificatesIndex({ auth, certificates = {}, filters = {}, userType = 'admin' }) {
+export default function CertificatesIndex({ auth, certificates = {}, filters = {}, userType = 'admin', archivedCount = 0 }) {
     const [selectedCertificate, setSelectedCertificate] = useState(null);
     const [showMarkReadyDialog, setShowMarkReadyDialog] = useState(false);
     const [showRecordReleaseDialog, setShowRecordReleaseDialog] = useState(false);
@@ -29,6 +29,12 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
     const handlePreview = (certificate) => { window.open(route(`${routePrefix}.certificates.preview`, certificate.id), '_blank'); };
     const handleUploadCertificate = (certificate) => { setSelectedCertificate(certificate); setShowUploadModal(true); };
     const handleRefresh = () => { router.reload({ only: ['certificates'] }); };
+    // Archived requests (App\Console\Commands\ArchiveApplications - released
+    // or denied for years, or approved-and-unpaid for a month) are off this
+    // list by default, same as All Applications and Payments.
+    const archived = Boolean(filters?.archived);
+    const toggleArchived = () =>
+        router.get(route(`${routePrefix}.certificates.index`), { ...filters, archived: archived ? undefined : 1 });
     // The rows on screen, as a spreadsheet. (This button used to open the
     // payments report - a different list altogether.)
     const handleExport = () => {
@@ -91,6 +97,17 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
                     </div>
                 </div>
 
+                {archived && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-5 text-sm text-amber-900">
+                        <span>
+                            <span className="font-semibold">Archive.</span> Certificates tied to an archived application — released/denied for years, or approved-and-unpaid for a month.
+                        </span>
+                        <button type="button" onClick={toggleArchived} className="font-semibold underline-offset-2 hover:underline">
+                            Back to live certificates
+                        </button>
+                    </div>
+                )}
+
                 {/* Summary counts — clicking one filters the list below. */}
                 <CertificateStats
                     certificates={certificates?.data || []}
@@ -113,6 +130,9 @@ export default function CertificatesIndex({ auth, certificates = {}, filters = {
                     onDownload={handleDownload}
                     onPreview={handlePreview}
                     onUploadCertificate={handleUploadCertificate}
+                    archived={archived}
+                    archivedCount={archivedCount}
+                    onToggleArchived={toggleArchived}
                 />
             </Layout>
 

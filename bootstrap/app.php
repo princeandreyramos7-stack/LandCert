@@ -27,6 +27,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->web(append: [
+            // Checked before anything else assumes a signed-in request is
+            // still the account's active one - see App\Support\SingleSession
+            // for where a session actually earns that status.
+            \App\Http\Middleware\EnsureSingleSession::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\NoCacheHeaders::class,

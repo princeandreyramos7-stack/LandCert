@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Report;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,5 +45,28 @@ class DashboardTest extends TestCase
                 ->component('SuperAdmin/Dashboard')
                 ->has('adminActivity.admin_performance', 1)
                 ->where('adminActivity.admin_performance.0.admin_name', 'Mary Jane P. Bulauan'));
+    }
+
+    /**
+     * Regression: a request returned to the applicant for correction
+     * ('in_applicant') has no decision yet, so its report's evaluation is
+     * null (Request::deriveStatus falls back to the request's own status
+     * only when evaluation is null). DashboardCacheService's status
+     * breakdown grouped by evaluation without excluding that null, and the
+     * dashboard's formatStatusData() called .charAt() on it and crashed the
+     * whole analytics panel.
+     */
+    public function test_the_dashboard_survives_a_request_with_no_decision_yet(): void
+    {
+        $officer = $this->userOf('admin');
+        $request = $this->application($this->userOf('applicant'), 'CZC', 'pending', $officer);
+        Report::where('request_id', $request->id)->update(['evaluation' => null]);
+        $request->update(['status' => 'in_applicant']);
+
+        $this->actingAs($officer)->get('/dashboard-panel')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Dashboard')
+                ->where('analytics.status_breakdown', fn ($rows) => collect($rows)->every(fn ($row) => $row['evaluation'] !== null)));
     }
 }

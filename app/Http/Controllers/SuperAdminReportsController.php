@@ -10,6 +10,7 @@ use App\Support\Xlsx;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -164,7 +165,7 @@ class SuperAdminReportsController extends Controller
         }
 
         [$rows, $title, $subtitle] = $type === 'period'
-            ? $this->periodReport((int) $validated['year'], $validated['month'] ?? 'all')
+            ? $this->periodReport((int) ($validated['year'] ?? 0), $validated['month'] ?? 'all', $validated['day'] ?? null)
             : $this->officerReport($validated['officer'] ?? 'all');
 
         // The panel pages in the browser, so every row used to travel in this
@@ -208,7 +209,7 @@ class SuperAdminReportsController extends Controller
 
         [$rows, $title, $subtitle, $slug] = match ($type) {
             'applicant' => $this->applicantReport($validated['applicant']),
-            'period' => $this->periodReport((int) $validated['year'], $validated['month'] ?? 'all'),
+            'period' => $this->periodReport((int) ($validated['year'] ?? 0), $validated['month'] ?? 'all', $validated['day'] ?? null),
             'officer' => $this->officerReport($validated['officer'] ?? 'all'),
         };
 
@@ -229,7 +230,13 @@ class SuperAdminReportsController extends Controller
             'type' => 'required|in:' . implode(',', $this->allowedTypes()),
             'format' => 'nullable|in:pdf,xlsx,csv',
             'applicant' => 'required_if:type,applicant|nullable|string|max:255',
-            'year' => 'required_if:type,period|nullable|integer|min:2000|max:2100',
+            // A single day stands in for year+month - only one of the two is
+            // required, never both.
+            'day' => 'nullable|date_format:Y-m-d',
+            'year' => [
+                'nullable', 'integer', 'min:2000', 'max:2100',
+                Rule::requiredIf(fn () => $request->input('type') === 'period' && !$request->filled('day')),
+            ],
             // "all" means the whole year, so this is not simply a month number.
             'month' => 'nullable|string|in:all,1,2,3,4,5,6,7,8,9,10,11,12',
             'officer' => ['nullable', 'regex:/^(all|\d+)$/'],
@@ -252,8 +259,23 @@ class SuperAdminReportsController extends Controller
         ];
     }
 
-    private function periodReport(int $year, string $month): array
+    private function periodReport(int $year, string $month, ?string $day = null): array
     {
+        // A single day stands on its own - it names its own date and ignores
+        // whatever year/month came along with it.
+        if ($day) {
+            $date = Carbon::createFromFormat('Y-m-d', $day)->startOfDay();
+
+            $rows = $this->rows(fn ($query) => $query->whereDate('requests.created_at', $date));
+
+            return [
+                $rows,
+                'Applications Filed',
+                $date->format('F j, Y'),
+                'period-' . $date->format('Y-m-d'),
+            ];
+        }
+
         $monthNumber = ctype_digit($month) ? (int) $month : null;
 
         $rows = $this->rows(function ($query) use ($year, $monthNumber) {
@@ -298,9 +320,7 @@ class SuperAdminReportsController extends Controller
                 'report',
                 fn ($r) => $r->whereNotNull('evaluation')->where('evaluation', '!=', 'pending')
             ),
-            function ($request, $report) use ($wanted) {
-                $reviewer = $report?->resolveReviewer();
-
+            function ($request, $report, $reviewer) use ($wanted) {
                 if ($wanted) {
                     return isset($reviewer->id) && (int) $reviewer->id === $wanted;
                 }
@@ -339,6 +359,8 @@ class SuperAdminReportsController extends Controller
 
         // The documents are drawn in full, so the relations they read are
         // loaded whole rather than column by column.
+        $staff = User::whereIn('user_type', ['admin', 'super_admin'])->get();
+
         return RequestModel::with(array_merge(ApplicationDocuments::FORM_RELATIONS, [
             'report',
             'payments',
@@ -349,9 +371,9 @@ class SuperAdminReportsController extends Controller
             ->orderBy('created_at')
             ->get()
             ->values()
-            ->map(function ($request, $index) use ($zoningAdministrator) {
+            ->map(function ($request, $index) use ($zoningAdministrator, $staff) {
                 $report = $request->report;
-                $reviewer = $report?->resolveReviewer();
+                $reviewer = $report?->resolveReviewer($staff);
                 $rawStatus = RequestModel::deriveStatus($request->status, $report?->evaluation);
                 $fee = $report?->payment_amount ?? $report?->amount;
 
@@ -545,15 +567,18 @@ class SuperAdminReportsController extends Controller
 
         $scope($query);
 
-        return $query->get()
-            ->map(function ($request) use ($keep) {
-                $report = $request->report;
+        // Resolved once for the whole export, not per row: Report::resolveReviewer()
+        // would otherwise run one to two extra queries for every single row.
+        $staff = User::whereIn('user_type', ['admin', 'super_admin'])->get();
 
-                if ($keep && !$keep($request, $report)) {
+        return $query->get()
+            ->map(function ($request) use ($keep, $staff) {
+                $report = $request->report;
+                $reviewer = $report?->resolveReviewer($staff);
+
+                if ($keep && !$keep($request, $report, $reviewer)) {
                     return null;
                 }
-
-                $reviewer = $report?->resolveReviewer();
 
                 return (object) [
                     'application_number' => $request->application_number ?: "TPZ-{$request->id}",

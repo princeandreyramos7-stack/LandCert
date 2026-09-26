@@ -100,11 +100,21 @@ class Report extends Model
      * name against a staff account (older reports predate the FK), and finally
      * to a bare name object so the document still prints a name — just without
      * a signature.
+     *
+     * A single-record view (a certificate, a clearance) calls this with no
+     * argument, and it queries staff on its own, exactly as before. A caller
+     * resolving many reports at once - a report export, notably - should
+     * preload every admin/super_admin account once and pass that same
+     * collection into every call, or the lookup below becomes 1-2 extra
+     * queries per row.
      */
-    public function resolveReviewer(): ?object
+    public function resolveReviewer(?\Illuminate\Support\Collection $staff = null): ?object
     {
-        if ($this->reviewed_by && ($user = User::find($this->reviewed_by))) {
-            return $user;
+        if ($this->reviewed_by) {
+            $user = $staff?->firstWhere('id', $this->reviewed_by) ?? User::find($this->reviewed_by);
+            if ($user) {
+                return $user;
+            }
         }
 
         $name = trim((string) $this->issued_by);
@@ -112,12 +122,12 @@ class Report extends Model
             return null;
         }
 
-        $match = User::whereIn('user_type', ['admin', 'super_admin'])
-            ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($name)])
-            ->first();
+        $staff ??= User::whereIn('user_type', ['admin', 'super_admin'])->get();
+        $target = mb_strtolower($name);
+        $match = $staff->first(fn (User $user) => mb_strtolower(trim($user->name)) === $target);
 
         return $match
-            ?: $this->matchStaffLoosely($name)
+            ?: $this->matchStaffLoosely($name, $staff)
             ?: (object) ['name' => $name, 'signature_url' => null];
     }
 
@@ -135,7 +145,7 @@ class Report extends Model
      * Only an unambiguous match counts: signing a certificate as the wrong
      * officer is far worse than leaving it unsigned.
      */
-    private function matchStaffLoosely(string $name): ?User
+    private function matchStaffLoosely(string $name, \Illuminate\Support\Collection $staff): ?User
     {
         $letters = fn (string $value) => preg_replace('/[^a-z]/', '', mb_strtolower($value));
 
@@ -161,9 +171,7 @@ class Report extends Model
             return null;
         }
 
-        $candidates = User::whereIn('user_type', ['admin', 'super_admin'])
-            ->get()
-            ->filter(fn (User $user) => $collapse($user->name) === $target);
+        $candidates = $staff->filter(fn (User $user) => $collapse($user->name) === $target);
 
         return $candidates->count() === 1 ? $candidates->first() : null;
     }

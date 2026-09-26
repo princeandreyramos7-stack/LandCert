@@ -258,6 +258,16 @@ class SmsService
         return $this->send($phone, $this->truncate($message));
     }
 
+    /**
+     * The 2FA code sent at sign-in. Not a template (see sendTemplate): a
+     * security code is not something an office admin should be able to
+     * reword from the SMS Templates screen.
+     */
+    public function sendTwoFactorCode(string $phone, string $code): bool
+    {
+        return $this->send($phone, "Your CPDO sign-in code is {$code}. It expires in 5 minutes. Never share this code with anyone.");
+    }
+
     /* ─────────────────────────────────────────────────────────────
      * Helpers
      * ───────────────────────────────────────────────────────────── */

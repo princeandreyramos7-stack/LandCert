@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Rules\LowercaseEmailDomain;
 use App\Mail\UserRegistrationWelcome;
 use App\Models\User;
+use App\Services\TwoFactorAuthService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -115,8 +115,11 @@ class RegisteredUserController extends Controller
             // Continue with registration even if email fails
         }
 
-        Auth::login($user);
-
-        return redirect(route('dashboard', absolute: false));
+        // A new account confirms its phone number the same way a returning
+        // one confirms its password: the number just typed into the form is
+        // not proven to be reachable until a texted code comes back through
+        // it. Skipping that here - signing straight in - would let anyone
+        // create an account against a number they do not hold.
+        return app(TwoFactorAuthService::class)->beginChallenge($request, $user);
     }
 }

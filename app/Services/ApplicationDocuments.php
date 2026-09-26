@@ -140,7 +140,7 @@ class ApplicationDocuments
             'project_cost'             => $request->project?->project_cost ?? null,
 
             // Location
-            'location_number'       => $request->property?->lot_number ?? '',
+            'location_number'       => $request->location?->house_number ?? '',
             'location_street'       => $request->location?->street_address ?? '',
             'location_barangay'     => $request->location?->barangay ?? '',
             'location_city'         => $request->location?->city_municipality ?? 'City of Ilagan',

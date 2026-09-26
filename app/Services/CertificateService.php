@@ -26,28 +26,44 @@ class CertificateService
             throw new \Exception("Payment #{$payment->id} has no associated request.");
         }
 
-        // Return existing certificate if already created for this request
-        $existing = Certificate::where('request_id', $request->id)->first();
-        if ($existing) {
-            Log::info("Certificate already exists for request #{$request->id}", [
-                'certificate_id' => $existing->id,
+        // The existence check and the number generation + insert happen
+        // under one lock: without it, two near-simultaneous calls for the
+        // same request could both see "none yet", both compute the same
+        // next number, and both insert - the unique certificate_number
+        // index would then reject one with an uncaught exception instead of
+        // this just quietly returning the other call's certificate.
+        [$certificate, $certificateNumber] = Certificate::underIssuanceLock(function () use ($request, $payment) {
+            $existing = Certificate::where('request_id', $request->id)->first();
+            if ($existing) {
+                Log::info("Certificate already exists for request #{$request->id}", [
+                    'certificate_id' => $existing->id,
+                ]);
+                return [$existing, $existing->certificate_number];
+            }
+
+            $certificateNumber = $this->generateCertificateNumber();
+
+            $certificate = Certificate::create([
+                'request_id'         => $request->id,
+                'payment_id'         => $payment->id,
+                'user_id'            => $request->user_id,
+                'certificate_number' => $certificateNumber,
+                'issued_by'          => auth()->id(),
+                'issued_at'          => now(),
+                'valid_until'        => now()->addMonths(self::validityMonths()),
+                'status'             => 'preparing',
+                'notes'              => 'Auto-generated after payment confirmation',
             ]);
-            return $existing;
+
+            return [$certificate, $certificateNumber];
+        });
+
+        // Already existed - the rest of this method (marking ready, the
+        // audit log, notifications) already ran the first time; running it
+        // again for the same certificate would double-log and double-notify.
+        if ($certificate->wasRecentlyCreated === false) {
+            return $certificate;
         }
-
-        $certificateNumber = $this->generateCertificateNumber();
-
-        $certificate = Certificate::create([
-            'request_id'         => $request->id,
-            'payment_id'         => $payment->id,
-            'user_id'            => $request->user_id,
-            'certificate_number' => $certificateNumber,
-            'issued_by'          => auth()->id(),
-            'issued_at'          => now(),
-            'valid_until'        => now()->addMonths(self::validityMonths()),
-            'status'             => 'preparing',
-            'notes'              => 'Auto-generated after payment confirmation',
-        ]);
 
         // Update request status to certificate_ready immediately since certificate is generated
         $request->update(['status' => 'certificate_ready']);
@@ -337,11 +353,17 @@ class CertificateService
      */
     public function getAllCertificates(array $filters = [])
     {
+        $archived = !empty($filters['archived']);
+
         $query = Certificate::with(['request.applicant', 'request.project', 'request.releaser', 'payment', 'issuedBy'])
             // Only show certificates with verified payments
             ->whereHas('payment', function ($q) {
                 $q->where('payment_status', 'verified');
             })
+            // An archived application (App\Console\Commands\ArchiveApplications)
+            // is off the live board, so its certificate defaults off this list
+            // too - the 'archived' filter still reaches it.
+            ->whereHas('request', fn ($q) => $q->{$archived ? 'whereNotNull' : 'whereNull'}('archived_at'))
             ->orderBy('issued_at', 'desc');
 
         // Released means handed to the applicant, which is what the badge in the

@@ -31,7 +31,16 @@ class PresenceTest extends TestCase
         $administrator = $this->userOf('super_admin', ['name' => 'Crisanta D. Concepcion']);
         $officer = $this->userOf('admin', ['name' => 'Jeffrey C. Pauig']);
         $applicant = $this->userOf('applicant', ['name' => 'Juan Dela Cruz']);
-        $gone = $this->userOf('applicant', ['name' => 'Left Yesterday', 'last_seen_at' => now()->subHours(3), 'last_seen_path' => '/dashboard']);
+        // subHours(3) crossed into yesterday whenever this happened to run in
+        // the first few hours after midnight, undercounting 'today' by one -
+        // clamped to the start of today instead, which still clears the
+        // 5-minute online window (Presence::ONLINE_MINUTES) by a wide margin
+        // regardless of what time this runs at.
+        $gone = $this->userOf('applicant', [
+            'name' => 'Left Yesterday',
+            'last_seen_at' => now()->subHours(3)->max(today()->startOfDay()),
+            'last_seen_path' => '/dashboard',
+        ]);
 
         $this->actingAs($officer)->get('/applications')->assertOk();
         $this->actingAs($applicant)->get('/request')->assertOk();

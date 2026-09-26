@@ -41,7 +41,7 @@ class AdminUserSeeder extends Seeder
                 'name' => 'Crisanta D. Concepcion',
                 'password' => Hash::make(self::SUPER_ADMIN_PASSWORD),
                 'user_type' => 'super_admin',
-                'contact_number' => '09123456789',
+                'contact_number' => '09707112132',
                 'address' => 'CPDO Office, City of Ilagan',
                 'email_verified_at' => now(),
                 // Signature printed on certificates and clearances.
@@ -59,7 +59,7 @@ class AdminUserSeeder extends Seeder
                 'name' => 'Jeffrey C. Pauig',
                 'password' => Hash::make('jeff123'),
                 'user_type' => 'admin',
-                'contact_number' => '09123456789',
+                'contact_number' => '09707112132',
                 'address' => 'CPDO Office, City of Ilagan',
                 'email_verified_at' => now(),
                 // Signature printed on certificates and clearances he evaluated.

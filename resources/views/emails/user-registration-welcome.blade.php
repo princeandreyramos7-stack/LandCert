@@ -225,7 +225,7 @@
                 <p>This is an automated message. Please do not reply to this email.</p>
             </div>
             <p style="margin-top: 20px; font-size: 12px; opacity: 0.8;">
-                © {{ date('Y') }} City of Ilagan CDRRMO. All rights reserved.
+                © {{ date('Y') }} CPDO City of Ilagan. All rights reserved.
             </p>
         </div>
     </div>

@@ -70,6 +70,31 @@ class Certificate extends Model
     }
 
     /**
+     * Run $work while holding a database-wide lock on certificate issuance,
+     * so two near-simultaneous calls (a double-clicked "Verify Payment", or
+     * FixStuckCertificates overlapping a manual verification) cannot both
+     * read "no certificate yet for this request" and both create one, nor
+     * both read the same highest certificate_number. Mirrors
+     * Request::underNumberLock, which protects application/decision numbers
+     * the same way.
+     */
+    public static function underIssuanceLock(callable $work)
+    {
+        $connection = \Illuminate\Support\Facades\DB::connection();
+        if (!in_array($connection->getDriverName(), ['mysql', 'mariadb'], true)) {
+            return $work();
+        }
+
+        $name = 'cpdo.certificate_issuance';
+        $connection->selectOne('SELECT GET_LOCK(?, 10) AS got', [$name]);
+        try {
+            return $work();
+        } finally {
+            $connection->selectOne('SELECT RELEASE_LOCK(?) AS released', [$name]);
+        }
+    }
+
+    /**
      * A fresh, unused code: 12 characters from the safe alphabet, about 60
      * bits, so it cannot be guessed and one cannot be turned into another.
      */

@@ -383,12 +383,20 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
             onError: (errors) => {
                 console.error("Error recording payment:", errors);
                 setIsProcessing(false);
+                // The form stays open with everything still filled in, so
+                // trying again is one click away either way - Inertia gives
+                // no clean signal here for "never reached the server" vs a
+                // real validation error, only an empty errors object for
+                // the former.
+                const isLikelyNetworkIssue = !errors || Object.keys(errors).length === 0;
                 toast({
                     variant: "destructive",
                     title: "Failed to Record Payment",
                     description:
                         errors.message ||
-                        "An error occurred while recording the payment.",
+                        (isLikelyNetworkIssue
+                            ? "Could not reach the server. Check your connection and press Submit again."
+                            : "An error occurred while recording the payment."),
                 });
             },
         });

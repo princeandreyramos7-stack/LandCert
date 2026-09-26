@@ -8,7 +8,18 @@ import {
     DialogTitle,
 } from "@/Components/ui/dialog";
 import { Button } from "@/Components/ui/button";
-import { Loader2, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Loader2, CheckCircle2, ShieldCheck, WifiOff } from "lucide-react";
+
+/** Module-level, not defined inside the modal body - see PhilippineAddressFields
+ * for why a component nested in another component's render is best avoided. */
+function SummaryItem({ label, value }) {
+    return (
+        <div className="flex justify-between gap-4">
+            <span className="text-gray-600 text-xs">{label}:</span>
+            <span className="text-gray-900 font-medium text-xs text-right">{value || "N/A"}</span>
+        </div>
+    );
+}
 
 export function ApplicationSummaryModal({
     isOpen,
@@ -21,7 +32,14 @@ export function ApplicationSummaryModal({
     // (useForm's cloneDeep destroys File objects), so they are passed in directly.
     requirementFiles = {},
     requirements = [],
+    // 'idle' | 'waiting' | 'retrying' - see resources/js/lib/resilientSubmit.js.
+    // The connection dropped mid-submit: nothing was lost, it is retrying on
+    // its own, and the applicant is told so rather than left looking at a
+    // spinner that never resolves.
+    connectionState = 'idle',
+    onCancelSubmit = () => {},
 }) {
+    const offline = connectionState !== 'idle';
     /*
      * The declaration is a separate act from the consent given at sign-up:
      * that one covers the handling of personal information, this one is the
@@ -48,13 +66,6 @@ export function ApplicationSummaryModal({
 
     const requirementLabel = (reqId) =>
         requirements.find((r) => String(r.id) === String(reqId))?.name || `Requirement #${reqId}`;
-
-    const SummaryItem = ({ label, value }) => (
-        <div className="flex justify-between gap-4">
-            <span className="text-gray-600 text-xs">{label}:</span>
-            <span className="text-gray-900 font-medium text-xs text-right">{value || "N/A"}</span>
-        </div>
-    );
 
     return (
         // While the submit is in flight the dialog cannot be dismissed — by the
@@ -108,6 +119,19 @@ export function ApplicationSummaryModal({
                         </div>
                     </div>
 
+                    {/* A Zoning Certification has no Step 2 to show these from -
+                        they were asked for in Step 1 instead (see
+                        Step1ApplicantInfo's own "Property Identification"). */}
+                    {isZC && (
+                        <div className="space-y-3">
+                            <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Property Identification</h3>
+                            <div className="space-y-2 text-sm">
+                                <SummaryItem label="Lot Number" value={data.lot_number} />
+                                <SummaryItem label="Tax Declaration No." value={data.tax_declaration_no} />
+                            </div>
+                        </div>
+                    )}
+
                     {/* Project, location and land use — skipped for a Zoning
                         Certification, which has no project to describe. */}
                     {!isZC && (
@@ -120,6 +144,8 @@ export function ApplicationSummaryModal({
                                 <SummaryItem label="Project Nature" value={data.project_nature} />
                                 <SummaryItem label="Project Area - Lot (sqm)" value={data.lot_area_sqm} />
                                 <SummaryItem label="Project Area - Bldg. Improvement (sqm)" value={data.bldg_improvement_sqm} />
+                                <SummaryItem label="Lot Number" value={data.lot_number} />
+                                <SummaryItem label="Tax Declaration No." value={data.tax_declaration_no} />
                                 <SummaryItem label="Right Over Land" value={data.right_over_land} />
                                 <SummaryItem label="Project Tenure" value={
                                     String(data.project_nature_duration || '').toLowerCase() === 'temporary'
@@ -137,7 +163,7 @@ export function ApplicationSummaryModal({
                         <div className="space-y-3">
                             <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Project Location</h3>
                             <div className="space-y-2 text-sm">
-                                <SummaryItem label="House/Lot Number" value={data.project_location_number} />
+                                <SummaryItem label="No./Blk" value={data.project_location_number} />
                                 <SummaryItem label="Street" value={data.project_location_street} />
                                 <SummaryItem label="Barangay" value={data.project_location_barangay} />
                                 <SummaryItem label="Municipality/City" value={data.project_location_municipality} />
@@ -224,6 +250,23 @@ export function ApplicationSummaryModal({
                         </ul>
                     </div>
 
+                    {/* Connection lost mid-submit - nothing here was lost, it is
+                        retrying on its own. See resources/js/lib/resilientSubmit.js. */}
+                    {offline && (
+                        <div className="flex items-start gap-3 rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
+                            <WifiOff className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
+                            <div className="text-sm text-amber-900">
+                                <p className="font-bold">Connection lost</p>
+                                <p className="mt-1">
+                                    Your application and every file you attached are safe and
+                                    waiting to send. This will keep trying on its own as soon as
+                                    your connection comes back — no need to do anything, and
+                                    nothing will be filed twice.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Declaration - required before the form can be filed */}
                     <div className="rounded-lg border-2 border-[#0d1f5c]/15 bg-[#0d1f5c]/[0.03] p-4">
                         <div className="mb-2.5 flex items-center gap-2">
@@ -274,15 +317,24 @@ export function ApplicationSummaryModal({
 
                 {/* Footer */}
                 <DialogFooter className="gap-3">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={onClose}
-                        disabled={processing}
-                        className="px-6"
-                    >
-                        Back to Edit
-                    </Button>
+                    {offline ? (
+                        // Cancelling here only stops the retry loop - nothing
+                        // was ever sent, so there is nothing to undo. The form
+                        // itself, files included, is untouched either way.
+                        <Button type="button" variant="outline" onClick={onCancelSubmit} className="px-6">
+                            Cancel and keep editing
+                        </Button>
+                    ) : (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={onClose}
+                            disabled={processing}
+                            className="px-6"
+                        >
+                            Back to Edit
+                        </Button>
+                    )}
                     <Button
                         type="button"
                         onClick={() => onConfirm({ declared })}
@@ -290,7 +342,12 @@ export function ApplicationSummaryModal({
                         title={declared ? undefined : "Tick the declaration above to submit"}
                         className="gap-2 bg-blue-600 hover:bg-blue-700 px-6 disabled:cursor-not-allowed"
                     >
-                        {processing ? (
+                        {offline ? (
+                            <>
+                                <WifiOff className="h-4 w-4" />
+                                Waiting for connection…
+                            </>
+                        ) : processing ? (
                             <>
                                 <Loader2 className="h-4 w-4 animate-spin" />
                                 {isEditing ? "Updating..." : "Submitting..."}

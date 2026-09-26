@@ -32,6 +32,7 @@ import {
     Ban,
     ShieldCheck,
     Link2,
+    Archive,
 } from "lucide-react";
 import { router } from "@inertiajs/react";
 import { Textarea } from "@/Components/ui/textarea";
@@ -178,6 +179,9 @@ export function CertificatesTable({
     onPreview,
     onUploadCertificate,
     className = "",
+    archived = false,
+    archivedCount = 0,
+    onToggleArchived,
 }) {
     const [searchTerm, setSearchTerm] = useState(filters.search || "");
     const [statusFilter, setStatusFilter] = useState(filters.status || "all");
@@ -335,12 +339,24 @@ export function CertificatesTable({
                         </span>{" "}
                         certificates
                     </p>
-                    {(searchTerm || statusFilter !== "all") && (
-                        <Badge variant="outline" className="text-xs">
-                            <Filter className="h-3 w-3 mr-1" />
-                            Filters Active
-                        </Badge>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {(searchTerm || statusFilter !== "all") && (
+                            <Badge variant="outline" className="text-xs">
+                                <Filter className="h-3 w-3 mr-1" />
+                                Filters Active
+                            </Badge>
+                        )}
+                        {onToggleArchived && (
+                            <button
+                                type="button"
+                                onClick={onToggleArchived}
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-[#0d1f5c] hover:underline"
+                            >
+                                <Archive className="h-3 w-3" />
+                                {archived ? "Back to live certificates" : `View archive${archivedCount ? ` (${archivedCount})` : ""}`}
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 

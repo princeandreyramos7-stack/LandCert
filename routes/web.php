@@ -110,6 +110,15 @@ Route::middleware(['auth', 'throttle:60,1,pages', 'prevent.back'])->group(functi
     // Request routes
     Route::get('/request', [RequestController::class, 'index'])->name('request.index');
     Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:10,1,submit')->name('request.store');
+    // The account-tied New Application draft - saved on request so it
+    // survives closing the browser or switching devices, not just a
+    // refresh. Its own throttle: this is called periodically while the
+    // wizard is open, not once like the page views around it.
+    Route::withoutMiddleware('throttle:60,1,pages')->middleware('throttle:30,1,draft-save')->group(function () {
+        Route::get('/request/draft', [\App\Http\Controllers\ApplicationDraftController::class, 'show'])->name('request.draft.show');
+        Route::post('/request/draft', [\App\Http\Controllers\ApplicationDraftController::class, 'store'])->name('request.draft.store');
+        Route::delete('/request/draft', [\App\Http\Controllers\ApplicationDraftController::class, 'destroy'])->name('request.draft.destroy');
+    });
     Route::get('/requests/{id}/edit', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'edit-application', $id)); })->name('requests.edit');
     Route::put('/requests/{id}', [RequestController::class, 'update'])->middleware('throttle:10,1,submit')->name('requests.update');
     Route::get('/my-applications', [RequestController::class, 'myApplications'])->name('my-applications');
@@ -123,6 +132,15 @@ Route::middleware(['auth', 'throttle:60,1,pages', 'prevent.back'])->group(functi
     
     // Requirement document routes (for viewing/deleting only - upload is now in Step 4)
     Route::delete('/requirements/{id}', [\App\Http\Controllers\RequirementDocumentController::class, 'destroy'])->name('requirements.destroy');
+    // A no-save check of one file against the same readability rule the
+    // wizard's final submission enforces (see ReadableDocument), so Step 4
+    // can reject a bad scan the moment it is attached rather than only
+    // after the whole application is filled in and Submit is pressed. Its
+    // own throttle: a wizard page can have a dozen upload slots, each
+    // firing this once per file picked, which would eat the shared page
+    // limit fast.
+    Route::post('/requirements/check-readability', [\App\Http\Controllers\RequirementDocumentController::class, 'checkReadability'])
+        ->withoutMiddleware('throttle:60,1,pages')->middleware('throttle:40,1,doc-check')->name('requirements.check-readability');
     // Pictures, not pages: one report shows a dozen of these at once, and its
     // printed pack shows them again, so they get a limit of their own rather
     // than eating the group's sixty a minute and leaving the later scans as
@@ -160,8 +178,6 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::get('/requests/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'print-form', $id)); })->name('requests.print');
     Route::get('/requests/{id}/generate-certificate', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'generate-certificate', $id)); })->name('generate-certificate');
     Route::post('/requests/{id}/certificate-details', [AdminController::class, 'saveCertificateDetails'])->name('certificate-details');
-    Route::post('/update-project-type/{id}', [AdminController::class, 'updateProjectType'])->name('update-project-type');
-    Route::post('/requests/{id}/application-details', [AdminController::class, 'updateApplicationDetails'])->name('application-details');
     // Releasing to the applicant is the Zoning Officer's act; the Administrator has no route for it.
     Route::get('/requests/{id}/generate-clearance', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'generate-clearance', $id)); })->name('generate-clearance');
     Route::get('/requests/{id}/generate-order-of-payment', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'order-of-payment', $id)); })->name('generate-order-of-payment');
@@ -224,8 +240,6 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::get('/sms', function (\Illuminate\Http\Request $request) { return redirect('/sms-broadcast' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('sms.index');
     Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
 
-    // Print form
-    Route::get('/requests/{id}/print', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'print-form', $id)); })->name('requests.print');
     Route::get('/export/requests', [\App\Http\Controllers\AdminController::class, 'exportRequests'])->name('export.requests');
     Route::get('/export/users', [\App\Http\Controllers\AdminController::class, 'exportUsers'])->name('export.users');
     Route::get('/export/payments', [\App\Http\Controllers\AdminController::class, 'exportPayments'])->name('export.payments');

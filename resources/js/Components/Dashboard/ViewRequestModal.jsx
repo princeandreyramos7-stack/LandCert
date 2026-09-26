@@ -262,7 +262,7 @@ export function ViewRequestModal({ request, isOpen, onClose }) {
                                     {request?.project_location_number && (
                                         <div>
                                             <p className="text-xs font-medium text-gray-500">
-                                                House/Lot Number
+                                                No./Blk
                                             </p>
                                             <p className="font-semibold">
                                                 {request.project_location_number}

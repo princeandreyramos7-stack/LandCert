@@ -43,7 +43,7 @@
                             <p style="margin: 0 0 20px; font-size: 12px; color: #9ca3af;">🌐 www.ilagan.gov.ph</p>
                             <div style="border-top: 1px solid #e5e7eb; padding-top: 15px; margin-top: 15px;">
                                 <p style="margin: 0; font-size: 11px; color: #9ca3af;">This is an automated message. Please do not reply to this email.</p>
-                                <p style="margin: 5px 0 0; font-size: 11px; color: #9ca3af;">© {{ date('Y') }} CPDO. All rights reserved.</p>
+                                <p style="margin: 5px 0 0; font-size: 11px; color: #9ca3af;">© {{ date('Y') }} CPDO City of Ilagan. All rights reserved.</p>
                             </div>
                         </td>
                     </tr>

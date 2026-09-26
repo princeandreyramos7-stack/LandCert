@@ -45,7 +45,7 @@ class NotarizedFormUploadTest extends TestCase
 
         $response = $this->actingAs($user)->post(
             "/my-applications/{$application->id}/notarized-form",
-            ['document' => UploadedFile::fake()->create('notarized.pdf', 60, 'application/pdf')]
+            ['document' => $this->fakePdf('notarized.pdf', 60)]
         );
 
         $response->assertRedirect();
@@ -74,7 +74,7 @@ class NotarizedFormUploadTest extends TestCase
 
         $this->actingAs($stranger)->post(
             "/my-applications/{$application->id}/notarized-form",
-            ['document' => UploadedFile::fake()->create('notarized.pdf', 60, 'application/pdf')]
+            ['document' => $this->fakePdf('notarized.pdf', 60)]
         )->assertForbidden();
 
         $this->assertDatabaseCount('requirement_documents', 0);

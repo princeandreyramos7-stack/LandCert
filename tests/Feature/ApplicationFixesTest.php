@@ -43,7 +43,7 @@ class ApplicationFixesTest extends TestCase
             'has_written_notice' => 'no',
             'has_similar_application' => 'no',
             'preferred_release_mode' => 'pickup',
-            'requirement_uploads' => [2 => [UploadedFile::fake()->create('title.pdf', 40, 'application/pdf')]],
+            'requirement_uploads' => [2 => [$this->fakePdf('title.pdf', 40)]],
             'requirement_names' => [2 => '2. Right Over Land Documentation'],
         ], $extra);
     }

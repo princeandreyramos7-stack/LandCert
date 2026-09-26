@@ -257,9 +257,12 @@ class AuditProbeTest extends TestCase
     public function test_every_upload_is_judged_by_content(): void
     {
         $uploadRules = [
-            'AdminController.php' => ["'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240'", "'receipt_file' => 'required|file|mimes:jpeg,jpg,png,gif,pdf|max:5120'"],
-            'SuperAdminController.php' => ["'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240'", "'receipt_file' => 'required|file|mimes:jpeg,jpg,png,gif,pdf|max:5120'"],
-            'RequirementDocumentController.php' => ["'document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120'"],
+            'AdminController.php' => ["'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:20480'", "'receipt_file' => 'required|file|mimes:jpeg,jpg,png,gif,pdf|max:5120'"],
+            'SuperAdminController.php' => ["'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:20480'", "'receipt_file' => 'required|file|mimes:jpeg,jpg,png,gif,pdf|max:5120'"],
+            // The rule became an array (ReadableDocument, see App\Rules,
+            // does not fit Laravel's pipe-delimited string syntax), so the
+            // canary checks its pieces rather than one exact string.
+            'RequirementDocumentController.php' => ["'mimes:pdf,jpg,jpeg,png'", 'UploadLimits::MAX_FILE_KB', 'new ReadableDocument'],
             'PaymentController.php' => ["'receipt' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120'"],
         ];
         foreach ($uploadRules as $controller => $rules) {

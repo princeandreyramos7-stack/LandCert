@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Report;
 use App\Models\Request as RequestModel;
+use App\Rules\ReadableDocument;
+use App\Support\UploadLimits;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -192,6 +194,7 @@ class RequestController extends Controller
                 'normalized_projects.project_nature_years',
                 'normalized_projects.project_cost',
                 // Location fields
+                'locations.house_number as project_location_number',
                 'locations.street_address as project_location_street',
                 'locations.barangay as project_location_barangay',
                 'locations.city_municipality as project_location_city',
@@ -199,7 +202,8 @@ class RequestController extends Controller
                 // Property fields
                 'properties.lot_area_sqm',
                 'properties.bldg_improvement_sqm',
-                'properties.lot_number as project_location_number',
+                'properties.lot_number',
+                'properties.tax_declaration_no',
                 'properties.right_over_land',
                 'properties.existing_land_use',
                 // Note: project_area_sqm doesn't exist in normalized structure
@@ -303,16 +307,18 @@ class RequestController extends Controller
             'project_cost' => $request->project->project_cost ?? null,
             
             // Location details
-            'project_location_number' => $request->property->lot_number ?? '',
+            'project_location_number' => $request->location->house_number ?? '',
             'project_location_street' => $request->location->street_address ?? '',
             'project_location_barangay' => $request->location->barangay ?? '',
             'project_location_city' => $request->location->city_municipality ?? '',
             'project_location_municipality' => $request->location->city_municipality ?? '',
             'project_location_province' => $request->location->province ?? '',
-            
+
             // Property details
             'lot_area_sqm' => $request->property->lot_area_sqm ?? null,
             'bldg_improvement_sqm' => $request->property->bldg_improvement_sqm ?? null,
+            'lot_number' => $request->property->lot_number ?? '',
+            'tax_declaration_no' => $request->property->tax_declaration_no ?? '',
             'right_over_land' => $request->property->right_over_land ?? '',
             
             // Land use
@@ -403,8 +409,8 @@ class RequestController extends Controller
             'corporation_address' => 'nullable|string',
             'authorized_representative_name' => 'nullable|string|max:255',
             'authorized_representative_email' => 'nullable|email|max:255',
-            'authorization_letter' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            
+            'authorization_letter' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:' . UploadLimits::MAX_FILE_KB],
+
             // Page 2: Project Details
             'project_type' => 'nullable|string|max:255',
             'project_nature' => 'nullable|string|max:255',
@@ -417,11 +423,19 @@ class RequestController extends Controller
             'project_area_sqm' => 'nullable|numeric|min:0',
             'lot_area_sqm' => 'nullable|numeric|min:0',
             'bldg_improvement_sqm' => 'nullable|numeric|min:0',
+            // The parcel's legal Lot No. and its Tax Declaration No. - what
+            // the certificate and printed application form both quote by
+            // these exact names (see App\Services\ApplicationDocuments).
+            // Optional: the applicant may not have them to hand at filing,
+            // same as an officer's own entry for these is optional until an
+            // application is marked reviewed (see AdminController::reviewApplication).
+            'lot_number' => 'nullable|string|max:100',
+            'tax_declaration_no' => 'nullable|string|max:100',
             'right_over_land' => 'nullable|in:Owner,Lessee',
             'project_nature_duration' => 'nullable|in:Permanent,Temporary',
             'project_nature_years' => 'nullable|integer|min:1',
             'project_cost' => 'nullable|numeric|min:0',
-            
+
             // Page 3: Land Uses
             'existing_land_use' => 'nullable|in:Residential,Institutional,Commercial,Industrial,Tenanted,Vacant,Agricultural,Not Tenanted',
             'has_written_notice' => 'nullable|in:yes,no',
@@ -436,7 +450,7 @@ class RequestController extends Controller
             // Page 4: Requirements Upload
             'requirement_uploads' => 'nullable|array',
             'requirement_uploads.*' => 'nullable|array',
-            'requirement_uploads.*.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'requirement_uploads.*.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:' . UploadLimits::MAX_FILE_KB, new ReadableDocument],
             'requirement_names' => 'nullable|array',
             'verified_requirements' => 'nullable|array',
         ],
@@ -460,6 +474,8 @@ class RequestController extends Controller
         if ($chain->errors()->isNotEmpty()) {
             throw ValidationException::withMessages($chain->errors()->messages());
         }
+
+        self::assertNoMultipleImagesPerRequirement($request);
 
         $validated['applicant_address'] = \App\Support\PhilippineAddress::resolve($validated, 'applicant_address')['line'] ?? '';
         $validated['corporation_address'] = \App\Support\PhilippineAddress::resolve($validated, 'corporation_address')['line'] ?? '';
@@ -507,6 +523,39 @@ class RequestController extends Controller
      * Everything the submission writes, as one transaction. Split out so that
      * store() can retry it when an application number collides.
      */
+    /**
+     * A requirement takes at most one separate image file. Several loose
+     * photos for one requirement - front and back of a multi-page document,
+     * page after page of a long one - are refused, with a message asking
+     * for them combined into a single PDF instead. A PDF has no such limit;
+     * this only ever counts jpg/jpeg/png. The browser enforces the same
+     * rule at selection time (see Step4Requirements.jsx), but a request
+     * made by hand does not go through the browser.
+     */
+    private static function assertNoMultipleImagesPerRequirement(Request $request): void
+    {
+        $requirementFiles = $request->allFiles()['requirement_uploads'] ?? [];
+
+        foreach ($requirementFiles as $requirementId => $files) {
+            $files = is_array($files) ? $files : [$files];
+            $imageCount = 0;
+
+            foreach ($files as $file) {
+                if ($file instanceof \Illuminate\Http\UploadedFile
+                    && $file->isValid()
+                    && str_starts_with((string) $file->getMimeType(), 'image/')) {
+                    $imageCount++;
+                }
+            }
+
+            if ($imageCount > 1) {
+                throw ValidationException::withMessages([
+                    "requirement_uploads.{$requirementId}" => 'This requirement has more than one photo attached. Please combine them into a single PDF and upload that instead of separate images.',
+                ]);
+            }
+        }
+    }
+
     /**
      * The project's tenure as it will be stored: [duration, years].
      *
@@ -621,6 +670,7 @@ class RequestController extends Controller
             } elseif (isset($validated['project_location_barangay']) || isset($validated['project_location_city'])) {
                 \App\Models\Location::create([
                     'request_id' => $newRequest->id,
+                    'house_number' => $validated['project_location_number'] ?? null,
                     'street_address' => $validated['project_location_street'] ?? '',
                     'barangay' => $validated['project_location_barangay'] ?? '',
                     'city_municipality' => $validated['project_location_city'] ?? $validated['project_location_municipality'] ?? '',
@@ -636,7 +686,11 @@ class RequestController extends Controller
                 'request_id' => $newRequest->id,
                 'lot_area_sqm' => $validated['lot_area_sqm'] ?? null,
                 'bldg_improvement_sqm' => $validated['bldg_improvement_sqm'] ?? null,
-                'lot_number' => $validated['project_location_number'] ?? null,
+                // The parcel's legal Lot No. and Tax Dec. No. - what the applicant
+                // knows it as, not the house number above (see the 2026-09-25
+                // migration). An officer may still correct either at review.
+                'lot_number' => $validated['lot_number'] ?? null,
+                'tax_declaration_no' => $validated['tax_declaration_no'] ?? null,
                 'right_over_land' => $validated['right_over_land'] ?? null,
                 'existing_land_use' => $validated['existing_land_use'] ?? null,
             ]);
@@ -698,6 +752,13 @@ class RequestController extends Controller
      */
     private function finishSubmission(Request $request, array $result)
     {
+        // Filed for real: the account-tied draft (see ApplicationDraftController)
+        // would otherwise sit there offering to "resume" an application that
+        // already exists. Done here rather than left to the client's own
+        // cleanup call, so a dropped connection right after success can never
+        // leave a stale draft behind.
+        \App\Models\ApplicationDraft::where('user_id', auth()->id())->delete();
+
         // The e-mail is the RequestObserver's, sent once the application is
         // committed; sending it here as well had the applicant get it twice.
         try {
@@ -808,8 +869,8 @@ class RequestController extends Controller
             'corporation_address' => 'nullable|string',
             'authorized_representative_name' => 'nullable|string|max:255',
             'authorized_representative_email' => 'nullable|email|max:255',
-            'authorization_letter' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            
+            'authorization_letter' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:' . UploadLimits::MAX_FILE_KB],
+
             // Step 2
             'project_type' => 'nullable|string|max:255',
             'project_nature' => 'nullable|string|max:255',
@@ -821,6 +882,8 @@ class RequestController extends Controller
             'project_area_sqm' => 'nullable|numeric|min:0',
             'lot_area_sqm' => 'nullable|numeric|min:0',
             'bldg_improvement_sqm' => 'nullable|numeric|min:0',
+            'lot_number' => 'nullable|string|max:100',
+            'tax_declaration_no' => 'nullable|string|max:100',
             'right_over_land' => 'nullable|string',
             'project_nature_duration' => 'nullable|string',
             'project_nature_years' => 'nullable|integer|min:1',
@@ -840,7 +903,7 @@ class RequestController extends Controller
             // Step 4
             'requirement_uploads' => 'nullable|array',
             'requirement_uploads.*' => 'nullable|array',
-            'requirement_uploads.*.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'requirement_uploads.*.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:' . UploadLimits::MAX_FILE_KB, new ReadableDocument],
             'requirement_names' => 'nullable|array',
             'verified_requirements' => 'nullable|array',
         ],
@@ -859,6 +922,8 @@ class RequestController extends Controller
         if ($chain->errors()->isNotEmpty()) {
             throw ValidationException::withMessages($chain->errors()->messages());
         }
+
+        self::assertNoMultipleImagesPerRequirement($request);
 
         $validated['applicant_address'] = \App\Support\PhilippineAddress::resolve($validated, 'applicant_address')['line'] ?? '';
         $validated['authorized_representative_address'] = \App\Support\PhilippineAddress::resolve($validated, 'authorized_representative_address')['line'] ?? null;
@@ -938,6 +1003,7 @@ class RequestController extends Controller
             \App\Models\Location::updateOrCreate(
                 ['request_id' => $existingRequest->id],
                 self::locationForZoningCertification($validated, $applicantAddress) ?? [
+                    'house_number' => $validated['project_location_number'] ?? null,
                     'street_address' => $validated['project_location_street'] ?? '',
                     'barangay' => $validated['project_location_barangay'] ?? '',
                     'city_municipality' => $validated['project_location_municipality'] ?? '',
@@ -953,7 +1019,8 @@ class RequestController extends Controller
                 [
                     'lot_area_sqm' => $validated['lot_area_sqm'] ?? null,
                     'bldg_improvement_sqm' => $validated['bldg_improvement_sqm'] ?? null,
-                    'lot_number' => $validated['project_location_number'] ?? null,
+                    'lot_number' => $validated['lot_number'] ?? null,
+                    'tax_declaration_no' => $validated['tax_declaration_no'] ?? null,
                     'right_over_land' => $validated['right_over_land'] ?? null,
                     'existing_land_use' => $validated['existing_land_use'] ?? null,
                 ]
@@ -1331,6 +1398,7 @@ class RequestController extends Controller
                 'project_description' => $request->project?->project_description,
                 'project_cost' => $request->project?->project_cost,
 
+                'project_location_number' => $request->location?->house_number,
                 'project_location_street' => $request->location?->street_address,
                 'project_location_barangay' => $request->location?->barangay,
                 'project_location_city' => $request->location?->city_municipality,

@@ -48,10 +48,10 @@ class RequirementUploadTest extends TestCase
 
         $response = $this->actingAs($user)->post('/request', $this->validPayload() + [
             'requirement_uploads' => [
-                2 => [UploadedFile::fake()->create('right-over-land.pdf', 40, 'application/pdf')],
+                2 => [$this->fakePdf('right-over-land.pdf', 40)],
                 3 => [
-                    UploadedFile::fake()->create('vicinity-map.pdf', 40, 'application/pdf'),
-                    UploadedFile::fake()->create('vicinity-map-2.pdf', 40, 'application/pdf'),
+                    $this->fakePdf('vicinity-map.pdf', 40),
+                    $this->fakePdf('vicinity-map-2.pdf', 40),
                 ],
             ],
             'requirement_names' => [
@@ -85,7 +85,7 @@ class RequirementUploadTest extends TestCase
         // it can only be produced after the form is submitted and notarized.
         $response = $this->actingAs($user)->post('/request', $this->validPayload() + [
             'requirement_uploads' => [
-                2 => [UploadedFile::fake()->create('right-over-land.pdf', 40, 'application/pdf')],
+                2 => [$this->fakePdf('right-over-land.pdf', 40)],
             ],
             'requirement_names' => [2 => '2. Right Over Land Documentation'],
         ]);

@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Label } from "@/Components/ui/label";
 import { Button } from "@/Components/ui/button";
 import { Card } from "@/Components/ui/card";
-import { Upload, FileText, X, CheckCircle2, AlertCircle, Eye } from "lucide-react";
+import { Upload, FileText, X, CheckCircle2, AlertCircle, Eye, Loader2 } from "lucide-react";
+import { useToast } from "@/Components/ui/use-toast";
+import { fetchWithCsrf } from "@/lib/csrf";
 
 export function Step4Requirements({
     data,
@@ -19,6 +21,28 @@ export function Step4Requirements({
     // lodash cloneDeep destroys File objects.
     const uploads = files;
     const [previews, setPreviews] = useState({});
+    // How many files are mid-check for a given requirement, so its upload
+    // button can be disabled and show a spinner without one file's check
+    // clobbering another's in-flight state.
+    const [checkingCounts, setCheckingCounts] = useState({});
+    const { toast } = useToast();
+
+    // A file that arrived some way other than checkFile()'s own selection
+    // flow - a draft restored after a refresh (see requestDraft.js) - never
+    // got a preview generated for it there. Catches that once, for whatever
+    // image files are missing one.
+    useEffect(() => {
+        Object.values(uploads).flat().forEach((file) => {
+            if (file && file.type?.startsWith('image/') && !previews[file.name]) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setPreviews(prev => ({ ...prev, [file.name]: reader.result }));
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [uploads]);
 
     // Separate main and additional requirements. A requirement flagged is_group
     // is only a heading — the documents it asks for are its children, matched by
@@ -28,10 +52,72 @@ export function Step4Requirements({
     const childrenOf = (req) => allMain.filter((child) => child.parent_id === req.id);
     const additionalRequirements = requirements.filter((req) => req.section === 'additional');
 
+    /**
+     * One selected file is added only once the server confirms it is
+     * legible (see ReadableDocument): a blank, tiny or blurred scan is
+     * rejected right here, at the moment it is attached, rather than
+     * silently sitting in the form until Submit is pressed at the end of
+     * the wizard.
+     */
+    const checkFile = async (requirementId, file) => {
+        setCheckingCounts(prev => ({ ...prev, [requirementId]: (prev[requirementId] || 0) + 1 }));
+
+        try {
+            const formData = new FormData();
+            formData.append('document', file, file.name);
+
+            const response = await fetchWithCsrf(route('requirements.check-readability'), {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            });
+
+            if (!response.ok) {
+                let payload = null;
+                try { payload = await response.json(); } catch (_) { /* not JSON */ }
+                const messages = payload?.errors ? Object.values(payload.errors).flat() : [];
+                toast({
+                    variant: 'destructive',
+                    title: 'File rejected',
+                    description: messages[0] || `"${file.name}" could not be verified. Please choose a clearer file.`,
+                });
+                return;
+            }
+
+            // Passed - now it actually joins the form (parent-owned state,
+            // so the File object survives Inertia's setData clone).
+            onFilesChange(prev => ({
+                ...prev,
+                [requirementId]: [...(prev[requirementId] || []), file]
+            }));
+
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setPreviews(prev => ({ ...prev, [file.name]: reader.result }));
+                };
+                reader.readAsDataURL(file);
+            }
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Could not verify file',
+                description: `Check your connection and try attaching "${file.name}" again.`,
+            });
+        } finally {
+            setCheckingCounts(prev => ({ ...prev, [requirementId]: Math.max(0, (prev[requirementId] || 1) - 1) }));
+        }
+
+        // NOTE: uploading a document does NOT verify the requirement. Verification
+        // is the Zoning Officer's call after reviewing the file, so the officer's
+        // "Mark as Verified" toggle stays off until they turn it on.
+    };
+
     const handleFileSelect = (requirementId, files) => {
         const fileArray = Array.from(files);
 
-        // Validate file types (PDF, JPG, PNG)
+        // Validate file types (PDF, JPG, PNG) - cheap and instant, so this
+        // stays a local check rather than a round trip.
         const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
         const invalidFiles = fileArray.filter(file => !validTypes.includes(file.type));
 
@@ -40,36 +126,31 @@ export function Step4Requirements({
             return;
         }
 
-        // Validate file sizes (max 5MB each)
-        const oversizedFiles = fileArray.filter(file => file.size > 5 * 1024 * 1024);
-        if (oversizedFiles.length > 0) {
-            alert('File size must be less than 5MB.');
+        // A requirement takes at most one separate image - several loose
+        // photos (front and back, page after page) have to be combined into
+        // a single PDF first (see RequestController::assertNoMultipleImagesPerRequirement,
+        // which enforces the same rule server-side, in case this is ever
+        // bypassed). A PDF has no such limit.
+        const isImage = (file) => file.type.startsWith('image/');
+        const existingImages = (uploads[requirementId] || []).filter(isImage).length;
+        const newImages = fileArray.filter(isImage).length;
+
+        if (existingImages + newImages > 1) {
+            toast({
+                variant: 'destructive',
+                title: 'Only one photo per requirement',
+                description: 'This requirement takes at most one separate photo. To add another page, please combine every page into a single PDF and upload that instead.',
+            });
             return;
         }
 
-        // Add to uploads (parent-owned state, so the File objects survive)
-        onFilesChange(prev => ({
-            ...prev,
-            [requirementId]: [...(prev[requirementId] || []), ...fileArray]
-        }));
+        // File size is checked server-side (see checkFile below) against
+        // the real shared limit (App\Support\UploadLimits) - not duplicated
+        // here as a hardcoded number, which would only drift from it.
 
-        // Create previews for images
-        fileArray.forEach(file => {
-            if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    setPreviews(prev => ({
-                        ...prev,
-                        [file.name]: reader.result
-                    }));
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // NOTE: uploading a document does NOT verify the requirement. Verification
-        // is the Zoning Officer's call after reviewing the file, so the officer's
-        // "Mark as Verified" toggle stays off until they turn it on.
+        // Everything cheap to check locally passed - now ask the server
+        // whether each file is actually legible, in parallel.
+        fileArray.forEach(file => { checkFile(requirementId, file); });
     };
 
     const handleFileRemove = (requirementId, fileIndex) => {
@@ -117,6 +198,7 @@ export function Step4Requirements({
         const existingDocs = existingDocuments[requirement.id] || [];
         const hasExistingDocs = existingDocs.length > 0;
         const isSupplied = hasFiles || hasExistingDocs;
+        const isChecking = (checkingCounts[requirement.id] || 0) > 0;
 
         return (
             <Card key={requirement.id} className="overflow-hidden p-3 sm:p-4">
@@ -196,17 +278,40 @@ export function Step4Requirements({
                             id={`file-${requirement.id}`}
                             multiple
                             accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleFileSelect(requirement.id, e.target.files)}
+                            disabled={isChecking}
+                            onChange={(e) => {
+                                handleFileSelect(requirement.id, e.target.files);
+                                // Cleared so picking the same file again (a retry
+                                // after fixing it, or after a rejection) still
+                                // fires this - the browser skips onChange for an
+                                // unchanged selection otherwise.
+                                e.target.value = '';
+                            }}
                             className="hidden"
                         />
                         <label
                             htmlFor={`file-${requirement.id}`}
-                            className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                            className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg transition-colors ${
+                                isChecking
+                                    ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                                    : 'border-gray-300 cursor-pointer hover:border-blue-400 hover:bg-blue-50'
+                            }`}
                         >
-                            <Upload className="h-5 w-5 text-gray-500" />
-                            <span className="text-sm font-medium text-gray-700">
-                                {isSupplied ? 'Add more files' : 'Click to upload files'}
-                            </span>
+                            {isChecking ? (
+                                <>
+                                    <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                                    <span className="text-sm font-medium text-gray-500">
+                                        Checking file{(checkingCounts[requirement.id] || 0) > 1 ? 's' : ''}…
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="h-5 w-5 text-gray-500" />
+                                    <span className="text-sm font-medium text-gray-700">
+                                        {isSupplied ? 'Add more files' : 'Click to upload files'}
+                                    </span>
+                                </>
+                            )}
                         </label>
                     </div>
 
@@ -294,7 +399,9 @@ export function Step4Requirements({
                         <h3 className="font-semibold text-blue-900 mb-1">Document Upload Requirements</h3>
                         <p className="text-sm text-blue-800">
                             Upload scanned copies or clear photos of the required documents.
-                            Accepted formats: PDF, JPG, PNG (max 5MB per file).
+                            Accepted formats: PDF, JPG, PNG (up to 100MB per file).
+                            A requirement takes at most one separate photo — if it has several
+                            pages, please combine them into a single PDF first.
                             <br />
                             <span className="text-red-600 font-semibold">* Required documents</span> must be uploaded before submission.
                         </p>

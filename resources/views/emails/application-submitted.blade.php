@@ -105,7 +105,7 @@
 
     <div class="footer">
         <p style="margin: 5px 0;">This is an automated message. Please do not reply to this email.</p>
-        <p style="margin: 5px 0;">© {{ date('Y') }} Land Certification System. All rights reserved.</p>
+        <p style="margin: 5px 0;">© {{ date('Y') }} CPDO City of Ilagan. All rights reserved.</p>
     </div>
 </body>
 </html>

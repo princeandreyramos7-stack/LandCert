@@ -21,7 +21,7 @@ export function Step1ApplicantInfo({
                 </Label>
                 <Input
                     id="applicant_name"
-                    value={data.applicant_name}
+                    value={data.applicant_name || ""}
                     onChange={(e) => onDataChange("applicant_name", e.target.value)}
                     placeholder="Enter applicant name"
                 />
@@ -34,7 +34,7 @@ export function Step1ApplicantInfo({
                 <Label htmlFor="corporation_name">2. Name of Corporation</Label>
                 <Input
                     id="corporation_name"
-                    value={data.corporation_name}
+                    value={data.corporation_name || ""}
                     onChange={(e) => onDataChange("corporation_name", e.target.value)}
                     placeholder="Enter corporation name or type N/A"
                 />
@@ -143,7 +143,7 @@ export function Step1ApplicantInfo({
                         </Label>
                         <Input
                             id="authorized_representative_name"
-                            value={data.authorized_representative_name}
+                            value={data.authorized_representative_name || ""}
                             onChange={(e) =>
                                 onDataChange(
                                     "authorized_representative_name",
@@ -168,7 +168,7 @@ export function Step1ApplicantInfo({
                         <Input
                             id="authorized_representative_email"
                             type="email"
-                            value={data.authorized_representative_email}
+                            value={data.authorized_representative_email || ""}
                             onChange={(e) =>
                                 onDataChange(
                                     "authorized_representative_email",
@@ -246,7 +246,7 @@ export function Step1ApplicantInfo({
                             )}
                         </div>
                         <p className="text-xs text-gray-500">
-                            Accepted formats: PDF, JPG, PNG (Max 5MB)
+                            Accepted formats: PDF, JPG, PNG (Max 100MB)
                         </p>
                         {errors.authorization_letter && (
                             <p className="text-sm text-red-500">
@@ -266,6 +266,42 @@ export function Step1ApplicantInfo({
                         />
                     </div>
                 </>
+            )}
+
+            {/* A Zoning Certification has no Step 2 (Project Details) - its
+                location is the applicant's own address - so these have
+                nowhere else to be asked. Everywhere else, they sit under
+                Step 2's Project Area (see Step2ProjectDetails). */}
+            {String(data.project_type || "").toUpperCase() === "ZC" && (
+                <div className="space-y-2 md:col-span-2 rounded-lg border border-gray-200 bg-gray-50/60 p-4">
+                    <Label className="text-base font-semibold">Property Identification</Label>
+                    <div className="grid gap-4 pt-2 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="lot_number">Lot Number</Label>
+                            <Input
+                                id="lot_number"
+                                value={data.lot_number || ""}
+                                onChange={(e) => onDataChange("lot_number", e.target.value)}
+                                placeholder="e.g. Lot 4522-F"
+                            />
+                            {errors.lot_number && (
+                                <p className="text-sm text-red-500">{errors.lot_number}</p>
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="tax_declaration_no">Tax Declaration No.</Label>
+                            <Input
+                                id="tax_declaration_no"
+                                value={data.tax_declaration_no || ""}
+                                onChange={(e) => onDataChange("tax_declaration_no", e.target.value)}
+                                placeholder="As shown on the Tax Declaration"
+                            />
+                            {errors.tax_declaration_no && (
+                                <p className="text-sm text-red-500">{errors.tax_declaration_no}</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

@@ -29,6 +29,11 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            // Required at real registration (see RegisteredUserController)
+            // and, since it is where a sign-in's SMS code goes, now needed
+            // to sign in at all - a factory user without one is not one a
+            // real account could be.
+            'contact_number' => fake()->numerify('09#########'),
         ];
     }
 

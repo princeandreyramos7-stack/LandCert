@@ -21,11 +21,24 @@ class DashboardCacheService
      */
     const CACHE_TTL = 60;
 
+    /**
+     * The Payments page polls every 15s per open tab (see useLiveData) and
+     * runs three uncached, unpaginated ->get() queries - fine for one
+     * viewer, real load with several. A shorter TTL than the dashboard's:
+     * this data is acted on directly (verify/reject), so it should not lag
+     * behind a real change for long.
+     */
+    const PAYMENTS_CACHE_TTL = 20;
+
     /** Everything this service keeps, so one change can clear the lot. */
     public const CACHE_KEYS = [
         'dashboard.analytics',
         'dashboard.stats',
         'dashboard.evaluation_distribution',
+        'payments.admin.live',
+        'payments.admin.archived',
+        'payments.super-admin.live',
+        'payments.super-admin.archived',
     ];
 
     /**
@@ -41,6 +54,22 @@ class DashboardCacheService
         foreach (self::CACHE_KEYS as $key) {
             Cache::forget($key);
         }
+    }
+
+    /**
+     * The three payments-page queries (approved-awaiting-payment requests,
+     * verified payments, every payment), cached a few seconds at a time per
+     * role and archive state. $compute runs only on a cache miss.
+     */
+    public function rememberPayments(string $scope, bool $archived, callable $compute)
+    {
+        if (self::CACHE_TTL === 0) {
+            return $compute();
+        }
+
+        $key = "payments.{$scope}." . ($archived ? 'archived' : 'live');
+
+        return Cache::remember($key, self::PAYMENTS_CACHE_TTL, $compute);
     }
 
     /**
@@ -87,9 +116,7 @@ class DashboardCacheService
      */
     public function clearCache()
     {
-        Cache::forget('dashboard.analytics');
-        Cache::forget('dashboard.stats');
-        Cache::forget('dashboard.evaluation_distribution');
+        self::flush();
     }
 
     /**
@@ -135,8 +162,14 @@ class DashboardCacheService
         ->orderBy('day')
         ->get();
         
-        // Application status breakdown
+        // Application status breakdown - decisions only (pending, reviewed,
+        // approved, rejected). A report with no evaluation yet (the request
+        // is sitting 'in_applicant', returned for correction - see
+        // Request::deriveStatus) has not been decided either way, so it has
+        // no place in a breakdown of decisions; $applicationStatusBreakdown
+        // below covers every lifecycle stage instead, including that one.
         $statusBreakdown = Report::select('evaluation', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('evaluation')
             ->groupBy('evaluation')
             ->get();
 

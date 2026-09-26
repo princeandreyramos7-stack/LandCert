@@ -22,10 +22,17 @@ export function HeatMap({ data, maxValue, labels = { x: [], y: [] } }) {
         <div className="space-y-3">
             {/* 24 hour columns cannot share the width of a phone — squeezed to
                 a few pixels each the labels overlap and the cells stop being
-                readable. The grid keeps a workable minimum size and the whole
-                map scrolls sideways instead, header and rows together so the
-                columns stay aligned. */}
-            <div className="overflow-x-auto">
+                readable. Unlike a table, a 2D grid has no meaningful "one
+                card per row" stacked form on a small screen, so the grid
+                keeps a workable minimum size and the whole map scrolls
+                sideways instead, header and rows together so the columns
+                stay aligned; the hint below and the touch-scroll tuning are
+                there so that horizontal scroll actually reads as usable on
+                a phone instead of looking like a layout that broke. */}
+            <p className="text-center text-[11px] text-gray-400 sm:hidden">
+                Swipe sideways to see every hour →
+            </p>
+            <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain' }}>
             <div className="min-w-[760px] space-y-3">
             <div className="flex gap-2">
                 <div className="w-16 shrink-0" /> {/* Spacer for y-axis labels */}

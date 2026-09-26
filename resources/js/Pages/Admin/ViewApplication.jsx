@@ -103,13 +103,13 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
         return request.verified_requirements || {};
     });
 
-    // What Property Details saves and what "Mark as Reviewed" needs on the
-    // server: the lot number (the "Title Number (TCT/CCT)" field) and the tax
-    // declaration number. Seeded from lot_number, not title_number — the editor
-    // writes the former, and reading the latter left the decision card claiming
-    // the number was missing right after the officer had saved it.
-    const [titleNumber, setTitleNumber] = useState(request.lot_number || request.title_number || "");
-    const [taxDecNo, setTaxDecNo] = useState(request.tax_declaration_no || "");
+    // What "Mark as Reviewed" needs: the lot number (the "Title Number
+    // (TCT/CCT)" field) and the tax declaration number, as the applicant
+    // supplied them at submission - Property Details is read-only now, so
+    // these never change after the page loads. Read from lot_number, not
+    // title_number, matching Property Details' own display.
+    const titleNumber = request.lot_number || request.title_number || "";
+    const taxDecNo = request.tax_declaration_no || "";
     const [showAutoFillSuggestion, setShowAutoFillSuggestion] = useState(false);
 
     // "Document Verification" in the applications menu and the workflow
@@ -387,10 +387,6 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
                                             handleSaveProjectCost={handleSaveProjectCost}
                                             savingProjectCost={savingProjectCost}
                                             isZC={isZC}
-                                            titleNumber={titleNumber}
-                                            setTitleNumber={setTitleNumber}
-                                            taxDecNo={taxDecNo}
-                                            setTaxDecNo={setTaxDecNo}
                                             editingProjectType={editingProjectType}
                                             setEditingProjectType={setEditingProjectType}
                                             projectType={projectType}
@@ -685,7 +681,7 @@ function Step1Content({ request, isZC = false }) {
 }
 
 // Step 2: Project Details
-function Step2Content({ request, uploadedRequirements = [], editingProjectCost, setEditingProjectCost, projectCost, setProjectCost, handleSaveProjectCost, savingProjectCost, isZC = false, titleNumber, setTitleNumber, taxDecNo, setTaxDecNo, editingProjectType, setEditingProjectType, projectType, setProjectType, handleSaveProjectType, savingProjectType }) {
+function Step2Content({ request, uploadedRequirements = [], editingProjectCost, setEditingProjectCost, projectCost, setProjectCost, handleSaveProjectCost, savingProjectCost, isZC = false, editingProjectType, setEditingProjectType, projectType, setProjectType, handleSaveProjectType, savingProjectType }) {
     return (
         <div className="space-y-6">
             <SectionTitle icon={Building2} title="Project Details" />
@@ -734,13 +730,16 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectCost, 
                         )}
                     </div>
                     {editingProjectType ? (
-                        <input
-                            type="text"
+                        <select
                             value={projectType}
                             onChange={(e) => setProjectType(e.target.value)}
-                            placeholder="e.g. ZC, CZC, TUP"
                             className="w-full px-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
+                        >
+                            <option value="">Select type...</option>
+                            <option value="ZC">ZC - Zoning Certification</option>
+                            <option value="CZC">CZC - Certificate of Zoning Compliance</option>
+                            <option value="TUP">TUP - Temporary Use Permit</option>
+                        </select>
                     ) : (
                         <p className="text-sm text-gray-900 font-medium">
                             {projectType || <span className="text-gray-400 italic">Not set</span>}
@@ -820,18 +819,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectCost, 
     </>
             )}
 
-            <PropertyDetailsEditor
-                request={request}
-                routePrefix="admin"
-                uploadedRequirements={uploadedRequirements}
-                isZC={isZC}
-                titleNumber={titleNumber}
-                setTitleNumber={setTitleNumber}
-                taxDecNo={taxDecNo}
-                setTaxDecNo={setTaxDecNo}
-                titleRef={undefined}
-                taxRef={undefined}
-            />
+            <PropertyDetailsEditor request={request} isZC={isZC} />
 
             {!isZC && (
                 <>
@@ -856,68 +844,12 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectCost, 
                                     <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 font-bold tabular-nums text-gray-600">14</span>
                                     Project Cost/Capitalization (in pesos)
                                 </p>
-                                {!editingProjectCost ? (
-                                    <button
-                                        onClick={() => setEditingProjectCost(true)}
-                                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
-                                    >
-                                        <Edit2 className="h-3 w-3" />
-                                        Edit
-                                    </button>
-                                ) : (
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={handleSaveProjectCost}
-                                            disabled={savingProjectCost}
-                                            className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
-                                        >
-                                            {savingProjectCost ? (
-                                                <Loader2 className="h-3 w-3 animate-spin" />
-                                            ) : (
-                                                <Save className="h-3 w-3" />
-                                            )}
-                                            Save
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setProjectCost(
-                                                    request.project_cost === null || request.project_cost === undefined
-                                                        ? ''
-                                                        : String(request.project_cost)
-                                                );
-                                                setEditingProjectCost(false);
-                                            }}
-                                            disabled={savingProjectCost}
-                                            className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                )}
                             </div>
-                            {editingProjectCost ? (
-                                <div className="relative">
-                                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 select-none text-sm font-semibold text-gray-500">
-                                        ₱
-                                    </span>
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={projectCost}
-                                        onChange={(e) =>
-                                            setProjectCost(e.target.value.replace(/[^\d.]/g, ''))
-                                        }
-                                        placeholder="0.00"
-                                        className="w-full pl-7 pr-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-                            ) : (
-                                <p className="text-sm text-gray-900 font-medium">
-                                    {projectCost !== ''
-                                        ? `₱${parseFloat(projectCost).toLocaleString()}`
-                                        : <span className="text-gray-400 italic">Not set</span>}
-                                </p>
-                            )}
+                            <p className="text-sm text-gray-900 font-medium">
+                                {request.project_cost !== null && request.project_cost !== undefined && request.project_cost !== ''
+                                    ? `₱${parseFloat(request.project_cost).toLocaleString()}`
+                                    : <span className="text-gray-400 italic">Not set</span>}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -1013,46 +945,11 @@ function Step3Content({ request }) {
     );
 }
 
-// Property Details Editor Component
-function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = [], isZC = false, titleNumber, setTitleNumber, taxDecNo, setTaxDecNo, titleRef, taxRef }) {
-    const { toast } = useToast();
-    const [editing, setEditing] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [values, setValues] = useState({
-        lot_number: request.lot_number || "",
-        tax_declaration_no: request.tax_declaration_no || "",
-    });
-
-    const reset = () =>
-        setValues({
-            lot_number: request.lot_number || "",
-            tax_declaration_no: request.tax_declaration_no || "",
-        });
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await axios.post(`/${routePrefix}/requests/${request.id}/certificate-details`, values);
-            request.lot_number = values.lot_number;
-            request.tax_declaration_no = values.tax_declaration_no;
-            
-            // Update parent state if provided (from Requirements tab)
-            if (setTitleNumber) setTitleNumber(values.lot_number);
-            if (setTaxDecNo) setTaxDecNo(values.tax_declaration_no);
-            
-            toast({ title: "Saved", description: "Property details updated." });
-            setEditing(false);
-        } catch (error) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Failed to save property details.",
-            });
-        } finally {
-            setSaving(false);
-        }
-    };
-
+// Property Details - read-only. The applicant supplies the Lot Number and
+// Tax Declaration No. at submission (Step 1/2 of the request form), so
+// there is nothing left for the office to type in here; this mirrors
+// SuperAdmin's already-read-only version of the same panel.
+function PropertyDetailsEditor({ request, isZC = false }) {
     const missingRequired = !request.lot_number && !request.tax_declaration_no;
 
     return (
@@ -1064,97 +961,14 @@ function PropertyDetailsEditor({ request, routePrefix, uploadedRequirements = []
                     )}
                     Property Details
                 </h4>
-                {!editing ? (
-                    <button
-                        onClick={() => setEditing(true)}
-                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                        <Edit2 className="h-3 w-3" />
-                        Edit
-                    </button>
-                ) : (
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
-                        >
-                            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                            Save
-                        </button>
-                        <button
-                            onClick={() => { reset(); setEditing(false); }}
-                            disabled={saving}
-                            className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                )}
             </div>
-
-            {uploadedRequirements.some((doc) => /\b(title|tax declaration)\b/i.test(doc.name || "")) && (
-                <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                        Submitted Requirements
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                        {/* Only what Property Details is filled in from: the
-                            title carries the lot number, the tax declaration
-                            its number. The full list is the checklist below. */}
-                        {uploadedRequirements.filter((doc) => /\b(title|tax declaration)\b/i.test(doc.name || "")).map((doc) =>
-                            doc.files.length > 0 ? (
-                                doc.files.map((file, index) => (
-                                    <DocumentViewLink
-                                        key={file.id}
-                                        doc={file}
-                                        title={file.original_filename}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
-                                    >
-                                        <FileText className="h-3.5 w-3.5" />
-                                        {doc.name}
-                                        {doc.files.length > 1 ? ` (${index + 1})` : ''}
-                                    </DocumentViewLink>
-                                ))
-                            ) : (
-                                <span
-                                    key={doc.id}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-gray-300 text-gray-400 text-xs font-medium"
-                                >
-                                    <FileText className="h-3.5 w-3.5" />
-                                    {doc.name} — not uploaded
-                                </span>
-                            )
-                        )}
-                    </div>
-                </div>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {editing ? (
-                    <>
-                        <EditField
-                            label="Title Number (TCT/CCT)"
-                            value={values.lot_number}
-                            onChange={(v) => setValues({ ...values, lot_number: v })}
-                            placeholder="e.g. T-12345"
-                        />
-                        <EditField
-                            label="Tax Declaration No."
-                            value={values.tax_declaration_no}
-                            onChange={(v) => setValues({ ...values, tax_declaration_no: v })}
-                            placeholder="e.g. 2024-12-0001"
-                        />
-                    </>
-                ) : (
-                    <>
-                        <InfoField label="Title Number (TCT/CCT)" value={request.lot_number} />
-                        <InfoField label="Tax Declaration No." value={request.tax_declaration_no} />
-                    </>
-                )}
+                <InfoField label="Title Number (TCT/CCT)" value={request.lot_number} />
+                <InfoField label="Tax Declaration No." value={request.tax_declaration_no} />
             </div>
 
-            {missingRequired && !editing && (
+            {missingRequired && (
                 <div className="mt-3 flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
                     <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
                     <span>

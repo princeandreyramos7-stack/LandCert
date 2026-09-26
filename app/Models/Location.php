@@ -12,6 +12,7 @@ class Location extends Model
 
     protected $fillable = [
         'request_id',
+        'house_number',
         'street_address',
         'barangay',
         'city_municipality',

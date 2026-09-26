@@ -160,7 +160,7 @@
 
     <div class="footer">
         <p>This is a computer-generated document. No signature is required.</p>
-        <p>© {{ date('Y') }} - City Planning and Development Office. All rights reserved.</p>
+        <p>© {{ date('Y') }} CPDO City of Ilagan. All rights reserved.</p>
     </div>
 </body>
 </html>

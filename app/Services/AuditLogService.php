@@ -209,6 +209,34 @@ class AuditLogService
     }
 
     /**
+     * A wrong or expired code at the two-factor step. The account is
+     * already known by then - a right password got them this far - so
+     * this always carries a user id, unlike logFailedLogin.
+     */
+    public static function logTwoFactorFailed(int $userId, string $email, int $attempt, int $limit)
+    {
+        $log = new AuditLog();
+        $log->user_id = $userId;
+        $log->user_name = $email;
+        $log->user_email = $email;
+        $log->action = 'two_factor_failed';
+        $log->description = "Wrong verification code for {$email} - attempt {$attempt} of {$limit}";
+        $log->ip_address = Request::ip();
+        $log->user_agent = Request::userAgent();
+        $log->url = Request::fullUrl();
+        $log->method = Request::method();
+        $log->metadata = [
+            'email' => $email,
+            'attempt' => $attempt,
+            'limit' => $limit,
+            'remaining' => max(0, $limit - $attempt),
+        ];
+        $log->save();
+
+        return $log;
+    }
+
+    /**
      * Log bulk action
      */
     public static function logBulkAction(string $action, string $modelType, array $ids, string $description = null)
