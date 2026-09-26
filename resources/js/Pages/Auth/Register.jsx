@@ -323,6 +323,13 @@ export default function Register({ legal = [], legalVersion }) {
                     <span>Sign In Instead</span>
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform"/>
                 </Link>
+
+                {/* Back to Home */}
+                <Link href="/"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-xs font-semibold text-gray-500 hover:text-[#0d1f5c] hover:bg-gray-50 transition-all duration-200">
+                    <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                    <span>Back to Home</span>
+                </Link>
             </form>
         </GuestLayout>
     );
