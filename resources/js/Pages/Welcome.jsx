@@ -284,18 +284,25 @@ export default function Welcome() {
                             clicks, right from the comfort of your home.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
                             <Link
                                 href={route("register")}
-                                className="px-8 py-3.5 rounded-md bg-[#d4a017] hover:bg-[#b8880d] text-white font-bold text-base shadow-lg transition-colors text-center"
+                                className="px-6 py-2.5 rounded-md bg-[#d4a017] hover:bg-[#b8880d] text-white font-bold text-sm shadow-lg transition-colors text-center"
                             >
                                 APPLY ONLINE NOW
                             </Link>
                             <Link
                                 href={route("login")}
-                                className="px-8 py-3.5 rounded-md border border-blue-400/40 text-blue-200 hover:text-white hover:border-blue-300 hover:bg-white/5 font-bold text-base transition-all text-center"
+                                className="px-6 py-2.5 rounded-md border border-blue-400/40 text-blue-200 hover:text-white hover:border-blue-300 hover:bg-white/5 font-bold text-sm transition-all text-center"
                             >
                                 Already Registered?
+                            </Link>
+                            <Link
+                                href={route("verify.index")}
+                                className="flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-md border border-[#d4a017]/60 text-[#d4a017] hover:text-white hover:border-[#d4a017] hover:bg-[#d4a017] font-bold text-sm transition-all text-center"
+                            >
+                                <Eye className="h-3.5 w-3.5" />
+                                Verify Document
                             </Link>
                         </div>
                     </div>
