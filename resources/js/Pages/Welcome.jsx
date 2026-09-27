@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import { Head, Link } from "@inertiajs/react";
+import InstallAppButton from "@/Components/InstallAppButton";
 import {
     LayoutDashboard,
     CheckCircle2,
@@ -159,6 +160,9 @@ export default function Welcome() {
                         >
                             Contact
                         </a>
+                        <InstallAppButton
+                            className="inline-flex items-center gap-1.5 rounded-md border border-[#d4a017]/50 px-4 py-2 text-sm font-bold text-[#d4a017] transition-colors hover:bg-[#d4a017]/10"
+                        />
                         {/* Login only - registration is disabled for public access */}
                         <Link
                             href={route("login")}
@@ -170,6 +174,10 @@ export default function Welcome() {
 
                     {/* Mobile */}
                     <div className="flex items-center gap-2 md:hidden">
+                        <InstallAppButton
+                            className="inline-flex items-center gap-1 rounded-md border border-[#d4a017]/50 px-2.5 py-2 text-xs font-bold text-[#d4a017]"
+                            label="Install"
+                        />
                         <Link
                             href={route("login")}
                             className="rounded-md bg-[#d4a017] px-3 py-2 text-sm font-bold text-white"

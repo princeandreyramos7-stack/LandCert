@@ -13,6 +13,13 @@ import CookieNotice from '@/Components/CookieNotice';
 import ErrorBoundary from '@/Components/ErrorBoundary';
 import PwaUpdatePrompt from '@/Components/PwaUpdatePrompt';
 import { TooltipProvider } from '@/Components/ui/tooltip';
+// Side-effect only: attaches the beforeinstallprompt/appinstalled listeners
+// at module scope the moment the app boots, regardless of which page loads
+// first. See usePwaInstall.js's own comment - the event fires once per
+// real page load, not once per Inertia navigation, so it has to be caught
+// here rather than inside whichever component happens to render the
+// Install App button.
+import '@/lib/usePwaInstall';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
