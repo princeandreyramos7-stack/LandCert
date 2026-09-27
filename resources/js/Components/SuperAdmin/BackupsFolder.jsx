@@ -1,10 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/Components/ui/dialog";
 import { Button } from "@/Components/ui/button";
 import { fetchWithCsrf } from "@/lib/csrf";
 import {
     FolderOpen, FileArchive, Download, Trash2, Play, Loader2, CheckCircle2, XCircle, CalendarClock, HardDrive, ChevronRight, RefreshCw,
+    RotateCcw, Cloud, ShieldAlert, Eye, EyeOff,
 } from "lucide-react";
+
+const DISK_LABELS = { backups: "This server", s3: "AWS S3", gcs: "Google Cloud" };
 
 const fmtBytes = (n) => {
     if (!n) return "0 B";
@@ -28,6 +32,110 @@ const api = async (method, url, body) => {
 };
 
 /**
+ * The confirmation a restore has to clear before it touches anything: the
+ * super admin's current password, re-checked fresh for this one action, and
+ * a typed "RESTORE" so a stray click can never be the whole story. The
+ * warning explains what actually happens - not a full wipe of every file,
+ * a real replace of the database - so nobody agrees to something other than
+ * what this does.
+ */
+function RestoreDialog({ backup, onClose, onRestored }) {
+    const [password, setPassword] = useState("");
+    const [confirmation, setConfirmation] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState(null);
+
+    const canSubmit = password.length > 0 && confirmation.trim().toUpperCase() === "RESTORE" && !busy;
+
+    const submit = async () => {
+        setBusy(true);
+        setError(null);
+        try {
+            const data = await api("POST", route("super-admin.backups.restore", backup.name), { password, confirmation });
+            onRestored(data.message);
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return createPortal(
+        <div
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4"
+            onClick={() => !busy && onClose()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Restore this backup"
+        >
+            <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-start gap-3 border-b border-rose-100 bg-rose-50 px-6 py-4">
+                    <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
+                    <div>
+                        <h3 className="text-base font-black text-rose-700">Restore this backup?</h3>
+                        <p className="mt-0.5 text-xs text-rose-700/80">
+                            This replaces the current database with the one inside <span className="font-mono font-semibold">{backup.name}</span>, and
+                            writes its files back over what's on the server now. A safety backup of the current state is taken automatically,
+                            immediately before anything changes, in case this turns out to be the wrong one.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="space-y-4 px-6 py-5">
+                    <div>
+                        <label className="block text-xs font-bold uppercase tracking-wide text-gray-500">Your password</label>
+                        <div className="relative mt-1.5">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                autoComplete="current-password"
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 pr-10 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#0d1f5c]"
+                                placeholder="Confirm it's you"
+                            />
+                            <button type="button" tabIndex={-1} onClick={() => setShowPassword((v) => !v)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold uppercase tracking-wide text-gray-500">
+                            Type <span className="font-mono text-rose-600">RESTORE</span> to confirm
+                        </label>
+                        <input
+                            type="text"
+                            value={confirmation}
+                            onChange={(e) => setConfirmation(e.target.value)}
+                            className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm uppercase tracking-widest focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#0d1f5c]"
+                            placeholder="RESTORE"
+                        />
+                    </div>
+
+                    {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>}
+                    {busy && (
+                        <p className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Restoring - the site is briefly offline for everyone else while this finishes…
+                        </p>
+                    )}
+                </div>
+
+                <div className="flex items-center justify-end gap-2 border-t border-gray-100 bg-gray-50/60 px-6 py-3.5">
+                    <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>Cancel</Button>
+                    <Button size="sm" onClick={submit} disabled={!canSubmit} className="gap-1.5 bg-rose-600 text-white hover:bg-rose-700">
+                        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                        {busy ? "Restoring…" : "Restore now"}
+                    </Button>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
+/**
  * The backups folder: every backup of the database and uploaded files, as a
  * folder the administrator opens from the sidebar - not a page of its own.
  * Take one now, download or delete one, and set when the automatic one runs.
@@ -38,6 +146,7 @@ export default function BackupsFolder({ open, onOpenChange }) {
     const [busy, setBusy] = useState(null); // "run" | "schedule" | file name
     const [notice, setNotice] = useState(null); // { ok, text }
     const [confirmDelete, setConfirmDelete] = useState(null);
+    const [restoreTarget, setRestoreTarget] = useState(null); // the backup row being restored, or null
     const [schedule, setSchedule] = useState({ frequency: "daily", time: "02:00", day: 0 });
 
     const load = useCallback(async () => {
@@ -74,6 +183,13 @@ export default function BackupsFolder({ open, onOpenChange }) {
 
     const backups = folder?.backups ?? [];
     const lastRun = folder?.lastRun;
+    const redundancyDisks = folder?.redundancyDisks ?? ["backups"];
+
+    const handleRestored = (message) => {
+        setRestoreTarget(null);
+        setNotice({ ok: true, text: message });
+        load();
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -109,6 +225,10 @@ export default function BackupsFolder({ open, onOpenChange }) {
                         {lastRun ? `Last run ${lastRun.ok ? "completed" : "failed"} · ${fmtDate(lastRun.at)}` : "No run recorded yet"}
                     </span>
                     <span className="flex items-center gap-1.5"><CalendarClock className="h-3.5 w-3.5 text-[#0d1f5c]" />Next automatic run {fmtDate(folder?.nextRun)}</span>
+                    <span className="flex items-center gap-1.5" title="Every backup is written to each of these at once">
+                        <Cloud className="h-3.5 w-3.5 text-[#0d1f5c]" />
+                        Saved to {redundancyDisks.map((d) => DISK_LABELS[d] ?? d).join(" + ")}
+                    </span>
                     <span className="ml-auto hidden text-gray-400 sm:inline">All kept {folder?.keepDays ?? 7} days, then daily/weekly/monthly copies</span>
                 </div>
 
@@ -121,7 +241,7 @@ export default function BackupsFolder({ open, onOpenChange }) {
 
                 {/* Files */}
                 <div className="max-h-[50vh] overflow-y-auto">
-                    <div className="hidden grid-cols-[1fr_140px_80px_84px] gap-3 border-b border-gray-100 px-5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-gray-400 sm:grid">
+                    <div className="hidden grid-cols-[1fr_140px_80px_116px] gap-3 border-b border-gray-100 px-5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-gray-400 sm:grid">
                         <span>Name</span><span>Date</span><span className="text-right">Size</span><span />
                     </div>
                     {loading && !folder ? (
@@ -135,7 +255,7 @@ export default function BackupsFolder({ open, onOpenChange }) {
                     ) : (
                         <ul className="divide-y divide-gray-50">
                             {backups.map((b, i) => (
-                                <li key={b.name} className="grid grid-cols-[1fr_auto] items-center gap-3 px-5 py-2 hover:bg-gray-50 sm:grid-cols-[1fr_140px_80px_84px]">
+                                <li key={b.name} className="grid grid-cols-[1fr_auto] items-center gap-3 px-5 py-2 hover:bg-gray-50 sm:grid-cols-[1fr_140px_80px_116px]">
                                     <div className="flex min-w-0 items-center gap-2.5">
                                         <FileArchive className="h-5 w-5 shrink-0 text-[#d4a017]" />
                                         <div className="min-w-0">
@@ -147,6 +267,9 @@ export default function BackupsFolder({ open, onOpenChange }) {
                                     <span className="hidden text-xs text-gray-500 sm:block">{fmtDate(b.created_at)}</span>
                                     <span className="hidden text-right text-xs text-gray-500 sm:block">{fmtBytes(b.size)}</span>
                                     <div className="flex items-center justify-end gap-0.5">
+                                        <button type="button" onClick={() => setRestoreTarget(b)} title="Restore this backup" aria-label={`Restore ${b.name}`} className="rounded-md p-1.5 text-gray-400 hover:bg-amber-50 hover:text-amber-700">
+                                            <RotateCcw className="h-4 w-4" />
+                                        </button>
                                         <a href={route("super-admin.backups.download", b.name)} title="Download" aria-label={`Download ${b.name}`} className="rounded-md p-1.5 text-[#0d1f5c] hover:bg-[#0d1f5c]/10">
                                             <Download className="h-4 w-4" />
                                         </a>
@@ -192,6 +315,9 @@ export default function BackupsFolder({ open, onOpenChange }) {
                     <span className="ml-auto text-[11px] text-gray-400">Download a copy now and then and keep it off this server.</span>
                 </form>
             </DialogContent>
+            {restoreTarget && (
+                <RestoreDialog backup={restoreTarget} onClose={() => setRestoreTarget(null)} onRestored={handleRestored} />
+            )}
         </Dialog>
     );
 }

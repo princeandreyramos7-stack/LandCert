@@ -72,6 +72,24 @@ return [
             'report' => false,
         ],
 
+        // The second of the two off-server backup destinations (see
+        // config/backup.php - both are only added to a backup run once
+        // their credentials are actually filled in, so leaving this unset
+        // is not a broken config, just one cloud short of the redundancy).
+        'gcs' => [
+            'driver' => 'gcs',
+            'project_id' => env('GOOGLE_CLOUD_PROJECT_ID'),
+            // A path to the service account JSON file on disk, not the JSON
+            // itself - Google's SDK camelCases this to `keyFilePath`, the
+            // one of its two key-file options that takes a path string
+            // rather than an already-decoded JSON array.
+            'key_file_path' => env('GOOGLE_CLOUD_KEY_FILE'),
+            'bucket' => env('GOOGLE_CLOUD_STORAGE_BUCKET'),
+            'path_prefix' => env('GOOGLE_CLOUD_STORAGE_PATH_PREFIX'),
+            'visibility' => 'private',
+            'throw' => false,
+        ],
+
     ],
 
     /*

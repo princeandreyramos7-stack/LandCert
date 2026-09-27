@@ -81,7 +81,8 @@ class BackupController extends Controller
         }
     }
 
-    private static function isTransient(string $message): bool
+    /** Also used by RestoreController, for the identical safety-backup-first retry. */
+    public static function isTransient(string $message): bool
     {
         return str_contains($message, 'Can\'t create TCP/IP socket')
             || str_contains($message, '10106')
@@ -154,6 +155,12 @@ class BackupController extends Controller
             'nextRun' => BackupSchedule::nextRun($schedule)->toIso8601String(),
             'lastRun' => BackupSchedule::lastRun(),
             'keepDays' => (int) config('backup.cleanup.default_strategy.keep_all_backups_for_days', 7),
+            // Every disk each backup run actually writes to (see
+            // config/backup.php - 's3'/'gcs' only join this list once their
+            // own credentials are filled in), so the folder can show
+            // whether geographic redundancy is really happening rather
+            // than assuming it from the .env alone.
+            'redundancyDisks' => config('backup.backup.destination.disks', []),
         ];
     }
 

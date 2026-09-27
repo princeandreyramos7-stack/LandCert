@@ -202,6 +202,12 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     Route::put('/backups/schedule', [\App\Http\Controllers\BackupController::class, 'schedule'])->name('backups.schedule');
     Route::get('/backups/{file}/download', [\App\Http\Controllers\BackupController::class, 'download'])->name('backups.download');
     Route::delete('/backups/{file}', [\App\Http\Controllers\BackupController::class, 'destroy'])->name('backups.destroy');
+    // Restoring - see App\Http\Controllers\RestoreController's own docblock
+    // for why this one route carries so much more weight than the rest of
+    // the folder. Its own throttle: this is destructive enough that even a
+    // super admin should not be able to fire off many in a row.
+    Route::post('/backups/{file}/restore', [\App\Http\Controllers\RestoreController::class, 'restore'])
+        ->middleware('throttle:3,10,restore')->name('backups.restore');
     
     // Super Admin specific actions
     Route::post('/approve-request/{reportId}', [\App\Http\Controllers\SuperAdminController::class, 'approveRequest'])->name('approve-request');

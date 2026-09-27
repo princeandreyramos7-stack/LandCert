@@ -46,8 +46,19 @@ return [
                  * This path is used to make directories in resulting zip-file relative
                  * Set to `null` to include complete absolute path
                  * Example: base_path()
+                 *
+                 * Set to base_path() rather than left null: an absolute path
+                 * (C:\xampp\htdocs\... locally, /home/.../public_html on the
+                 * host) gets baked into every file entry in the zip, which
+                 * only ever matches the exact machine that took the backup.
+                 * A backup meant to be restorable somewhere else - a rebuilt
+                 * server, a different host entirely - cannot assume that;
+                 * RestoreController also copes with older backups taken
+                 * before this changed, since it locates each entry's
+                 * storage/app segment rather than trusting the path as a
+                 * whole either way.
                  */
-                'relative_path' => null,
+                'relative_path' => base_path(),
             ],
 
             /*
@@ -153,10 +164,19 @@ return [
 
             /*
              * The disk names on which the backups will be stored.
+             *
+             * Always the local 'backups' disk, plus AWS S3 and/or Google
+             * Cloud Storage automatically once their credentials are
+             * actually filled in .env - geographic redundancy this way is
+             * "configure the cloud disk and it just starts happening," not
+             * a second setting to remember to also switch on. Leaving both
+             * unset keeps today's local-only behaviour exactly as it was.
              */
-            'disks' => [
+            'disks' => array_values(array_filter([
                 'backups',
-            ],
+                (env('AWS_ACCESS_KEY_ID') && env('AWS_BUCKET')) ? 's3' : null,
+                env('GOOGLE_CLOUD_STORAGE_BUCKET') ? 'gcs' : null,
+            ])),
         ],
 
         /*
