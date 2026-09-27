@@ -16,6 +16,6 @@ export function AdminRequestList({ requests, flash = {}, archived = false, archi
     }, [flash, toast]);
 
     return (
-        <ApplicationsBoard requests={requests} role="admin" exportRoute="admin.export.requests" listRoute="admin.requests" archived={archived} archivedCount={archivedCount} sla={sla} />
+        <ApplicationsBoard requests={requests} role="admin" exportRoute="admin.export.requests" listRoute="admin.requests" batchArchiveRoute="admin.requests.batch-archive" archived={archived} archivedCount={archivedCount} sla={sla} />
     );
 }

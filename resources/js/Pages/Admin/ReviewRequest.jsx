@@ -1465,8 +1465,22 @@ function UploadedRequirementGroup({ group, isChecked, onToggle }) {
                                     {new Date(doc.created_at).toLocaleDateString()}
                                 </span>
                             </div>
+                            {(doc.duplicate_of_id || doc.possible_editing_flag) && (
+                                <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                    {doc.duplicate_of_id && (
+                                        <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] px-2 py-0.5">
+                                            Duplicate of {doc.duplicate_of_application_number || `application #${doc.duplicate_of_id}`}
+                                        </Badge>
+                                    )}
+                                    {doc.possible_editing_flag && (
+                                        <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] px-2 py-0.5" title={doc.possible_editing_reason || undefined}>
+                                            Possible editing — worth a second look
+                                        </Badge>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                        
+
                         {/* View Button */}
                         <DocumentViewLink
                             doc={doc}

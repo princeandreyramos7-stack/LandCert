@@ -78,8 +78,14 @@ class RequirementDocumentController extends Controller
                 // Store file on the private disk (not publicly web-accessible)
                 $path = $file->storeAs('requirement_documents', $filename, 'local');
 
+                $integrity = app(\App\Services\DocumentIntegrityCheck::class)->inspect(
+                    Storage::disk('local')->path($path),
+                    $file->getMimeType(),
+                    (int) $applicationId
+                );
+
                 // Create new document record (don't delete old ones - allow multiple documents per requirement)
-                RequirementDocument::create([
+                RequirementDocument::create(array_merge([
                     'request_id' => $applicationId,
                     'requirement_id' => $dbId,
                     'requirement_name' => $requirementName,
@@ -87,7 +93,7 @@ class RequirementDocumentController extends Controller
                     'original_filename' => $file->getClientOriginalName(),
                     'mime_type' => $file->getMimeType(),
                     'file_size' => $file->getSize(),
-                ]);
+                ], $integrity->toAttributes()));
 
                 $uploadedCount++;
             }
@@ -284,7 +290,13 @@ class RequirementDocumentController extends Controller
             $mimeType = 'application/pdf';
         }
 
-        RequirementDocument::create([
+        $integrity = app(\App\Services\DocumentIntegrityCheck::class)->inspect(
+            Storage::disk('local')->path($path),
+            $mimeType,
+            $requestModel->id
+        );
+
+        RequirementDocument::create(array_merge([
             'request_id' => $requestModel->id,
             'requirement_id' => $requirementId,
             'requirement_name' => $requirementName,
@@ -292,7 +304,7 @@ class RequirementDocumentController extends Controller
             'original_filename' => $file->getClientOriginalName(),
             'mime_type' => $mimeType,
             'file_size' => $file->getSize(),
-        ]);
+        ], $integrity->toAttributes()));
 
         // NOTE: uploading a document does NOT verify the requirement. The Zoning
         // Officer reviews the file and turns on "Mark as Verified" themselves.

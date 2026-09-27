@@ -726,7 +726,13 @@ class RequestController extends Controller
 
                     $path = $file->store('requirements', 'local');
 
-                    \App\Models\RequirementDocument::create([
+                    $integrity = app(\App\Services\DocumentIntegrityCheck::class)->inspect(
+                        \Illuminate\Support\Facades\Storage::disk('local')->path($path),
+                        $file->getMimeType(),
+                        $newRequest->id
+                    );
+
+                    \App\Models\RequirementDocument::create(array_merge([
                         'request_id' => $newRequest->id,
                         'requirement_id' => $requirementId,
                         'requirement_name' => $requirementNames[$requirementId] ?? 'Requirement #' . $requirementId,
@@ -734,7 +740,7 @@ class RequestController extends Controller
                         'original_filename' => $file->getClientOriginalName(),
                         'mime_type' => $file->getMimeType(),
                         'file_size' => $file->getSize(),
-                    ]);
+                    ], $integrity->toAttributes()));
                 }
             }
 
@@ -1065,8 +1071,14 @@ class RequestController extends Controller
                     if (is_array($files)) {
                         foreach ($files as $file) {
                             $path = $file->store('requirements', 'local');
-                            
-                            \App\Models\RequirementDocument::create([
+
+                            $integrity = app(\App\Services\DocumentIntegrityCheck::class)->inspect(
+                                \Illuminate\Support\Facades\Storage::disk('local')->path($path),
+                                $file->getMimeType(),
+                                $existingRequest->id
+                            );
+
+                            \App\Models\RequirementDocument::create(array_merge([
                                 'request_id' => $existingRequest->id,
                                 'requirement_id' => $requirementId,
                                 'requirement_name' => $request->input("requirement_names.{$requirementId}")
@@ -1075,7 +1087,7 @@ class RequestController extends Controller
                                 'original_filename' => $file->getClientOriginalName(),
                                 'mime_type' => $file->getMimeType(),
                                 'file_size' => $file->getSize(),
-                            ]);
+                            ], $integrity->toAttributes()));
                             
                             \Log::info('File saved', [
                                 'requirement_id' => $requirementId,

@@ -22,6 +22,8 @@ use App\Models\AuditLog;
 
 class AdminController extends Controller
 {
+    use \App\Http\Controllers\Concerns\BatchArchivesRequests;
+
     // Middleware is applied in routes/web.php
 
 
@@ -198,12 +200,12 @@ class AdminController extends Controller
             'project',
             'location',
             'property',
-            'requirementDocuments' // Add requirement documents
+            'requirementDocuments.duplicateOf.request:id,application_number',
         ])->findOrFail($id);
-        
+
         // Get the latest report for this request
         $report = $request->reports->first();
-        
+
         // Build the request data with normalized relationships
         $requestData = [
             'id' => $request->id,
@@ -266,7 +268,7 @@ class AdminController extends Controller
             'report_id' => $report?->report_id,
             'evaluation' => $report?->evaluation,
             'application_id' => $request->id,
-            
+
             // Requirement documents
             'uploaded_requirements' => $request->requirementDocuments->map(function($doc) {
                 return [
@@ -278,6 +280,10 @@ class AdminController extends Controller
                     'mime_type' => $doc->mime_type,
                     'file_size' => $doc->file_size,
                     'created_at' => $doc->created_at,
+                    'duplicate_of_id' => $doc->duplicate_of_id,
+                    'duplicate_of_application_number' => $doc->duplicateOf?->request?->application_number,
+                    'possible_editing_flag' => $doc->possible_editing_flag,
+                    'possible_editing_reason' => $doc->possible_editing_reason,
                 ];
             })->toArray(),
 

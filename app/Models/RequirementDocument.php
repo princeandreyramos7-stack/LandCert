@@ -18,6 +18,14 @@ class RequirementDocument extends Model
         'original_filename',
         'mime_type',
         'file_size',
+        'file_hash',
+        'duplicate_of_id',
+        'possible_editing_flag',
+        'possible_editing_reason',
+    ];
+
+    protected $casts = [
+        'possible_editing_flag' => 'boolean',
     ];
 
     /**
@@ -26,5 +34,11 @@ class RequirementDocument extends Model
     public function request(): BelongsTo
     {
         return $this->belongsTo(Request::class, 'request_id');
+    }
+
+    /** The earlier document (on a different application) with the same file hash, if any. */
+    public function duplicateOf(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'duplicate_of_id');
     }
 }

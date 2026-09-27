@@ -231,6 +231,10 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
     // The archive: closed applications taken off the board (see applications:archive).
     Route::post('/requests/{id}/archive', [\App\Http\Controllers\SuperAdminController::class, 'archiveRequest'])->name('requests.archive');
     Route::post('/requests/{id}/unarchive', [\App\Http\Controllers\SuperAdminController::class, 'unarchiveRequest'])->name('requests.unarchive');
+    // Same archive rule as above, applied in one shot to every closed application filed in a date range.
+    // Own throttle: unlike the single-row action beside it, one call here can move many rows at once.
+    Route::post('/requests/batch-archive', [\App\Http\Controllers\SuperAdminController::class, 'batchArchiveRequests'])
+        ->middleware('throttle:20,1,batch-archive')->name('requests.batch-archive');
     
     // Certificate Management Routes (NEW: Using CertificateController with PDF generation)
     Route::prefix('certificates')->name('certificates.')->group(function () {
@@ -315,6 +319,10 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     // Requirement verification toggle
     Route::post('/save-requirement-verification', [AdminController::class, 'saveRequirementVerification'])->name('save-requirement-verification');
     Route::post('/requests/{id}/verify-requirements', [AdminController::class, 'verifyRequirements'])->name('requests.verify-requirements');
+
+    // Batch archive - same rule as the Zoning Administrator's (see BatchArchivesRequests).
+    Route::post('/requests/batch-archive', [AdminController::class, 'batchArchiveRequests'])
+        ->middleware('throttle:20,1,batch-archive')->name('requests.batch-archive');
     
     // Upload requirement document by admin
     Route::post('/upload-requirement-document', [AdminController::class, 'uploadRequirementDocument'])->name('upload-requirement-document');

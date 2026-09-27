@@ -27,6 +27,7 @@ export function ApplicationsToolbar({
     sort, onSort,
     shown, total,
     onExport, onClear,
+    onBatchArchive,
     role = "admin",
     archivedCount = 0,
 }) {
@@ -80,6 +81,18 @@ export function ApplicationsToolbar({
                             <span className="sm:hidden">Excel</span>
                         </Button>
                     </WithTooltip>
+                    {(role === "super_admin" || role === "admin") && (
+                        <WithTooltip
+                            label="Batch Archive"
+                            hint="Archive every closed application filed in a date range, in one action"
+                        >
+                            <Button type="button" variant="outline" onClick={onBatchArchive} className="h-10 shrink-0 gap-2 border-gray-200 text-gray-700 hover:bg-gray-50">
+                                <Archive className="h-4 w-4" />
+                                <span className="hidden sm:inline">Batch Archive</span>
+                                <span className="sm:hidden">Archive</span>
+                            </Button>
+                        </WithTooltip>
+                    )}
                 </div>
             </div>
 

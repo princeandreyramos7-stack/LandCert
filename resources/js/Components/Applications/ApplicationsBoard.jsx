@@ -9,6 +9,7 @@ import { LiveIndicator } from "@/Components/LiveIndicator";
 import { ApplicationsStats } from "./ApplicationsStats";
 import { ApplicationsToolbar } from "./ApplicationsToolbar";
 import { ApplicationsTable } from "./ApplicationsTable";
+import { BatchArchiveModal } from "./BatchArchiveModal";
 
 // Props refreshed by the live poller. Declared outside the component so the
 // array identity is stable and the polling effect is not re-created each render.
@@ -29,12 +30,13 @@ const norm = (v) => String(v ?? "").toLowerCase();
  *                  live list, which is what archiving is for.
  * @param sla       working days allowed per step (Citizen's Charter).
  */
-export function ApplicationsBoard({ requests, role, exportRoute, listRoute, archived = false, archivedCount = 0, sla }) {
+export function ApplicationsBoard({ requests, role, exportRoute, listRoute, batchArchiveRoute, archived = false, archivedCount = 0, sla }) {
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState(archived ? "archived" : "all");
     const [type, setType] = useState("all");
     const [sort, setSort] = useState("newest");
     const [page, setPage] = useState(1);
+    const [batchArchiveOpen, setBatchArchiveOpen] = useState(false);
     const { toast } = useToast();
 
     const all = requests?.data || requests || [];
@@ -114,6 +116,7 @@ export function ApplicationsBoard({ requests, role, exportRoute, listRoute, arch
                         sort={sort} onSort={setSort}
                         shown={rows.length} total={all.length}
                         onExport={exportExcel} onClear={clear}
+                        onBatchArchive={() => setBatchArchiveOpen(true)}
                         role={role}
                     />
                 </div>
@@ -124,6 +127,10 @@ export function ApplicationsBoard({ requests, role, exportRoute, listRoute, arch
                     <TablePagination currentPage={page} totalItems={rows.length} perPage={PER_PAGE} onPageChange={setPage} label="applications" />
                 </div>
             </div>
+
+            {(role === "super_admin" || role === "admin") && (
+                <BatchArchiveModal isOpen={batchArchiveOpen} onClose={() => setBatchArchiveOpen(false)} routeName={batchArchiveRoute} />
+            )}
         </div>
     );
 }

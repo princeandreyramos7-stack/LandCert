@@ -23,6 +23,8 @@ use Illuminate\Support\Facades\Mail;
 
 class SuperAdminController extends Controller
 {
+    use \App\Http\Controllers\Concerns\BatchArchivesRequests;
+
     protected $cacheService;
 
     public function __construct(DashboardCacheService $cacheService)
@@ -505,14 +507,14 @@ class SuperAdminController extends Controller
     public function reviewRequest($id): Response
     {
         $request = RequestModel::with([
-            'user', 
+            'user',
             'reports',
             'applicant.corporation',
             'applicant.primaryRepresentative',
             'project',
             'location',
             'property',
-            'requirementDocuments' // Add requirement documents
+            'requirementDocuments.duplicateOf.request:id,application_number',
         ])->findOrFail($id);
         
         // Get the latest report for this request
@@ -595,6 +597,10 @@ class SuperAdminController extends Controller
                     'mime_type' => $doc->mime_type,
                     'file_size' => $doc->file_size,
                     'created_at' => $doc->created_at,
+                    'duplicate_of_id' => $doc->duplicate_of_id,
+                    'duplicate_of_application_number' => $doc->duplicateOf?->request?->application_number,
+                    'possible_editing_flag' => $doc->possible_editing_flag,
+                    'possible_editing_reason' => $doc->possible_editing_reason,
                 ];
             }),
 
@@ -868,9 +874,15 @@ class SuperAdminController extends Controller
             // RequirementDocumentController@view. Every other upload path here
             // uses 'local'; these two did not.
             $path = $file->store('requirements', 'local');
-            
+
+            $integrity = app(\App\Services\DocumentIntegrityCheck::class)->inspect(
+                \Illuminate\Support\Facades\Storage::disk('local')->path($path),
+                $file->getMimeType(),
+                (int) $validated['request_id']
+            );
+
             // Create requirement document record
-            $requirementDoc = \App\Models\RequirementDocument::create([
+            $requirementDoc = \App\Models\RequirementDocument::create(array_merge([
                 'request_id' => $validated['request_id'],
                 'requirement_id' => $validated['requirement_id'],
                 'requirement_name' => $validated['requirement_name'],
@@ -880,7 +892,7 @@ class SuperAdminController extends Controller
                 'file_size' => $file->getSize(),
                 'mime_type' => $file->getMimeType(),
                 'uploaded_by_admin' => true,
-            ]);
+            ], $integrity->toAttributes()));
 
             return response()->json([
                 'success' => true,
