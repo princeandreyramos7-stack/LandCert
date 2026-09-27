@@ -5,10 +5,11 @@ import { Transition } from "@headlessui/react";
 import InputError from "@/Components/InputError";
 import AvatarUpload from "@/Components/AvatarUpload";
 import { PhilippineAddressFields } from "@/Components/Address/PhilippineAddressFields";
+import PushNotificationToggle from "@/Components/PushNotificationToggle";
 import { useRef, useState } from "react";
 import {
     User, Lock, Trash2, Mail, Phone, KeyRound, Eye, EyeOff,
-    ShieldAlert, CheckCircle2, Save, AlertTriangle,
+    ShieldAlert, CheckCircle2, Save, AlertTriangle, Bell,
 } from "lucide-react";
 
 /* ── Field wrapper ─────────────────────────────────────── */
@@ -371,6 +372,14 @@ export default function Edit({ mustVerifyEmail, status }) {
                             <PasswordForm/>
                         </Section>
                     </div>
+
+                    {/* ── Push notifications — full width ─────────── */}
+                    <Section icon={Bell} title="Notifications"
+                        desc="Manage how this device is alerted about your applications"
+                        accent="border-l-[#1a3a8f]"
+                        badge="Device" badgeColor="bg-[#1a3a8f]/8 text-[#1a3a8f]">
+                        <PushNotificationToggle/>
+                    </Section>
 
                     {/* ── Delete account — full width ─────────────── */}
                     <Section icon={Trash2} title="Danger Zone"

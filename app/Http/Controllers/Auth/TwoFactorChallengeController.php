@@ -17,11 +17,12 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The SMS code every sign-in confirms between a right password and a
- * trusted session. AuthenticatedSessionController leaves the pending
- * account's id in the session for this to pick up; it is cleared the
- * moment the code is checked, right or wrong, so nothing here is ever left
- * over for a later, unrelated visit to find.
+ * The SMS code a brand-new account confirms before it is signed in.
+ * RegisteredUserController leaves the pending account's id in the session
+ * for this to pick up; it is cleared the moment the code is checked, right
+ * or wrong, so nothing here is ever left over for a later, unrelated visit
+ * to find. A plain sign-in never reaches here - see
+ * AuthenticatedSessionController::store.
  */
 class TwoFactorChallengeController extends Controller
 {

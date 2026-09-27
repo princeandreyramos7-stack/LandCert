@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Services\AuditLogService;
-use App\Services\TwoFactorAuthService;
+use App\Support\PostLoginRedirect;
+use App\Support\SingleSession;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,21 +29,31 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * Handle an incoming authentication request.
+     *
+     * The texted one-time code lives at registration only (see
+     * RegisteredUserController::store) - a sign-in with the right password
+     * finishes here directly. Session regeneration matters more than usual
+     * for exactly that reason: this is now the one place a plain password
+     * alone hands out a trusted session, so a fixation attack has only this
+     * one path to close.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
 
-        // The password was right, but the session is not trusted with
-        // anything yet: every sign-in confirms a texted code before it is.
-        // Auth::attempt() inside authenticate() already logged the account
-        // in - undone here rather than never letting it log in, so the rate
-        // limiting and audit logging above stay exactly as they were; only
-        // what happens after a right password changes.
         $user = $request->user();
-        Auth::guard('web')->logout();
+        $request->session()->regenerate();
 
-        return app(TwoFactorAuthService::class)->beginChallenge($request, $user, $request->boolean('remember'));
+        // At most one signed-in session for this account from here on - see
+        // App\Support\SingleSession and its middleware counterpart.
+        SingleSession::claim($user, $request);
+
+        // A fresh session gets a fresh history key: the pages the browser
+        // remembers from before this sign-in cannot be brought back with
+        // the Back button.
+        Inertia::clearHistory();
+
+        return PostLoginRedirect::for($user, $request);
     }
 
     /**
@@ -61,7 +72,7 @@ class AuthenticatedSessionController extends Controller
         Auth::guard('web')->logout();
 
         if ($user) {
-            \App\Support\SingleSession::release($user);
+            SingleSession::release($user);
         }
 
         // Invalidate the session

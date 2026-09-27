@@ -12,11 +12,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 /**
- * The SMS one-time code every sign-in confirms before its session is
- * trusted. Nothing about a pending code lives on the user row or needs a
- * migration - it sits in the cache, keyed to the account, for exactly as
- * long as it is good for. A leaked cache entry is a 6-digit guess behind a
- * 5-attempt lock (see TwoFactorChallengeController), not a lasting secret.
+ * The SMS one-time code a brand-new account confirms before it is signed
+ * in - proof the phone number just typed into the registration form is one
+ * the applicant actually holds. A plain sign-in with the right password no
+ * longer goes through this (see AuthenticatedSessionController::store);
+ * only RegisteredUserController::store calls beginChallenge() now.
+ *
+ * Nothing about a pending code lives on the user row or needs a migration -
+ * it sits in the cache, keyed to the account, for exactly as long as it is
+ * good for. A leaked cache entry is a 6-digit guess behind a 5-attempt lock
+ * (see TwoFactorChallengeController), not a lasting secret.
  */
 class TwoFactorAuthService
 {
@@ -83,11 +88,10 @@ class TwoFactorAuthService
     }
 
     /**
-     * Starts the challenge for an account that just cleared whatever comes
-     * before it - a right password, or a brand-new registration - so both
-     * callers require exactly the same second factor. The account must not
+     * Starts the challenge for a just-created account, right after
+     * RegisteredUserController::store creates the row. The account must not
      * be signed in yet: the challenge only finishes the sign-in once the
-     * code is confirmed.
+     * code is confirmed (see TwoFactorChallengeController::store).
      */
     public function beginChallenge(Request $request, User $user, bool $remember = false): RedirectResponse
     {

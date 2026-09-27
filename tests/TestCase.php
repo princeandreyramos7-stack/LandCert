@@ -22,18 +22,40 @@ use Illuminate\Testing\TestResponse;
 abstract class TestCase extends BaseTestCase
 {
     /**
-     * Signs a user in through the real routes - password, then the texted
-     * code - the way a browser does. Event::fake() here only intercepts
-     * TwoFactorCodeIssued (to read the code a phone would have shown);
-     * every other event, including whatever the caller's own test listens
-     * for, still fires normally. Returns the response to the code, i.e. the
-     * one that actually finishes the sign-in.
+     * Signs a user in through the real /login route, the way a browser
+     * does - for tests that care about a real sign-in's side effects
+     * (session regeneration, the single-session token, history flags), not
+     * just an authenticated user actingAs() would give them for free.
+     *
+     * No texted code involved: a plain sign-in finishes on the password
+     * alone (see AuthenticatedSessionController::store). The code is
+     * registration-only - see registerThroughTwoFactor() below.
      */
-    protected function loginThroughTwoFactor(string $email, string $password): TestResponse
+    protected function realLogin(string $email, string $password): TestResponse
+    {
+        return $this->post('/login', ['email' => $email, 'password' => $password]);
+    }
+
+    /**
+     * Registers a brand-new account through the real routes - the form,
+     * then the texted code - the way a browser does. Event::fake() here
+     * only intercepts TwoFactorCodeIssued (to read the code a phone would
+     * have shown); every other event, including whatever the caller's own
+     * test listens for, still fires normally. Returns the response to the
+     * code, i.e. the one that actually finishes the sign-in.
+     */
+    protected function registerThroughTwoFactor(array $overrides = []): TestResponse
     {
         Event::fake([TwoFactorCodeIssued::class]);
 
-        $this->post('/login', ['email' => $email, 'password' => $password]);
+        $this->post('/register', array_merge([
+            'consent' => '1',
+            'name' => 'Test User',
+            'email' => 'newcomer@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'contact_number' => '09171234567',
+        ], $overrides));
 
         $code = null;
         Event::assertDispatched(TwoFactorCodeIssued::class, function ($event) use (&$code) {

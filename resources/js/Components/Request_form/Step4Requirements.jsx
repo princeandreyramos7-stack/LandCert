@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Label } from "@/Components/ui/label";
 import { Button } from "@/Components/ui/button";
 import { Card } from "@/Components/ui/card";
-import { Upload, FileText, X, CheckCircle2, AlertCircle, Eye, Loader2 } from "lucide-react";
+import { Upload, FileText, X, CheckCircle2, AlertCircle, Eye, Loader2, Camera } from "lucide-react";
 import { useToast } from "@/Components/ui/use-toast";
 import { fetchWithCsrf } from "@/lib/csrf";
 
@@ -272,7 +272,7 @@ export function Step4Requirements({
                     )}
 
                     {/* File upload area */}
-                    <div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
                         <input
                             type="file"
                             id={`file-${requirement.id}`}
@@ -291,7 +291,7 @@ export function Step4Requirements({
                         />
                         <label
                             htmlFor={`file-${requirement.id}`}
-                            className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg transition-colors ${
+                            className={`flex flex-1 items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg transition-colors ${
                                 isChecking
                                     ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
                                     : 'border-gray-300 cursor-pointer hover:border-blue-400 hover:bg-blue-50'
@@ -312,6 +312,36 @@ export function Step4Requirements({
                                     </span>
                                 </>
                             )}
+                        </label>
+
+                        {/* A separate control, not folded into the input above:
+                            `capture` combined with `multiple` and a PDF-inclusive
+                            `accept` makes some mobile browsers skip straight to
+                            the camera with no way to pick from the gallery or
+                            attach an existing PDF - this is deliberately its own
+                            single-photo, camera-only input instead. */}
+                        <input
+                            type="file"
+                            id={`camera-${requirement.id}`}
+                            accept="image/*"
+                            capture="environment"
+                            disabled={isChecking}
+                            onChange={(e) => {
+                                handleFileSelect(requirement.id, e.target.files);
+                                e.target.value = '';
+                            }}
+                            className="hidden"
+                        />
+                        <label
+                            htmlFor={`camera-${requirement.id}`}
+                            className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg transition-colors sm:w-40 ${
+                                isChecking
+                                    ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                                    : 'border-gray-300 cursor-pointer hover:border-blue-400 hover:bg-blue-50'
+                            }`}
+                        >
+                            <Camera className="h-5 w-5 text-gray-500" />
+                            <span className="text-sm font-medium text-gray-700">Take Photo</span>
                         </label>
                     </div>
 

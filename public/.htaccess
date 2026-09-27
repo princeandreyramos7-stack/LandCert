@@ -97,6 +97,29 @@
         Header set Cache-Control "no-store, must-revalidate"
     </FilesMatch>
 
+    # The service worker and the PWA's own manifest, also stable names -
+    # same reasoning, and doubly so for sw.js: a browser that trusted the
+    # year-long immutable rule above (which this overrides, matching later)
+    # would keep running last year's service worker and never learn a new
+    # one exists, since it would never even ask the server again.
+    #
+    # sw-push.js is included here too, for a subtler reason: sw.js pulls it
+    # in with importScripts(), and browsers are known to keep serving an
+    # imported script from HTTP cache even after sw.js itself is refetched
+    # and found byte-identical - if this one were cachable, a change to its
+    # push/notificationclick handlers could sit invisible indefinitely.
+    <FilesMatch "^(sw|sw-push|workbox-[^.]+)\.js$">
+        Header set Cache-Control "no-cache"
+        # A service worker's scope is its own directory by default - this
+        # one is served from /build/, but registered for scope "/" (see
+        # vite.config.js) so it can control the whole app, not just the
+        # build directory. The browser only honours that if told to here.
+        Header set Service-Worker-Allowed "/"
+    </FilesMatch>
+    <FilesMatch "^manifest\.webmanifest$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+
     # Security headers for everything served straight off disk. The
     # application's own responses get these from PerformanceHeaders;
     # a static file never passes through PHP, so it would get none.

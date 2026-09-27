@@ -262,9 +262,7 @@ class SecurityTest extends TestCase
         $this->assertNotNull($cookie);
         $this->assertTrue($cookie->isHttpOnly());
 
-        // Regeneration now happens once the texted code is confirmed too -
-        // the password step alone no longer finishes the sign-in.
-        $login = $this->loginThroughTwoFactor($user->email, 'a-plain-password-2026')->assertRedirect();
+        $login = $this->realLogin($user->email, 'a-plain-password-2026')->assertRedirect();
         $after = collect($login->headers->getCookies())->first(fn ($c) => $c->getName() === config('session.cookie'));
         $this->assertNotNull($after);
         $this->assertNotSame($cookie->getValue(), $after->getValue(), 'the session id must be regenerated at login');

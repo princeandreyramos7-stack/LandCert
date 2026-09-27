@@ -8,37 +8,13 @@ test('login screen can be rendered', function () {
     $response->assertStatus(200);
 });
 
-test('a right password alone does not sign the user in', function () {
+test('a right password signs the user in directly, with no texted code involved', function () {
     $user = User::factory()->create();
 
-    $response = $this->post('/login', [
-        'email' => $user->email,
-        'password' => 'password',
-    ]);
+    $response = $this->realLogin($user->email, 'password');
 
-    // The session stays a guest's until the texted code is confirmed too.
-    $this->assertGuest();
-    $response->assertRedirect(route('two-factor.challenge'));
-});
-
-test('users can authenticate using the login screen and its texted code', function () {
-    $user = User::factory()->create();
-
-    $response = $this->loginThroughTwoFactor($user->email, 'password');
-
-    $this->assertAuthenticated();
+    $this->assertAuthenticatedAs($user);
     $response->assertRedirect(route('dashboard', absolute: false));
-});
-
-test('a wrong verification code does not sign the user in', function () {
-    $user = User::factory()->create();
-
-    $this->post('/login', ['email' => $user->email, 'password' => 'password']);
-
-    $response = $this->post('/two-factor-challenge', ['code' => '000000']);
-
-    $this->assertGuest();
-    $response->assertSessionHasErrors('code');
 });
 
 test('users can not authenticate with invalid password', function () {
@@ -50,6 +26,15 @@ test('users can not authenticate with invalid password', function () {
     ]);
 
     $this->assertGuest();
+});
+
+test('staff land on their own dashboard after signing in', function () {
+    $admin = User::factory()->create(['user_type' => 'admin']);
+    $this->realLogin($admin->email, 'password')->assertRedirect(route('admin.dashboard'));
+
+    $superAdmin = User::factory()->create(['user_type' => 'super_admin']);
+    $this->post('/logout');
+    $this->realLogin($superAdmin->email, 'password')->assertRedirect(route('super-admin.dashboard'));
 });
 
 test('users can logout', function () {

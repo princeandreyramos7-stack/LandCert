@@ -30,7 +30,7 @@ class SingleSessionTest extends TestCase
     {
         $user = $this->userOf('applicant');
 
-        $this->loginThroughTwoFactor($user->email, 'password')->assertRedirect();
+        $this->realLogin($user->email, 'password')->assertRedirect();
 
         $user->refresh();
         $this->assertNotNull($user->current_session_id);
@@ -46,7 +46,7 @@ class SingleSessionTest extends TestCase
     public function test_a_later_login_elsewhere_signs_this_session_out(): void
     {
         $user = $this->userOf('applicant');
-        $this->loginThroughTwoFactor($user->email, 'password')->assertRedirect();
+        $this->realLogin($user->email, 'password')->assertRedirect();
         $this->assertAuthenticatedAs($user);
 
         $user->forceFill(['current_session_id' => 'a-different-devices-token'])->save();
@@ -59,7 +59,7 @@ class SingleSessionTest extends TestCase
     public function test_the_signed_out_message_explains_why(): void
     {
         $user = $this->userOf('applicant');
-        $this->loginThroughTwoFactor($user->email, 'password');
+        $this->realLogin($user->email, 'password');
         $user->forceFill(['current_session_id' => 'a-different-devices-token'])->save();
         $this->forgetResolvedUser();
 
@@ -71,7 +71,7 @@ class SingleSessionTest extends TestCase
     public function test_logging_out_releases_the_claim(): void
     {
         $user = $this->userOf('applicant');
-        $this->loginThroughTwoFactor($user->email, 'password')->assertRedirect();
+        $this->realLogin($user->email, 'password')->assertRedirect();
 
         $this->post('/logout');
 
@@ -95,7 +95,7 @@ class SingleSessionTest extends TestCase
     {
         $user = $this->userOf('applicant');
 
-        $this->loginThroughTwoFactor($user->email, 'password')->assertRedirect();
+        $this->realLogin($user->email, 'password')->assertRedirect();
         $firstToken = $user->fresh()->current_session_id;
         $this->assertNotNull($firstToken);
 
@@ -106,7 +106,7 @@ class SingleSessionTest extends TestCase
         $this->forgetResolvedUser();
         $this->flushSession();
 
-        $this->loginThroughTwoFactor($user->email, 'password')->assertRedirect();
+        $this->realLogin($user->email, 'password')->assertRedirect();
         $secondToken = $user->fresh()->current_session_id;
 
         $this->assertNotNull($secondToken);
@@ -119,7 +119,7 @@ class SingleSessionTest extends TestCase
         $first = $this->userOf('applicant');
         $second = $this->userOf('applicant');
 
-        $this->loginThroughTwoFactor($first->email, 'password')->assertRedirect();
+        $this->realLogin($first->email, 'password')->assertRedirect();
         $this->assertAuthenticatedAs($first);
 
         // Another account signing in elsewhere does not touch this one.

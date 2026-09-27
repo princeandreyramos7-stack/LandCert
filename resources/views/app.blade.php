@@ -15,7 +15,18 @@
         <!-- Favicon -->
         <link rel="icon" type="image/png" href="{{ asset('images/Ilagan-64.png') }}">
         <link rel="shortcut icon" type="image/png" href="{{ asset('images/Ilagan-64.png') }}">
-        <link rel="apple-touch-icon" href="{{ asset('images/Ilagan-64.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
+
+        <!-- PWA: installable app shell. The service worker itself is
+             registered from resources/js/Components/PwaUpdatePrompt.jsx,
+             not auto-injected here (vite-plugin-pwa's injectRegister is off
+             in vite.config.js) - a Blade layout is not the index.html the
+             plugin expects to inject into. -->
+        <link rel="manifest" href="{{ asset('build/manifest.webmanifest') }}">
+        <meta name="theme-color" content="#0d1f5c">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="CPDO Ilagan">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

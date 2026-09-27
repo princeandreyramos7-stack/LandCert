@@ -27,11 +27,12 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
-    // The step between a right password and a trusted session: reached only
-    // mid-login, via the pending account id AuthenticatedSessionController
-    // leaves in the session. `guest` still fits here - Auth::check() is
-    // false throughout, since the password step logs the account back out
-    // before this is ever reached.
+    // The step between a brand-new account and a trusted session: reached
+    // only right after registration, via the pending account id
+    // RegisteredUserController leaves in the session. A plain sign-in with
+    // an existing account never comes through here - see
+    // AuthenticatedSessionController::store. `guest` still fits: the
+    // account is not signed in yet at either point.
     Route::get('two-factor-challenge', [TwoFactorChallengeController::class, 'create'])
         ->name('two-factor.challenge');
 

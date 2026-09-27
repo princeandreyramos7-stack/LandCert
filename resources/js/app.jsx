@@ -11,6 +11,7 @@ import { router } from '@inertiajs/react';
 import IdleLogout from '@/Components/IdleLogout';
 import CookieNotice from '@/Components/CookieNotice';
 import ErrorBoundary from '@/Components/ErrorBoundary';
+import PwaUpdatePrompt from '@/Components/PwaUpdatePrompt';
 import { TooltipProvider } from '@/Components/ui/tooltip';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -112,6 +113,7 @@ function AppWrapper({ children, auth: initialAuth }) {
             {/* Disclosure, not a consent gate - the system sets no
                 analytics or advertising cookie. See CookieNotice. */}
             <CookieNotice />
+            <PwaUpdatePrompt />
         </TooltipProvider>
     );
 }

@@ -4,47 +4,58 @@ namespace Tests\Feature\Auth;
 
 use App\Events\TwoFactorCodeIssued;
 use App\Models\AuditLog;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 /**
- * The texted code every sign-in confirms between a right password and a
- * trusted session (see AuthenticatedSessionController and
- * TwoFactorChallengeController).
+ * The texted code a brand-new account confirms before it is signed in (see
+ * RegisteredUserController and TwoFactorChallengeController). A plain
+ * sign-in with an existing account never triggers this any more - see
+ * AuthenticationTest for that path.
  */
 class TwoFactorAuthTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_a_right_password_sends_a_code_and_does_not_sign_in(): void
+    private function registrationPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'consent' => '1',
+            'name' => 'Test User',
+            'email' => 'newcomer@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'contact_number' => '09171234567',
+        ], $overrides);
+    }
+
+    public function test_registering_sends_a_code_and_does_not_sign_in(): void
     {
         Event::fake([TwoFactorCodeIssued::class]);
-        $user = $this->userOf('applicant');
 
-        $this->post('/login', ['email' => $user->email, 'password' => 'password'])
+        $this->post('/register', $this->registrationPayload())
             ->assertRedirect(route('two-factor.challenge'));
 
         $this->assertGuest();
+        $user = User::where('email', 'newcomer@example.com')->firstOrFail();
         Event::assertDispatched(TwoFactorCodeIssued::class, fn ($event) => $event->user->is($user));
     }
 
-    public function test_the_right_code_finishes_signing_in(): void
+    public function test_the_right_code_finishes_registering(): void
     {
-        $user = $this->userOf('applicant');
-
-        $this->loginThroughTwoFactor($user->email, 'password')
+        $this->registerThroughTwoFactor()
             ->assertRedirect(route('dashboard', absolute: false));
 
-        $this->assertAuthenticatedAs($user);
+        $this->assertAuthenticated();
     }
 
     public function test_a_wrong_code_is_refused_and_logged(): void
     {
-        $user = $this->userOf('applicant');
-
-        $this->post('/login', ['email' => $user->email, 'password' => 'password']);
+        $this->post('/register', $this->registrationPayload());
+        $user = User::where('email', 'newcomer@example.com')->firstOrFail();
 
         $this->post('/two-factor-challenge', ['code' => '000000'])
             ->assertSessionHasErrors('code');
@@ -57,10 +68,9 @@ class TwoFactorAuthTest extends TestCase
 
     public function test_five_wrong_codes_lock_the_challenge_and_restart_the_sign_in(): void
     {
-        $user = $this->userOf('applicant');
+        $this->post('/register', $this->registrationPayload());
+        $user = User::where('email', 'newcomer@example.com')->firstOrFail();
         RateLimiter::clear('two-factor:' . $user->id . '|127.0.0.1');
-
-        $this->post('/login', ['email' => $user->email, 'password' => 'password']);
 
         foreach (range(1, 5) as $ignored) {
             $this->post('/two-factor-challenge', ['code' => '000000']);
@@ -71,16 +81,14 @@ class TwoFactorAuthTest extends TestCase
             ->assertSessionHasErrors('code');
 
         // And the pending sign-in was cleared along with it - back to a
-        // fresh password check, not stuck on a challenge it cannot pass.
+        // fresh registration attempt, not stuck on a challenge it cannot pass.
         $this->get('/two-factor-challenge')->assertRedirect(route('login'));
         $this->assertGuest();
     }
 
     public function test_resending_replaces_the_code_the_old_one_no_longer_works(): void
     {
-        $user = $this->userOf('applicant');
-
-        $this->post('/login', ['email' => $user->email, 'password' => 'password']);
+        $this->post('/register', $this->registrationPayload());
 
         Event::fake([TwoFactorCodeIssued::class]);
         $this->post('/two-factor-challenge/resend')->assertSessionHas('status');
@@ -92,35 +100,11 @@ class TwoFactorAuthTest extends TestCase
         });
 
         $this->post('/two-factor-challenge', ['code' => $newCode])->assertRedirect();
-        $this->assertAuthenticatedAs($user);
-    }
-
-    public function test_an_account_with_no_phone_number_cannot_sign_in(): void
-    {
-        $user = $this->userOf('applicant', ['contact_number' => null]);
-
-        $this->post('/login', ['email' => $user->email, 'password' => 'password'])
-            ->assertSessionHasErrors('email');
-
-        $this->assertGuest();
+        $this->assertAuthenticated();
     }
 
     public function test_visiting_the_challenge_page_with_no_pending_sign_in_bounces_to_login(): void
     {
         $this->get('/two-factor-challenge')->assertRedirect(route('login'));
-    }
-
-    public function test_staff_still_land_on_their_own_dashboard_after_the_code(): void
-    {
-        $admin = $this->userOf('admin');
-
-        $this->loginThroughTwoFactor($admin->email, 'password')
-            ->assertRedirect(route('admin.dashboard'));
-
-        $superAdmin = $this->userOf('super_admin');
-        $this->post('/logout');
-
-        $this->loginThroughTwoFactor($superAdmin->email, 'password')
-            ->assertRedirect(route('super-admin.dashboard'));
     }
 }

@@ -9,19 +9,19 @@ use Illuminate\Support\Str;
 /**
  * At most one signed-in session per account at a time.
  *
- * claim() is called from the one place in this app a session actually
- * becomes trusted (TwoFactorChallengeController::store, after the password
- * and the texted code both check out): it mints a fresh random token, keeps
- * it on the account, and stamps this session with the same value. Any other
- * session still carrying the previous token is signed out the next time it
- * is seen - see App\Http\Middleware\EnsureSingleSession, which is the other
- * half of this and does the actual comparing.
+ * claim() is called from both places in this app a session becomes trusted:
+ * AuthenticatedSessionController::store (a plain sign-in) and
+ * TwoFactorChallengeController::store (after registration's texted code is
+ * confirmed). It mints a fresh random token, keeps it on the account, and
+ * stamps this session with the same value. Any other session still carrying
+ * the previous token is signed out the next time it is seen - see
+ * App\Http\Middleware\EnsureSingleSession, which is the other half of this
+ * and does the actual comparing.
  *
  * Deliberately not hooked to Laravel's generic Login event: that event also
- * fires for this app's own password-only step before the texted code is
- * confirmed (see AuthenticatedSessionController::store, which immediately
- * undoes that login again) - claiming there would let a correct password
- * alone, without the code, sign out whoever actually holds the account.
+ * fires for Auth::attempt() itself, one line before this runs, and calling
+ * claim() twice for the same sign-in would mint a second token that
+ * immediately invalidates the first.
  */
 class SingleSession
 {

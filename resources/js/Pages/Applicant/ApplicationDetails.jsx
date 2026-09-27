@@ -24,6 +24,7 @@ import {
     Package,
     Lock,
     Trash2,
+    Camera,
 } from "lucide-react";
 import { DocumentViewLink } from "@/Components/DocumentViewLink";
 
@@ -79,6 +80,10 @@ const formatSqm = (n) =>
 export default function ApplicationDetails({ application, requirements = [], documents = {} }) {
     const { toast } = useToast();
     const fileInputs = useRef({});
+    // A second, camera-only input per requirement: `capture` is unreliable
+    // once a mixed image+PDF accept list is on the same <input>, so this is
+    // its own input rather than added to the one above.
+    const cameraInputs = useRef({});
     const [uploadingId, setUploadingId] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
 
@@ -193,7 +198,7 @@ export default function ApplicationDetails({ application, requirements = [], doc
                         </p>
 
                         {allowed ? (
-                            <>
+                            <div className="flex items-center gap-1.5">
                                 <input
                                     type="file"
                                     ref={(el) => { fileInputs.current[req.id] = el; }}
@@ -216,7 +221,35 @@ export default function ApplicationDetails({ application, requirements = [], doc
                                     <Upload className="h-3.5 w-3.5" />
                                     {busy ? "Uploading…" : uploaded ? "Replace" : "Upload"}
                                 </Button>
-                            </>
+
+                                {/* Its own camera-only input: `capture` next to a
+                                    PDF-inclusive accept list is unreliable across
+                                    mobile browsers. */}
+                                <input
+                                    type="file"
+                                    ref={(el) => { cameraInputs.current[req.id] = el; }}
+                                    accept="image/*"
+                                    capture="environment"
+                                    style={{ display: "none" }}
+                                    onChange={(e) => {
+                                        const picked = e.target.files?.[0];
+                                        e.target.value = "";
+                                        handleUpload(req, picked);
+                                    }}
+                                />
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={busy}
+                                    onClick={() => cameraInputs.current[req.id]?.click()}
+                                    title="Take a photo"
+                                    aria-label="Take a photo"
+                                    className="h-7 w-7 p-0"
+                                >
+                                    <Camera className="h-3.5 w-3.5" />
+                                </Button>
+                            </div>
                         ) : uploaded ? (
                             <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
                                 <Lock className="h-3 w-3" />

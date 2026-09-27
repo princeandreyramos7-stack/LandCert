@@ -92,6 +92,11 @@ class HandleInertiaRequests extends Middleware
                 'fileMaxBytes' => self::iniBytes('upload_max_filesize'),
                 'maxFiles' => (int) ini_get('max_file_uploads'),
             ],
+            // The VAPID public key is, by design, public - it is what
+            // PushManager.subscribe() needs client-side to open a
+            // subscription the server's matching private key can later sign
+            // pushes for. Never the private key.
+            'vapidPublicKey' => config('webpush.vapid.public_key'),
             // Add flash messages
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

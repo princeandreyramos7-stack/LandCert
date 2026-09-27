@@ -106,7 +106,13 @@ Route::middleware(['auth', 'throttle:60,1,pages', 'prevent.back'])->group(functi
     Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.destroy');
     // A staff member's own e-signature - in force from the moment it is uploaded.
     Route::post('/profile/signature', [ProfileController::class, 'updateSignature'])->name('profile.signature.update');
-    
+
+    // Browser push subscriptions - opted into from the applicant Profile page.
+    // Not restricted to the applicant role at the route level (staff never see
+    // the toggle that calls these), matching how /profile itself is shared.
+    Route::post('/push-subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
+    Route::delete('/push-subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
+
     // Request routes
     Route::get('/request', [RequestController::class, 'index'])->name('request.index');
     Route::post('/request', [RequestController::class, 'store'])->middleware('throttle:10,1,submit')->name('request.store');
