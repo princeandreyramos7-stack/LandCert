@@ -41,7 +41,7 @@ export default defineConfig({
             registerType: 'prompt',
             manifest: {
                 name: 'CPDO City of Ilagan',
-                short_name: 'CPDO Ilagan',
+                short_name: 'LC',
                 description: 'Zoning and land use permit applications for the City of Ilagan, Isabela.',
                 start_url: '/',
                 scope: '/',
