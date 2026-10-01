@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -65,6 +66,15 @@ class PsgcSeeder extends Seeder
             'code' => $r[0], 'name' => $r[1], 'city_code' => $r[2],
         ]);
         Schema::enableForeignKeyConstraints();
+
+        // App\Support\PhilippineAddress caches every province/city/barangay
+        // lookup for a day (it is reference data that almost never changes),
+        // keyed per province/city rather than one list - too many dynamic
+        // keys to forget individually, so a re-seed flushes the whole store.
+        // Without this, a table refilled with different codes (an updated
+        // PSGC file) still answers with what was cached before this ran,
+        // for up to a day - exactly what happened here once already.
+        Cache::flush();
 
         $this->command?->info(sprintf(
             'PSGC loaded: %d provinces (across %d regions), %d cities/municipalities, %d barangays.',

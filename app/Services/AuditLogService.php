@@ -213,7 +213,7 @@ class AuditLogService
      * already known by then - a right password got them this far - so
      * this always carries a user id, unlike logFailedLogin.
      */
-    public static function logTwoFactorFailed(int $userId, string $email, int $attempt, int $limit)
+    public static function logTwoFactorFailed(?int $userId, string $email, int $attempt, int $limit)
     {
         $log = new AuditLog();
         $log->user_id = $userId;

@@ -38,7 +38,7 @@ test('registration finishes once the texted code is confirmed', function () {
     $code = null;
     Event::assertDispatched(TwoFactorCodeIssued::class, function ($event) use (&$code) {
         $code = $event->code;
-        return $event->user->email === 'test@example.com';
+        return $event->user === null && $event->email === 'test@example.com';
     });
 
     $this->post('/two-factor-challenge', ['code' => $code])

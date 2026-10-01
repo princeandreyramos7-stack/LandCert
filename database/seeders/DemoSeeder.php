@@ -17,6 +17,7 @@ use App\Services\CertificateService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -46,9 +47,15 @@ class DemoSeeder extends Seeder
 {
     private const DEMO_PASSWORD = 'demo1234';
 
+    // Spelled exactly as PsgcSeeder's data has them (psgc_barangays.name) -
+    // "Allinguigan" is double-L there, and "San Vicente" carries "(Pob.)",
+    // both easy to get wrong typing from memory. A name that does not match
+    // exactly silently fails to find a code (see barangayCode()) and the
+    // address falls back to text-only, the same gap a genuinely pre-picker
+    // address has.
     private const BARANGAYS = [
-        'Alibagu', 'Alinguigan 1st', 'Alinguigan 2nd', 'Osmena',
-        'Cabannungan 1st', 'Baligatan', 'San Vicente', 'Calamagui 1st',
+        'Alibagu', 'Allinguigan 1st', 'Allinguigan 2nd', 'Osmeña',
+        'Cabannungan 1st', 'Baligatan', 'San Vicente (Pob.)', 'Calamagui 1st',
     ];
 
     private const PROJECT_NATURES = [
@@ -65,6 +72,14 @@ class DemoSeeder extends Seeder
 
     /** One Applicant (and its User) per demo name, reused across their applications. */
     private array $applicantsByName = [];
+
+    /** PSGC code for City of Ilagan - the region/province every demo address sits under. */
+    private const CITY_ILAGAN_CODE = '023114000';
+    private const PROVINCE_ISABELA_CODE = '023100000';
+    private const REGION_CAGAYAN_VALLEY_CODE = '020000000';
+
+    /** Looked up once per barangay name, not once per applicant. */
+    private array $barangayCodes = [];
 
     public function run(): void
     {
@@ -285,6 +300,26 @@ class DemoSeeder extends Seeder
         };
     }
 
+    /**
+     * The real PSGC code for one of the eight hardcoded demo barangays, so a
+     * demo address is exactly what a real applicant's own address would be:
+     * composed text AND the codes behind it. Editing an application reads
+     * those codes to show the picker already filled in
+     * (RequestController::edit) - a demo address with only the text half
+     * cannot do that, the same gap a genuinely pre-picker address has.
+     */
+    private function barangayCode(string $name): ?string
+    {
+        if (!array_key_exists($name, $this->barangayCodes)) {
+            $this->barangayCodes[$name] = DB::table('psgc_barangays')
+                ->where('city_code', self::CITY_ILAGAN_CODE)
+                ->where('name', $name)
+                ->value('code');
+        }
+
+        return $this->barangayCodes[$name];
+    }
+
     /** Find-or-create the demo account and applicant record for this name. */
     private function applicantFor(string $name): Applicant
     {
@@ -302,16 +337,31 @@ class DemoSeeder extends Seeder
                 'password' => bcrypt(self::DEMO_PASSWORD),
                 'contact_number' => '09' . rand(100000000, 999999999),
                 'email_verified_at' => now(),
+                // A demo account is meant to be ready to sign in and try,
+                // not stuck on a registration code nobody can receive - see
+                // AuthenticatedSessionController::store.
+                'phone_verified_at' => now(),
             ]
         );
+
+        $barangayName = self::BARANGAYS[array_rand(self::BARANGAYS)];
+        $street = 'Purok ' . rand(1, 7);
+        $barangayCode = $this->barangayCode($barangayName);
 
         $applicant = Applicant::firstOrCreate(
             ['user_id' => $user->id],
             [
                 'applicant_name' => $name,
-                'applicant_address' => 'Purok ' . rand(1, 7) . ', ' . self::BARANGAYS[array_rand(self::BARANGAYS)] . ', City of Ilagan, Isabela',
+                'applicant_address' => "{$street}, {$barangayName}, City of Ilagan, Isabela",
                 'applicant_contact' => $user->contact_number,
                 'applicant_type' => 'individual',
+                // Same codes a real applicant picking this exact address
+                // through the form would end up with.
+                'address_region_code' => self::REGION_CAGAYAN_VALLEY_CODE,
+                'address_province_code' => self::PROVINCE_ISABELA_CODE,
+                'address_city_code' => self::CITY_ILAGAN_CODE,
+                'address_barangay_code' => $barangayCode,
+                'address_street' => $street,
             ]
         );
 

@@ -49,9 +49,15 @@ const DropdownMenuContent = React.forwardRef(({ className, sideOffset = 4, ...pr
     <DropdownMenuPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
-      style={{ zIndex: 99999, position: 'fixed' }}
+      // No inline position/z-index override here: Radix owns this content's
+      // position (Popper-computed top/left/transform) and fighting it with a
+      // forced `position: 'fixed'` is what was clipping/misplacing every
+      // dropdown menu in the app, most visibly near the right edge of a
+      // table. Its z-index is already covered globally - see app.css's
+      // `[role="menu"] { z-index: 99999 !important; }`, which this element
+      // gets automatically since Radix sets role="menu" itself.
       className={cn(
-        "!z-[99999] min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         className
       )}
       {...props} />

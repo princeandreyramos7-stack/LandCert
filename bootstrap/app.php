@@ -42,6 +42,16 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'prevent.back' => \App\Http\Middleware\PreventBackHistory::class,
         ]);
+
+        // A real payment gateway calls its webhook server-to-server with no
+        // browser session and therefore no CSRF token - the gateway's own
+        // request signature is what authenticates it instead, once a
+        // provider is actually wired into PaymentGatewayService. Still
+        // answers 503 today (PAYMENT_GATEWAY_ENABLED is off), so this is
+        // dormant until that changes.
+        $middleware->validateCsrfTokens(except: [
+            'payments/online/webhook',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Custom error handling for production

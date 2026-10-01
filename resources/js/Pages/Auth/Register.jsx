@@ -4,6 +4,7 @@ import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { PhilippineAddressFields } from '@/Components/Address/PhilippineAddressFields';
 import { User, Mail, Phone, Lock, Eye, EyeOff, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { useFocusFirstError } from '@/hooks/useFocusFirstError';
 
 /* ── Reusable field wrapper ─────────────────────────────────────── */
 function Field({ label, required, hint, error, children }) {
@@ -68,6 +69,8 @@ export default function Register({ legal = [], legalVersion }) {
     const [showPw, setShowPw] = useState(false);
     const [showCpw, setShowCpw] = useState(false);
 
+    useFocusFirstError(errors);
+
     const submit = (e) => {
         e.preventDefault();
         post(route('register'), { onFinish: () => reset('password', 'password_confirmation') });
@@ -97,7 +100,7 @@ export default function Register({ legal = [], legalVersion }) {
 
                 {/* Global errors display */}
                 {Object.keys(errors).length > 0 && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                    <div data-error-summary tabIndex={-1} className="rounded-lg border border-red-200 bg-red-50 p-4">
                         <div className="flex items-start gap-3">
                             <div className="flex-shrink-0">
                                 <svg className="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">

@@ -334,14 +334,11 @@ export function SuperAdminUserManagement({ users }) {
                                                             <MoreVertical className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent 
+                                                    <DropdownMenuContent
                                                         align="end"
                                                         side="bottom"
                                                         sideOffset={5}
                                                         className="min-w-[200px]"
-                                                        style={{
-                                                            transform: 'translateX(-20px)'
-                                                        }}
                                                     >
                                                         <DropdownMenuItem onClick={() => handleEdit(user)}>
                                                             <Pencil className="mr-2 h-4 w-4" />
@@ -398,14 +395,11 @@ export function SuperAdminUserManagement({ users }) {
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent 
+                                            <DropdownMenuContent
                                                 align="end"
                                                 side="bottom"
                                                 sideOffset={5}
                                                 className="min-w-[200px]"
-                                                style={{
-                                                    transform: 'translateX(-20px)'
-                                                }}
                                             >
                                                 <DropdownMenuItem onClick={() => handleEdit(user)}>
                                                     <Pencil className="mr-2 h-4 w-4" />

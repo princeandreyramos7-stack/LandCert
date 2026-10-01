@@ -3,19 +3,19 @@
 namespace App\Support;
 
 /**
- * The one place the applicant-facing per-file upload size lives, so every
- * validation rule that enforces it - the wizard's Step 4, its own no-save
- * check, the post-submission re-upload, and the notarized-form upload - can
- * never drift apart the way project_location_number and lot_number once did.
+ * The one place EVERY requirement-document upload's per-file size limit
+ * lives - the applicant wizard's Step 4, its own no-save readability check,
+ * the post-submission re-upload, the notarized-form upload, and both
+ * staff-side upload endpoints - so a validation rule can never quietly drift
+ * from the rest the way project_location_number and lot_number once did.
  *
- * 100MB is well past any real phone photo (those run 3-15MB even at full
- * resolution); it exists so a high-resolution scan or a combined multi-page
- * PDF is never the blocker. See public/.htaccess for the matching
- * upload_max_filesize/post_max_size/memory_limit - raising this alone does
- * nothing if PHP itself still discards anything larger before Laravel ever
- * sees it.
+ * 20MB is well past a real phone photo or a single scanned document (those
+ * run a few MB even at full resolution); kept deliberately tighter than PHP
+ * itself allows (see public/.htaccess's upload_max_filesize/post_max_size)
+ * so the ceiling here, not php.ini, is what actually bounds storage and
+ * abuse exposure across every upload path at once.
  */
 class UploadLimits
 {
-    public const MAX_FILE_KB = 102400;
+    public const MAX_FILE_KB = 20480;
 }

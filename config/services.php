@@ -50,4 +50,26 @@ return [
         'sender_name' => env('SEMAPHORE_SENDER_NAME', 'CPDO'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Online Payment Gateway Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Readiness scaffolding only - the City Treasury has not yet confirmed
+    | which gateway/channel this office will use online. Leave
+    | PAYMENT_GATEWAY_ENABLED=false until that is decided and
+    | PaymentGatewayService has a real provider implementation; while
+    | disabled, the existing manual counter-and-receipt flow is completely
+    | unaffected.
+    |
+    */
+    'payment_gateway' => [
+        'enabled' => env('PAYMENT_GATEWAY_ENABLED', false),
+        'provider' => env('PAYMENT_GATEWAY_PROVIDER'),
+        'api_key' => env('PAYMENT_GATEWAY_API_KEY'),
+        'secret_key' => env('PAYMENT_GATEWAY_SECRET_KEY'),
+        'webhook_secret' => env('PAYMENT_GATEWAY_WEBHOOK_SECRET'),
+        'base_url' => env('PAYMENT_GATEWAY_BASE_URL'),
+    ],
+
 ];

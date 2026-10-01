@@ -257,8 +257,12 @@ class AuditProbeTest extends TestCase
     public function test_every_upload_is_judged_by_content(): void
     {
         $uploadRules = [
-            'AdminController.php' => ["'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:20480'", "'receipt_file' => 'required|file|mimes:jpeg,jpg,png,gif,pdf|max:5120'"],
-            'SuperAdminController.php' => ["'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:20480'", "'receipt_file' => 'required|file|mimes:jpeg,jpg,png,gif,pdf|max:5120'"],
+            // The max: piece is UploadLimits::MAX_FILE_KB, not a literal number
+            // (see App\Support\UploadLimits) - every upload path shares one
+            // limit, so the canary checks the mimes list and that reference
+            // separately rather than one exact string.
+            'AdminController.php' => ["'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:'", 'UploadLimits::MAX_FILE_KB', "'receipt_file' => 'required|file|mimes:jpeg,jpg,png,gif,pdf|max:5120'"],
+            'SuperAdminController.php' => ["'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:'", 'UploadLimits::MAX_FILE_KB', "'receipt_file' => 'required|file|mimes:jpeg,jpg,png,gif,pdf|max:5120'"],
             // The rule became an array (ReadableDocument, see App\Rules,
             // does not fit Laravel's pipe-delimited string syntax), so the
             // canary checks its pieces rather than one exact string.

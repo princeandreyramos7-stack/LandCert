@@ -196,6 +196,16 @@ class SmsService
         ]);
     }
 
+    /** Sent once, alongside sendApplicationRejected(), the denial that reaches Request::MAX_DENIALS. */
+    public function sendApplicationPermanentlyDenied(string $phone, string $name, string $applicationNumber): bool
+    {
+        return $this->sendTemplate('application_locked', $phone, [
+            '{name}'               => $name,
+            '{application_number}' => $applicationNumber,
+            '{max}'                => (string) \App\Models\Request::MAX_DENIALS,
+        ]);
+    }
+
     public function sendPaymentReminder(string $phone, string $name, string $applicationNumber, int $daysRemaining = 0): bool
     {
         return $this->sendTemplate('payment_reminder', $phone, [

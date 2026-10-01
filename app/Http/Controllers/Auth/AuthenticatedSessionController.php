@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Services\AuditLogService;
+use App\Services\TwoFactorAuthService;
 use App\Support\PostLoginRedirect;
 use App\Support\SingleSession;
 use Illuminate\Http\RedirectResponse;
@@ -36,12 +37,29 @@ class AuthenticatedSessionController extends Controller
      * for exactly that reason: this is now the one place a plain password
      * alone hands out a trusted session, so a fixation attack has only this
      * one path to close.
+     *
+     * A password match alone is not enough for an applicant account that
+     * never finished that code: Auth::attempt() has already signed them in
+     * by the time this runs, so that has to be undone, not just refused,
+     * before sending them back into the same challenge a fresh registration
+     * gets. Staff accounts are exempt - they are provisioned directly by an
+     * administrator (AdminUserSeeder, SuperAdminController::createAdmin),
+     * never through self-registration, so there was never a code for them
+     * to have completed in the first place.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
 
         $user = $request->user();
+
+        if ($user->user_type === 'applicant' && !$user->phone_verified_at) {
+            $remember = $request->boolean('remember');
+            Auth::guard('web')->logout();
+
+            return app(TwoFactorAuthService::class)->beginChallenge($request, $user, $remember);
+        }
+
         $request->session()->regenerate();
 
         // At most one signed-in session for this account from here on - see

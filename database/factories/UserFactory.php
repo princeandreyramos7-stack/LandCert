@@ -27,6 +27,11 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
+            // A factory user stands in for a real, already-onboarded account
+            // unless a test asks for unverifiedPhone() - AuthenticatedSessionController
+            // now refuses a plain sign-in without this, same as a real
+            // account that never finished its registration code would be.
+            'phone_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             // Required at real registration (see RegisteredUserController)
@@ -44,6 +49,17 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Never finished the registration SMS code - the state a plain sign-in
+     * refuses (see AuthenticatedSessionController::store).
+     */
+    public function unverifiedPhone(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'phone_verified_at' => null,
         ]);
     }
 }

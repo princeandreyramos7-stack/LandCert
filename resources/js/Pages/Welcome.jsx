@@ -1,21 +1,18 @@
-import { Fragment } from "react";
 import { Head, Link } from "@inertiajs/react";
-import InstallAppButton from "@/Components/InstallAppButton";
+import PublicNavbar from "@/Components/PublicNavbar";
+import PublicFooter from "@/Components/PublicFooter";
 import {
     LayoutDashboard,
     CheckCircle2,
     ChevronDown,
     ChevronUp,
-    MapPin,
-    Phone,
-    Mail,
-    Clock,
     MonitorSmartphone,
     ClipboardList,
     Landmark,
     Eye,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { MISSION, VISION } from "@/lib/officeInfo";
 
 /* ── Scroll-reveal wrapper ────────────────────────────────────────────────── */
 function Reveal({ children, delay = 0, className = "" }) {
@@ -63,19 +60,6 @@ function Step({ n, label }) {
     );
 }
 
-/* ── Mission & Vision ────────────────────────────────────────────────────
-   Transcribed from the plaques mounted in the CPDO office. The wording is the
-   office's own and should not be paraphrased. */
-const MISSION =
-    "To operate and sustain an autonomous local government with responsive and " +
-    "accountable public servants, self-reliant, capable of planning and execution " +
-    "of fiscal and administrative development, at the forefront in the realization " +
-    "of the vision of development thus contribute to the attainment of national goals.";
-
-const VISION =
-    "City of Ilagan, the Corn Capital of the Philippines, with empowered citizenry " +
-    "and committed leadership advancing towards a liveable city.";
-
 export default function Welcome() {
     const [in_, setIn] = useState(false);
     useEffect(() => {
@@ -96,97 +80,7 @@ export default function Welcome() {
         <>
             <Head title="CPDO LC — City of Ilagan" />
 
-            {/* ═══════════════════════ NAVBAR ═════════════════════════════ */}
-            <nav className="sticky top-0 z-50 bg-[#0d1f5c] border-b border-[#1a3a8f]/60 shadow-md">
-                <div className="max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between h-16">
-                    {/* Logo */}
-                    <div
-                        className="flex items-center gap-3"
-                        style={{
-                            opacity: in_ ? 1 : 0,
-                            transform: in_ ? "none" : "translateX(-14px)",
-                            transition: "all .7s ease",
-                        }}
-                    >
-                        <div className="w-10 h-10 rounded-full border-2 border-[#d4a017]/40 overflow-hidden shrink-0">
-                            <img
-                                src="/images/ilagan1.png"
-                                alt="City of Ilagan"
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-                        <div className="leading-tight">
-                            <p className="text-white font-black text-xs tracking-[0.15em] uppercase">
-                                Republic of the Philippines
-                            </p>
-                            <p className="text-[#d4a017] font-black text-sm tracking-wide uppercase">
-                                CPDO LC
-                            </p>
-                            <p className="text-blue-300 text-[10px] tracking-widest">
-                                City of Ilagan, Isabela
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Nav links */}
-                    <div
-                        className="hidden md:flex items-center gap-7 text-sm font-semibold"
-                        style={{
-                            opacity: in_ ? 1 : 0,
-                            transition: "opacity .7s ease .2s",
-                        }}
-                    >
-                        <a
-                            href="#why"
-                            className="text-blue-200 hover:text-white transition-colors"
-                        >
-                            About
-                        </a>
-                        <a
-                            href="#how"
-                            className="text-blue-200 hover:text-white transition-colors"
-                        >
-                            How It Works
-                        </a>
-                        <a
-                            href="#mission"
-                            className="text-blue-200 hover:text-white transition-colors"
-                        >
-                            Mission & Vision
-                        </a>
-                        <a
-                            href="#contact"
-                            className="text-blue-200 hover:text-white transition-colors"
-                        >
-                            Contact
-                        </a>
-                        <InstallAppButton
-                            className="inline-flex items-center gap-1.5 rounded-md border border-[#d4a017]/50 px-4 py-2 text-sm font-bold text-[#d4a017] transition-colors hover:bg-[#d4a017]/10"
-                        />
-                        {/* Login only - registration is disabled for public access */}
-                        <Link
-                            href={route("login")}
-                            className="rounded-md bg-[#d4a017] px-5 py-2 text-sm font-bold text-white shadow transition-colors hover:bg-[#b8880d]"
-                        >
-                            Login
-                        </Link>
-                    </div>
-
-                    {/* Mobile */}
-                    <div className="flex items-center gap-2 md:hidden">
-                        <InstallAppButton
-                            className="inline-flex items-center gap-1 rounded-md border border-[#d4a017]/50 px-2.5 py-2 text-xs font-bold text-[#d4a017]"
-                            label="Install"
-                        />
-                        <Link
-                            href={route("login")}
-                            className="rounded-md bg-[#d4a017] px-3 py-2 text-sm font-bold text-white"
-                        >
-                            Login
-                        </Link>
-                    </div>
-                </div>
-            </nav>
+            <PublicNavbar />
 
             {/* ═══════════════════════ HERO ═══════════════════════════════ */}
             <section
@@ -639,142 +533,7 @@ export default function Welcome() {
                 </div>
             </section>
 
-            {/* ═══════════════════════ FOOTER ═════════════════════════════ */}
-            <footer
-                id="contact"
-                className="bg-[#0d1f5c] border-t border-[#1a3a8f]/60"
-            >
-                <div className="max-w-7xl mx-auto px-6 lg:px-12 py-12">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
-                        {/* Brand */}
-                        <div>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-full border border-white/20 overflow-hidden shrink-0">
-                                    <img
-                                        src="/images/ilagan1.png"
-                                        alt="City of Ilagan"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                                <div>
-                                    <p className="text-white font-black text-sm tracking-widest uppercase">
-                                        CPDO LC
-                                    </p>
-                                    <p className="text-[#d4a017] text-xs font-semibold">
-                                        City of Ilagan, Isabela
-                                    </p>
-                                </div>
-                            </div>
-                            <p className="text-blue-300/70 text-sm leading-relaxed max-w-xs">
-                                Committed to responsible land use planning,
-                                sustainable development, and accessible
-                                government services for all City of Ilagan
-                                residents.
-                            </p>
-                        </div>
-
-                        {/* Quick links */}
-                        <div>
-                            <h4 className="text-white font-bold mb-4 text-sm tracking-wide">
-                                Quick Links
-                            </h4>
-                            <ul className="space-y-2 text-blue-300/70 text-sm">
-                                <li>
-                                    <a
-                                        href="#why"
-                                        className="hover:text-[#d4a017] transition-colors"
-                                    >
-                                        About CPDO LC
-                                    </a>
-                                </li>
-                                <li>
-                                    <a
-                                        href="#how"
-                                        className="hover:text-[#d4a017] transition-colors"
-                                    >
-                                        How It Works
-                                    </a>
-                                </li>
-                                <li>
-                                    <Link
-                                        href={route("register")}
-                                        className="hover:text-[#d4a017] transition-colors"
-                                    >
-                                        Create Account
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link
-                                        href={route("login")}
-                                        className="hover:text-[#d4a017] transition-colors"
-                                    >
-                                        Login
-                                    </Link>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* Contact */}
-                        <div>
-                            <h4 className="text-white font-bold mb-4 text-sm tracking-wide">
-                                Contact Us
-                            </h4>
-                            <ul className="space-y-3 text-blue-300/70 text-sm">
-                                <li className="flex items-start gap-2">
-                                    <MapPin className="w-4 h-4 mt-0.5 text-[#d4a017] shrink-0" />
-                                    Ground Floor, City Hall Bldg,
-                                    <br />
-                                    City of Ilagan, Isabela
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <Phone className="w-4 h-4 text-[#d4a017] shrink-0" />
-                                    624-0009
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <Mail className="w-4 h-4 text-[#d4a017] shrink-0" />
-                                    cpdo@cityofilagan.gov.ph
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <Clock className="w-4 h-4 text-[#d4a017] shrink-0" />
-                                    Mon – Fri: 8:00 AM – 5:00 PM
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    {/* Bottom bar */}
-                    <div className="border-t border-[#1a3a8f]/50 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-                        <p className="text-blue-400/50 text-xs">
-                            &copy; {new Date().getFullYear()} City Planning and
-                            Development Office — City of Ilagan, Isabela. All
-                            rights reserved.
-                        </p>
-                        <nav
-                            aria-label="Policies"
-                            className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-blue-400/60 text-xs"
-                        >
-                            {[
-                                ["Privacy Policy", "/legal/privacy"],
-                                ["Terms and Conditions", "/legal/terms"],
-                                ["Cookie Policy", "/legal/cookies"],
-                                ["Refund Policy", "/legal/refund"],
-                                ["Verify a Document", "/verify"],
-                                ["Contact Us", "#contact"],
-                            ].map(([label, href], i) => (
-                                <Fragment key={href}>
-                                    {i > 0 && <span aria-hidden="true">|</span>}
-                                    <a
-                                        href={href}
-                                        className="hover:text-[#d4a017] transition-colors"
-                                    >
-                                        {label}
-                                    </a>
-                                </Fragment>
-                            ))}
-                        </nav>
-                    </div>
-                </div>
-            </footer>
+            <PublicFooter />
 
             {/* Back to top */}
             <button

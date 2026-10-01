@@ -43,6 +43,7 @@ class RequestController extends Controller
                 'requests.id',
                 'requests.user_id',
                 'requests.status as request_status',
+                'requests.denial_count',
                 'requests.released_to_applicant_at',
                 'requests.application_number',
                 'requests.created_at',
@@ -164,6 +165,7 @@ class RequestController extends Controller
                 'requests.id as application_id',
                 'requests.user_id',
                 'requests.status as request_status',
+                'requests.denial_count',
                 'requests.released_to_applicant_at',
                 'requests.application_number',
                 'requests.decision_number',
@@ -275,19 +277,34 @@ class RequestController extends Controller
             // The selections behind the address, so re-opening a returned
             // application shows the address already picked rather than four
             // empty dropdowns. Blank for anything filed before the picker.
+            // region_code is the first of the four the picker cascades from
+            // (PhilippineAddressFields loads provinces off it) - leaving it
+            // out here broke the whole chain even though the other three
+            // were present, which is why every dropdown showed empty.
+            'applicant_address_region_code' => $request->applicant->address_region_code ?? '',
             'applicant_address_province_code' => $request->applicant->address_province_code ?? '',
             'applicant_address_city_code' => $request->applicant->address_city_code ?? '',
             'applicant_address_barangay_code' => $request->applicant->address_barangay_code ?? '',
             'applicant_address_street' => $request->applicant->address_street ?? '',
             'applicant_type' => $request->applicant->applicant_type ?? 'individual',
-            
+
             // Corporation information
             'corporation_name' => $request->applicant->corporation->corporation_name ?? '',
             'corporation_address' => $request->applicant->corporation->corporation_address ?? '',
-            
+            // Same picked-address parts as the applicant's own, so a
+            // corporation address is not asked for all over again either -
+            // column names on NormalizedCorporation are corporation_*, not
+            // address_*, hence the explicit mapping here.
+            'corporation_address_region_code' => $request->applicant->corporation->corporation_region_code ?? '',
+            'corporation_address_province_code' => $request->applicant->corporation->corporation_province_code ?? '',
+            'corporation_address_city_code' => $request->applicant->corporation->corporation_city_code ?? '',
+            'corporation_address_barangay_code' => $request->applicant->corporation->corporation_barangay_code ?? '',
+            'corporation_address_street' => $request->applicant->corporation->corporation_street ?? '',
+
             // Representative information
             'authorized_representative_name' => $request->applicant->primaryRepresentative->representative_name ?? '',
             'authorized_representative_address' => $request->applicant->primaryRepresentative->representative_address ?? '',
+            'authorized_representative_address_region_code' => $request->applicant->primaryRepresentative->address_region_code ?? '',
             'authorized_representative_address_province_code' => $request->applicant->primaryRepresentative->address_province_code ?? '',
             'authorized_representative_address_city_code' => $request->applicant->primaryRepresentative->address_city_code ?? '',
             'authorized_representative_address_barangay_code' => $request->applicant->primaryRepresentative->address_barangay_code ?? '',
@@ -862,6 +879,12 @@ class RequestController extends Controller
             throw ValidationException::withMessages(['error' => 'Only denied or returned applications can be edited.']);
         }
 
+        // Denied this many times: the office wants every further denial to
+        // get its full attention in person, not another online round.
+        if ($existingRequest->denial_count >= \App\Models\Request::MAX_DENIALS) {
+            throw ValidationException::withMessages(['error' => 'This application has been denied ' . \App\Models\Request::MAX_DENIALS . ' times and can no longer be resubmitted online. Please visit the CPDO office in person.']);
+        }
+
         // Validate input
         $hasRepresentative = filled($request->input('authorized_representative_name'));
 
@@ -1382,6 +1405,7 @@ class RequestController extends Controller
                 'decision_number' => $request->decision_number,
                 'status' => $derivedStatus,
                 'request_status' => $request->status,
+                'denial_count' => $request->denial_count,
                 // For the "where it stands" panel: the same flags My Applications reads.
                 'released_to_applicant_at' => $request->released_to_applicant_at,
                 'latest_payment_status' => $request->payments->first()?->payment_status,

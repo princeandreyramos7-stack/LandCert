@@ -256,7 +256,9 @@ class PhilippineAddressTest extends TestCase
     {
         $alibagu = collect(PhilippineAddress::barangaysOf(self::CITY_ILAGAN))->firstWhere('name', 'Alibagu');
 
-        $this->post('/register', [
+        // The row - and so the composed address on it - only exists once
+        // the texted code confirms the registration.
+        $this->registerThroughTwoFactor([
             'consent' => '1',
             'name' => 'Juan Dela Cruz',
             'email' => 'juan@example.test',
@@ -280,7 +282,7 @@ class PhilippineAddressTest extends TestCase
     {
         // An account is useful without one; it is asked for so an application
         // can start from it, not because registering depends on it.
-        $this->post('/register', [
+        $this->registerThroughTwoFactor([
             'consent' => '1',
             'name' => 'No Address',
             'email' => 'noaddress@example.test',

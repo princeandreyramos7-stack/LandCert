@@ -27,9 +27,12 @@ abstract class TestCase extends BaseTestCase
      * (session regeneration, the single-session token, history flags), not
      * just an authenticated user actingAs() would give them for free.
      *
-     * No texted code involved: a plain sign-in finishes on the password
-     * alone (see AuthenticatedSessionController::store). The code is
-     * registration-only - see registerThroughTwoFactor() below.
+     * A plain sign-in finishes on the password alone for staff and for any
+     * applicant who already completed the registration code - the common
+     * case, and what a factory user is by default (see UserFactory). An
+     * applicant created with unverifiedPhone() is sent back into the code
+     * instead (AuthenticatedSessionController::store) - see
+     * registerThroughTwoFactor() below for driving that path too.
      */
     protected function realLogin(string $email, string $password): TestResponse
     {

@@ -13,6 +13,7 @@ import CookieNotice from '@/Components/CookieNotice';
 import ErrorBoundary from '@/Components/ErrorBoundary';
 import PwaUpdatePrompt from '@/Components/PwaUpdatePrompt';
 import { TooltipProvider } from '@/Components/ui/tooltip';
+import { toast } from '@/Components/ui/use-toast';
 // Side-effect only: attaches the beforeinstallprompt/appinstalled listeners
 // at module scope the moment the app boots, regardless of which page loads
 // first. See usePwaInstall.js's own comment - the event fires once per
@@ -28,7 +29,9 @@ const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 // /legal/* is here for the same reason as /verify: somebody deciding
 // whether to create an account has to be able to read what they would be
 // agreeing to, and a privacy notice behind a sign-in is not a notice.
-const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify', '/two-factor-challenge'];
+// /about and /how-to-use are the same again: a prospective applicant reads
+// these before they have any reason to sign in at all.
+const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify', '/two-factor-challenge', '/about', '/how-to-use'];
 function isPublicPath(path) {
     return PUBLIC_PATHS.includes(path)
         || path.startsWith('/reset-password/')
@@ -46,6 +49,24 @@ function AppWrapper({ children, auth: initialAuth }) {
     useEffect(() => {
         const stopListening = inertiaRouter.on('navigate', (event) => {
             setAuth(event.detail.page?.props?.auth ?? null);
+        });
+
+        return () => {
+            if (typeof stopListening === 'function') stopListening();
+        };
+    }, []);
+
+    useEffect(() => {
+        // Safety net: fires when the server answers with something Inertia
+        // cannot render as a page (a 500, a dropped connection, a non-JSON
+        // response) - not every page remembers to toast on failure itself,
+        // so without this a request like that can fail completely silently.
+        const stopListening = inertiaRouter.on('invalid', () => {
+            toast({
+                variant: 'destructive',
+                title: 'Something went wrong',
+                description: 'That action did not go through. Please try again, and contact the office if it keeps happening.',
+            });
         });
 
         return () => {

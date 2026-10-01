@@ -31,6 +31,11 @@ Route::get('/', function () {
     ]);
 });
 
+// Public, unauthenticated - reachable from the landing page's nav/footer
+// before anyone has an account.
+Route::get('/about', fn () => Inertia::render('AboutUs'))->name('about');
+Route::get('/how-to-use', fn () => Inertia::render('HowToUse'))->name('how-to-use');
+
 Route::get('/dashboard', [RequestController::class, 'dashboard'])->middleware(['auth', 'verified', 'prevent.back'])->name('dashboard');
 
 Route::middleware(['auth', 'prevent.back'])->group(function () {
@@ -92,6 +97,17 @@ Route::middleware('throttle:30,1,verify')->group(function () {
     Route::post('/verify', [\App\Http\Controllers\VerificationController::class, 'lookup'])->name('verify.lookup');
     Route::get('/verify/{code}', [\App\Http\Controllers\VerificationController::class, 'show'])->name('verify.show');
 });
+
+/*
+ * Online payment gateway webhook - readiness scaffolding. Deliberately
+ * outside the auth group and exempted from CSRF (see bootstrap/app.php):
+ * a real gateway calls this server-to-server with no browser session, and
+ * its own signature (verified inside PaymentGatewayService, not shown yet
+ * because no provider is wired in) is what stands in for CSRF here.
+ * Answers 503 until PAYMENT_GATEWAY_ENABLED is turned on.
+ */
+Route::post('/payments/online/webhook', [\App\Http\Controllers\PaymentGatewayController::class, 'webhook'])
+    ->middleware('throttle:60,1,gateway-webhook')->name('payments.online.webhook');
 
 // The throttles here carry a key prefix (the third argument) because Laravel
 // otherwise keys every throttle by the user alone: the general limit and the
@@ -161,6 +177,10 @@ Route::middleware(['auth', 'throttle:60,1,pages', 'prevent.back'])->group(functi
     Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
     Route::get('/payments/{payment}/receipt', [PaymentController::class, 'viewReceipt'])
         ->withoutMiddleware('throttle:60,1,pages')->middleware('throttle:300,1,files')->name('payments.receipt.view');
+    // Online payment - readiness scaffolding, answers 503 until
+    // PAYMENT_GATEWAY_ENABLED is turned on for a confirmed provider. See
+    // PaymentGatewayService for why nothing beyond that exists yet.
+    Route::post('/payments/{payment}/online/initiate', [\App\Http\Controllers\PaymentGatewayController::class, 'initiate'])->name('payments.online.initiate');
 
     // Certificate download/preview (applicant-facing, ownership checked in controller)
     Route::get('/certificate/{certificate}/download', [CertificateController::class, 'applicantDownload'])->name('certificate.download');
@@ -172,7 +192,11 @@ Route::middleware(['auth', 'throttle:60,1,pages', 'prevent.back'])->group(functi
 });
 
 // Super Admin routes (highest privilege)
-Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-admin')->name('super-admin.')->group(function () {
+// 200/min is well above any legitimate staff workflow (including bulk
+// actions, which layer their own tighter limit on top) - this is a backstop
+// against a compromised or scripted session, not a limit staff should ever
+// notice.
+Route::middleware(['auth', 'role:super_admin', 'throttle:200,1,super-admin', 'prevent.back'])->prefix('super-admin')->name('super-admin.')->group(function () {
     Route::get('/dashboard', function (\Illuminate\Http\Request $request) { return redirect('/dashboard-panel' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('dashboard');
     Route::get('/requests', function (\Illuminate\Http\Request $request) { return redirect('/applications' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('requests');
     Route::get('/requests/{id}/review', function (\Illuminate\Http\Request $request, $id) { return redirect(\App\Http\Controllers\CleanPageController::remember($request, 'review-application', $id)); })->name('requests.review');
@@ -223,6 +247,8 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
 
     // Streamlined review workflow (same handler as the admin side; the Super Admin
     Route::post('/review-application', [AdminController::class, 'reviewApplication'])->name('review-application');
+    // Staff override of the 3-denial online-resubmission lock (same handler as the admin side).
+    Route::post('/requests/{id}/allow-resubmission', [AdminController::class, 'allowResubmission'])->name('requests.allow-resubmission');
 
     // Upload requirement document by super admin
     Route::post('/upload-requirement-document', [\App\Http\Controllers\SuperAdminController::class, 'uploadRequirementDocument'])->name('upload-requirement-document');
@@ -283,7 +309,8 @@ Route::middleware(['auth', 'role:super_admin', 'prevent.back'])->prefix('super-a
 });
 
 // Admin routes
-Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name('admin.')->group(function () {
+// See the super-admin group above for why this exists and why 200/min.
+Route::middleware(['auth', 'role:admin', 'throttle:200,1,admin-actions', 'prevent.back'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', function (\Illuminate\Http\Request $request) { return redirect('/dashboard-panel' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('dashboard');
     Route::get('/search', [AdminController::class, 'search'])->name('search');
     Route::get('/requests', function (\Illuminate\Http\Request $request) { return redirect('/applications' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('requests');
@@ -311,6 +338,8 @@ Route::middleware(['auth', 'role:admin', 'prevent.back'])->prefix('admin')->name
     
     // NEW: Streamlined Review Workflow
     Route::post('/review-application', [AdminController::class, 'reviewApplication'])->name('review-application');
+    // Staff override of the 3-denial online-resubmission lock.
+    Route::post('/requests/{id}/allow-resubmission', [AdminController::class, 'allowResubmission'])->name('requests.allow-resubmission');
     Route::get('/get-requirements', [AdminController::class, 'getRequirements'])->name('get-requirements');
     Route::post('/update-project-type/{id}', [AdminController::class, 'updateProjectType'])->name('update-project-type');
     Route::post('/requests/{id}/application-details', [AdminController::class, 'updateApplicationDetails'])->name('application-details');

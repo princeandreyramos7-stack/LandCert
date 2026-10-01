@@ -4,15 +4,11 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Rules\LowercaseEmailDomain;
-use App\Mail\UserRegistrationWelcome;
 use App\Models\User;
 use App\Services\TwoFactorAuthService;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -34,6 +30,14 @@ class RegisteredUserController extends Controller
 
     /**
      * Handle an incoming registration request.
+     *
+     * Nothing is written to the users table here. The form is validated and
+     * the SMS code sent exactly as before, but the row itself is only ever
+     * created once that code is confirmed
+     * (TwoFactorChallengeController::store) - see
+     * TwoFactorAuthService::beginRegistration for where the data waits in
+     * the meantime. An abandoned registration this way leaves nothing
+     * behind at all, not even a row to clean up later.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
@@ -83,7 +87,9 @@ class RegisteredUserController extends Controller
         // Composed here from the codes, never taken from the browser.
         $address = \App\Support\PhilippineAddress::resolve($validated, 'address');
 
-        $user = User::create(\App\Support\PhilippineAddress::columns($address, 'address') + [
+        // Exactly the array User::create() used to get directly. Held by
+        // TwoFactorAuthService until the code is confirmed, not written yet.
+        $userData = \App\Support\PhilippineAddress::columns($address, 'address') + [
             'name' => $request->name,
             'email' => $request->email,
             'contact_number' => $request->contact_number,
@@ -94,32 +100,13 @@ class RegisteredUserController extends Controller
             'consented_at' => now(),
             'consent_version' => \App\Support\LegalDocuments::VERSION,
             'consent_ip' => $request->ip(),
-        ]);
-
-        event(new Registered($user));
-
-        // Send welcome email immediately
-        try {
-            Mail::to($user->email)->send(new UserRegistrationWelcome($user));
-            Log::info('Welcome email sent successfully for user: ' . $user->email, [
-                'user_id' => $user->id,
-                'user_name' => $user->name,
-                'timestamp' => now()
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Failed to send welcome email for user: ' . $user->email, [
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-                'timestamp' => now()
-            ]);
-            // Continue with registration even if email fails
-        }
+        ];
 
         // A new account confirms its phone number the same way a returning
         // one confirms its password: the number just typed into the form is
         // not proven to be reachable until a texted code comes back through
         // it. Skipping that here - signing straight in - would let anyone
         // create an account against a number they do not hold.
-        return app(TwoFactorAuthService::class)->beginChallenge($request, $user);
+        return app(TwoFactorAuthService::class)->beginRegistration($request, $userData);
     }
 }

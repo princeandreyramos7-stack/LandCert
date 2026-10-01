@@ -122,7 +122,11 @@ export function Step4Requirements({
         const invalidFiles = fileArray.filter(file => !validTypes.includes(file.type));
 
         if (invalidFiles.length > 0) {
-            alert('Only PDF, JPG, and PNG files are allowed.');
+            toast({
+                variant: 'destructive',
+                title: 'File type not allowed',
+                description: 'Only PDF, JPG, and PNG files are allowed.',
+            });
             return;
         }
 

@@ -38,12 +38,21 @@ class Request extends Model
         
         // Status
         'status',
+        'denial_count',
         'stage_since',
         'released_to_applicant_at',
         'released_by',
         'archived_at',
         'archived_by',
     ];
+
+    /**
+     * Denials on the SAME application before online resubmission is closed
+     * and the applicant is told to visit the office in person - see
+     * RequestController::update()'s lock check and
+     * AdminController's three denial sites, which increment this.
+     */
+    public const MAX_DENIALS = 3;
 
     protected $casts = [
         'released_to_applicant_at' => 'datetime',

@@ -36,6 +36,17 @@ export function journeyOf(app) {
     const notarized = app.has_notarized_form === undefined ? true : Boolean(Number(app.has_notarized_form));
 
     if (status === "rejected") {
+        // Keep in sync with App\Models\Request::MAX_DENIALS (PHP).
+        const denialCount = Number(app.denial_count ?? 0);
+        if (denialCount >= 3) {
+            return {
+                stage: 2, failed: true, needsAction: true, tone: "rose",
+                label: "Denied - visit the office",
+                headline: "This application has been denied 3 times",
+                note: "It can no longer be resubmitted online. Please visit the CPDO office in person to proceed.",
+                action: null,
+            };
+        }
         return {
             stage: 2, failed: true, needsAction: true, tone: "rose",
             label: "Denied",

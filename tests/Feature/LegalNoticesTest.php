@@ -85,7 +85,9 @@ class LegalNoticesTest extends TestCase
 
     public function test_the_edition_consented_to_is_recorded_with_the_account(): void
     {
-        $this->post('/register', [
+        // Consent is captured at the form, but the row - and so this fact -
+        // only exists once the texted code confirms the registration.
+        $this->registerThroughTwoFactor([
             'name' => 'Juan Dela Cruz',
             'email' => 'juan@example.com',
             'contact_number' => '09171234567',

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Mail\ApplicationRejected;
+use App\Mail\ApplicationPermanentlyDenied;
 use App\Services\DashboardCacheService;
 use App\Services\AuditLogService;
 use App\Services\NotificationService;
@@ -432,6 +433,11 @@ class AdminController extends Controller
             'payment_amount' => $report?->payment_amount,
             'admin_notes' => $report?->admin_notes,
             'application_id' => $request->id,
+            // How many times this application has been denied - see
+            // App\Models\Request::MAX_DENIALS. Shown on the decision card so
+            // the officer knows before denying again whether it will lock
+            // the applicant out of resubmitting online.
+            'denial_count' => $request->denial_count,
 
             // The decision card works on the report: the Administrator's
             // approve/return routes take the report id, and the banners say
@@ -637,7 +643,8 @@ class AdminController extends Controller
                             }
                         } elseif ($validated['evaluation'] === 'rejected') {
                             $rejectionReason = $validated['description'] ?? 'Your application has been denied. Please review and resubmit with the necessary corrections.';
-                            
+                            $requestModel->increment('denial_count');
+
                             // Send denial email immediately (not queued)
                             \Mail::to($user->email)->send(
                                 new ApplicationRejected(
@@ -660,7 +667,29 @@ class AdminController extends Controller
                                     $rejectionReason
                                 );
                             }
-                            
+
+                            // 3rd (or later, if reached some other way) denial: online
+                            // resubmission is now closed - see RequestController::update()
+                            // for the enforcement, this is just the notice.
+                            if ($requestModel->denial_count >= RequestModel::MAX_DENIALS) {
+                                \Mail::to($user->email)->send(
+                                    new ApplicationPermanentlyDenied(
+                                        $requestModel,
+                                        $requestModel->applicant->applicant_name ?? 'Applicant',
+                                        $requestModel->id,
+                                        $rejectionReason
+                                    )
+                                );
+                                NotificationService::applicationPermanentlyDenied($requestModel, auth()->user());
+                                if ($user->contact_number) {
+                                    app(\App\Services\SmsService::class)->sendApplicationPermanentlyDenied(
+                                        $user->contact_number,
+                                        $user->name,
+                                        $requestModel->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT)
+                                    );
+                                }
+                            }
+
                             // Log the email sending for debugging
                             \Log::info('Application denial email sent to: ' . $user->email . ' for request ID: ' . $requestModel->id);
                         }
@@ -794,6 +823,7 @@ class AdminController extends Controller
 
             $requestModel->status = 'rejected';
             $requestModel->save();
+            $requestModel->increment('denial_count');
 
             // Log the action
             AuditLogService::logCreate(
@@ -828,12 +858,69 @@ class AdminController extends Controller
                         $validated['rejection_reason']
                     );
                 }
+
+                // 3rd (or later) denial: online resubmission is now closed - see
+                // RequestController::update() for the enforcement, this is just the notice.
+                if ($requestModel->denial_count >= RequestModel::MAX_DENIALS) {
+                    if ($requestModel->user && $requestModel->user->email) {
+                        \Mail::to($requestModel->user->email)->send(
+                            new ApplicationPermanentlyDenied(
+                                $requestModel,
+                                $requestModel->applicant->applicant_name ?? 'Applicant',
+                                $requestModel->id,
+                                $validated['rejection_reason']
+                            )
+                        );
+                    }
+                    NotificationService::applicationPermanentlyDenied($requestModel, auth()->user());
+                    if ($requestModel->user && $requestModel->user->contact_number) {
+                        app(\App\Services\SmsService::class)->sendApplicationPermanentlyDenied(
+                            $requestModel->user->contact_number,
+                            $requestModel->user->name,
+                            $requestModel->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT)
+                        );
+                    }
+                }
             } catch (\Exception $e) {
                 \Log::error('Failed to send denial notification: ' . $e->getMessage());
             }
 
             return back()->with('success', 'Application denied and applicant has been notified.');
         }
+    }
+
+    /**
+     * Staff override: lifts the online-resubmission lock a 3rd (or later)
+     * denial put in place - see RequestController::update()'s check against
+     * Request::MAX_DENIALS, and OfficerDecision.jsx, where this is offered
+     * once that lock shows. For when the office has spoken to the applicant
+     * in person and decided the application should be allowed to continue
+     * online after all, rather than staying a dead end.
+     */
+    public function allowResubmission($id)
+    {
+        $requestModel = RequestModel::findOrFail($id);
+
+        if ($requestModel->denial_count < RequestModel::MAX_DENIALS) {
+            return back()->with('error', 'This application is not locked - there is nothing to allow.');
+        }
+
+        $previousCount = $requestModel->denial_count;
+        $requestModel->update(['denial_count' => 0]);
+
+        AuditLogService::logUpdate(
+            'Request',
+            $requestModel->id,
+            ['denial_count' => $previousCount],
+            ['denial_count' => 0],
+            "Resubmission re-allowed for application {$requestModel->application_number} by " . (auth()->user()->name ?? 'staff')
+        );
+
+        NotificationService::resubmissionAllowed($requestModel, auth()->user());
+
+        $this->cacheService->clearCache();
+
+        return back()->with('success', "Application {$requestModel->application_number} can be resubmitted online again.");
     }
 
     /**
@@ -1154,7 +1241,17 @@ class AdminController extends Controller
         ]);
 
         $payment = \App\Models\Payment::findOrFail($paymentId);
-        
+
+        // A double-click or a replayed request would otherwise re-send the
+        // "payment verified" SMS a second time and silently overwrite the
+        // already-verified amount/receipt/date with whatever this second
+        // submission happens to contain. The certificate step below is
+        // already guarded by Certificate::underIssuanceLock(), but this
+        // Verify button itself was not.
+        if ($payment->payment_status === 'verified') {
+            return back()->with('success', 'Payment is already verified.');
+        }
+
         $payment->update([
             'payment_status' => 'verified',
             'amount' => $validated['amount'],
@@ -2103,6 +2200,7 @@ class AdminController extends Controller
                 $report->issued_by = auth()->user()->name ?? 'Admin';
                 $report->date_reported = now();
                 $report->save();
+                $requestModel->increment('denial_count');
 
                 // Send denial email
                 try {
@@ -2112,6 +2210,25 @@ class AdminController extends Controller
                         $requestModel->id,
                         $request->reason
                     ));
+
+                    // 3rd (or later) denial: online resubmission is now closed - see
+                    // RequestController::update() for the enforcement, this is just the notice.
+                    if ($requestModel->denial_count >= RequestModel::MAX_DENIALS) {
+                        \Mail::to($requestModel->user->email)->send(new ApplicationPermanentlyDenied(
+                            $requestModel,
+                            $requestModel->applicant->applicant_name ?? 'Applicant',
+                            $requestModel->id,
+                            $request->reason
+                        ));
+                        NotificationService::applicationPermanentlyDenied($requestModel, auth()->user());
+                        if ($requestModel->user->contact_number) {
+                            app(\App\Services\SmsService::class)->sendApplicationPermanentlyDenied(
+                                $requestModel->user->contact_number,
+                                $requestModel->user->name,
+                                $requestModel->application_number ?? 'TPZ-' . date('m-y') . '-' . str_pad($requestModel->id, 4, '0', STR_PAD_LEFT)
+                            );
+                        }
+                    }
                 } catch (\Exception $e) {
                     \Log::error("Failed to send denial email for request {$requestId}: " . $e->getMessage());
                 }
@@ -2607,7 +2724,7 @@ class AdminController extends Controller
     public function uploadRequirementDocument(Request $request)
     {
         $validated = $request->validate([
-            'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:20480', // 20MB max
+            'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:' . \App\Support\UploadLimits::MAX_FILE_KB,
             'request_id' => 'required|exists:requests,id',
             'requirement_id' => 'required',
             'requirement_name' => 'required|string',

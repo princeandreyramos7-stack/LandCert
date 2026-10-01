@@ -236,6 +236,55 @@ class NotificationService
     }
 
     /**
+     * Sent once, alongside applicationRejected(), the moment denial_count
+     * reaches Request::MAX_DENIALS - online resubmission is now closed.
+     */
+    public static function applicationPermanentlyDenied(RequestModel $request, ?User $rejectedBy = null)
+    {
+        $rejectorName = $rejectedBy ? $rejectedBy->name : 'Admin';
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
+
+        Notification::createForUser(
+            $request->user_id,
+            'application_locked',
+            'Application Denied - Visit the Office',
+            "Application {$applicationNumber} has been denied " . RequestModel::MAX_DENIALS . " times and can no longer be resubmitted online. Please visit the CPDO office in person.",
+            "/my-applications",
+            [
+                'application_id' => $request->id,
+                'application_number' => $applicationNumber,
+                'denial_count' => $request->denial_count,
+                'rejected_by' => $rejectorName,
+            ]
+        );
+    }
+
+    /**
+     * Sent when staff override the online-resubmission lock - see
+     * AdminController::allowResubmission(). The applicant has no way to
+     * know the office did this otherwise; their journey card and the
+     * "Edit & resubmit" button just quietly work again.
+     */
+    public static function resubmissionAllowed(RequestModel $request, ?User $allowedBy = null)
+    {
+        $staffName = $allowedBy ? $allowedBy->name : 'The office';
+        $applicationNumber = $request->application_number ?? "#" . $request->id;
+
+        Notification::createForUser(
+            $request->user_id,
+            'resubmission_allowed',
+            'You Can Resubmit This Application',
+            "{$staffName} has reviewed application {$applicationNumber} and you may now resubmit it online again.",
+            "/my-applications",
+            [
+                'application_id' => $request->id,
+                'application_number' => $applicationNumber,
+                'allowed_by' => $staffName,
+            ]
+        );
+    }
+
+    /**
      * Create notification when the Zoning Administrator returns a reviewed
      * application to the Zoning Officer instead of approving it.
      *

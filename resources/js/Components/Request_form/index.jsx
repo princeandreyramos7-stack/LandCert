@@ -466,7 +466,10 @@ export default function RequestForm({ isEditing = false, existingApplication = n
     const scrollToFirstError = (fields) => {
         const first = Object.keys(fields)[0];
         if (!first) return;
-        const el = document.querySelector(`[name="${first}"], #${first}`);
+        // The field named in the error may be on a step that isn't the
+        // current one - fall back to the on-page error summary so there is
+        // still somewhere for focus to land.
+        const el = document.querySelector(`[name="${first}"], #${first}`) || document.querySelector('[data-error-summary]');
         if (el) {
             el.scrollIntoView({ behavior: "smooth", block: "center" });
             if (typeof el.focus === "function") el.focus({ preventScroll: true });
@@ -960,6 +963,10 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                     console.warn('Application validation failed:', fieldErrors);
                     setSubmitErrors(messages.length ? messages : [payload?.message || 'Some fields need attention.']);
                     setSubmitErrorKind('form');
+                    // Field-level errors are keyed by their name/id already -
+                    // reuse the same scroll/focus this page already does for
+                    // client-side step validation (see validateCurrentStep).
+                    scrollToFirstError(fieldErrors);
                     toast({
                         variant: "destructive",
                         title: "Please fix the form",
@@ -1165,6 +1172,8 @@ export default function RequestForm({ isEditing = false, existingApplication = n
                                 problem is their form (fixable) or the system (not their fault). */}
                             {submitErrors.length > 0 && (
                                 <div
+                                    data-error-summary
+                                    tabIndex={-1}
                                     className={`mb-4 rounded-lg border-2 p-4 ${
                                         submitErrorKind === 'system'
                                             ? 'border-red-300 bg-red-50'

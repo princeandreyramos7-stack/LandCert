@@ -4,6 +4,7 @@ import InputError from '@/Components/InputError';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { useFocusFirstError } from '@/hooks/useFocusFirstError';
 
 /* ── Reusable field wrapper ─────────────────────────────────────── */
 function Field({ label, required, error, children }) {
@@ -38,6 +39,8 @@ export default function Login({ status, canResetPassword }) {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [formKey, setFormKey] = useState(Date.now()); // Force form remount
+
+    useFocusFirstError(errors);
 
     // Clear form on mount to prevent autofill from showing after logout
     useEffect(() => {

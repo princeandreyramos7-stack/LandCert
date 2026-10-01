@@ -25,12 +25,22 @@ class Payment extends Model
         'verified_at',
         'rejection_reason',
         'notes',
+        // Online-payment readiness columns - unused while every payment is
+        // 'manual' (the default). See PaymentGatewayService.
+        'payment_channel',
+        'gateway_provider',
+        'gateway_reference',
+        'gateway_status',
+        'gateway_paid_at',
+        'gateway_response',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'payment_date' => 'date',
         'verified_at' => 'datetime',
+        'gateway_paid_at' => 'datetime',
+        'gateway_response' => 'array',
     ];
 
     /**

@@ -46,6 +46,16 @@ export default function OfficerDecision({
     const status = String(request.status || "").toLowerCase();
     const decisionLocked = isDecisionLocked(status);
 
+    // Keep in sync with App\Models\Request::MAX_DENIALS (PHP). Denying again
+    // at this count locks the applicant out of resubmitting online - see
+    // RequestController::update().
+    const MAX_DENIALS = 3;
+    const denialCount = Number(request.denial_count ?? 0);
+    const willLockOnDenial = denialCount + 1 >= MAX_DENIALS;
+    const isLocked = denialCount >= MAX_DENIALS;
+    const [showAllowConfirm, setShowAllowConfirm] = useState(false);
+    const [allowing, setAllowing] = useState(false);
+
     // What was decided last time, if anything: the form opens on it.
     const previousAction =
         status === "reviewed" || decisionLocked ? "reviewed" : status === "rejected" ? "rejected" : "";
@@ -154,6 +164,27 @@ export default function OfficerDecision({
 
     const reviewedAmount = formData.payment_amount ? `₱${formatAmountForDisplay(formData.payment_amount)}` : "₱0.00";
 
+    const confirmAllowResubmission = async () => {
+        setShowAllowConfirm(false);
+        setAllowing(true);
+        try {
+            await axios.post(`/admin/requests/${request.id}/allow-resubmission`);
+            toast({
+                title: "Resubmission Allowed",
+                description: "The applicant can now resubmit this application online again.",
+            });
+            router.reload({ only: ["request"] });
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: error.response?.data?.message || "Could not allow resubmission. Please try again.",
+            });
+        } finally {
+            setAllowing(false);
+        }
+    };
+
     return (
         <Card className="mb-6">
             <CardHeader className="border-b bg-white">
@@ -212,6 +243,38 @@ export default function OfficerDecision({
                     </div>
                 )}
 
+                {/* Locked after 3 denials (Request::MAX_DENIALS): the applicant
+                    cannot resubmit online any more (RequestController::update()),
+                    but the office can still lift that if it has spoken to them
+                    in person and decided the case should go on. */}
+                {isLocked && (
+                    <div className="flex items-start gap-3 rounded-lg border-2 border-red-200 bg-red-50 p-4">
+                        <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+                        <div className="flex-1 text-sm text-red-900">
+                            <h4 className="font-semibold">Locked from online resubmission</h4>
+                            <p className="mt-1">
+                                This application has been denied {denialCount} time(s) and the applicant can no
+                                longer resubmit it online — they were told to visit the office in person.
+                            </p>
+                            <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => setShowAllowConfirm(true)}
+                                disabled={allowing}
+                                className="mt-3 bg-red-700 text-white hover:bg-red-800"
+                            >
+                                {allowing ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Allowing…
+                                    </>
+                                ) : (
+                                    "Allow Resubmission"
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Action */}
                     <div>
@@ -248,6 +311,15 @@ export default function OfficerDecision({
                                         required
                                     />
                                     <span className="ml-3 text-sm font-medium text-gray-900">{option.label}</span>
+                                    {option.value === "rejected" && denialCount > 0 && (
+                                        <span
+                                            className={`ml-2 rounded-full px-2 py-0.5 text-xs font-bold ${
+                                                willLockOnDenial ? "bg-red-600 text-white" : "bg-amber-100 text-amber-800"
+                                            }`}
+                                        >
+                                            Denied {denialCount}x already
+                                        </span>
+                                    )}
                                 </label>
                             ))}
                         </div>
@@ -331,6 +403,23 @@ export default function OfficerDecision({
                                     The applicant receives this reason by e-mail, SMS and notification.
                                 </p>
                             </div>
+
+                            {denialCount > 0 && !decisionLocked && (
+                                <DecisionNotice tone={willLockOnDenial ? "red" : "amber"} title={willLockOnDenial ? "This will be the final denial" : `Already denied ${denialCount} time(s)`}>
+                                    {willLockOnDenial ? (
+                                        <p>
+                                            This application has been denied <span className="font-semibold">{denialCount}</span> time(s) already.
+                                            Denying it again will permanently lock it from further online resubmission — the applicant will be
+                                            told to visit the CPDO office in person to proceed.
+                                        </p>
+                                    ) : (
+                                        <p>
+                                            After <span className="font-semibold">{MAX_DENIALS - denialCount}</span> more denial(s), this
+                                            application can no longer be resubmitted online.
+                                        </p>
+                                    )}
+                                </DecisionNotice>
+                            )}
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -451,8 +540,34 @@ export default function OfficerDecision({
                         <p className="mt-2 whitespace-pre-line rounded bg-red-50 p-3 text-sm text-red-900">
                             {formData.rejection_reason || "No reason provided"}
                         </p>
+                        {willLockOnDenial && (
+                            <p className="mt-3 rounded bg-red-100 p-3 text-sm font-semibold text-red-800">
+                                This is the {denialCount + 1}{denialCount + 1 === 3 ? "rd" : "th"} denial — it will permanently lock this
+                                application from further online resubmission.
+                            </p>
+                        )}
                     </>
                 )}
+            </ConfirmDecisionDialog>
+
+            <ConfirmDecisionDialog
+                open={showAllowConfirm}
+                title="Allow Resubmission?"
+                tone="red"
+                confirmLabel="Allow Resubmission"
+                loading={allowing}
+                onCancel={() => setShowAllowConfirm(false)}
+                onConfirm={confirmAllowResubmission}
+            >
+                <p>
+                    This lifts the online-resubmission lock for application{" "}
+                    <span className="font-semibold">{request.application_number}</span>. The applicant will be able
+                    to edit and resubmit it online again, and is notified that they may do so.
+                </p>
+                <p className="mt-2 text-xs text-gray-500">
+                    Only do this after speaking with the applicant - it does not change this denial's own record,
+                    only whether the application can be resubmitted.
+                </p>
             </ConfirmDecisionDialog>
         </Card>
     );

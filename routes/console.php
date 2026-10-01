@@ -51,3 +51,7 @@ if ($backupSchedule['frequency'] === 'weekly') {
 }
 Schedule::command('backup:clean --disable-notifications')->dailyAt('03:30');
 
+// Accounts that started registering and never entered their SMS code - see
+// App\Console\Commands\PruneUnverifiedUsers.
+Schedule::command('users:prune-unverified')->dailyAt('04:00');
+
