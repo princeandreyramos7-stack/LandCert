@@ -60,7 +60,29 @@ export default defineConfig({
                 // asset paths must never be served from a stale cache, or a
                 // deploy's new page could ask for a chunk the old
                 // precache list never learned about.
-                globIgnores: ['**/manifest.json'],
+                //
+                // The rest of this list is staff-only, occasional-use
+                // tooling (Reports/analytics charts, the print/certificate
+                // action bar) that happens to be the largest chunks in the
+                // build (recharts and the print toolkit pull their weight)
+                // and is never what the offline-resilience goal above is
+                // about - an applicant's shell loading with no connection
+                // does not need the Zoning Administrator's Reports page
+                // pre-downloaded in the background on their phone. Visiting
+                // one of these pages still works exactly as before; it just
+                // fetches normally instead of coming from the precache.
+                globIgnores: [
+                    '**/manifest.json',
+                    '**/assets/ReportsWorkspace-*.js',
+                    '**/assets/DocumentActionBar-*.js',
+                    '**/assets/PieChart-*.js',
+                    '**/assets/*Tab-*.js',
+                ],
+                // Backstop for any future chunk this large, whether or not
+                // it happens to match a name above - this app's own PWA
+                // goal was never "cache literally everything" (see the
+                // comment on `registerType` above).
+                maximumFileSizeToCacheInBytes: 600 * 1024,
                 // generateSW mode builds sw.js from a Workbox recipe, not
                 // from a source file of ours - this is the one hook it gives
                 // for adding plain event-listener code (push,
@@ -90,10 +112,17 @@ export default defineConfig({
     build: {
         rollupOptions: {
             output: {
-                // Force new filenames to break browser cache
-                entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
-                chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
-                assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`,
+                // Vite's own content hash already changes a filename the
+                // moment that file's content changes, and Inertia's default
+                // asset-versioning (HandleInertiaRequests::version(), a hash
+                // of manifest.json) already forces a full reload - not a
+                // stale client-side navigation - the moment any asset
+                // changes on deploy. A `Date.now()` suffix on top of that
+                // (removed here) added no protection beyond what those two
+                // already guarantee, while making every unchanged file look
+                // "new" on every single deploy - every returning visitor
+                // re-downloaded the whole app each time instead of keeping
+                // what hadn't actually changed.
                 manualChunks: undefined,
             },
         },
