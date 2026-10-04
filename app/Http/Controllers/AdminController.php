@@ -431,6 +431,16 @@ class AdminController extends Controller
             'decision_number' => $request->decision_number,
             'rejection_reason' => $report?->evaluation === 'rejected' ? $report?->description : null,
             'payment_amount' => $report?->payment_amount,
+            // The 2013 Schedule of Fees, priced for this project cost under
+            // every category - the decision card only shows the one picked.
+            'fee_category' => $report?->fee_category,
+            'suggested_fee_category' => \App\Support\ZoningFeeSchedule::isZoningCertification($request->project?->project_type)
+                ? 'ZC'
+                : \App\Support\ZoningFeeSchedule::suggestCategory($request->property?->existing_land_use),
+            'fee_quotes' => \App\Support\ZoningFeeSchedule::quotesFor(
+                $request->project?->project_type,
+                $request->project?->project_cost,
+            ),
             'admin_notes' => $report?->admin_notes,
             'application_id' => $request->id,
             // How many times this application has been denied - see
@@ -720,8 +730,9 @@ class AdminController extends Controller
             
             // For "reviewed" action
             'payment_amount' => 'required_if:action,reviewed|nullable|numeric|min:0',
+            'fee_category' => ['nullable', Rule::in([...array_keys(\App\Support\ZoningFeeSchedule::CATEGORIES), 'ZC'])],
             'admin_notes' => 'nullable|string|max:1000',
-            
+
             // For "rejected" action
             'rejection_reason' => 'required_if:action,rejected|nullable|string|max:1000'
         ]);
@@ -759,6 +770,19 @@ class AdminController extends Controller
                 ]);
             }
 
+            // The schedule's own figure for the category the officer priced
+            // under, recomputed here from the stored project cost rather than
+            // trusted from the browser. payment_amount stays whatever the
+            // officer set - they may override the schedule - and the two
+            // side by side show when they did.
+            $quote = \App\Support\ZoningFeeSchedule::computeFor(
+                $requestModel->project?->project_type,
+                $validated['fee_category'] ?? null,
+                $requestModel->project?->project_cost,
+            );
+            $feeCategory = $quote['category'] ?? null;
+            $computedFee = $quote['amount'] ?? null;
+
             // Create or update report with review details including payment info
             $report = Report::updateOrCreate(
                 ['request_id' => $requestModel->id],
@@ -771,6 +795,8 @@ class AdminController extends Controller
                     'date_reported' => now(),
                     'description' => 'Application reviewed by ' . auth()->user()->name . '. Pending SuperAdmin approval.',
                     'payment_amount' => $validated['payment_amount'] ?? null,
+                    'fee_category' => $feeCategory,
+                    'computed_fee' => $computedFee,
                     'admin_notes' => $validated['admin_notes'] ?? null,
                 ]
             );

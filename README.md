@@ -39,6 +39,7 @@ All documentation is located in the **`docs/`** folder.
 - **[GIS & Zoning User Guide](docs/GIS_ZONING_USER_GUIDE.md)** - Complete GIS features guide
 - **[Property Management](docs/PROPERTY_MANAGEMENT_GUIDE.md)** - How to add and manage properties
 - **[DSS Implementation](docs/LANDCERT_DSS_IMPLEMENTATION.md)** - Decision Support System guide
+- **[Fee Computation](docs/FEE_COMPUTATION.md)** - How the Treasury fee is calculated for each application type
 
 ### Full Documentation Index
 See **[docs/README.md](docs/README.md)** for complete documentation index.

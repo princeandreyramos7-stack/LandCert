@@ -77,6 +77,87 @@ class ReviewWorkflowTest extends TestCase
         $this->assertSame("/super-admin/requests/{$request->id}/view-application?section=requirements", $notice->link);
     }
 
+    public function test_the_schedule_fee_is_offered_and_recorded_beside_the_officers_amount(): void
+    {
+        $officer = $this->userOf('admin');
+        $request = $this->application($this->userOf('applicant'), 'CZC', 'pending');
+        $request->project->update(['project_cost' => 2_000_000]);
+        $request->property->update(['existing_land_use' => 'Residential']);
+
+        // The page prices the cost under every category and suggests A.
+        $this->actingAs($officer)->get("/admin/requests/{$request->id}/view-application");
+        $this->actingAs($officer)->get('/view-application')
+            ->assertInertia(fn ($page) => $page
+                ->where('request.suggested_fee_category', 'A')
+                ->where('request.fee_quotes.0.category', 'A')
+                ->where('request.fee_quotes.0.amount', 2520)
+                ->etc());
+
+        // The officer overrides the schedule; both figures are kept, and the
+        // computed one comes from the server, not the browser.
+        $this->actingAs($officer)->post('/admin/review-application', [
+            'request_id' => $request->id,
+            'action' => 'reviewed',
+            'payment_amount' => '3000',
+            'fee_category' => 'A',
+        ])->assertSessionHas('success');
+
+        $report = Report::where('request_id', $request->id)->first();
+        $this->assertSame('3000.00', $report->payment_amount);
+        $this->assertSame('A', $report->fee_category);
+        $this->assertSame('2520.00', $report->computed_fee);
+    }
+
+    public function test_temporary_and_special_use_permits_are_priced_by_the_schedule_too(): void
+    {
+        $officer = $this->userOf('admin');
+        $applicant = $this->userOf('applicant');
+
+        foreach (['TUP' => ['A', '2520.00'], 'SUP' => ['F', '7200.00']] as $type => [$category, $fee]) {
+            $request = $this->application($applicant, $type, 'pending');
+            $request->project->update(['project_cost' => 2_000_000]);
+
+            $this->actingAs($officer)->post('/admin/review-application', [
+                'request_id' => $request->id,
+                'action' => 'reviewed',
+                'payment_amount' => $fee,
+                'fee_category' => $category,
+            ])->assertSessionHas('success');
+
+            $report = Report::where('request_id', $request->id)->first();
+            $this->assertSame($category, $report->fee_category, $type);
+            $this->assertSame($fee, $report->computed_fee, $type);
+        }
+    }
+
+    public function test_a_zoning_certification_is_a_fixed_720_with_nothing_to_enter(): void
+    {
+        $officer = $this->userOf('admin');
+        $request = $this->application($this->userOf('applicant'), 'ZC', 'pending');
+        // A ZC's form has no project details - the fee does not need any.
+        $request->project->update(['project_cost' => null]);
+
+        $this->actingAs($officer)->get("/admin/requests/{$request->id}/view-application");
+        $this->actingAs($officer)->get('/view-application')
+            ->assertInertia(fn ($page) => $page
+                ->where('request.suggested_fee_category', 'ZC')
+                ->has('request.fee_quotes', 1)
+                ->where('request.fee_quotes.0.category', 'ZC')
+                ->where('request.fee_quotes.0.amount', 720)
+                ->etc());
+
+        $this->actingAs($officer)->post('/admin/review-application', [
+            'request_id' => $request->id,
+            'action' => 'reviewed',
+            'payment_amount' => '720',
+            'fee_category' => 'ZC',
+        ])->assertSessionHas('success');
+
+        $report = Report::where('request_id', $request->id)->first();
+        $this->assertSame('ZC', $report->fee_category);
+        $this->assertSame('720.00', $report->computed_fee);
+    }
+
     public function test_officer_cannot_mark_reviewed_without_the_type_lot_and_tax_numbers(): void
     {
         $officer = $this->userOf('admin');

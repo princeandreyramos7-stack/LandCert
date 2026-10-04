@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, router } from "@inertiajs/react";
 import axios from "axios";
 import { Button } from "@/Components/ui/button";
@@ -15,6 +15,9 @@ import {
     isDecisionLocked,
     missingRequirementsText,
 } from "./reviewDecision";
+
+const peso = (value) =>
+    Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /**
  * The Zoning Officer's Review & Decision card on View Application.
@@ -74,11 +77,75 @@ export default function OfficerDecision({
     const [loading, setLoading] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
 
+    // The 2013 Schedule of Fees (App\Support\ZoningFeeSchedule). The server
+    // prices this application's project cost under every category; picking
+    // one here only chooses which of those figures to use.
+    const feeQuotes = request.fee_quotes || [];
+    const [feeCategory, setFeeCategory] = useState(
+        request.fee_category || request.suggested_fee_category || "",
+    );
+    const selectedQuote = feeQuotes.find((quote) => quote.category === feeCategory) || null;
+
+    const chooseFeeCategory = (category) => {
+        setFeeCategory(category);
+        const quote = feeQuotes.find((item) => item.category === category);
+        if (quote) setFormData((prev) => ({ ...prev, payment_amount: String(quote.amount) }));
+    };
+
     const missingRequirements = () =>
         missingRequirementsText(request.requirements_reference, uploadedRequirements, verifiedRequirements);
 
     // What the server will refuse "reviewed" without.
     const typeValue = String(projectType ?? request.project_type ?? "").trim().toUpperCase();
+    // Every type is priced by the Schedule of Fees (ZoningFeeSchedule): a
+    // Zoning Certification at a fixed P720, the others by category A-F and
+    // the project cost.
+    const feeScheduleApplies = ["CZC", "ZONING", "TUP", "SUP", "ZC"].includes(typeValue);
+    const isZcFee = typeValue === "ZC";
+
+    // Fill the amount from the schedule whenever a figure becomes available
+    // - on choosing Mark as Reviewed, or once a project cost is entered
+    // below - unless an amount is already set. A new application's report
+    // is created with 0.00, so zero counts as not set.
+    useEffect(() => {
+        if (action !== "reviewed" || !feeScheduleApplies || !selectedQuote) return;
+        setFormData((prev) =>
+            Number(prev.payment_amount) > 0 ? prev : { ...prev, payment_amount: String(selectedQuote.amount) },
+        );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [action, feeScheduleApplies, selectedQuote?.category, selectedQuote?.amount, request.project_cost]);
+
+    // No project cost on file: the officer enters it here. It is saved
+    // through the same endpoint as Step 2's project cost, and the server
+    // prices it on the reload.
+    const [costEntry, setCostEntry] = useState("");
+    const [editingCost, setEditingCost] = useState(false);
+    const [savingCost, setSavingCost] = useState(false);
+    const saveCostForFee = async () => {
+        if (!(Number(costEntry) > 0)) return;
+        setSavingCost(true);
+        try {
+            await axios.post(`/admin/requests/${request.id}/application-details`, { project_cost: costEntry });
+            // A new cost means a new fee: clear the amount so the schedule's
+            // figure for the new cost fills it once the reload arrives.
+            setFormData((prev) => ({ ...prev, payment_amount: "" }));
+            setEditingCost(false);
+            router.reload({ only: ["request"], preserveScroll: true });
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: error.response?.data?.errors?.project_cost?.[0] || "Failed to save the project cost.",
+            });
+        } finally {
+            setSavingCost(false);
+        }
+    };
+    const amountDiffersFromSchedule =
+        feeScheduleApplies &&
+        selectedQuote &&
+        formData.payment_amount !== "" &&
+        Math.abs(Number(formData.payment_amount) - selectedQuote.amount) >= 0.005;
     const prerequisites = [
         { ok: typeValue !== "" && typeValue !== "N/A" && typeValue !== "NA", label: "Application Type" },
         { ok: String(lotNumber ?? request.lot_number ?? "").trim() !== "", label: "Lot Number / Title No." },
@@ -135,6 +202,7 @@ export default function OfficerDecision({
                 request_id: request.id,
                 action,
                 payment_amount: action === "reviewed" ? formData.payment_amount : null,
+                fee_category: action === "reviewed" && feeScheduleApplies && feeCategory ? feeCategory : null,
                 admin_notes: action === "reviewed" ? formData.admin_notes : null,
                 rejection_reason: action === "rejected" ? formData.rejection_reason : null,
             });
@@ -350,6 +418,134 @@ export default function OfficerDecision({
                                 </DecisionNotice>
                             )}
 
+                            {feeScheduleApplies && (
+                                <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-blue-900">
+                                            Fee Computation — 2013 Schedule of Fees
+                                        </h4>
+                                        <p className="mt-0.5 text-xs text-blue-800">
+                                            {isZcFee
+                                                ? "Other Certifications — Zoning Certification: fixed fee."
+                                                : "Zoning / Locational Clearance. Choose the category of the project; the fee follows from the project cost."}
+                                        </p>
+                                    </div>
+
+                                    {feeQuotes.length === 0 || editingCost ? (
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-amber-800">
+                                                {editingCost
+                                                    ? "Enter the corrected project cost."
+                                                    : "No project cost is recorded. Enter it here to compute the fee."}
+                                            </p>
+                                            <div className="flex gap-2">
+                                                <div className="relative flex-1">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
+                                                    <input
+                                                        type="text"
+                                                        inputMode="decimal"
+                                                        aria-label="Project cost"
+                                                        value={formatAmountForDisplay(costEntry)}
+                                                        onChange={(e) => setCostEntry(parseAmountInput(e.target.value))}
+                                                        disabled={decisionLocked || savingCost}
+                                                        placeholder="Project cost"
+                                                        className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-8 pr-4 text-sm focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
+                                                    />
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    onClick={saveCostForFee}
+                                                    disabled={decisionLocked || savingCost || !(Number(costEntry) > 0)}
+                                                    className="bg-[#0d1f5c] text-white hover:bg-[#0d1f5c]/90"
+                                                >
+                                                    {savingCost ? <Loader2 className="h-4 w-4 animate-spin" /> : "Compute Fee"}
+                                                </Button>
+                                                {editingCost && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={() => setEditingCost(false)}
+                                                        disabled={savingCost}
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-600">
+                                                Saved as the application's project cost.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {!isZcFee && (
+                                            <div>
+                                                <label htmlFor="fee-category" className="mb-1 block text-xs font-medium text-gray-700">
+                                                    Category
+                                                </label>
+                                                <select
+                                                    id="fee-category"
+                                                    value={feeCategory}
+                                                    onChange={(e) => chooseFeeCategory(e.target.value)}
+                                                    disabled={decisionLocked}
+                                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
+                                                >
+                                                    <option value="">Select a category…</option>
+                                                    {feeQuotes.map((quote) => (
+                                                        <option key={quote.category} value={quote.category}>
+                                                            {quote.category}. {quote.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {request.existing_land_use && (
+                                                    <p className="mt-1 text-xs text-gray-600">
+                                                        Applicant's stated land use:{" "}
+                                                        <span className="font-medium">{request.existing_land_use}</span>
+                                                        {request.suggested_fee_category
+                                                            ? ` — suggests category ${request.suggested_fee_category}; confirm it fits the actual project.`
+                                                            : " — does not point to a category; choose one."}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            )}
+
+                                            {selectedQuote && (
+                                                <div className="rounded-md bg-white p-3 text-sm">
+                                                    {!isZcFee && (
+                                                    <p className="mb-1 text-xs text-gray-500">
+                                                        Project cost: ₱{peso(request.project_cost)}
+                                                        {!decisionLocked && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setCostEntry(String(Number(request.project_cost)));
+                                                                    setEditingCost(true);
+                                                                }}
+                                                                className="ml-2 font-medium text-blue-600 hover:text-blue-700"
+                                                            >
+                                                                Change
+                                                            </button>
+                                                        )}
+                                                    </p>
+                                                    )}
+                                                    <p className="text-gray-800">{selectedQuote.formula}</p>
+                                                    <p className="mt-1 font-semibold text-blue-900">
+                                                        Schedule fee: ₱{peso(selectedQuote.amount)}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {!isZcFee && String(request.project_nature || "").toLowerCase() === "improvement" && (
+                                                <p className="text-xs text-amber-800">
+                                                    This is an Improvement: the schedule charges alterations/expansions on
+                                                    the cost of the affected work only. Check that the project cost above
+                                                    is that cost, not the whole structure's.
+                                                </p>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-gray-700">
                                     Amount to Pay at the Treasury <span className="text-red-500">*</span>
@@ -369,9 +565,25 @@ export default function OfficerDecision({
                                         placeholder="0.00"
                                     />
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500">
-                                    The fee the applicant pays at the Treasury Office once the Administrator approves.
-                                </p>
+                                {amountDiffersFromSchedule ? (
+                                    <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-amber-800">
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                        Differs from the schedule fee of ₱{peso(selectedQuote.amount)}.
+                                        {!decisionLocked && (
+                                            <button
+                                                type="button"
+                                                onClick={() => chooseFeeCategory(feeCategory)}
+                                                className="font-semibold underline hover:text-amber-900"
+                                            >
+                                                Use the schedule fee
+                                            </button>
+                                        )}
+                                    </p>
+                                ) : (
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        The fee the applicant pays at the Treasury Office once the Administrator approves.
+                                    </p>
+                                )}
                             </div>
 
                             <div>
@@ -526,6 +738,13 @@ export default function OfficerDecision({
                         <div className="mt-3 rounded bg-blue-50 p-3">
                             <p className="text-sm font-medium text-gray-700">Amount to Pay at the Treasury</p>
                             <p className="text-xl font-bold text-blue-900">{reviewedAmount}</p>
+                            {feeScheduleApplies && selectedQuote && (
+                                <p className="mt-1 text-xs text-gray-600">
+                                    {selectedQuote.category === "ZC" ? "Zoning Certification" : `Category ${selectedQuote.category}`}:{" "}
+                                    {selectedQuote.formula}
+                                    {amountDiffersFromSchedule && " — overridden"}
+                                </p>
+                            )}
                         </div>
                         <p className="mt-2 text-xs text-gray-500">
                             The applicant is notified only after the Administrator approves.

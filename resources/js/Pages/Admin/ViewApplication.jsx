@@ -149,6 +149,9 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
                 project_cost: projectCost === '' ? null : projectCost,
             });
             request.project_cost = projectCost === '' ? null : projectCost;
+            // The decision card's fee quotes are priced from this cost on
+            // the server - fetch them again rather than leave them stale.
+            router.reload({ only: ['request'], preserveScroll: true });
             toast({
                 title: "Success!",
                 description: "Project cost updated successfully.",
