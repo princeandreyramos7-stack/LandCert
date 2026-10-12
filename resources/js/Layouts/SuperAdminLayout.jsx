@@ -31,7 +31,10 @@ export default function SuperAdminLayout({
     return (
         <SidebarProvider>
             <SuperAdminSidebar />
-            <SidebarInset>
+            {/* min-w-0: a flex item otherwise grows to its widest content, so a
+                wide table pushed the whole page past the screen instead of
+                scrolling inside its own box. */}
+            <SidebarInset className="min-w-0">
                 <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 bg-white border-b border-gray-100 shadow-sm ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
                     <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
                         <WithTooltip label="Show or hide the menu" side="bottom">

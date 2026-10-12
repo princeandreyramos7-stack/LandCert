@@ -40,8 +40,15 @@ class SmsController extends Controller
             : ['applicants' => 'applicant'];
     }
 
-    public function index(Request $request): Response
+    public function index(Request $request): Response|\Illuminate\Http\RedirectResponse
     {
+        // The Administrator's texts to the officers are sent from Notify
+        // Officers now (OfficerNoticeController), so they sit in one history
+        // with her in-app notices. An old bookmark lands there.
+        if (auth()->user()?->user_type === 'super_admin') {
+            return redirect('/officer-notices');
+        }
+
         $audiences = $this->audiences();
         $types = array_values($audiences);
 

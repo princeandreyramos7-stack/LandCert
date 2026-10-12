@@ -10,7 +10,6 @@ import {
     Award,
     Clock,
     History,
-    MessageSquare,
     FileBarChart,
     FolderArchive,
     BellRing,
@@ -85,12 +84,9 @@ const navGroups = [
                 icon: ScrollText,
             },
             {
-                title: "SMS to Officers",
-                url: "/sms-broadcast",
-                icon: MessageSquare,
-            },
-            {
-                // In-app notifications to the Zoning Officers (bell + their dashboard).
+                // Everything to the Zoning Officers, in one place: in-app
+                // notices (bell + their dashboard) and, ticked, the same by SMS.
+                // Took over the old "SMS to Officers" page.
                 title: "Notify Officers",
                 url: "/officer-notices",
                 icon: BellRing,

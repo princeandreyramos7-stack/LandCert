@@ -159,6 +159,85 @@ class OfficerDashboardTest extends TestCase
         $this->assertSame(0, Notification::where('user_id', $applicant->id)->count());
     }
 
+    public function test_a_notice_can_also_go_out_as_a_text_message(): void
+    {
+        $administrator = $this->userOf('super_admin');
+        $withPhone = $this->userOf('admin', ['name' => 'Ana Officer', 'contact_number' => '09171234567']);
+        $noPhone = $this->userOf('admin', ['name' => 'Ben Officer', 'contact_number' => null]);
+
+        // The gateway is faked: the test checks who is texted and with what,
+        // not Semaphore.
+        $texts = [];
+        $this->mock(\App\Services\SmsService::class, function ($sms) use (&$texts) {
+            $sms->shouldReceive('isEnabled')->andReturn(true);
+            $sms->shouldReceive('resolvePhone')->andReturnUsing(fn ($user) => $user->contact_number ?: null);
+            $sms->shouldReceive('send')->andReturnUsing(function ($phone, $text) use (&$texts) {
+                $texts[$phone] = $text;
+                return true;
+            });
+        });
+
+        $this->actingAs($administrator)->get('/officer-notices')
+            ->assertInertia(fn ($page) => $page->component('SuperAdmin/OfficerNotices')
+                ->where('officers.0.has_phone', true)
+                ->where('officers.1.has_phone', false)
+                ->missing('officers.0.contact_number')
+                ->where('sms.enabled', true)
+                ->etc());
+
+        $this->actingAs($administrator)->post('/super-admin/officer-notices', [
+            'title' => 'Inspection Friday',
+            'message' => 'Confirm your availability.',
+            'is_important' => true,
+            'send_sms' => true,
+            'recipients' => 'all',
+        ])->assertSessionHas('success');
+
+        $this->assertSame(['09171234567' => "IMPORTANT - CPDO Notice: Inspection Friday\nConfirm your availability."], $texts);
+
+        // Both still get it in the app; the one without a number is counted, not texted.
+        $this->assertSame(1, Notification::where('user_id', $withPhone->id)->count());
+        $this->assertSame(1, Notification::where('user_id', $noPhone->id)->count());
+        $notice = OfficerNotice::firstOrFail();
+        $this->assertTrue($notice->via_sms);
+        $this->assertSame([1, 0, 1], [$notice->sms_sent, $notice->sms_failed, $notice->sms_skipped]);
+    }
+
+    public function test_a_notice_without_the_sms_option_is_not_texted(): void
+    {
+        $administrator = $this->userOf('super_admin');
+        $this->userOf('admin', ['contact_number' => '09171234567']);
+        $this->mock(\App\Services\SmsService::class, function ($sms) {
+            $sms->shouldReceive('isEnabled')->andReturn(true);
+            $sms->shouldReceive('resolvePhone')->andReturnUsing(fn ($user) => $user->contact_number ?: null);
+            $sms->shouldNotReceive('send');
+        });
+
+        $this->actingAs($administrator)->post('/super-admin/officer-notices', [
+            'title' => 'App only', 'message' => 'In the bell.', 'recipients' => 'all',
+        ])->assertSessionHas('success');
+
+        $notice = OfficerNotice::firstOrFail();
+        $this->assertFalse($notice->via_sms);
+        $this->assertNull($notice->sms_sent);
+    }
+
+    public function test_a_long_notice_is_cut_to_one_text_with_a_pointer_to_the_app(): void
+    {
+        $text = \App\Http\Controllers\OfficerNoticeController::smsText('Title', str_repeat('word ', 200));
+
+        $this->assertSame(\App\Http\Controllers\OfficerNoticeController::SMS_MAX, mb_strlen($text));
+        $this->assertStringEndsWith('(full notice on your CPDO dashboard)', $text);
+        $this->assertStringStartsWith('CPDO Notice: Title', $text);
+    }
+
+    public function test_sms_to_officers_now_opens_notify_officers(): void
+    {
+        $this->actingAs($this->userOf('super_admin'))->get('/sms-broadcast')->assertRedirect('/officer-notices');
+        // The officer's SMS Broadcast (to applicants) is untouched.
+        $this->actingAs($this->userOf('admin'))->get('/sms-broadcast')->assertOk();
+    }
+
     public function test_only_the_administrator_notifies_officers(): void
     {
         $this->userOf('admin');

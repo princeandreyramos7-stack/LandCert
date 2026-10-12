@@ -176,8 +176,9 @@ export function SuperAdminUserManagement({ users }) {
         }
     };
 
+    // The layout already pads the page; a second p-6 here squeezed it on phones.
     return (
-        <div className="space-y-6 p-6">
+        <div className="space-y-6">
             {/* Enhanced Header */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-0">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -243,8 +244,8 @@ export function SuperAdminUserManagement({ users }) {
                     </div>
                 </CardHeader>
                 <CardContent className="p-6">
-                    <div className="flex gap-4">
-                        <div className="relative flex-1">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                        <div className="relative min-w-0 flex-1">
                             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                             <Input
                                 placeholder="Search by name, email, contact..."
@@ -254,7 +255,7 @@ export function SuperAdminUserManagement({ users }) {
                             />
                         </div>
                         <Select value={filterUserType} onValueChange={setFilterUserType}>
-                            <SelectTrigger className="w-[200px]">
+                            <SelectTrigger className="w-full sm:w-[200px]">
                                 <SelectValue placeholder="Filter by type" />
                             </SelectTrigger>
                             <SelectContent>
@@ -280,9 +281,7 @@ export function SuperAdminUserManagement({ users }) {
                             <TableHeader>
                                 <TableRow className="bg-gray-50">
                                     <TableHead>Name</TableHead>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Contact</TableHead>
-                                    <TableHead>Address</TableHead>
+                                    <TableHead>Contact &amp; address</TableHead>
                                     <TableHead>User Type</TableHead>
                                     <TableHead>Registered</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
@@ -291,7 +290,7 @@ export function SuperAdminUserManagement({ users }) {
                             <TableBody>
                                 {filteredUsers.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                                             {searchTerm || filterUserType !== "all"
                                                 ? "No users match your filters"
                                                 : "No users found"}
@@ -308,12 +307,18 @@ export function SuperAdminUserManagement({ users }) {
                                                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0d1f5c]/10 text-xs font-black text-[#0d1f5c]">
                                                         {String(user.name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() || "").join("") || "?"}
                                                     </span>
-                                                    <span className="truncate">{user.name}</span>
+                                                    {/* The e-mail under the name, as on the officer's list:
+                                                        its own column made the table wider than the page. */}
+                                                    <span className="min-w-0">
+                                                        <span className="block max-w-[260px] truncate">{user.name}</span>
+                                                        <span className="block max-w-[260px] truncate text-xs font-normal text-gray-500" title={user.email}>{user.email}</span>
+                                                    </span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{user.email}</TableCell>
-                                            <TableCell>{user.contact_number ? <span className="font-mono text-sm">{user.contact_number}</span> : <span className="text-gray-400">—</span>}</TableCell>
-                                            <TableCell className="max-w-xs truncate" title={user.address || ""}>{user.address || <span className="text-gray-400">—</span>}</TableCell>
+                                            <TableCell>
+                                                {user.contact_number ? <span className="block font-mono text-sm">{user.contact_number}</span> : <span className="block text-gray-400">—</span>}
+                                                <span className="block max-w-[240px] truncate text-xs text-gray-500" title={user.address || ""}>{user.address || "No address"}</span>
+                                            </TableCell>
                                             <TableCell>
                                                 <Badge className={getUserTypeBadge(user.user_type)}>
                                                     {user.user_type === "super_admin" && <Shield className="h-3 w-3 mr-1" />}
@@ -326,7 +331,7 @@ export function SuperAdminUserManagement({ users }) {
                                                     </p>
                                                 )}
                                             </TableCell>
-                                            <TableCell>{formatDate(user.created_at)}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{formatDate(user.created_at)}</TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
