@@ -208,10 +208,14 @@ export default function LegalShow({ doc, documents }) {
                         </span>
                     </div>
 
-                    {/* Opening paragraph */}
-                    <p className="mb-8 border-l-4 border-[#0d1f5c]/20 pl-5 text-base leading-relaxed text-gray-800">
-                        {doc.intro}
-                    </p>
+                    {/* Opening paragraphs (blank-line separated), when the notice has any */}
+                    {doc.intro && (
+                        <div className="mb-8 space-y-3 border-l-4 border-[#0d1f5c]/20 pl-5 text-base leading-relaxed text-gray-800">
+                            {String(doc.intro).split("\n\n").map((paragraph, i) => (
+                                <p key={i}>{paragraph}</p>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Contents */}
                     <nav

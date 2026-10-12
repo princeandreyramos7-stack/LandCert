@@ -83,6 +83,12 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
+        // Demo applicants share one known password: never on the live site.
+        if (app()->environment('production')) {
+            $this->command->error('DemoSeeder is for local/demo databases only - refusing to run in production.');
+            return;
+        }
+
         $this->certificateService = app(CertificateService::class);
 
         $this->officers = User::where('user_type', 'admin')->get()->all();

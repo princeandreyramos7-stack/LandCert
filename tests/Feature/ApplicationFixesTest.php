@@ -26,7 +26,7 @@ class ApplicationFixesTest extends TestCase
 
     private function submission(array $extra = []): array
     {
-        return array_merge($this->addressFields(), [
+        return $this->completeSubmission(array_merge($this->addressFields(), [
             // Ticked in the summary dialog before the form can be
             // filed, and required by the server. See LegalDocuments.
             'declaration' => '1',
@@ -45,7 +45,7 @@ class ApplicationFixesTest extends TestCase
             'preferred_release_mode' => 'pickup',
             'requirement_uploads' => [2 => [$this->fakePdf('title.pdf', 40)]],
             'requirement_names' => [2 => '2. Right Over Land Documentation'],
-        ], $extra);
+        ], $extra));
     }
 
     private function withRepresentative(array $extra = []): array

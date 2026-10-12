@@ -40,7 +40,7 @@ class TestRegistrationEmail extends Command
                 'email' => $email,
                 'address' => 'Test Address',
                 'contact_number' => '09123456789',
-                'password' => Hash::make('password123'),
+                'password' => Hash::make(\Illuminate\Support\Str::password(16)),
             ]);
             
             $this->info("User created successfully with ID: {$user->id}");

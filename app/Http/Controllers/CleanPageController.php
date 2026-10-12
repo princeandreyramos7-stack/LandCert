@@ -113,6 +113,9 @@ class CleanPageController extends Controller
         'reports'         => ['method' => 'index',     'controllers' => ['super_admin' => SuperAdminReportsController::class, 'admin' => AdminReportsController::class]],
         'sms-broadcast'   => ['method' => 'index',     'controllers' => ['super_admin' => SmsController::class, 'admin' => SmsController::class]],
         // The administrator alone: a role with no entry here gets a 403.
+        // The administrator notifies the officers; officers read them in the
+        // bell and on their dashboard, so the page itself is hers alone.
+        'officer-notices' => ['method' => 'index',     'controllers' => ['super_admin' => OfficerNoticeController::class]],
     ];
 
     /** Slugs for the section pages. */

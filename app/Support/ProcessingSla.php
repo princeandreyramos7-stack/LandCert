@@ -97,6 +97,27 @@ class ProcessingSla
         return $days;
     }
 
+    /**
+     * The moment a number of working days (Monday to Friday) after $from -
+     * the same clock time, weekends skipped. The Charter deadline of a step
+     * that began at $from. Public holidays are not known to the system, so
+     * they are counted as working days (the deadline is never later than it
+     * should be).
+     */
+    public static function addWorkingDays(CarbonInterface $from, int $days): CarbonInterface
+    {
+        $due = $from->copy();
+        $added = 0;
+        while ($added < $days) {
+            $due = $due->addDay();
+            if ($due->isWeekday()) {
+                $added++;
+            }
+        }
+
+        return $due;
+    }
+
     /** The status the office sees for a request, read fresh. */
     public static function derivedStatus(RequestModel $request): ?string
     {

@@ -2,20 +2,73 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 
+/**
+ * The office's own accounts: the Zoning Administrator and the Zoning
+ * Officers, with the names, numbers and signatures printed on documents.
+ *
+ * No password lives in this file. This repository was public with the
+ * accounts' passwords written here, and every run of `db:seed` reset them
+ * back to those values. Now:
+ *
+ *  - an account that already exists keeps its password - re-seeding only
+ *    refreshes its profile (name, role, contact, signature);
+ *  - a new account gets the password from SEED_PASSWORD_<KEY> in .env
+ *    (e.g. SEED_PASSWORD_CRISANTA) if one is set, otherwise a random one,
+ *    printed once here for handing over. Change it at first sign-in.
+ */
 class AdminUserSeeder extends Seeder
 {
-    /**
-     * Kept as constants so the credentials this seeder prints can never drift
-     * from the ones it actually creates.
-     */
     private const SUPER_ADMIN_EMAIL = 'crisanta@cpdo.com';
-    private const SUPER_ADMIN_PASSWORD = 'crisanta123';
+
+    /** key => [email, attributes]. The key names the SEED_PASSWORD_<KEY> variable. */
+    private function accounts(): array
+    {
+        return [
+            'CRISANTA' => [self::SUPER_ADMIN_EMAIL, [
+                'name' => 'Crisanta D. Concepcion',
+                'user_type' => 'super_admin',
+                'contact_number' => '09707112132',
+                'address' => 'CPDO Office, City of Ilagan',
+                // Signature printed on certificates and clearances.
+                'signature_path' => 'images/E-signitures/ENGR. CRISANTA D. CONCEPCION, EnP.png',
+            ]],
+            // Zoning Officer - Jeffrey C. Pauig
+            'JEFF' => ['jeff@cpdo.com', [
+                'name' => 'Jeffrey C. Pauig',
+                'user_type' => 'admin',
+                'contact_number' => '09707112132',
+                'address' => 'CPDO Office, City of Ilagan',
+                // Signature printed on certificates and clearances he evaluated.
+                'signature_path' => 'images/E-signitures/JeffreyPauig.png',
+            ]],
+            // Zoning Officer - Kay B. Aggarao
+            'KAY' => ['kay@cpdo.com', [
+                'name' => 'Kay B. Aggarao',
+                'user_type' => 'admin',
+                'contact_number' => '09123456789',
+                'address' => 'CPDO Office, City of Ilagan',
+            ]],
+            // Zoning Officer - April V. Cuntapay
+            'APRIL' => ['april@cpdo.com', [
+                'name' => 'April V. Cuntapay',
+                'user_type' => 'admin',
+                'contact_number' => '09123456789',
+                'address' => 'CPDO Office, City of Ilagan',
+            ]],
+            'MARYJANE' => ['maryjane@cpdo.com', [
+                'name' => 'Mary Jane P. Bulauan',
+                'user_type' => 'admin',
+                'contact_number' => '09123456789',
+                'address' => 'CPDO Office, City of Ilagan',
+            ]],
+        ];
+    }
 
     /**
      * Run the database seeds.
@@ -23,9 +76,9 @@ class AdminUserSeeder extends Seeder
     public function run(): void
     {
         // Create admin role if it doesn't exist
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $superAdminRole = Role::firstOrCreate(['name' => 'super_admin']);
-        
+        Role::firstOrCreate(['name' => 'admin']);
+        Role::firstOrCreate(['name' => 'super_admin']);
+
         // The Zoning Administrator was previously seeded as superadmin@cpdo.com.
         // Carry that account over to the real identity rather than leaving a
         // duplicate super admin behind.
@@ -34,91 +87,28 @@ class AdminUserSeeder extends Seeder
             $legacySuperAdmin->update(['email' => self::SUPER_ADMIN_EMAIL]);
         }
 
-        // Create or update super admin user (Zoning Administrator)
-        $superAdmin = User::updateOrCreate(
-            ['email' => self::SUPER_ADMIN_EMAIL],
-            [
-                'name' => 'Crisanta D. Concepcion',
-                'password' => Hash::make(self::SUPER_ADMIN_PASSWORD),
-                'user_type' => 'super_admin',
-                'contact_number' => '09707112132',
-                'address' => 'CPDO Office, City of Ilagan',
-                'email_verified_at' => now(),
-                // Signature printed on certificates and clearances.
-                'signature_path' => 'images/E-signitures/ENGR. CRISANTA D. CONCEPCION, EnP.png',
-            ]
-        );
+        // Note: the Spatie roles are assigned automatically via User::booted(),
+        // which keeps roles in sync with the user_type column.
+        $created = [];
+        foreach ($this->accounts() as $key => [$email, $attributes]) {
+            $user = User::firstOrNew(['email' => $email]);
+            $user->fill($attributes);
 
-        // Note: the 'super_admin' Spatie role is assigned automatically via
-        // User::booted(), which keeps roles in sync with the user_type column.
+            if (!$user->exists) {
+                $fromEnv = env("SEED_PASSWORD_{$key}");
+                $password = is_string($fromEnv) && $fromEnv !== '' ? $fromEnv : Str::password(16);
+                $user->password = Hash::make($password);
+                $user->email_verified_at = now();
+                $created[] = [$attributes['name'], $email, $fromEnv ? "(SEED_PASSWORD_{$key})" : $password];
+            }
 
-        // Create Zoning Officer - Jeffrey C. Pauig
-        $jeff = User::updateOrCreate(
-            ['email' => 'jeff@cpdo.com'],
-            [
-                'name' => 'Jeffrey C. Pauig',
-                'password' => Hash::make('jeff123'),
-                'user_type' => 'admin',
-                'contact_number' => '09707112132',
-                'address' => 'CPDO Office, City of Ilagan',
-                'email_verified_at' => now(),
-                // Signature printed on certificates and clearances he evaluated.
-                'signature_path' => 'images/E-signitures/JeffreyPauig.png',
-            ]
-        );
+            $user->save();
+        }
 
-        // Create Zoning Officer - Kay B. Aggarao
-        $kay = User::updateOrCreate(
-            ['email' => 'kay@cpdo.com'],
-            [
-                'name' => 'Kay B. Aggarao',
-                'password' => Hash::make('kay123'),
-                'user_type' => 'admin',
-                'contact_number' => '09123456789',
-                'address' => 'CPDO Office, City of Ilagan',
-                'email_verified_at' => now(),
-            ]
-        );
-
-        // Create Zoning Officer - April V. Cuntapay
-        $april = User::updateOrCreate(
-            ['email' => 'april@cpdo.com'],
-            [
-                'name' => 'April V. Cuntapay',
-                'password' => Hash::make('april123'),
-                'user_type' => 'admin',
-                'contact_number' => '09123456789',
-                'address' => 'CPDO Office, City of Ilagan',
-                'email_verified_at' => now(),
-            ]
-        );
-
-        $maryjane = User::updateOrCreate(
-            ['email' => 'maryjane@cpdo.com'],
-            [
-                'name' => 'Mary Jane P. Bulauan',
-                'password' => Hash::make('maryjane123'),
-                'user_type' => 'admin',
-                'contact_number' => '09123456789',
-                'address' => 'CPDO Office, City of Ilagan',
-                'email_verified_at' => now(),
-            ]
-        );
-
-        $this->command->info('==============================================');
-        $this->command->info('Super Admin user created/updated successfully!');
-        $this->command->info('Name: ' . $superAdmin->name);
-        $this->command->info('Email: ' . self::SUPER_ADMIN_EMAIL);
-        $this->command->info('Password: ' . self::SUPER_ADMIN_PASSWORD);
-        $this->command->info('User Type: ' . $superAdmin->user_type);
-        $this->command->info('==============================================');
-        $this->command->info('Zoning Officers created/updated successfully!');
-        $this->command->info('');
-        $this->command->info('1. Email: jeff@cpdo.com | Password: jeff123 (Jeffrey C. Pauig)');
-        $this->command->info('2. Email: kay@cpdo.com | Password: kay123 (Kay B. Aggarao)');
-        $this->command->info('3. Email: april@cpdo.com | Password: april123 (April V. Cuntapay)');
-        $this->command->info('4. Email: maryjane@cpdo.com | Password: maryjane123 (Mary Jane P. Bulauan)');
-        $this->command->info('==============================================');
-        $this->command->warn('⚠️  Please change the passwords after first login!');
+        $this->command->info('Office accounts are in place. Existing accounts kept their passwords.');
+        if ($created) {
+            $this->command->warn('New accounts - hand these over privately and change them at first sign-in:');
+            $this->command->table(['Name', 'Email', 'Password'], $created);
+        }
     }
 }

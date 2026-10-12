@@ -40,11 +40,16 @@ class LegalNoticesTest extends TestCase
         $this->get('/legal/whatever')->assertNotFound();
     }
 
-    public function test_each_notice_has_a_title_an_opening_and_sections(): void
+    public function test_each_notice_has_a_title_and_sections(): void
     {
         foreach (LegalDocuments::all() as $doc) {
             $this->assertNotEmpty($doc['title'], "{$doc['key']} has no title");
-            $this->assertNotEmpty($doc['intro'], "{$doc['key']} has no opening paragraph");
+            // An opening paragraph is optional - the Payment and Refund
+            // Policy opens with its own "Purpose" section, as written by the
+            // office - but if there is one it must say something.
+            if ($doc['intro'] !== null) {
+                $this->assertNotSame('', trim($doc['intro']), "{$doc['key']} has a blank opening paragraph");
+            }
             $this->assertNotEmpty($doc['sections'], "{$doc['key']} has no sections");
 
             foreach ($doc['sections'] as $section) {

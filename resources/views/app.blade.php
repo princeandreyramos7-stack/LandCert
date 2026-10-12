@@ -24,6 +24,8 @@
              plugin expects to inject into. -->
         <link rel="manifest" href="{{ asset('build/manifest.webmanifest') }}">
         <meta name="theme-color" content="#0d1f5c">
+        {{-- The standard name; the apple- one stays for older iPhones/iPads. --}}
+        <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <meta name="apple-mobile-web-app-title" content="CPDO Ilagan">

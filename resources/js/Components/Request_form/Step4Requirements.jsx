@@ -433,7 +433,7 @@ export function Step4Requirements({
                         <h3 className="font-semibold text-blue-900 mb-1">Document Upload Requirements</h3>
                         <p className="text-sm text-blue-800">
                             Upload scanned copies or clear photos of the required documents.
-                            Accepted formats: PDF, JPG, PNG (up to 100MB per file).
+                            Accepted formats: PDF, JPG, PNG (up to 20MB per file).
                             A requirement takes at most one separate photo — if it has several
                             pages, please combine them into a single PDF first.
                             <br />

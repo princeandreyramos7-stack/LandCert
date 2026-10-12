@@ -46,7 +46,7 @@ class RequirementUploadTest extends TestCase
 
         $user = User::factory()->create(['user_type' => 'applicant']);
 
-        $response = $this->actingAs($user)->post('/request', $this->validPayload() + [
+        $response = $this->actingAs($user)->post('/request', $this->completeSubmission($this->validPayload() + [
             'requirement_uploads' => [
                 2 => [$this->fakePdf('right-over-land.pdf', 40)],
                 3 => [
@@ -58,11 +58,13 @@ class RequirementUploadTest extends TestCase
                 2 => '2. Right Over Land Documentation',
                 3 => '3. VICINITY MAP',
             ],
-        ]);
+        ]));
 
         $response->assertRedirect();
 
-        $docs = RequirementDocument::all();
+        // Only the two requirements under test; the rest of the required set
+        // comes from completeSubmission().
+        $docs = RequirementDocument::whereIn('requirement_id', [2, 3])->get();
 
         $this->assertCount(3, $docs, 'All three nested uploads should be saved.');
 
@@ -83,15 +85,15 @@ class RequirementUploadTest extends TestCase
 
         // Requirement #1 (notarized application form) is intentionally absent:
         // it can only be produced after the form is submitted and notarized.
-        $response = $this->actingAs($user)->post('/request', $this->validPayload() + [
+        $response = $this->actingAs($user)->post('/request', $this->completeSubmission($this->validPayload() + [
             'requirement_uploads' => [
                 2 => [$this->fakePdf('right-over-land.pdf', 40)],
             ],
             'requirement_names' => [2 => '2. Right Over Land Documentation'],
-        ]);
+        ]));
 
         $response->assertRedirect();
-        $this->assertDatabaseCount('requirement_documents', 1);
+        $this->assertSame(1, RequirementDocument::where('requirement_id', 2)->count());
         $this->assertDatabaseMissing('requirement_documents', ['requirement_id' => 1]);
     }
 }

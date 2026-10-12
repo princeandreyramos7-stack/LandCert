@@ -13,6 +13,7 @@ import {
     MessageSquare,
     FileBarChart,
     FolderArchive,
+    BellRing,
 } from "lucide-react";
 import BackupsFolder from "@/Components/SuperAdmin/BackupsFolder";
 import SidebarUserMenu from "@/Components/SidebarUserMenu";
@@ -87,6 +88,12 @@ const navGroups = [
                 title: "SMS to Officers",
                 url: "/sms-broadcast",
                 icon: MessageSquare,
+            },
+            {
+                // In-app notifications to the Zoning Officers (bell + their dashboard).
+                title: "Notify Officers",
+                url: "/officer-notices",
+                icon: BellRing,
             },
             {
                 // Not a page: opens the backups folder over whatever page is open.

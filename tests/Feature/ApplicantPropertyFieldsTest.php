@@ -24,7 +24,7 @@ class ApplicantPropertyFieldsTest extends TestCase
 
     private function submission(array $extra = []): array
     {
-        return array_merge($this->addressFields(), [
+        return $this->completeSubmission(array_merge($this->addressFields(), [
             'declaration' => '1',
             'applicant_name' => 'Juan Dela Cruz',
             'project_nature' => 'New Residential House',
@@ -40,7 +40,7 @@ class ApplicantPropertyFieldsTest extends TestCase
             'preferred_release_mode' => 'pickup',
             'requirement_uploads' => [2 => [$this->fakePdf('title.pdf', 40)]],
             'requirement_names' => [2 => '2. Right Over Land Documentation'],
-        ], $extra);
+        ], $extra));
     }
 
     public function test_house_number_lot_number_and_tax_declaration_no_land_in_their_own_columns(): void

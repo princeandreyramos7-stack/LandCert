@@ -750,12 +750,12 @@ class SuperAdminController extends Controller
             'approved_by' => $report?->approved_by,
             'approved_at' => $report?->approved_at,
             'returned_reason' => $report?->returnedReason(),
-            
+
             // Full requirements list for the Requirements section
             'requirements_reference' => $requirementList->toArray(),
             'verified_requirements' => $request->verified_requirements ?? [],
         ];
-        
+
         return Inertia::render('SuperAdmin/ViewApplication', [
             'request' => $requestData,
             'uploadedRequirements' => $uploadedRequirements,
@@ -954,40 +954,69 @@ class SuperAdminController extends Controller
      */
     public function approveRequest(Request $request, $reportId)
     {
-        $report = Report::with(['requestModel.applicant', 'requestModel.project', 'requestModel.user'])
-            ->findOrFail($reportId);
-        
-        $requestModel = $report->requestModel;
+        Report::findOrFail($reportId);
 
-        // The Zoning Administrator can only act once the Zoning Officer has
-        // reviewed the application (status "For Approval"). No shortcut exists.
-        if ($report->evaluation !== 'reviewed') {
+        // Two approvals at the same instant (two administrators, two tabs, a
+        // double-click) used to both pass the "reviewed" check, both read the
+        // same highest decision number, and the loser died on the unique index
+        // after its report was already saved as approved - leaving the
+        // application "approved" with no decision number and no way to approve
+        // it again. Now the check, the report, the request and the decision
+        // number all happen together: under the number lock (so no two
+        // approvals read the same highest number) and in one transaction with
+        // the report row locked (so the second caller sees the first one's
+        // result, and a failure leaves nothing half-saved).
+        $approved = RequestModel::underNumberLock(fn () => DB::transaction(function () use ($reportId) {
+            $report = Report::whereKey($reportId)->lockForUpdate()->firstOrFail();
+            $requestModel = RequestModel::with('project')->lockForUpdate()->find($report->request_id);
+
+            // An approval cut short before this fix - report approved, request
+            // still "For Approval" with no decision number - is let through to
+            // finish rather than stranded.
+            $unfinished = $report->evaluation === 'approved'
+                && $requestModel && $requestModel->status === 'reviewed'
+                && empty($requestModel->decision_number);
+
+            // The Zoning Administrator can only act once the Zoning Officer has
+            // reviewed the application (status "For Approval"). No shortcut exists.
+            if (!$requestModel || ($report->evaluation !== 'reviewed' && !$unfinished)) {
+                return false;
+            }
+
+            // Update report to approved
+            $report->evaluation = 'approved';
+            $report->approved_by = auth()->user()->name;
+            $report->approved_at = now();
+            $report->description = 'Application approved by SuperAdmin ' . auth()->user()->name;
+            $report->save();
+
+            // Update request status
+            $requestModel->status = 'approved';
+
+            // Generate decision number if not already generated
+            if (empty($requestModel->decision_number)) {
+                $projectType = $requestModel->project->project_type ?? null;
+                // Handle empty string as well
+                if (empty($projectType)) {
+                    $projectType = 'CZC';
+                }
+                // MM-YY on the decision number tracks the application's creation month,
+                // not the approval date, so it matches the application number.
+                $requestModel->decision_number = $requestModel->generateDecisionNumber($projectType, $requestModel->created_at);
+            }
+
+            $requestModel->save();
+
+            return true;
+        }));
+
+        if (!$approved) {
             return back()->with('error', 'This application can only be approved once the Zoning Officer has reviewed it (status "For Approval").');
         }
 
-        // Update report to approved
-        $report->evaluation = 'approved';
-        $report->approved_by = auth()->user()->name;
-        $report->approved_at = now();
-        $report->description = 'Application approved by SuperAdmin ' . auth()->user()->name;
-        $report->save();
-
-        // Update request status
-        $requestModel->status = 'approved';
-        
-        // Generate decision number if not already generated
-        if (empty($requestModel->decision_number)) {
-            $projectType = $requestModel->project->project_type ?? null;
-            // Handle empty string as well
-            if (empty($projectType)) {
-                $projectType = 'CZC';
-            }
-            // MM-YY on the decision number tracks the application's creation month,
-            // not the approval date, so it matches the application number.
-            $requestModel->decision_number = $requestModel->generateDecisionNumber($projectType, $requestModel->created_at);
-        }
-        
-        $requestModel->save();
+        $report = Report::with(['requestModel.applicant', 'requestModel.project', 'requestModel.user'])
+            ->findOrFail($reportId);
+        $requestModel = $report->requestModel;
 
         // Log the action
         AuditLogService::logUpdate(
@@ -1109,34 +1138,53 @@ class SuperAdminController extends Controller
             'description' => 'required|string',
         ]);
 
-        $report = Report::findOrFail($reportId);
+        Report::findOrFail($reportId);
+
+        // Checked and written with the report row locked, so a double-click or
+        // an approval landing at the same moment cannot both pass the checks.
+        $outcome = DB::transaction(function () use ($reportId, $validated) {
+            $report = Report::whereKey($reportId)->lockForUpdate()->firstOrFail();
+            $requestModel = $report->request;
+
+            // Once an application is approved (or further along the certificate lifecycle)
+            // the decision is final and cannot be flipped to denied.
+            $lockedStatuses = ['approved', 'certificate_preparing', 'certificate_ready', 'released'];
+            if ($report->evaluation === 'approved'
+                || in_array(strtolower((string) optional($requestModel)->status), $lockedStatuses, true)) {
+                return 'This application has already been approved. The decision can no longer be changed.';
+            }
+
+            // The Zoning Administrator can only act once the Zoning Officer has
+            // reviewed the application (status "For Approval").
+            if ($report->evaluation !== 'reviewed') {
+                return 'This application can only be denied once the Zoning Officer has reviewed it (status "For Approval").';
+            }
+
+            // Back to 'pending' so the application reappears in the Zoning Officer's
+            // queue; the reason is kept on the report for them to act on.
+            $report->update([
+                'evaluation' => 'pending',
+                'description' => $validated['description'],
+                'admin_notes' => Report::RETURNED_NOTE_PREFIX . $validated['description'],
+                'date_reported' => now(),
+                'issued_by' => auth()->user()->name,
+            ]);
+
+            if ($requestModel) {
+                $requestModel->status = 'pending';
+                $requestModel->save();
+            }
+
+            return $report;
+        });
+
+        if (is_string($outcome)) {
+            return back()->with('error', $outcome);
+        }
+
+        $report = $outcome;
         $requestModel = $report->request;
-
-        // Once an application is approved (or further along the certificate lifecycle)
-        // the decision is final and cannot be flipped to denied.
-        $lockedStatuses = ['approved', 'certificate_preparing', 'certificate_ready', 'released'];
-        if ($report->evaluation === 'approved'
-            || in_array(strtolower((string) optional($requestModel)->status), $lockedStatuses, true)) {
-            return back()->with('error', 'This application has already been approved. The decision can no longer be changed.');
-        }
-
-        // The Zoning Administrator can only act once the Zoning Officer has
-        // reviewed the application (status "For Approval").
-        if ($report->evaluation !== 'reviewed') {
-            return back()->with('error', 'This application can only be denied once the Zoning Officer has reviewed it (status "For Approval").');
-        }
-
-        $oldValues = ['evaluation' => $report->evaluation];
-
-        // Back to 'pending' so the application reappears in the Zoning Officer's
-        // queue; the reason is kept on the report for them to act on.
-        $report->update([
-            'evaluation' => 'pending',
-            'description' => $validated['description'],
-            'admin_notes' => Report::RETURNED_NOTE_PREFIX . $validated['description'],
-            'date_reported' => now(),
-            'issued_by' => auth()->user()->name,
-        ]);
+        $oldValues = ['evaluation' => 'reviewed'];
 
         AuditLogService::logUpdate(
             'Report',
@@ -1148,10 +1196,6 @@ class SuperAdminController extends Controller
 
         // The application goes back to the Zoning Officer, so the applicant is
         // not told anything — no decision has been made against them.
-        if ($requestModel) {
-            $requestModel->status = 'pending';
-            $requestModel->save();
-        }
 
         // The Zoning Officer's queue needs to know this came back, and why.
         try {

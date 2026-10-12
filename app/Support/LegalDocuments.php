@@ -19,11 +19,16 @@ namespace App\Support;
  */
 class LegalDocuments
 {
-    /** The edition of the notices currently published. */
-    public const VERSION = '1.0';
+    /**
+     * The edition of the notices currently published. 2.0 is the LocClear
+     * Privacy Policy, Terms and Conditions, and Payment and Refund Policy
+     * supplied by the office; accounts and applications filed under 1.0
+     * keep their recorded 1.0.
+     */
+    public const VERSION = '2.0';
 
     /** The day this edition took effect. */
-    public const EFFECTIVE = '2026-09-20';
+    public const EFFECTIVE = '2026-10-04';
 
     /**
      * Who to write to about any of this.
@@ -35,10 +40,10 @@ class LegalDocuments
      */
     public const CONTACT = [
         'office' => 'City Planning and Development Office (CPDO)',
-        'unit' => 'Zoning Administration Division',
-        'address' => 'City Hall, City of Ilagan, Isabela 3300, Philippines',
-        'email' => 'cpdo@ilagan.gov.ph',
-        'phone' => '(078) 622-XXXX',
+        'unit' => 'City Government of Ilagan',
+        'address' => 'Ground Floor, City Hall Building, City of Ilagan, Isabela',
+        'email' => 'cpdo@cityofilagan.gov.ph',
+        'phone' => '624-0009',
         'hours' => 'Monday to Friday, 8:00 AM - 5:00 PM (excluding public holidays)',
     ];
 
@@ -115,118 +120,75 @@ class LegalDocuments
     {
         return [
             'title' => 'Privacy Policy',
-            'summary' => 'What personal information this system collects, why, who can see it, and how long it is kept.',
-            'intro' => 'The City Planning and Development Office of the City of Ilagan collects personal information through this system in order to receive, evaluate and act on applications for zoning and land use certification. This notice explains what is collected and what is done with it, as required by Republic Act No. 10173, the Data Privacy Act of 2012.',
+            'summary' => 'What personal information LocClear collects, how it is used and shared, and your rights under the Data Privacy Act.',
+            'intro' => "LocClear is a web-based application processing and record management system developed for the City Planning and Development Office (CPDO) of the City of Ilagan to facilitate the submission, processing, monitoring, and management of Locational Clearance applications.\n\nThe system is intended to support government service delivery and does not replace the authority of the City Government of Ilagan or its authorized offices.",
             'sections' => [
                 self::section(
-                    'Who is responsible for your information',
+                    'Information We Collect',
+                    self::p('LocClear may collect:'),
+                    self::ul([
+                        'Full name',
+                        'Address',
+                        'Contact number',
+                        'Email address',
+                        'Applicant type',
+                        'Property information',
+                        'Project/activity information',
+                        'Tax Declaration information',
+                        'Title information',
+                        'Application details',
+                        'Uploaded supporting documents',
+                        'Proof of payment, when applicable',
+                        'Application status and transaction history',
+                        'Account credentials and authentication information',
+                        'System activity/log information',
+                    ]),
+                    self::p('Only information necessary for application processing, verification, monitoring, record management, communication, and other legitimate government functions should be collected.'),
+                ),
+
+                self::section(
+                    'Use of Information',
+                    self::p('Personal information may be processed for:'),
+                    self::ul([
+                        'Processing Locational Clearance applications;',
+                        'Verifying submitted information and documents;',
+                        'Communicating application status;',
+                        'Generating application and transaction records;',
+                        'Verifying payment records;',
+                        'Maintaining government records;',
+                        'Generating administrative reports;',
+                        'Responding to legitimate requests and inquiries;',
+                        'Maintaining system security; and',
+                        'Complying with applicable laws, ordinances, regulations, and government requirements.',
+                    ]),
+                ),
+
+                self::section(
+                    'Sharing of Information',
                     self::p(
-                        'The personal information controller is the City Planning and Development Office (CPDO) of the City Government of Ilagan, Isabela. The CPDO decides what is collected through this system and how it is used.',
-                        'Questions about this notice, and requests to exercise any of the rights described below, should be addressed to the office using the contact details at the end of this page.',
+                        'Information may be accessed by authorized personnel of the City Government of Ilagan when necessary to perform their official functions.',
+                        'Information may also be disclosed when required or authorized by applicable law, regulation, court order, or competent government authority.',
                     ),
                 ),
 
                 self::section(
-                    'What is collected',
-                    self::p('The system holds only what is needed to process an application and to keep a lawful record of what the office did.'),
-                    self::table(
-                        ['Category', 'Details', 'Why it is needed'],
-                        [
-                            ['Account details', 'Full name, email address, mobile number, home address (region, province, city, barangay and street), profile photograph if you upload one', 'To create and secure your account, to identify you as the applicant, and to reach you about your application'],
-                            ['Application details', 'Type of certification sought, project name and nature, project location, project cost, lot and property particulars, right over the property', 'To evaluate the application against the zoning ordinance and applicable land use rules'],
-                            ['Representative details', 'Name, address and contact details of an authorised representative, and the authorisation letter, where one is appointed', 'To confirm that a person filing on your behalf is entitled to do so'],
-                            ['Supporting documents', 'Scanned requirements such as titles, tax declarations, plans, sketches, clearances and photographs that you upload', 'These are the evidence the evaluation is based on'],
-                            ['Payment records', 'Order of Payment details, official receipt number, date, amount and the receipt image you upload', 'To confirm that the prescribed fees were paid before a certificate is released'],
-                            ['Issued documents', 'Certificates, clearances and their verification codes', 'To issue the document and to allow a third party holding the paper to check that it is genuine'],
-                            ['Activity records', 'Sign-in and sign-out times, failed sign-in attempts, pages visited, actions taken on applications, and the IP address and browser used', 'To keep the audit trail that a government record system is expected to keep, and to detect misuse of accounts'],
-                            ['Signatures', 'The specimen signature and position of the signing officer or administrator, for staff accounts only', 'To place the correct signatory on the documents the office issues'],
-                        ],
-                    ),
-                    self::note('This system does not ask for, and should not be given, information about health, religion, political affiliation, genetic or biometric data, or any criminal record. Do not upload documents containing such information unless the office has specifically asked for them.'),
+                    'Data Security',
+                    self::p('LocClear shall implement reasonable organizational, physical, and technical safeguards designed to protect personal information against unauthorized access, alteration, disclosure, loss, destruction, or other unlawful processing.'),
                 ),
 
                 self::section(
-                    'Why it may lawfully be processed',
-                    self::p('Under Sections 12 and 13 of the Data Privacy Act, the office processes this information on the following bases:'),
-                    self::ul([
-                        'It is necessary to fulfil a function of a public authority - the City Planning and Development Office is mandated to administer zoning and land use regulation within the City of Ilagan.',
-                        'It is necessary to comply with a legal obligation, including Republic Act No. 11032 (Ease of Doing Business and Efficient Government Service Delivery Act of 2018), the Local Government Code, and the records and audit requirements that apply to local government units.',
-                        'It is necessary to take steps at your request before, and in the course of, acting on your application.',
-                        'Where none of the above applies, it is processed on the basis of the consent you give when you create an account or submit an application - which you may withdraw, subject to the limits described below.',
-                    ]),
+                    'Data Retention',
+                    self::p('Records shall be retained only for as long as necessary to fulfill legitimate government, administrative, legal, auditing, and records-management requirements, subject to applicable laws and City Government policies.'),
                 ),
 
                 self::section(
-                    'Who can see it',
-                    self::p('Access follows the role a person holds in the office, and nothing more.'),
-                    self::table(
-                        ['Who', 'What they can see'],
-                        [
-                            ['You', 'Your own account, your own applications, your own uploaded documents, your own payments and the documents issued to you. You cannot see another applicant\'s records.'],
-                            ['Zoning Officer', 'Applications assigned for evaluation, their supporting documents and payments, in order to review them.'],
-                            ['Zoning Administrator', 'Applications forwarded for approval, and the office-wide reports and audit trail.'],
-                            ['City Treasurer\'s Office', 'Payment information, to the extent needed to confirm collection of the prescribed fees.'],
-                            ['Holder of a printed certificate', 'Only what is already printed on the paper - the name, project, dates and whether the document is still valid - reached by scanning the QR code or entering the verification code. No other information is shown, and no account is needed.'],
-                        ],
-                    ),
-                    self::p(
-                        'Your information is not sold, rented, or shared for advertising. It is not transferred outside the Philippines.',
-                        'It may be disclosed to another government agency, to the Commission on Audit, or to a court or other body with authority to require it, where the law requires the office to do so.',
-                    ),
+                    'Applicant Rights',
+                    self::p('Data subjects may exercise applicable rights under the Data Privacy Act of 2012 (RA 10173) and its implementing rules and regulations, subject to applicable legal limitations.'),
                 ),
 
                 self::section(
-                    'Where it is kept and how it is protected',
-                    self::p('The system and its database are hosted on servers operated by the office\'s hosting provider. The following measures apply:'),
-                    self::ul([
-                        'All traffic between your browser and the system is encrypted (HTTPS).',
-                        'Passwords are stored as one-way hashes and cannot be read by anyone, including office staff.',
-                        'Uploaded documents are stored outside the public web directory and are served only to a signed-in user who is entitled to see that particular file.',
-                        'Every significant action - a submission, an approval, a denial, a payment, a release - is written to an audit trail with the account that performed it and the time it happened.',
-                        'Sessions end automatically after a period of inactivity, and signing out clears the session.',
-                        'Failed sign-in attempts are recorded and repeated failures are rate-limited.',
-                    ]),
-                ),
-
-                self::section(
-                    'How long it is kept',
-                    self::p('Records are retained for as long as the office is required to keep them, and no longer than is useful for the purpose they were collected for.'),
-                    self::table(
-                        ['Record', 'Retention'],
-                        [
-                            ['Applications and their supporting documents', 'Retained while active, then archived. Archived applications remain retrievable for the period set by the National Archives of the Philippines general records disposition schedule for local government records.'],
-                            ['Issued certificates and clearances', 'Retained permanently as a record of what the office issued, so that a document presented years later can still be verified.'],
-                            ['Payment records', 'Retained for the period required by audit rules.'],
-                            ['Audit and sign-in records', 'Retained as the record of who did what, in line with the same schedule.'],
-                            ['Account details', 'Retained while the account exists. If you ask for your account to be closed, the account is deactivated; applications already filed remain on record, because they are part of the office\'s official file.'],
-                        ],
-                    ),
-                ),
-
-                self::section(
-                    'Your rights',
-                    self::p('The Data Privacy Act gives you the following rights over your personal information. To exercise any of them, write to the office using the details below.'),
-                    self::ul([
-                        'To be informed of how your information is collected and used - this notice.',
-                        'To access the information the office holds about you, and to be given a copy of it.',
-                        'To have inaccurate or incomplete information corrected. Much of it you can correct yourself from your profile; where an application has already been submitted, ask the office.',
-                        'To object to processing, and to withdraw consent where consent was the basis for it.',
-                        'To erasure or blocking of information that is incomplete, outdated, false, unlawfully obtained, or no longer necessary - subject to the office\'s duty to keep its official records.',
-                        'To damages, if you suffer loss because your rights under the Act were violated.',
-                        'To lodge a complaint with the National Privacy Commission (privacy.gov.ph) if you believe your rights have not been respected.',
-                        'To data portability - to obtain the information you supplied in a structured, commonly used electronic format.',
-                    ]),
-                    self::note('Withdrawing consent or asking for erasure while an application is in progress will usually mean the office cannot continue to process that application, because the information withdrawn is the information the evaluation depends on.'),
-                ),
-
-                self::section(
-                    'Children',
-                    self::p('This system is intended for use by adults transacting with the City Planning and Development Office. Accounts should not be created by persons below eighteen years of age. Where a minor has an interest in a property, the application should be filed by a parent, guardian or authorised representative.'),
-                ),
-
-                self::section(
-                    'Changes to this notice',
-                    self::p('If this notice changes in substance, the version number and effective date at the top of this page change with it, and you will be asked to acknowledge the new version the next time you sign in. Past versions remain available on request.'),
+                    'Privacy Contact',
+                    self::p('For privacy-related concerns, applicants may contact the appropriate Data Protection/Privacy Officer or authorized City Government office.'),
                 ),
             ],
         ];
@@ -238,108 +200,131 @@ class LegalDocuments
     {
         return [
             'title' => 'Terms and Conditions',
-            'summary' => 'The rules for using this system, what the office undertakes to do, and what is expected of you.',
-            'intro' => 'These terms govern your use of the online land certification system of the City Planning and Development Office, City of Ilagan, Isabela. By creating an account or submitting an application, you agree to them.',
+            'summary' => 'The rules for using LocClear: your responsibilities, how applications, documents and fees are handled, and what is not allowed.',
+            'intro' => "These Terms and Conditions govern the use of LocClear, a web-based application processing and record management system intended to support the processing of Locational Clearance services of the City Planning and Development Office (CPDO) of the City of Ilagan.\n\nBy creating an account, submitting an application, or using the system, the applicant acknowledges and agrees to these Terms and Conditions.",
             'sections' => [
                 self::section(
-                    'What this system is',
+                    'Purpose of the System',
                     self::p(
-                        'This is the official channel through which the City Planning and Development Office receives applications for zoning and land use certification, evaluates them, and issues the resulting documents. It exists to let you file, track and receive these documents without repeated trips to City Hall.',
-                        'It is a means of transacting with the office. It is not, in itself, a decision-maker. Every certificate, clearance and denial is the act of the responsible officer or the Zoning Administrator.',
+                        'LocClear provides an electronic platform for submitting, monitoring, processing, and managing Locational Clearance applications and related records.',
+                        'The system is intended to improve accessibility, transaction monitoring, document management, and service delivery.',
                     ),
                 ),
 
                 self::section(
-                    'Your account',
+                    'Applicant Responsibility',
+                    self::p(
+                        'Applicants are responsible for ensuring that all information and documents submitted through LocClear are true, accurate, complete, current, and authentic.',
+                        'Applicants must not knowingly submit false, misleading, fraudulent, altered, or unauthorized documents.',
+                        'The City Government of Ilagan may require additional documents or clarification when necessary to evaluate an application.',
+                    ),
+                ),
+
+                self::section(
+                    'Application Submission',
+                    self::p(
+                        'Submission of an application through LocClear does not constitute automatic approval.',
+                        'An application remains subject to evaluation, verification, applicable zoning and development regulations, documentary requirements, and approval by authorized City Government personnel.',
+                        'The CPDO and other authorized offices retain their respective governmental authority to approve, deny, return, or require additional information regarding an application.',
+                    ),
+                ),
+
+                self::section(
+                    'Supporting Documents',
+                    self::p(
+                        'Applicants must upload clear and readable copies of required documents.',
+                        'The City may request the presentation of original documents or certified copies when necessary for verification.',
+                        'Submitting a document electronically does not automatically establish its authenticity or validity.',
+                    ),
+                ),
+
+                self::section(
+                    'Application Status',
+                    self::p(
+                        'LocClear may provide electronic status updates to help applicants monitor their transactions.',
+                        'A status displayed by the system represents the current recorded processing stage and does not by itself constitute a final governmental decision unless issued or approved by the authorized office.',
+                    ),
+                ),
+
+                self::section(
+                    'Fees and Payment',
+                    self::p(
+                        'Applicable fees and charges shall be based on the prevailing laws, ordinances, revenue regulations, and official fee schedules of the City Government of Ilagan.',
+                        'Payment of applicable fees shall be made through the authorized payment process of the City Government.',
+                        'LocClear may record or facilitate the monitoring of payment information, but the City Treasurer\'s Office remains the authorized office responsible for the collection and official receipt of applicable government fees.',
+                        'An application is not considered paid merely because an applicant has uploaded a payment-related document unless the payment has been verified by the authorized City Government personnel.',
+                    ),
+                ),
+
+                self::section(
+                    'Refunds and Credits',
+                    self::p(
+                        'Requests for refund or credit of government fees shall be governed by applicable City ordinances, revenue regulations, and other applicable laws.',
+                        'Where required, the applicant shall submit a written claim to the City Treasurer\'s Office or other authorized office.',
+                        'LocClear does not independently authorize refunds of government fees.',
+                    ),
+                ),
+
+                self::section(
+                    'Account Security',
+                    self::p(
+                        'Applicants are responsible for maintaining the confidentiality of their account credentials.',
+                        'Applicants must immediately report suspected unauthorized access or account compromise to the appropriate system administrator or authorized City Government personnel.',
+                    ),
+                ),
+
+                self::section(
+                    'Prohibited Activities',
+                    self::p('Users shall not:'),
                     self::ul([
-                        'One person, one account. Register with your own true and complete name, email address and contact number.',
-                        'You are responsible for everything done through your account. Keep your password to yourself, and choose one you do not use elsewhere.',
-                        'Tell the office at once if you believe someone else has used your account.',
-                        'An account found to have been created with a false identity, or used to file on behalf of another person without authority, may be suspended and the applications filed through it set aside.',
-                        'Staff accounts are created by the office. They are tied to a named officer and may not be shared.',
+                        'Submit fraudulent information or documents;',
+                        'Impersonate another person;',
+                        'Access another user\'s account;',
+                        'Attempt to bypass system security;',
+                        'Introduce malicious software or code;',
+                        'Interfere with system availability;',
+                        'Access restricted administrative functions without authorization;',
+                        'Manipulate application records;',
+                        'Use the system for unlawful purposes; or',
+                        'Attempt to obtain information that they are not authorized to access.',
                     ]),
                 ),
 
                 self::section(
-                    'Filing an application',
-                    self::p('When you submit an application through this system you are making a formal representation to a government office. The following applies:'),
-                    self::ul([
-                        'Everything you state must be true, and every document you upload must be genuine and current.',
-                        'Uploading a falsified, altered or forged public or private document is a criminal offence under the Revised Penal Code. The office will refer such cases for prosecution and the application will be denied.',
-                        'Where you file on behalf of someone else, you must upload a signed authorisation letter, and the office may require the original.',
-                        'Submitting an application does not create any right to the certificate applied for. It begins an evaluation.',
-                        'The office may require you to produce original documents, to submit additional requirements, or to allow an inspection of the site, before it decides.',
-                    ]),
-                ),
-
-                self::section(
-                    'Processing times',
+                    'System Availability',
                     self::p(
-                        'The office processes applications within the periods set out in its Citizen\'s Charter, as required by Republic Act No. 11032. The system records the time an application spends at each stage and shows it to you, so that the office can be held to those periods.',
-                        'A period runs in working days and is counted from the point at which the application is complete. Time spent waiting for a requirement you have not yet supplied, or for a fee you have not yet paid, does not count against the office.',
+                        'The City Government may temporarily suspend or restrict access to LocClear for maintenance, security updates, system improvements, technical problems, emergencies, or other legitimate governmental purposes.',
+                        'The City shall endeavor to restore services as reasonably practicable.',
                     ),
                 ),
 
                 self::section(
-                    'Fees',
+                    'Electronic Communications',
                     self::p(
-                        'Fees are those prescribed by the applicable city ordinance and revenue code. The system issues an Order of Payment stating the amount due. Payment is made to the City Treasurer\'s Office; this system does not accept card or online payment and will never ask you for card details.',
-                        'A certificate is released only after payment has been confirmed against an official receipt. See the Refund Policy for what happens if you have paid and the application does not proceed.',
+                        'Applicants may receive application-related notifications through the contact information provided during registration or application submission.',
+                        'Applicants are responsible for ensuring that their contact information remains accurate and accessible.',
                     ),
                 ),
 
                 self::section(
-                    'Documents the office issues',
+                    'Government Authority',
+                    self::p('Nothing in these Terms and Conditions limits the authority of the City Government of Ilagan, CPDO, City Treasurer\'s Office, or other authorized government offices to perform their functions under applicable laws, ordinances, regulations, and official policies.'),
+                ),
+
+                self::section(
+                    'Changes to These Terms',
                     self::p(
-                        'A certificate or clearance issued through this system carries a verification code and a QR code. Any person holding the printed document may check it at the public verification page, which will confirm whether the document is genuine, who it was issued to, and whether it is still valid.',
-                        'An electronic document generated by this system, and the electronic signature it carries, are given legal recognition by Republic Act No. 8792, the Electronic Commerce Act of 2000.',
-                        'The office may revoke a document that was issued on the basis of false information, or that was issued in error. A revoked document shows as revoked on the verification page.',
+                        'These Terms and Conditions may be updated when necessary to reflect changes in applicable laws, ordinances, government procedures, security requirements, or system functionality.',
+                        'The updated version shall indicate its effective or updated date.',
                     ),
                 ),
 
                 self::section(
-                    'What you must not do',
-                    self::ul([
-                        'Attempt to reach another person\'s account, application or documents.',
-                        'Probe, scan or test the system\'s security, or attempt to bypass any access control or rate limit.',
-                        'Upload anything containing malicious code.',
-                        'Use automated means to submit applications, to harvest information, or to guess verification codes.',
-                        'Interfere with the system\'s operation, or with another person\'s use of it.',
-                        'Reproduce, imitate or alter a document issued by the office.',
-                    ]),
-                    self::note('The system records the account, address and time of every action. Conduct of this kind is logged and may be referred to the proper authorities.'),
-                ),
-
-                self::section(
-                    'Availability',
+                    'Acceptance',
                     self::p(
-                        'The office aims to keep the system available at all times, but it cannot guarantee uninterrupted service. It may be taken down for maintenance, and may be unavailable through circumstances outside the office\'s control.',
-                        'Where the system is unavailable, applications may still be filed over the counter at the City Planning and Development Office during office hours. Unavailability of the system does not extend a period fixed by law or ordinance, but the office will not count against you time during which it was not possible to file.',
+                        'By using LocClear, the applicant acknowledges that they have read, understood, and agreed to these Terms and Conditions.',
+                        'If the applicant does not agree with these Terms and Conditions, they should not use the system.',
                     ),
-                ),
-
-                self::section(
-                    'Limits',
-                    self::p(
-                        'The office provides this system in good faith and takes reasonable care over its accuracy. It does not warrant that the system will be free of error.',
-                        'Nothing shown in this system - including any indicative fee, any estimated period, or any status - overrides the certificate, clearance, order of payment or official receipt actually issued on paper. Where the two differ, the issued document governs.',
-                        'The office is not liable for loss arising from your own failure to keep your account secure, from information you supplied that was incorrect, or from your reliance on a document that the verification page shows to be revoked or invalid.',
-                    ),
-                ),
-
-                self::section(
-                    'Suspension',
-                    self::p('The office may suspend or close an account that is used in breach of these terms, that is used to submit falsified documents, or that is used to attack the system. Where an account is suspended, applications already filed continue to be dealt with under the law.'),
-                ),
-
-                self::section(
-                    'Governing law',
-                    self::p('These terms are governed by the laws of the Republic of the Philippines. Any dispute arising from them falls to the proper courts of the City of Ilagan, Province of Isabela.'),
-                ),
-
-                self::section(
-                    'Changes to these terms',
-                    self::p('The office may revise these terms. When it does, the version number and effective date at the top of this page change, and you will be asked to acknowledge the new version the next time you sign in. Continuing to use the system after that point means you accept the revised terms.'),
                 ),
             ],
         ];
@@ -409,77 +394,78 @@ class LegalDocuments
         ];
     }
 
-    /* ── Refund Policy ────────────────────────────────────────────── */
+    /* ── Payment and Refund Policy ────────────────────────────────── */
 
     private static function docRefund(): array
     {
         return [
-            'title' => 'Refund Policy',
-            'summary' => 'When a fee paid to the City Treasurer can be refunded, when it cannot, and how to ask.',
-            'intro' => 'Fees for zoning and land use certification are government revenue, collected under the city\'s revenue code and accounted for to the Commission on Audit. They are not commercial charges, and refunding them is governed by government accounting rules rather than by a merchant\'s discretion. This page sets out how the office applies those rules.',
+            'title' => 'Payment and Refund Policy',
+            'summary' => 'How fees are paid and verified, and how a refund or credit of a government fee may be requested.',
+            'intro' => null,
             'sections' => [
                 self::section(
-                    'How payment works',
+                    'Purpose',
+                    self::p('This Payment and Refund Policy explains how fees associated with Locational Clearance applications are recorded and how requests concerning erroneous or otherwise refundable government payments may be handled.'),
+                ),
+
+                self::section(
+                    'Government Fees',
                     self::p(
-                        'This system does not collect money. It issues an Order of Payment stating what is due; you pay that amount at the City Treasurer\'s Office and are given an official receipt; you then record the receipt in the system so that the office can confirm payment and proceed.',
-                        'The office will never ask you for a card number, a bank login, or an online transfer to a personal account. If anyone claiming to be from the CPDO asks for this, it is not the office - report it.',
-                    ),
-                    self::note('Because no payment is taken through this system, there is no card charge here to reverse. Every refund described below is a refund by the City Treasurer of money actually received at the counter.'),
-                ),
-
-                self::section(
-                    'When a refund may be claimed',
-                    self::p('A refund may be claimed where the money should not have been collected, or was collected in excess. In practice this means:'),
-                    self::table(
-                        ['Situation', 'Refundable?'],
-                        [
-                            ['You were assessed and paid more than the correct fee', 'Yes - the excess is refundable'],
-                            ['You paid twice for the same application', 'Yes - the duplicate is refundable'],
-                            ['The office assessed a fee for a certification that does not apply to your project', 'Yes'],
-                            ['You paid, and the office is unable to act on the application through its own error', 'Yes'],
-                            ['You withdraw the application before the office has begun evaluating it', 'Yes, at the office\'s determination, less any filing fee already earned'],
-                            ['You withdraw after evaluation or inspection has been carried out', 'Generally no - the service the fee pays for has been performed'],
-                            ['The application is denied after evaluation', 'No - the fee pays for the evaluation, not for a favourable result'],
-                            ['The certificate was issued and you no longer need it', 'No'],
-                            ['The certificate lapsed because you did not act on it within its validity', 'No'],
-                            ['You supplied false information and the application was denied or the document revoked', 'No'],
-                        ],
+                        'Fees for Locational Clearance and related services shall be based on the prevailing City of Ilagan ordinances, revenue regulations, and official fee schedules.',
+                        'The City Treasurer\'s Office is responsible for the collection and official recording of applicable government fees.',
                     ),
                 ),
 
                 self::section(
-                    'A denial is not a refund',
+                    'Payment Verification',
                     self::p(
-                        'This is the point most often misunderstood, so it is stated plainly. The fee is for the evaluation of your application against the zoning ordinance - the officer\'s time, the checking of documents, and where required the inspection of the site. That work is done whether the answer is yes or no.',
-                        'If your application is denied you will be given the reason in writing. You may correct what was wrong and apply again, and you may appeal the decision through the channels stated in the notice of denial. What you may not do is recover the fee for the evaluation that produced the decision.',
+                        'Where payment information or proof of payment is submitted through LocClear, the submission may be reviewed and verified by authorized City Government personnel.',
+                        'Uploading proof of payment does not by itself constitute confirmation that the payment has been accepted.',
+                        'The application shall proceed according to the City\'s prescribed processing procedure after payment has been appropriately verified.',
                     ),
                 ),
 
                 self::section(
-                    'How to ask for a refund',
+                    'Refund or Credit Requests',
+                    self::p(
+                        'Applicants who believe that a government fee has been erroneously or illegally collected may submit a written claim for refund or credit to the appropriate City Government office, particularly the City Treasurer\'s Office, in accordance with applicable laws and City ordinances.',
+                        'Refund or credit requests shall be evaluated by the appropriate authorized government office.',
+                        'LocClear does not independently approve or issue refunds.',
+                    ),
+                ),
+
+                self::section(
+                    'Supporting Documents',
+                    self::p('An applicant requesting a refund or credit may be required to provide supporting documents, which may include:'),
                     self::ul([
-                        'Write to the City Planning and Development Office, stating the application number, the amount, the date of payment and the reason you believe a refund is due.',
-                        'Attach the original official receipt. A refund cannot be processed without it.',
-                        'Bring a valid government-issued identification document. If you are claiming on behalf of the payer, bring a notarised authorisation and your own identification.',
-                        'Lodge the claim within two years of the date of payment. Claims made after that are barred by the general rule on claims against government funds.',
+                        'Official Receipt;',
+                        'Application or transaction reference number;',
+                        'Proof of payment;',
+                        'Valid identification;',
+                        'Written explanation of the refund or credit request; and',
+                        'Other documents required by the City Treasurer\'s Office.',
                     ]),
                 ),
 
                 self::section(
-                    'What happens next',
-                    self::p('The office acknowledges the claim and evaluates it within the period set in its Citizen\'s Charter. Where the claim is found to be proper, it is endorsed to the City Treasurer\'s Office and to the City Accountant for processing.'),
-                    self::ul([
-                        'A refund of government funds is disbursed by the City Treasurer, not by this office, and follows the city\'s ordinary disbursement procedure.',
-                        'It is paid to the person named on the official receipt.',
-                        'Processing typically takes fifteen to thirty working days from approval of the claim, depending on the city\'s disbursement schedule.',
-                        'You will be told in writing if the claim is refused, and why.',
-                    ]),
-                    self::note('These periods are indicative. The disbursement of public funds is subject to the rules of the Commission on Audit and to the availability of the appropriate fund, and the office cannot guarantee a date.'),
+                    'Review and Decision',
+                    self::p('Refund or credit requests shall be reviewed and decided by the authorized City Government office in accordance with applicable laws, ordinances, revenue regulations, and accounting and auditing requirements.'),
                 ),
 
                 self::section(
-                    'If you disagree',
-                    self::p('If your claim is refused and you believe it should not have been, you may raise the matter with the City Administrator, and thereafter with the Commission on Audit, which has jurisdiction over money claims against a local government unit.'),
+                    'No Automatic Refund',
+                    self::p(
+                        'Cancellation, withdrawal, rejection, or non-completion of an application does not automatically establish a right to a refund.',
+                        'Any refund or credit shall be subject to applicable government rules and the determination of the authorized office.',
+                    ),
+                ),
+
+                self::section(
+                    'Governing Rules',
+                    self::p(
+                        'This Policy shall be interpreted together with the applicable City of Ilagan Revenue Code, ordinances, Citizen\'s Charter, and other applicable laws and regulations.',
+                        'Where a conflict exists, the applicable law, ordinance, or official government regulation shall prevail.',
+                    ),
                 ),
             ],
         ];

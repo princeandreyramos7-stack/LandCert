@@ -308,9 +308,9 @@ export function ApplicationSummaryModal({
                             Payment this application will produce. See the{" "}
                             <a href="/legal/refund" target="_blank" rel="noopener noreferrer"
                                 className="underline underline-offset-2 hover:text-[#0d1f5c]">
-                                Refund Policy
+                                Payment and Refund Policy
                             </a>{" "}
-                            for when a fee can be refunded.
+                            for how payments are verified and how a refund or credit may be requested.
                         </p>
                     </div>
                 </div>

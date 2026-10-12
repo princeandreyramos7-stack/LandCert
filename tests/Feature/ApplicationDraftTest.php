@@ -122,7 +122,7 @@ class ApplicationDraftTest extends TestCase
 
         $this->actingAs($user)
             ->withHeaders(['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
-            ->post('/request', array_merge($this->addressFields(), [
+            ->post('/request', $this->completeSubmission(array_merge($this->addressFields(), [
                 'declaration' => '1',
                 'applicant_name' => 'Juan Dela Cruz',
                 'project_nature' => 'New Residential House',
@@ -138,7 +138,7 @@ class ApplicationDraftTest extends TestCase
                 'preferred_release_mode' => 'pickup',
                 'requirement_uploads' => [2 => [$this->fakePdf('title.pdf', 40)]],
                 'requirement_names' => [2 => '2. Right Over Land Documentation'],
-            ]))
+            ])))
             ->assertCreated();
 
         // Cleared server-side, in the controller itself - not left to the

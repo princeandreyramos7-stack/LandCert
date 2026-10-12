@@ -279,7 +279,7 @@ export default function Register({ legal = [], legalVersion }) {
                             className="underline underline-offset-2 hover:text-[#0d1f5c]">Cookie Policy</a>
                         {' · '}
                         <a href="/legal/refund" target="_blank" rel="noopener noreferrer"
-                            className="underline underline-offset-2 hover:text-[#0d1f5c]">Refund Policy</a>
+                            className="underline underline-offset-2 hover:text-[#0d1f5c]">Payment and Refund Policy</a>
                         {legalVersion && <> · version {legalVersion}</>}
                     </p>
 

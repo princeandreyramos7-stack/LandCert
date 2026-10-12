@@ -103,6 +103,25 @@ class AdminController extends Controller
             'evaluationDistribution' => $evaluationDistribution,
             // Who is using the system right now (never cached).
             'online' => \App\Support\Presence::snapshot(),
+            // Applications waiting on the officer, by Citizen's Charter deadline.
+            'actionQueue' => \App\Support\OfficerActionQueue::build(),
+            // What the Zoning Administrator has sent this officer: her notices
+            // (page /officer-notices) and her decisions on the officer's reviews.
+            'adminNotices' => \App\Models\Notification::where('user_id', auth()->id())
+                ->whereIn('type', [\App\Models\OfficerNotice::TYPE, 'application_final_approved', 'application_returned'])
+                ->latest('id')
+                ->take(6)
+                ->get()
+                ->map(fn ($n) => [
+                    'id' => $n->id,
+                    'type' => $n->type,
+                    'title' => $n->title,
+                    'message' => $n->message,
+                    'link' => $n->link,
+                    'read' => (bool) $n->read,
+                    'important' => (bool) ($n->data['important'] ?? false),
+                    'created_at' => $n->created_at?->toIso8601String(),
+                ]),
         ]);
     }
     
@@ -1273,20 +1292,33 @@ class AdminController extends Controller
         // already-verified amount/receipt/date with whatever this second
         // submission happens to contain. The certificate step below is
         // already guarded by Certificate::underIssuanceLock(), but this
-        // Verify button itself was not.
-        if ($payment->payment_status === 'verified') {
+        // Verify button itself was not. The check and the write share one
+        // transaction with the payment row locked, so two clicks landing at
+        // the same instant cannot both read "not verified yet".
+        $verifiedNow = DB::transaction(function () use ($payment, $validated) {
+            $locked = \App\Models\Payment::whereKey($payment->id)->lockForUpdate()->first();
+            if ($locked->payment_status === 'verified') {
+                return false;
+            }
+
+            $locked->update([
+                'payment_status' => 'verified',
+                'amount' => $validated['amount'],
+                'receipt_number' => $validated['receipt_number'],
+                'payment_date' => $validated['payment_date'],
+                'notes' => $validated['notes'] ?? $locked->notes,
+                'verified_by' => auth()->id(),
+                'verified_at' => now(),
+            ]);
+
+            return true;
+        });
+
+        if (!$verifiedNow) {
             return back()->with('success', 'Payment is already verified.');
         }
 
-        $payment->update([
-            'payment_status' => 'verified',
-            'amount' => $validated['amount'],
-            'receipt_number' => $validated['receipt_number'],
-            'payment_date' => $validated['payment_date'],
-            'notes' => $validated['notes'] ?? $payment->notes,
-            'verified_by' => auth()->id(),
-            'verified_at' => now(),
-        ]);
+        $payment->refresh();
 
         // Clear dashboard cache so analytics refresh immediately
         $this->cacheService->clearCache();
@@ -2613,8 +2645,16 @@ class AdminController extends Controller
         // used to pass a nullable rule and then die on the database.
         $projectType = $validated['project_type'];
 
-        // Update the project type in normalized_projects table
-        $project = $requestModel->project;
+        // Update the project type in normalized_projects table. An application
+        // filed without a project row (before every submission got one) used
+        // to answer "updated successfully" here while saving nothing, so "Mark
+        // as Reviewed" kept refusing for want of the type. Create the row.
+        $project = $requestModel->project
+            ?? \App\Models\NormalizedProject::create([
+                'request_id' => $requestModel->id,
+                'project_type' => '',
+                'project_nature' => '',
+            ]);
         if ($project) {
             $oldProjectType = $project->project_type;
             $project->update([

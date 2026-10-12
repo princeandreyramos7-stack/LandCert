@@ -1,265 +1,189 @@
-# CPDO Land Certification System
+# CPDO Locational Clearance System
 
-City Planning and Development Office (CPDO) - Land Certification Management System for Ilagan City, Isabela, Philippines.
+Online locational clearance and zoning compliance for the City Planning and
+Development Office (CPDO), City of Ilagan, Isabela.
+
+Live: https://cityofilaganzoningadministration.online
 
 ---
 
-## 🚀 Quick Start
+## What it does
+
+**Applicants**
+- Register with an SMS one-time code; the address is picked from the PSGC list
+- File an application (CZC, TUP, SUP or ZC) through a step-by-step form and upload the requirements
+- Follow it through five steps (filed → verified → approved → paid → released), fix and resubmit when it is returned, upload the payment receipt, and download the certificate or clearance
+- Notifications in the app, by e-mail, by SMS, and as push notifications on the installable app (PWA)
+
+**Zoning Officer**
+- Dashboard with the applications waiting on them and their Citizen's Charter deadlines, plus notices from the Zoning Administrator
+- Document verification, review, fee computation and the order of payment
+- Payment verification, certificate preparation and release
+- Reports (by applicant, by day / month / year) as PDF and Excel, SMS broadcast to applicants, the audit log
+
+**Zoning Administrator**
+- Final approval of what the officers have reviewed
+- User management (staff accounts, positions, e-signatures), notices to officers, SMS to officers
+- Oversight reports, including what each Zoning Officer reviewed
+- Backups, with optional off-site copies (S3 / Google Cloud Storage) and one-click restore
+
+Issued documents carry a QR code that anyone can check at `/verify`.
+Processing time is measured in working days against the Citizen's Charter
+limits, and closed applications are archived automatically.
+
+---
+
+## Tech stack
+
+- Laravel 12 (PHP 8.2+), MySQL / MariaDB
+- React 18 + Inertia.js 2, Tailwind CSS, shadcn/ui, Vite 7
+- Semaphore (SMS), SMTP mail through a queue, Web Push (VAPID)
+- spatie/laravel-backup, spatie/laravel-permission
+
+---
+
+## Local development
 
 ```bash
-# Install dependencies
 composer install
 npm install
-
-# Setup environment
 cp .env.example .env
 php artisan key:generate
-
-# Run migrations
 php artisan migrate
-
-# Seed database
-php artisan db:seed
-
-# Build frontend
-npm run build
-
-# Start server
-php artisan serve
+php artisan db:seed          # roles, staff accounts, PSGC address list
+php artisan storage:link
+composer run dev             # app server + queue worker + Vite, together
 ```
 
----
-
-## 📚 Documentation
-
-All documentation is located in the **`docs/`** folder.
-
-### Essential Guides
-- **[Getting Started](docs/START_HERE.md)** - New user guide
-- **[GIS & Zoning User Guide](docs/GIS_ZONING_USER_GUIDE.md)** - Complete GIS features guide
-- **[Property Management](docs/PROPERTY_MANAGEMENT_GUIDE.md)** - How to add and manage properties
-- **[DSS Implementation](docs/LANDCERT_DSS_IMPLEMENTATION.md)** - Decision Support System guide
-- **[Fee Computation](docs/FEE_COMPUTATION.md)** - How the Treasury fee is calculated for each application type
-
-### Full Documentation Index
-See **[docs/README.md](docs/README.md)** for complete documentation index.
-
----
-
-## ✨ Key Features
-
-### Land Certification Management
-- Request submission and tracking
-- Multi-step application form
-- Payment processing and verification
-- Certificate generation and download
-- Email notifications
-
-### GIS & Zoning System
-- Interactive map (Leaflet + OpenStreetMap)
-- Property location visualization
-- Zoning classification management
-- Ilagan City-specific boundaries
-
-### Decision Support System (DSS)
-- Automated zoning compliance checks
-- Risk assessment (0-100 score)
-- Compliance scoring (0-100 score)
-- AI-powered recommendations
-- 7 zoning rules, 8 risk factors
-
-### Admin Features
-- User management with roles
-- Request approval workflow
-- Payment verification
-- Audit logging
-- Analytics dashboard
-- PDF exports
-
----
-
-## 🛠️ Tech Stack
-
-- **Backend**: Laravel 12.x, PHP 8.2
-- **Frontend**: React, Inertia.js, Tailwind CSS
-- **UI Components**: shadcn/ui
-- **Database**: MySQL
-- **Maps**: Leaflet.js + OpenStreetMap
-- **Email**: Laravel Mail
-
----
-
-## 📋 Requirements
-
-- PHP >= 8.2
-- Composer
-- Node.js >= 18
-- MySQL >= 8.0
-- XAMPP/WAMP (for local development)
-
----
-
-## 🔐 Default Credentials
-
-### Admin Account
-- Email: `admin@example.com`
-- Password: `password`
-
-### Test User
-- Email: `user@example.com`
-- Password: `password`
-
----
-
-## 🗺️ GIS Features
-
-### Zoning Map
-- View all properties on interactive map
-- Click markers for property details
-- Restricted to Ilagan City area
-- Free (no API keys required)
-
-### Add Properties
-Two methods:
-1. **From Application** - Select from existing requests
-2. **Manual Entry** - Fill form manually
-
-Access: **Admin Panel → GIS & Zoning → Add Property**
-
----
-
-## 🎯 Decision Support System
-
-### Features
-- Zoning compliance validation
-- Environmental risk assessment
-- Infrastructure availability checks
-- Automated recommendations
-
-### Usage
-1. Go to **Admin Panel → Requests**
-2. Click **"Evaluate with DSS"** on any request
-3. Review compliance score and recommendations
-
----
-
-## 📦 Database Seeding
+Demo data (local only - it refuses to run in production):
 
 ```bash
-# Seed all data
-php artisan db:seed
-
-# Seed specific data
-php artisan db:seed --class=AdminUserSeeder
-php artisan db:seed --class=ZoningRuleSeeder
-php artisan db:seed --class=RiskFactorSeeder
-php artisan db:seed --class=PropertyLocationSeeder
+php artisan db:seed --class=DemoSeeder   # 21 applications across every status
 ```
 
----
-
-## 🧪 Useful Commands
+### Tests
 
 ```bash
-# Check properties
-php artisan check:properties
-
-# Update property zones
-php artisan update:property-zones
-
-# Reset admin password
-php artisan reset:admin-password
-
-# Show admin info
-php artisan show:admin-info
-
-# Clear caches
-php artisan optimize:clear
+php artisan test
 ```
+
+The suite runs against its own database (`zoning_compliance_test`, see
+`phpunit.xml`), never the working one. Run it before every deploy. Stop the
+Vite dev server first (or move `public/hot` aside) so pages load the built
+assets.
 
 ---
 
-## 📁 Project Structure
+## Deploying to production
 
-```
-cpdo_project/
-├── app/
-│   ├── Http/Controllers/
-│   ├── Models/
-│   ├── Services/
-│   └── Observers/
-├── database/
-│   ├── migrations/
-│   └── seeders/
-├── resources/
-│   ├── js/
-│   │   ├── Components/
-│   │   └── Pages/
-│   └── views/
-├── routes/
-│   └── web.php
-├── docs/              # All documentation
-└── public/
-```
+The host has no Node.js, so **the compiled frontend travels in the
+repository**: run `npm run build` and commit `public/build` whenever frontend
+code changes. `public/hot` (written by the Vite dev server) must never be on
+the server - it is git-ignored for that reason.
 
----
+### 1. Environment (`.env` on the host - never committed)
 
-## 🔧 Configuration
+- `APP_ENV=production`, `APP_DEBUG=false` (set it directly; `php artisan optimize` fails otherwise)
+- `APP_URL=https://cityofilaganzoningadministration.online`, `SESSION_SECURE_COOKIE=true`
+- `QUEUE_CONNECTION=database`, `MAIL_*`, `SMS_ENABLED=true` and the SMS key
+- `DB_*`, and `DB_DUMP_PATH` pointing at the server's `mysqldump` directory (backups)
+- Push notifications: generate a fresh key pair on the host with `php artisan webpush:vapid` - never reuse the development keys
+- Optional off-site backups: `AWS_*` and/or `GOOGLE_CLOUD_*`
 
-### Environment Variables
-Key settings in `.env`:
-- `APP_URL` - Application URL
-- `DB_*` - Database configuration
-- `MAIL_*` - Email configuration
+### 2. After every deploy
 
-### Map Configuration
-- Center: Ilagan City (16.9754°N, 121.8947°E)
-- Zoom: 13
-- Bounds: Ilagan City area only
-
----
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**404 Errors**
 ```bash
-php artisan route:clear
-php artisan config:clear
-php artisan cache:clear
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan route:clear && php artisan config:clear && php artisan cache:clear && php artisan view:clear
+php artisan optimize
 ```
 
-**Map Not Loading**
-- Check internet connection
-- Verify Leaflet CSS is loaded
-- See `docs/FREE_MAP_SETUP.md`
+Clearing the caches is not optional: a stale route cache on the host has
+broken every public page before (`Ziggy error: route ... is not in the route list`).
 
-**No Properties on Map**
+### 3. Once, on a new server
+
 ```bash
-php artisan check:properties
-php artisan db:seed --class=PropertyLocationSeeder
+php artisan storage:link
+php artisan db:seed --force          # prints each staff password once
+php artisan signatures:sync          # links the e-signature images to the staff accounts
+```
+
+- Writable: `storage/`, `bootstrap/cache/`, `public/images/E-signitures/uploads/`
+- Apache `mod_rewrite` and `mod_headers` on (`public/.htaccess` sends the
+  `Service-Worker-Allowed` header the installable app needs)
+
+### 4. Cron - required
+
+```
+* * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Without it **no e-mail is sent** (all mail is queued) and reminders, nightly
+archiving, unverified-account cleanup and backups never run.
+
+---
+
+## Accounts
+
+There are no default passwords. `php artisan db:seed` creates the office's
+staff accounts with random passwords (or the `SEED_PASSWORD_<NAME>` values in
+`.env`, e.g. `SEED_PASSWORD_CRISANTA`), prints them once, and never resets an
+account that already exists. Applicants register themselves at `/register`.
+
+To reset a staff password:
+
+```bash
+php artisan admin:reset-password someone@cpdo.com          # prints a random one
+php artisan admin:reset-password someone@cpdo.com --password=...
 ```
 
 ---
 
-## 📖 Learn More
+## Useful commands
 
-- **Full Documentation**: [docs/README.md](docs/README.md)
-- **GIS Guide**: [docs/GIS_ZONING_USER_GUIDE.md](docs/GIS_ZONING_USER_GUIDE.md)
-- **DSS Guide**: [docs/LANDCERT_DSS_IMPLEMENTATION.md](docs/LANDCERT_DSS_IMPLEMENTATION.md)
-- **Architecture**: [docs/LANDCERT_ARCHITECTURE.md](docs/LANDCERT_ARCHITECTURE.md)
+| Command | What it does |
+|---|---|
+| `admin:reset-password {email}` | Reset a staff password |
+| `admin:info` | Show the staff accounts |
+| `signatures:sync` | Match the e-signature images to staff accounts |
+| `applications:archive` | Archive closed and long-unpaid applications (also runs nightly) |
+| `reminders:send` | Send the reminders that are due (also runs hourly) |
+| `users:prune-unverified` | Remove sign-ups that never finished SMS verification (also runs daily) |
+| `diagnose:email` | Check the mail configuration |
+| `webpush:vapid` | Generate push-notification keys |
+| `backup:run` | Take a backup now |
 
 ---
 
-## 📄 License
+## Troubleshooting
 
-This project is proprietary software developed for the City Planning and Development Office of Ilagan City, Isabela, Philippines.
+**404s, or "route ... is not in the route list" after a deploy** - the route
+cache is stale:
+
+```bash
+php artisan route:clear && php artisan config:clear && php artisan cache:clear && php artisan view:clear
+```
+
+**`php artisan optimize` fails with `laravel-exceptions-renderer::topbar`** -
+`APP_DEBUG` is not `false` in the host's `.env`.
+
+**No e-mails arrive** - the cron above is not running, so the mail queue is
+never worked.
+
+**A signature is missing from a printed document** - run
+`php artisan signatures:sync` on the host.
 
 ---
 
-## 👥 Credits
+## Documentation
 
-Developed for CPDO - Ilagan City, Isabela, Philippines
+- [Fee computation](docs/FEE_COMPUTATION.md) - how the Treasury fee is calculated for each application type
 
-**Last Updated**: February 24, 2026
+---
+
+## License
+
+Proprietary software developed for the City Planning and Development Office of
+the City of Ilagan, Isabela, Philippines.

@@ -413,7 +413,7 @@ class RequestController extends Controller
         // what the certificate prints is what was actually selected.
         $hasRepresentative = filled($request->input('authorized_representative_name'));
 
-        $validated = $request->validate(array_merge([
+        $validated = $request->validate(\App\Support\ApplicationSubmission::strengthen(array_merge([
             // The applicant certifies the form is true before it is
             // filed. Enforced here and not only in the browser: a
             // declaration that can be skipped by posting the form
@@ -474,7 +474,7 @@ class RequestController extends Controller
             \App\Support\PhilippineAddress::rules('applicant_address'),
             \App\Support\PhilippineAddress::rules('corporation_address', false),
             \App\Support\PhilippineAddress::rules('authorized_representative_address', $hasRepresentative)
-        ), [], array_merge(
+        ), $request), \App\Support\ApplicationSubmission::messages(), array_merge(
             \App\Support\PhilippineAddress::attributes('applicant_address', 'applicant'),
             \App\Support\PhilippineAddress::attributes('corporation_address', 'corporation'),
             \App\Support\PhilippineAddress::attributes('authorized_representative_address', 'representative')
@@ -493,6 +493,9 @@ class RequestController extends Controller
         }
 
         self::assertNoMultipleImagesPerRequirement($request);
+
+        // The documents the wizard requires, uploaded with this submission.
+        \App\Support\ApplicationSubmission::assertRequiredDocuments($request);
 
         $validated['applicant_address'] = \App\Support\PhilippineAddress::resolve($validated, 'applicant_address')['line'] ?? '';
         $validated['corporation_address'] = \App\Support\PhilippineAddress::resolve($validated, 'corporation_address')['line'] ?? '';
@@ -667,18 +670,18 @@ class RequestController extends Controller
                 ]);
             }
 
-            // 5. Create Project record
-            if (isset($validated['project_type']) || isset($validated['project_nature'])) {
-                [$duration, $years] = self::projectTenure($validated);
-                \App\Models\NormalizedProject::create([
-                    'request_id' => $newRequest->id,
-                    'project_type' => $validated['project_type'] ?? '',
-                    'project_nature' => $validated['project_nature'] ?? '',
-                    'project_nature_duration' => $duration,
-                    'project_nature_years' => $years,
-                    'project_cost' => $validated['project_cost'] ?? null,
-                ]);
-            }
+            // 5. Create Project record - always, even when the applicant chose
+            //    "I'm not sure" for the type: the officer sets the type later
+            //    (update-project-type), and that needs a row to write it to.
+            [$duration, $years] = self::projectTenure($validated);
+            \App\Models\NormalizedProject::create([
+                'request_id' => $newRequest->id,
+                'project_type' => $validated['project_type'] ?? '',
+                'project_nature' => $validated['project_nature'] ?? '',
+                'project_nature_duration' => $duration,
+                'project_nature_years' => $years,
+                'project_cost' => $validated['project_cost'] ?? null,
+            ]);
 
             // 6. Create Location record. A Zoning Certification has no project
             //    step, so its location is the applicant's own address.
@@ -847,18 +850,6 @@ class RequestController extends Controller
         // outright rather than told what their forged submission got wrong.
         abort_if(RequestModel::where('id', $id)->value('user_id') !== auth()->id(), 403, 'Unauthorized to update this application.');
 
-        // AGGRESSIVE LOGGING - Check if method is even called
-        error_log("====== UPDATE METHOD HIT ======");
-        error_log("Request ID: " . $id);
-        error_log("User ID: " . auth()->id());
-        error_log("Method: " . $request->method());
-        
-        \Log::error('UPDATE METHOD CALLED', [
-            'request_id' => $id,
-            'user_id' => auth()->id(),
-            'method' => $request->method(),
-        ]);
-        
         // Find the request with all relationships
         $existingRequest = RequestModel::with([
             'applicant.corporation',
@@ -888,7 +879,7 @@ class RequestController extends Controller
         // Validate input
         $hasRepresentative = filled($request->input('authorized_representative_name'));
 
-        $validated = $request->validate(array_merge([
+        $validated = $request->validate(\App\Support\ApplicationSubmission::strengthen(array_merge([
             // Certified again on resubmission - see store().
             'declaration' => ['accepted'],
 
@@ -938,7 +929,7 @@ class RequestController extends Controller
         ],
             \App\Support\PhilippineAddress::rules('applicant_address'),
             \App\Support\PhilippineAddress::rules('authorized_representative_address', $hasRepresentative)
-        ), [], array_merge(
+        ), $request), \App\Support\ApplicationSubmission::messages(), array_merge(
             \App\Support\PhilippineAddress::attributes('applicant_address', 'applicant'),
             \App\Support\PhilippineAddress::attributes('authorized_representative_address', 'representative')
         ));
@@ -953,6 +944,10 @@ class RequestController extends Controller
         }
 
         self::assertNoMultipleImagesPerRequirement($request);
+
+        // The documents the wizard requires: newly uploaded, or still on file
+        // from the application being resubmitted.
+        \App\Support\ApplicationSubmission::assertRequiredDocuments($request, $existingRequest->id);
 
         $validated['applicant_address'] = \App\Support\PhilippineAddress::resolve($validated, 'applicant_address')['line'] ?? '';
         $validated['authorized_representative_address'] = \App\Support\PhilippineAddress::resolve($validated, 'authorized_representative_address')['line'] ?? null;

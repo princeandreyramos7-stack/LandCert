@@ -104,12 +104,17 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
     });
 
     // What "Mark as Reviewed" needs: the lot number (the "Title Number
-    // (TCT/CCT)" field) and the tax declaration number, as the applicant
-    // supplied them at submission - Property Details is read-only now, so
-    // these never change after the page loads. Read from lot_number, not
+    // (TCT/CCT)" field) and the tax declaration number. The applicant may
+    // leave both blank at filing, so the officer can fill them in under
+    // Property Details (saved through certificate-details); held here so the
+    // decision panel sees a save at once. Read from lot_number, not
     // title_number, matching Property Details' own display.
-    const titleNumber = request.lot_number || request.title_number || "";
-    const taxDecNo = request.tax_declaration_no || "";
+    const [propertyNumbers, setPropertyNumbers] = useState(() => ({
+        lot: request.lot_number || request.title_number || "",
+        tax: request.tax_declaration_no || "",
+    }));
+    const titleNumber = propertyNumbers.lot;
+    const taxDecNo = propertyNumbers.tax;
     const [showAutoFillSuggestion, setShowAutoFillSuggestion] = useState(false);
 
     // "Document Verification" in the applications menu and the workflow
@@ -396,6 +401,8 @@ export default function ViewApplication({ request, uploadedRequirements = [] }) 
                                             setProjectType={setProjectType}
                                             handleSaveProjectType={handleSaveProjectType}
                                             savingProjectType={savingProjectType}
+                                            propertyNumbers={propertyNumbers}
+                                            setPropertyNumbers={setPropertyNumbers}
                                         />
                                     )}
                                     {currentStep === 3 && !isZC && (
@@ -684,7 +691,7 @@ function Step1Content({ request, isZC = false }) {
 }
 
 // Step 2: Project Details
-function Step2Content({ request, uploadedRequirements = [], editingProjectCost, setEditingProjectCost, projectCost, setProjectCost, handleSaveProjectCost, savingProjectCost, isZC = false, editingProjectType, setEditingProjectType, projectType, setProjectType, handleSaveProjectType, savingProjectType }) {
+function Step2Content({ request, uploadedRequirements = [], editingProjectCost, setEditingProjectCost, projectCost, setProjectCost, handleSaveProjectCost, savingProjectCost, isZC = false, editingProjectType, setEditingProjectType, projectType, setProjectType, handleSaveProjectType, savingProjectType, propertyNumbers, setPropertyNumbers }) {
     return (
         <div className="space-y-6">
             <SectionTitle icon={Building2} title="Project Details" />
@@ -822,7 +829,7 @@ function Step2Content({ request, uploadedRequirements = [], editingProjectCost, 
     </>
             )}
 
-            <PropertyDetailsEditor request={request} isZC={isZC} />
+            <PropertyDetailsEditor request={request} isZC={isZC} numbers={propertyNumbers} onSaved={setPropertyNumbers} />
 
             {!isZC && (
                 <>
@@ -948,12 +955,60 @@ function Step3Content({ request }) {
     );
 }
 
-// Property Details - read-only. The applicant supplies the Lot Number and
-// Tax Declaration No. at submission (Step 1/2 of the request form), so
-// there is nothing left for the office to type in here; this mirrors
-// SuperAdmin's already-read-only version of the same panel.
-function PropertyDetailsEditor({ request, isZC = false }) {
-    const missingRequired = !request.lot_number && !request.tax_declaration_no;
+// Statuses after the Zoning Administrator's approval: the decision is final
+// there, so the numbers it was made on are no longer the officer's to change.
+const isPastApproval = (status) =>
+    /^(approved|payment|certificate|released|archived)/.test(String(status || "").toLowerCase());
+
+// Property Details. The applicant may leave the Lot Number and Tax
+// Declaration No. blank at submission (they are optional on the form), and
+// "Mark as Reviewed" needs both - so until the application is approved the
+// officer can fill them in here from the Assessor's records. Saved through
+// the certificate-details endpoint, which stores them on the property row.
+function PropertyDetailsEditor({ request, isZC = false, numbers, onSaved }) {
+    const { toast } = useToast();
+    const lot = numbers?.lot ?? request.lot_number ?? "";
+    const tax = numbers?.tax ?? request.tax_declaration_no ?? "";
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState({ lot, tax });
+    const [saving, setSaving] = useState(false);
+    const [errors, setErrors] = useState({});
+    const canEdit = !isPastApproval(request.status) && typeof onSaved === "function";
+    const missingRequired = !String(lot).trim() || !String(tax).trim();
+
+    const startEditing = () => {
+        setDraft({ lot, tax });
+        setErrors({});
+        setEditing(true);
+    };
+
+    const save = async () => {
+        setSaving(true);
+        setErrors({});
+        try {
+            await axios.post(`/admin/requests/${request.id}/certificate-details`, {
+                lot_number: draft.lot.trim(),
+                tax_declaration_no: draft.tax.trim(),
+            });
+            onSaved({ lot: draft.lot.trim(), tax: draft.tax.trim() });
+            setEditing(false);
+            toast({ title: "Saved", description: "Property details updated." });
+        } catch (error) {
+            const fieldErrors = error.response?.data?.errors || {};
+            setErrors(fieldErrors);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description:
+                    fieldErrors.lot_number?.[0] ||
+                    fieldErrors.tax_declaration_no?.[0] ||
+                    error.response?.data?.message ||
+                    "Failed to save the property details.",
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
 
     return (
         <div className="pt-4 border-t">
@@ -964,19 +1019,83 @@ function PropertyDetailsEditor({ request, isZC = false }) {
                     )}
                     Property Details
                 </h4>
+                {canEdit && !editing && (
+                    <button
+                        type="button"
+                        onClick={startEditing}
+                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                        <Edit2 className="h-3 w-3" />
+                        Edit
+                    </button>
+                )}
+                {editing && (
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={save}
+                            disabled={saving}
+                            className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
+                        >
+                            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                            Save
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setEditing(false)}
+                            disabled={saving}
+                            className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InfoField label="Title Number (TCT/CCT)" value={request.lot_number} />
-                <InfoField label="Tax Declaration No." value={request.tax_declaration_no} />
-            </div>
+            {editing ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label htmlFor="pd-lot" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Title Number (TCT/CCT)
+                        </label>
+                        <input
+                            id="pd-lot"
+                            type="text"
+                            maxLength={100}
+                            value={draft.lot}
+                            onChange={(e) => setDraft((d) => ({ ...d, lot: e.target.value }))}
+                            className="w-full px-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        {errors.lot_number && <p className="mt-1 text-xs text-red-600">{errors.lot_number[0]}</p>}
+                    </div>
+                    <div>
+                        <label htmlFor="pd-tax" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Tax Declaration No.
+                        </label>
+                        <input
+                            id="pd-tax"
+                            type="text"
+                            maxLength={100}
+                            value={draft.tax}
+                            onChange={(e) => setDraft((d) => ({ ...d, tax: e.target.value }))}
+                            className="w-full px-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        {errors.tax_declaration_no && <p className="mt-1 text-xs text-red-600">{errors.tax_declaration_no[0]}</p>}
+                    </div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InfoField label="Title Number (TCT/CCT)" value={lot} />
+                    <InfoField label="Tax Declaration No." value={tax} />
+                </div>
+            )}
 
-            {missingRequired && (
+            {missingRequired && !editing && (
                 <div className="mt-3 flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
                     <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
                     <span>
                         Title Number (TCT/CCT) and Tax Declaration No. must be set before this application
-                        can be marked as reviewed.
+                        can be marked as reviewed.{canEdit && " Click Edit above to add them."}
                     </span>
                 </div>
             )}

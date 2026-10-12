@@ -2,14 +2,18 @@ import React, { useState } from "react";
 import { Button } from "@/Components/ui/button";
 import { BarChart3, Clock, FileText, CheckCircle2 } from "lucide-react";
 
-import { AnalyticsDashboard } from "@/Components/Admin/Analytics";
+import { AnalyticsDashboard, AnalyticsStatsCards } from "@/Components/Admin/Analytics";
 import { OnlineNowPanel } from "@/Components/OnlineNowPanel";
+import OfficerActionQueue from "@/Components/Admin/Dashboard/OfficerActionQueue";
+import AdministratorNotices from "@/Components/Admin/Dashboard/AdministratorNotices";
 
 export function AdminDashboard({
     online = null,
     analytics = null,
     stats = {},
     applications = [],
+    actionQueue = null,
+    adminNotices = [],
 }) {
     const [showAnalytics, setShowAnalytics] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
@@ -103,10 +107,25 @@ export function AdminDashboard({
                 </div>
             </div>
 
-            {/* Analytics */}
+            {/* The headline figures come first (they belong to the analytics,
+                so Hide Analytics hides them too). */}
             {showAnalytics && analytics && (
                 <div className="animate-in fade-in slide-in-from-bottom duration-500">
-                    <AnalyticsDashboard analytics={analytics} afterCards={<OnlineNowPanel online={online} />} />
+                    <AnalyticsStatsCards analytics={analytics} />
+                </div>
+            )}
+
+            {/* What needs the officer now, beside what the Zoning Administrator
+                has sent them - shown whether or not the analytics are. */}
+            <div className="grid items-start gap-4 lg:grid-cols-3">
+                <OfficerActionQueue queue={actionQueue} className="lg:col-span-2" />
+                <AdministratorNotices notices={adminNotices} />
+            </div>
+
+            {/* Analytics (its stat cards are already at the top) */}
+            {showAnalytics && analytics && (
+                <div className="animate-in fade-in slide-in-from-bottom duration-500">
+                    <AnalyticsDashboard analytics={analytics} showCards={false} afterCards={<OnlineNowPanel online={online} />} />
                 </div>
             )}
 

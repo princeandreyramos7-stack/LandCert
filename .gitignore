@@ -4,6 +4,11 @@
 .env.backup
 .env.production
 .env.local
+# Every other environment file too (.env.testing, .env.staging, ...): real
+# keys and passwords were once committed in documentation files. Only the
+# template with empty values belongs in git.
+.env.*
+!.env.example
 .phpactor.json
 .phpunit.result.cache
 /.fleet
@@ -30,3 +35,7 @@ Thumbs.db
 
 # Staff e-signatures uploaded through the app (User Management / My Profile) live on the host, not in git.
 /public/images/E-signitures/uploads
+
+# Local AI-assistant and editor folders: settings and notes for this machine, not the app.
+/.claude
+/.kiro

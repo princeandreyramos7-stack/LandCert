@@ -1,15 +1,31 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, router } from "@inertiajs/react";
-import { Button } from "@/Components/ui/button";
 import { journeyOf, bucketOf, TONES } from "@/lib/applicantJourney";
 import { JourneyTrack, followAction } from "@/Components/Applicant/JourneyPanel";
 import {
-    Search, MapPin, Calendar, Printer, Eye, ArrowRight, FilePlus, Inbox, AlertCircle, ExternalLink, CheckCircle2,
+    AlertCircle,
+    ArrowRight,
+    Calendar,
+    CheckCircle2,
+    ExternalLink,
+    Eye,
+    FilePlus,
+    Inbox,
+    MapPin,
+    Printer,
+    Search,
 } from "lucide-react";
+
+/*
+ * The applicant's applications (My Applications): a photo banner with the
+ * counts, filters and search, and one card per application - how far it has
+ * come, what happens next, and the button that matters now. Statuses, counts
+ * and actions come from journeyOf() (lib/applicantJourney), as on the
+ * dashboard.
+ */
 
 const fmtDate = (ds) => (ds ? new Date(ds).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—");
 const peso = (n) => (n == null || n === "" ? null : `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`);
-
 const TYPE_NAMES = { CZC: "Certificate of Zoning Compliance", SUP: "Special Use Permit", TUP: "Temporary Use Permit", ZC: "Zoning Certification" };
 
 const FILTERS = [
@@ -20,111 +36,12 @@ const FILTERS = [
     { key: "denied", label: "Denied" },
 ];
 
-const go = followAction;
-
-function ApplicationCard({ app }) {
-    const journey = journeyOf(app);
-    const tone = TONES[journey.tone];
-    const type = String(app.project_type || "").toUpperCase();
-    const details = route("my-applications.show", app.id);
-    const location = [app.project_location_barangay, app.project_location_city || "City of Ilagan"].filter(Boolean).join(", ");
-
-    return (
-        <article className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md ${journey.needsAction ? "border-[#d4a017]/50" : "border-gray-100"}`}>
-            {journey.needsAction && (
-                <div className={`flex items-center gap-2 px-4 py-1.5 text-xs font-bold ${tone.soft} ${tone.text}`}>
-                    <AlertCircle className="h-3.5 w-3.5" /> Action needed
-                </div>
-            )}
-            <div className="p-4 sm:p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-md bg-[#0d1f5c] px-2 py-0.5 font-mono text-[11px] font-bold text-white">{app.application_number || `#${app.id}`}</span>
-                            {type && <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-bold text-gray-700" title={TYPE_NAMES[type]}>{type}</span>}
-                            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${tone.badge}`}>{journey.label}</span>
-                            {/* From approval on: the office has checked the
-                                documents and the Administrator has signed off. */}
-                            {journey.stage >= 3 && !journey.failed && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                                    <CheckCircle2 className="h-3 w-3" /> Access Verified
-                                </span>
-                            )}
-                        </div>
-                        <Link href={details} className="mt-2 block truncate text-base font-black text-[#0d1f5c] hover:underline">
-                            {app.project_nature || TYPE_NAMES[type] || "Application"}
-                        </Link>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-                            {location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-gray-400" />{location}</span>}
-                            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5 text-gray-400" />Filed {fmtDate(app.created_at)}</span>
-                            {peso(app.report_amount) && journey.stage >= 3 && <span className="font-semibold text-gray-700">Fee {peso(app.report_amount)}</span>}
-                        </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                        {/* The form is for filing and notarising. Once the document is
-                            ready to download the form has served its purpose, and a
-                            print button beside "Download" only invites printing the
-                            wrong paper. */}
-                        {journey.stage < 5 && (
-                            <button type="button" onClick={() => window.open(route("my-applications.print", app.id), "_blank")} title="Print application form" className="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 hover:text-[#0d1f5c]">
-                                <Printer className="h-4 w-4" />
-                            </button>
-                        )}
-                        <Link href={details} title="View details" className="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 hover:text-[#0d1f5c]">
-                            <Eye className="h-4 w-4" />
-                        </Link>
-                    </div>
-                </div>
-
-                <div className="mt-4">
-                    <JourneyTrack journey={journey} />
-                </div>
-
-                <div className={`mt-4 flex flex-col gap-3 rounded-xl px-4 py-3 sm:flex-row sm:items-center ${journey.needsAction ? tone.soft : "bg-gray-50"}`}>
-                    <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-bold ${journey.needsAction ? tone.text : "text-gray-800"}`}>{journey.headline}</p>
-                        <p className="mt-0.5 text-xs text-gray-500">{journey.note}</p>
-                        {/* What the Zoning Office wrote for the applicant when it
-                            reviewed the application; the server hands it over
-                            only once the Administrator has approved. */}
-                        {app.office_note && (
-                            <p className="mt-2 rounded-lg border border-[#0d1f5c]/10 bg-white/80 px-3 py-2 text-xs text-gray-700">
-                                <span className="font-semibold text-[#0d1f5c]">Note from the Zoning Office: </span>
-                                {app.office_note}
-                            </p>
-                        )}
-                    </div>
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                        {journey.secondary && (
-                            <Button variant="outline" size="sm" onClick={() => go(journey.secondary, app)} className="h-9 gap-1.5 border-gray-200 bg-white text-xs font-semibold">
-                                <Printer className="h-3.5 w-3.5" /> {journey.secondary.label}
-                            </Button>
-                        )}
-                        {journey.action && (
-                            <Button size="sm" onClick={() => go(journey.action, app)} className={`h-9 gap-1.5 text-xs font-bold ${journey.needsAction ? "bg-[#0d1f5c] text-white hover:bg-[#0d1f5c]/90" : "border border-gray-200 bg-white text-[#0d1f5c] hover:bg-gray-50"}`}>
-                                {journey.action.label}
-                                {journey.action.newTab ? <ExternalLink className="h-3.5 w-3.5" /> : <ArrowRight className="h-3.5 w-3.5" />}
-                            </Button>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </article>
-    );
-}
-
-/**
- * The applicant's applications: each one a card with how far it has come,
- * what happens next, and the one button that matters right now.
- */
-export function MyApplicationsList({ applications }) {
+/* ── shared state: exactly the current list's filtering, search and paging ── */
+function useApplications(applications) {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
-
     const paged = applications?.data ? applications : { data: applications || [], total: applications?.length || 0 };
     const list = paged.data || [];
-    const currentPage = paged.current_page || 1;
-    const lastPage = paged.last_page || 1;
 
     const counts = useMemo(() => {
         const c = { all: list.length, action: 0, progress: 0, done: 0, denied: 0 };
@@ -146,80 +63,222 @@ export function MyApplicationsList({ applications }) {
         });
     }, [list, filter, search]);
 
-    return (
-        <div className="space-y-4">
-            {/* Header */}
-            <div className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 className="text-xl font-black text-[#0d1f5c]">My Applications</h1>
-                    <p className="mt-0.5 text-sm text-gray-500">
-                        {counts.action > 0
-                            ? <><span className="font-bold text-[#d4a017]">{counts.action}</span> {counts.action === 1 ? "needs" : "need"} something from you.</>
-                            : list.length ? "Nothing needs your attention right now." : "You have not filed an application yet."}
-                    </p>
-                </div>
-                <Link href="/request" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[#d4a017] px-4 py-2.5 text-sm font-bold text-[#0d1f5c] shadow hover:bg-[#b8880d] hover:text-white">
-                    <FilePlus className="h-4 w-4" /> New Application
-                </Link>
-            </div>
+    return { list, counts, shown, search, setSearch, filter, setFilter, currentPage: paged.current_page || 1, lastPage: paged.last_page || 1 };
+}
 
-            {/* Filters */}
+const facts = (app) => {
+    const type = String(app.project_type || "").toUpperCase();
+    return {
+        type,
+        title: app.project_nature || TYPE_NAMES[type] || "Application",
+        number: app.application_number || `#${app.id}`,
+        details: route("my-applications.show", app.id),
+        location: [app.project_location_barangay, app.project_location_city || "City of Ilagan"].filter(Boolean).join(", "),
+    };
+};
+
+function Pager({ currentPage, lastPage }) {
+    if (lastPage <= 1) return null;
+    const goTo = (page) => router.get(route("my-applications"), { page }, { preserveState: true });
+    return (
+        <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3 text-sm">
+            <span className="text-gray-500">Page {currentPage} of {lastPage}</span>
+            <div className="flex gap-2">
+                <button type="button" disabled={currentPage <= 1} onClick={() => goTo(currentPage - 1)} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold disabled:opacity-40">Previous</button>
+                <button type="button" disabled={currentPage >= lastPage} onClick={() => goTo(currentPage + 1)} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold disabled:opacity-40">Next</button>
+            </div>
+        </div>
+    );
+}
+
+function SearchBox({ state, className = "" }) {
+    return (
+        <div className={`relative ${className}`}>
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+                value={state.search}
+                onChange={(e) => state.setSearch(e.target.value)}
+                placeholder="Search number, project, barangay"
+                className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 text-sm focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c]/20"
+            />
+        </div>
+    );
+}
+
+function FilterPills({ state, dark = false }) {
+    return (
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+            {FILTERS.map((f) => {
+                const on = state.filter === f.key;
+                return (
+                    <button
+                        key={f.key}
+                        type="button"
+                        onClick={() => state.setFilter(f.key)}
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
+                            on ? (dark ? "bg-white text-[#0d1f5c]" : "bg-[#0d1f5c] text-white") : dark ? "bg-white/10 text-white hover:bg-white/20" : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"
+                        }`}
+                    >
+                        {f.label} <span className={on ? "opacity-60" : "opacity-50"}>{state.counts[f.key]}</span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+function Empty({ hasAny }) {
+    return (
+        <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-14 text-center">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0d1f5c]/5 text-[#0d1f5c]/40"><Inbox className="h-7 w-7" /></span>
+            <h3 className="mt-3 text-base font-bold text-gray-800">{hasAny ? "Nothing here" : "No applications yet"}</h3>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500">
+                {hasAny ? "Try another filter or search term." : "Start your first application — it takes about ten minutes and you can print the form for notarization right after."}
+            </p>
+            {!hasAny && (
+                <Link href="/request" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#0d1f5c] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#0d1f5c]/90">
+                    <FilePlus className="h-4 w-4" /> Start an application
+                </Link>
+            )}
+        </div>
+    );
+}
+
+function Badges({ journey }) {
+    const tone = TONES[journey.tone];
+    return (
+        <>
+            <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${tone.badge}`}>{journey.label}</span>
+            {journey.stage >= 3 && !journey.failed && (
+                <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                    <CheckCircle2 className="h-3 w-3" /> Access Verified
+                </span>
+            )}
+        </>
+    );
+}
+
+/** The card's buttons: secondary (Order of Payment), main action, print form, details. */
+function Actions({ app, journey, withIcons = true, compact = false }) {
+    const f = facts(app);
+    return (
+        <div className="flex flex-wrap items-center gap-2">
+            {journey.secondary && (
+                <button type="button" onClick={() => followAction(journey.secondary, app)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-[#0d1f5c] hover:bg-gray-50">
+                    <Printer className="h-3.5 w-3.5" /> {journey.secondary.label}
+                </button>
+            )}
+            {journey.action && (
+                <button
+                    type="button"
+                    onClick={() => followAction(journey.action, app)}
+                    className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold ${journey.needsAction ? "bg-[#0d1f5c] text-white hover:bg-[#0d1f5c]/90" : "border border-gray-200 bg-white text-[#0d1f5c] hover:bg-gray-50"}`}
+                >
+                    {journey.action.label}
+                    {journey.action.newTab ? <ExternalLink className="h-3.5 w-3.5" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                </button>
+            )}
+            {withIcons && journey.stage < 5 && (
+                <button type="button" onClick={() => window.open(route("my-applications.print", app.id), "_blank")} title="Print application form" className="rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 hover:text-[#0d1f5c]">
+                    <Printer className="h-4 w-4" />
+                </button>
+            )}
+            {withIcons && !compact && (
+                <Link href={f.details} title="View details" className="rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 hover:text-[#0d1f5c]">
+                    <Eye className="h-4 w-4" />
+                </Link>
+            )}
+        </div>
+    );
+}
+
+function OfficeNote({ app }) {
+    if (!app.office_note) return null;
+    return (
+        <p className="rounded-lg border border-[#0d1f5c]/10 bg-white/80 px-3 py-2 text-xs text-gray-700">
+            <span className="font-semibold text-[#0d1f5c]">Note from the Zoning Office: </span>
+            {app.office_note}
+        </p>
+    );
+}
+
+export function MyApplicationsList({ applications }) {
+    const state = useApplications(applications);
+    const { counts, list, shown } = state;
+    return (
+        <div className="space-y-5">
+            <section className="relative isolate overflow-hidden rounded-3xl text-white">
+                <img src="/images/hero/ilagan-city-hall.jpg" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+                <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#0d1f5c] via-[#0d1f5c]/90 to-[#0d1f5c]/50" />
+                <div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-end lg:justify-between lg:p-8">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#f5c842]">CPDO · City of Ilagan</p>
+                        <h1 className="mt-2 text-3xl font-black">My Applications</h1>
+                        <p className="mt-1 text-sm text-blue-100/85">
+                            {counts.action > 0 ? <><span className="font-bold text-[#f5c842]">{counts.action}</span> {counts.action === 1 ? "needs" : "need"} something from you.</> : list.length ? "Nothing needs your attention right now." : "You have not filed an application yet."}
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                        {[["Needs action", counts.action, "text-[#f5c842]"], ["In progress", counts.progress, "text-sky-200"], ["Ready", counts.done, "text-emerald-300"]].map(([l, v, c]) => (
+                            <div key={l} className="rounded-2xl bg-white/10 px-4 py-2 text-center backdrop-blur-sm">
+                                <p className={`text-2xl font-black ${c}`}>{v}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">{l}</p>
+                            </div>
+                        ))}
+                        <Link href="/request" className="inline-flex items-center gap-2 rounded-lg bg-[#d4a017] px-4 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-[#b8880d]">
+                            <FilePlus className="h-4 w-4" /> New Application
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
             {list.length > 0 && (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-                        {FILTERS.map((f) => (
-                            <button
-                                key={f.key}
-                                type="button"
-                                onClick={() => setFilter(f.key)}
-                                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${filter === f.key ? "bg-[#0d1f5c] text-white" : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"}`}
-                            >
-                                {f.label} <span className={`ml-1 ${filter === f.key ? "text-white/70" : "text-gray-400"}`}>{counts[f.key]}</span>
-                            </button>
-                        ))}
-                    </div>
-                    <div className="relative sm:w-64">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                        <input
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Search number, project, barangay"
-                            className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm focus:border-[#0d1f5c] focus:outline-none focus:ring-2 focus:ring-[#0d1f5c]/20"
-                        />
-                    </div>
+                    <FilterPills state={state} />
+                    <SearchBox state={state} className="sm:w-72" />
                 </div>
             )}
 
-            {/* Cards */}
-            {shown.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-14 text-center">
-                    <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0d1f5c]/5 text-[#0d1f5c]/40"><Inbox className="h-7 w-7" /></span>
-                    <h3 className="mt-3 text-base font-bold text-gray-800">{list.length ? "Nothing here" : "No applications yet"}</h3>
-                    <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500">
-                        {list.length ? "Try another filter or search term." : "Start your first application — it takes about ten minutes and you can print the form for notarization right after."}
-                    </p>
-                    {!list.length && (
-                        <Link href="/request" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#0d1f5c] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#0d1f5c]/90">
-                            <FilePlus className="h-4 w-4" /> Start an application
-                        </Link>
-                    )}
-                </div>
-            ) : (
+            {shown.length === 0 ? <Empty hasAny={list.length > 0} /> : (
                 <div className="space-y-3">
-                    {shown.map((app) => <ApplicationCard key={app.id} app={app} />)}
+                    {shown.map((app) => {
+                        const j = journeyOf(app);
+                        const tone = TONES[j.tone];
+                        const f = facts(app);
+                        return (
+                            <article key={app.id} className={`overflow-hidden rounded-2xl border bg-white shadow-sm ${j.needsAction ? "border-[#d4a017]/60" : "border-gray-100"}`}>
+                                <div className="grid gap-4 p-5 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="rounded-md bg-[#0d1f5c] px-2 py-0.5 font-mono text-[11px] font-bold text-white">{f.number}</span>
+                                            {f.type && <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-bold text-gray-700" title={TYPE_NAMES[f.type]}>{f.type}</span>}
+                                            <Badges journey={j} />
+                                        </div>
+                                        <Link href={f.details} className="mt-2 block truncate text-lg font-black text-[#0d1f5c] hover:underline">{f.title}</Link>
+                                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                                            {f.location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{f.location}</span>}
+                                            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />Filed {fmtDate(app.created_at)}</span>
+                                            {peso(app.report_amount) && j.stage >= 3 && <span className="font-semibold text-gray-700">Fee {peso(app.report_amount)}</span>}
+                                        </div>
+                                    </div>
+                                    <JourneyTrack journey={j} />
+                                </div>
+                                <div className={`flex flex-col gap-3 border-t px-5 py-3 sm:flex-row sm:items-center ${j.needsAction ? `${tone.soft} border-transparent` : "border-gray-50 bg-gray-50/60"}`}>
+                                    <div className="min-w-0 flex-1 space-y-1.5">
+                                        <p className={`flex items-center gap-1.5 text-sm font-bold ${j.needsAction ? tone.text : "text-gray-800"}`}>
+                                            {j.needsAction && <AlertCircle className="h-4 w-4 shrink-0" />} {j.headline}
+                                        </p>
+                                        <p className="text-xs text-gray-500">{j.note}</p>
+                                        <OfficeNote app={app} />
+                                    </div>
+                                    <Actions app={app} journey={j} />
+                                </div>
+                            </article>
+                        );
+                    })}
                 </div>
             )}
-
-            {/* Pages */}
-            {lastPage > 1 && (
-                <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3 text-sm">
-                    <span className="text-gray-500">Page {currentPage} of {lastPage}</span>
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => router.get(route("my-applications"), { page: currentPage - 1 }, { preserveState: true })}>Previous</Button>
-                        <Button variant="outline" size="sm" disabled={currentPage >= lastPage} onClick={() => router.get(route("my-applications"), { page: currentPage + 1 }, { preserveState: true })}>Next</Button>
-                    </div>
-                </div>
-            )}
+            <Pager currentPage={state.currentPage} lastPage={state.lastPage} />
         </div>
     );
 }

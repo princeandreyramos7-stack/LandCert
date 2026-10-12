@@ -104,7 +104,7 @@ class RequestSeeder extends Seeder
             
             $status = $statuses[array_rand($statuses)];
             
-            // Random date within last 6 months
+       
             $createdAt = Carbon::now()->subDays(rand(0, 180));
             $updatedAt = $createdAt->copy()->addDays(rand(0, 30));
 

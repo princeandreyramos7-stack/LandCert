@@ -1,216 +1,106 @@
 import { Link } from "@inertiajs/react";
-import { Globe, Activity, Award } from "lucide-react";
+import { Activity, Award, Globe } from "lucide-react";
 import { Toaster } from "@/Components/ui/toaster";
-import SealWatermark from "@/Components/SealWatermark";
+
+/*
+ * The frame around every signed-out form - sign in, sign up, the sign-up
+ * code, password reset, email verification. A formal left panel (City Hall
+ * and the Capital Arena tinted blue, the seal between gold rules) beside the
+ * form; on phones the panel gives way to a small brand header.
+ */
+
+const POLICIES = [
+    ["Privacy", "/legal/privacy"],
+    ["Terms", "/legal/terms"],
+    ["Cookies", "/legal/cookies"],
+    ["Payments & Refunds", "/legal/refund"],
+    ["Verify a document", "/verify"],
+];
+
+const BENEFITS = [
+    [Globe, "Apply online, any time of day"],
+    [Activity, "Follow your application at every step"],
+    [Award, "Receive official, QR-verifiable certificates"],
+];
+
+function Seal({ size }) {
+    return (
+        <span className={`inline-block shrink-0 overflow-hidden rounded-full border-2 border-[#d4a017]/60 bg-white ${size}`}>
+            <img src="/images/ilagan1-192.png" alt="City of Ilagan" className="h-full w-full object-cover" />
+        </span>
+    );
+}
 
 export default function GuestLayout({ children }) {
     return (
-        <div className="flex min-h-screen" style={{ background: "#f0f4ff" }}>
+        <div className="flex min-h-screen bg-[#0a1748]">
             {/* ── Left panel (desktop only) ─────────────────────────── */}
-            <div
-                className="hidden lg:flex lg:w-[46%] xl:w-[42%] relative overflow-hidden flex-col"
-                style={{
-                    background:
-                        "linear-gradient(160deg,#0a1848 0%,#0d1f5c 45%,#112068 100%)",
-                }}
-            >
-                {/* Grid overlay */}
-                <svg
-                    className="absolute inset-0 w-full h-full opacity-[0.07] pointer-events-none"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <defs>
-                        <pattern
-                            id="lg"
-                            width="52"
-                            height="52"
-                            patternUnits="userSpaceOnUse"
-                        >
-                            <path
-                                d="M 52 0 L 0 0 0 52"
-                                fill="none"
-                                stroke="#93c5fd"
-                                strokeWidth="0.7"
-                            />
-                        </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#lg)" />
-                </svg>
-
-                {/* Glow orbs */}
-                <div
-                    className="absolute -top-24 -left-24 w-80 h-80 rounded-full blur-3xl pointer-events-none opacity-40"
-                    style={{
-                        background:
-                            "radial-gradient(circle,#1d4ed8,transparent 70%)",
-                    }}
-                />
-                <div
-                    className="absolute bottom-0 right-0 w-72 h-72 rounded-full blur-3xl pointer-events-none opacity-30"
-                    style={{
-                        background:
-                            "radial-gradient(circle,#d4a017,transparent 70%)",
-                    }}
-                />
-
-                {/* Content */}
-                <div className="relative z-10 flex flex-col justify-between h-full p-12 text-white">
-                    {/* Logo */}
-                    <Link
-                        href="/"
-                        className="inline-flex items-center gap-4 group"
-                    >
-                        <div className="w-14 h-14 rounded-full border-2 border-[#d4a017]/40 bg-white/10 overflow-hidden flex items-center justify-center shrink-0">
-                            <img
-                                src="/images/ilagan1-192.png"
-                                alt="City of Ilagan"
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-                        <div>
-                            <p className="text-white font-black text-sm tracking-[0.15em] uppercase leading-tight">
-                                Republic of the Philippines
-                            </p>
-                            <p className="text-[#d4a017] font-black text-base tracking-wide leading-tight">
-                                CPDO LC
-                            </p>
-                            <p className="text-blue-300 text-[11px] tracking-widest">
-                                City of Ilagan, Isabela
-                            </p>
-                        </div>
-                    </Link>
-
-                    {/* Main pitch */}
-                    <div className="space-y-8">
-                        <div>
-                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#d4a017]/40 bg-[#d4a017]/10 text-[#d4a017] text-[11px] font-bold tracking-widest uppercase mb-5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#d4a017] animate-pulse" />
-                                Official Digital Platform
-                            </div>
-                            <h2 className="text-4xl font-black leading-tight mb-4">
-                                Your Land Use
-                                <br />
-                                <span
-                                    className="text-transparent bg-clip-text"
-                                    style={{
-                                        backgroundImage:
-                                            "linear-gradient(90deg,#d4a017,#f5c842)",
-                                    }}
-                                >
-                                    Certificates
-                                </span>
-                                <br />
-                                Made Simple
-                            </h2>
-                            <p className="text-blue-200/80 text-base leading-relaxed">
-                                Apply for Certificate of Zoning Compliance
-                                (CZC), Zoning Certification (ZC), Special Use
-                                Permit, and Temporary Use Permit. Track your
-                                application status in real time.
-                            </p>
-                        </div>
-
-                        {/* Feature list */}
-                        <div className="space-y-4">
-                            {[
-                                {
-                                    icon: Globe,
-                                    title: "Apply Online, Anytime",
-                                    desc: "Submit applications 24/7 from anywhere",
-                                },
-                                {
-                                    icon: Activity,
-                                    title: "Real-time Tracking",
-                                    desc: "Monitor your application at every stage",
-                                },
-                                {
-                                    icon: Award,
-                                    title: "Official Certificates",
-                                    desc: "Receive government-issued digital documents",
-                                },
-                            ].map((f, i) => (
-                                <div
-                                    key={i}
-                                    className="flex items-center gap-4 p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
-                                >
-                                    <div className="w-10 h-10 rounded-lg bg-[#d4a017]/15 border border-[#d4a017]/25 flex items-center justify-center shrink-0">
-                                        <f.icon className="w-5 h-5 text-[#d4a017]" />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-white text-sm">
-                                            {f.title}
-                                        </p>
-                                        <p className="text-blue-200/70 text-xs">
-                                            {f.desc}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Footer */}
-                    <p className="text-blue-400/50 text-xs">
-                        &copy; {new Date().getFullYear()} City Planning and
-                        Development Office — City of Ilagan, Isabela
-                    </p>
+            <aside className="relative isolate hidden overflow-hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[44%] lg:self-start">
+                <div className="absolute inset-0 -z-20 grid grid-rows-2">
+                    <img src="/images/hero/ilagan-city-hall.jpg" alt="" className="h-full w-full object-cover grayscale" />
+                    <img src="/images/hero/ilagan-capital-arena.jpg" alt="" className="h-full w-full object-cover grayscale" />
                 </div>
-            </div>
+                <div className="absolute inset-0 -z-10 bg-[#1a3a8f] mix-blend-multiply" />
+                <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0a1748]/40 via-[#0a1748]/70 to-[#0a1748]" />
+
+                <div className="flex w-full flex-col items-center justify-center p-12 text-center text-white">
+                    <Link href="/" className="flex items-center gap-4" aria-label="CPDO LC home">
+                        <span className="h-px w-16 bg-[#d4a017]" />
+                        <Seal size="h-20 w-20" />
+                        <span className="h-px w-16 bg-[#d4a017]" />
+                    </Link>
+                    <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.35em] text-blue-200">Republic of the Philippines</p>
+                    <p className="mt-1 text-sm font-semibold uppercase tracking-[0.2em] text-[#f5c842]">City of Ilagan, Isabela</p>
+                    <h2 className="mt-6 font-serif text-4xl font-bold leading-tight">City Planning and Development Office</h2>
+                    <div className="mx-auto my-6 h-px w-20 bg-[#d4a017]" />
+                    <ul className="space-y-3 text-left text-sm text-blue-50/90">
+                        {BENEFITS.map(([Icon, text]) => (
+                            <li key={text} className="flex items-center gap-3">
+                                <Icon className="h-4 w-4 shrink-0 text-[#f5c842]" /> {text}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </aside>
 
             {/* ── Right panel (form area) ───────────────────────────── */}
-            {/* The seal sits behind the form column only. The left panel is dark
-                navy with its own artwork, where a faint seal would be lost. */}
-            <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 lg:p-12 relative isolate overflow-y-auto">
-                <SealWatermark />
-                {/* Mobile logo */}
-                <div className="lg:hidden w-full max-w-md mb-8">
-                    <Link href="/" className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full border border-[#0d1f5c]/20 overflow-hidden shrink-0">
-                            <img
-                                src="/images/ilagan1-192.png"
-                                alt="City of Ilagan"
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-                        <div>
-                            <p className="text-[#0d1f5c] font-black text-sm tracking-wide">
-                                CPDO LC
-                            </p>
-                            <p className="text-[#d4a017] text-xs font-semibold">
-                                City of Ilagan, Isabela
-                            </p>
-                        </div>
+            <main className="flex flex-1 flex-col items-center justify-center bg-[#fbfaf6] p-6 sm:p-10">
+                {/* Mobile brand */}
+                <div className="mb-8 w-full max-w-md lg:hidden">
+                    <Link href="/" className="inline-flex items-center gap-3">
+                        <Seal size="h-10 w-10" />
+                        <span className="leading-tight">
+                            <span className="block text-[11px] font-black uppercase tracking-[0.15em] text-[#0d1f5c]">Republic of the Philippines</span>
+                            <span className="block text-base font-black tracking-wide text-[#d4a017]">CPDO LC</span>
+                            <span className="block text-[11px] tracking-widest text-gray-500">City of Ilagan, Isabela</span>
+                        </span>
                     </Link>
                 </div>
 
-                {/* Form card */}
                 <div className="w-full max-w-md">
-                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 sm:p-10">
-                        {children}
-                    </div>
+                    {/* Form card */}
+                    <div className="w-full border-t-4 border-t-[#d4a017] bg-white p-7 shadow-lg sm:p-10">{children}</div>
 
                     {/* The published notices, on every guest screen */}
-                    <nav
-                        aria-label="Policies"
-                        className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs text-gray-400"
-                    >
-                        <a href="/legal/privacy" className="hover:text-[#0d1f5c] hover:underline underline-offset-2">Privacy</a>
-                        <span aria-hidden="true">·</span>
-                        <a href="/legal/terms" className="hover:text-[#0d1f5c] hover:underline underline-offset-2">Terms</a>
-                        <span aria-hidden="true">·</span>
-                        <a href="/legal/cookies" className="hover:text-[#0d1f5c] hover:underline underline-offset-2">Cookies</a>
-                        <span aria-hidden="true">·</span>
-                        <a href="/legal/refund" className="hover:text-[#0d1f5c] hover:underline underline-offset-2">Refunds</a>
-                        <span aria-hidden="true">·</span>
-                        <a href="/verify" className="hover:text-[#0d1f5c] hover:underline underline-offset-2">Verify a document</a>
+                    <nav aria-label="Policies" className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs">
+                        {POLICIES.map(([label, href], i) => (
+                            <span key={href} className="flex items-center gap-3">
+                                {i > 0 && (
+                                    <span aria-hidden="true" className="text-gray-300">
+                                        ·
+                                    </span>
+                                )}
+                                <a href={href} className="text-gray-400 underline-offset-2 hover:text-[#0d1f5c] hover:underline">
+                                    {label}
+                                </a>
+                            </span>
+                        ))}
                     </nav>
-
-                    <div className="mt-3 text-center text-xs text-gray-400">
-                        &copy; {new Date().getFullYear()} CPDO City of Ilagan. All
-                        rights reserved.
-                    </div>
+                    <p className="mt-3 text-center text-xs text-gray-400">
+                        &copy; {new Date().getFullYear()} CPDO City of Ilagan. All rights reserved.
+                    </p>
                 </div>
-            </div>
+            </main>
 
             <Toaster />
         </div>

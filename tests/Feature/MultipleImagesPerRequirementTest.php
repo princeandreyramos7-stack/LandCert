@@ -25,7 +25,7 @@ class MultipleImagesPerRequirementTest extends TestCase
 
     private function submission(array $extra = []): array
     {
-        return array_merge($this->addressFields(), [
+        return $this->completeSubmission(array_merge($this->addressFields(), [
             'declaration' => '1',
             'applicant_name' => 'Juan Dela Cruz',
             'project_nature' => 'New Residential House',
@@ -39,7 +39,7 @@ class MultipleImagesPerRequirementTest extends TestCase
             'has_written_notice' => 'no',
             'has_similar_application' => 'no',
             'preferred_release_mode' => 'pickup',
-        ], $extra);
+        ], $extra));
     }
 
     /**

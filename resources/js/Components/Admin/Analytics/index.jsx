@@ -14,8 +14,28 @@ import {
 } from './utils';
 import { groupStatusCounts } from '@/lib/applicationStatus';
 
-/** @param afterCards  Rendered between the stat cards and the tabs (the officer's live view). */
-export function AnalyticsDashboard({ analytics, afterCards = null }) {
+/** The six stat cards, read straight from the analytics payload. */
+export function AnalyticsStatsCards({ analytics }) {
+    if (!analytics) return null;
+
+    return (
+        <StatsCards
+            certificate_stats={analytics.certificate_stats ?? {}}
+            completion_rate={analytics.completion_rate ?? 0}
+            approval_rate={analytics.approval_rate ?? 0}
+            avg_documents={analytics.avg_documents_per_request ?? 0}
+            user_activity_metrics={analytics.user_activity_metrics ?? {}}
+            processing_time_by_status={analytics.processing_time_by_status ?? []}
+        />
+    );
+}
+
+/**
+ * @param afterCards  Rendered between the stat cards and the tabs (the officer's live view).
+ * @param showCards   False when the page shows the stat cards itself (the
+ *                    Zoning Officer's dashboard puts them at the very top).
+ */
+export function AnalyticsDashboard({ analytics, afterCards = null, showCards = true }) {
     if (!analytics) return null;
 
     const {
@@ -49,14 +69,7 @@ export function AnalyticsDashboard({ analytics, afterCards = null }) {
 
     return (
         <div className="space-y-6">
-            <StatsCards
-                certificate_stats={certificate_stats}
-                completion_rate={completion_rate}
-                approval_rate={approval_rate}
-                avg_documents={avg_documents_per_request}
-                user_activity_metrics={user_activity_metrics}
-                processing_time_by_status={processing_time_by_status}
-            />
+            {showCards && <AnalyticsStatsCards analytics={analytics} />}
 
             {afterCards}
 

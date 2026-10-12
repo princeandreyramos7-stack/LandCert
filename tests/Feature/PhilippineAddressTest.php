@@ -340,7 +340,7 @@ class PhilippineAddressTest extends TestCase
     {
         $alibagu = collect(PhilippineAddress::barangaysOf(self::CITY_ILAGAN))->firstWhere('name', 'Alibagu');
 
-        return array_merge([
+        return $this->completeSubmission(array_merge([
             // Ticked in the summary dialog, and required by the server.
             'declaration' => '1',
             'applicant_name' => 'Juan Dela Cruz',
@@ -359,6 +359,6 @@ class PhilippineAddressTest extends TestCase
             'project_nature_duration' => 'Permanent',
             'existing_land_use' => 'Residential',
             'preferred_release_mode' => 'pickup',
-        ], $overrides);
+        ], $overrides));
     }
 }

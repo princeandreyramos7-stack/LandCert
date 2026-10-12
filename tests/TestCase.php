@@ -85,6 +85,47 @@ abstract class TestCase extends BaseTestCase
         return UploadedFile::fake()->createWithContent($name, $content);
     }
 
+    /**
+     * $payload made into a submission the wizard would let through: the
+     * required step 2/3 fields (a Zoning Certification skips them) and a file
+     * for every required document (App\Support\ApplicationSubmission). Only
+     * what the payload leaves out is added - a field or document it sets,
+     * even to blank, is kept as is, so whatever a test is about still wins.
+     */
+    protected function completeSubmission(array $payload): array
+    {
+        $isZc = \App\Support\ApplicationSubmission::isZoningCertification($payload['project_type'] ?? null);
+
+        if (!$isZc) {
+            $payload += [
+                'project_nature' => 'New Residential House',
+                'project_location_street' => 'Purok 1',
+                'project_location_barangay' => 'Alibagu',
+                'project_location_municipality' => 'City of Ilagan',
+                'project_location_province' => 'Isabela',
+                'lot_area_sqm' => 100,
+                'right_over_land' => 'Owner',
+                'project_nature_duration' => 'Permanent',
+                'project_cost' => 500000,
+                'existing_land_use' => 'Vacant',
+                'has_written_notice' => 'no',
+                'has_similar_application' => 'no',
+                'preferred_release_mode' => 'pickup',
+            ];
+        }
+
+        $required = \App\Support\ApplicationSubmission::REQUIRED_DOCUMENTS[$isZc ? 'ZC' : 'default'];
+        $uploads = $payload['requirement_uploads'] ?? [];
+        foreach (array_keys($required) as $id) {
+            if (!array_key_exists($id, $uploads)) {
+                $uploads[$id] = [$this->fakePdf("requirement-{$id}.pdf")];
+            }
+        }
+        $payload['requirement_uploads'] = $uploads;
+
+        return $payload;
+    }
+
     /** A signed-in account of the given kind. */
     protected function userOf(string $type, array $attributes = []): User
     {

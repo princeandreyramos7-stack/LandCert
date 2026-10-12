@@ -11,6 +11,8 @@ export default function Page({
     pendingPaymentsCount = 0,
     recentPayments = [],
     online = null,
+    actionQueue = null,
+    adminNotices = [],
 }) {
     return (
         <>
@@ -24,6 +26,8 @@ export default function Page({
                         "pendingPaymentsCount",
                         "recentPayments",
                         "online",
+                        "actionQueue",
+                        "adminNotices",
                     ]}
                     items={applications}
                     label="applications"
@@ -36,6 +40,8 @@ export default function Page({
                     analytics={analytics}
                     pendingPaymentsCount={pendingPaymentsCount}
                     recentPayments={recentPayments}
+                    actionQueue={actionQueue}
+                    adminNotices={adminNotices}
                 />
             </AdminLayout>
         </>

@@ -296,6 +296,10 @@ Route::middleware(['auth', 'role:super_admin', 'throttle:200,1,super-admin', 'pr
     Route::get('/reports/preview', [\App\Http\Controllers\SuperAdminReportsController::class, 'preview'])->name('reports.preview');
     Route::get('/reports/generate', [\App\Http\Controllers\SuperAdminReportsController::class, 'generate'])->name('reports.generate');
 
+    // The Zoning Administrator's notifications to the Zoning Officers
+    // (page: /officer-notices; officers read them in the bell and on their dashboard).
+    Route::post('/officer-notices', [\App\Http\Controllers\OfficerNoticeController::class, 'store'])->name('officer-notices.store');
+
     // Payment Management Routes - Unified Page
     Route::get('/payments', function (\Illuminate\Http\Request $request) { return redirect('/payments' . ($request->getQueryString() ? '?' . $request->getQueryString() : '')); })->name('payments');
     Route::post('/payments/upload-receipt', [\App\Http\Controllers\SuperAdminController::class, 'uploadReceipt'])->name('payments.upload-receipt');
