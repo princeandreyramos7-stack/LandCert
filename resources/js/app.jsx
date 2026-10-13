@@ -207,7 +207,9 @@ window.addEventListener('load', () => {
 });
 
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    // The app name is added only to a title that does not already name the
+    // office: "Sign In — CPDO" used to come out as "Sign In — CPDO - CPDO".
+    title: (title) => (!title ? appName : /\bCPDO\b/i.test(title) ? title : `${title} - ${appName}`),
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.jsx`,

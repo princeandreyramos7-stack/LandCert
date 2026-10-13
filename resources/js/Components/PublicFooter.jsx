@@ -10,9 +10,9 @@ const QUICK_LINKS = [
 ];
 
 const CONTACT = [
-    { icon: MapPin, lines: ["Ground Floor, City Hall Bldg,", "City of Ilagan, Isabela"] },
+    { icon: MapPin, lines: ["Ground Floor, City Hall Bldg, San Vicente", "City of Ilagan, Isabela"] },
     { icon: Phone, lines: ["624-0009"] },
-    { icon: Mail, lines: ["cpdo@cityofilagan.gov.ph"] },
+    { icon: Mail, lines: ["cpdoilagan@gmail.com"] },
     { icon: Clock, lines: ["Mon – Fri: 8:00 AM – 5:00 PM"] },
 ];
 

@@ -381,7 +381,7 @@
                     <div class="office-name">CITY OF ILAGAN</div>
                     <div class="office-main">CITY PLANNING </div>
                     <div class="office-main">DEVELOPMENT OFFICE</div>
-                    <div class="address">Ground Floor,City Hall Bldg, City of Ilagan, Isabela</div>
+                    <div class="address">Ground Floor, City Hall Bldg, San Vicente, City of Ilagan, Isabela</div>
                 </div>
                 <div class="logo">
                 </div>

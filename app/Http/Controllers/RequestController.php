@@ -1459,10 +1459,11 @@ class RequestController extends Controller
                 // Release — a pickup application is collected at the CPDO office.
                 'preferred_release_mode' => $request->preferred_release_mode,
                 'release_address' => $request->release_address
-                    ?: 'City Planning and Development Office, Ground Floor, City Hall Bldg, City of Ilagan, Isabela',
+                    ?: 'City Planning and Development Office, Ground Floor, City Hall Bldg, San Vicente, City of Ilagan, Isabela',
 
                 'rejection_reason' => $report?->evaluation === 'rejected' ? $report?->description : null,
                 'payment_amount' => $decided ? $report?->payment_amount : null,
+                'sms_fee' => $decided ? (float) ($report?->sms_fee ?? 0) : 0,
                 'admin_notes' => $decided ? $report?->admin_notes : null,
             ],
             'requirements' => $requirementsReference,

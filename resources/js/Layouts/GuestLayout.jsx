@@ -68,7 +68,7 @@ export default function GuestLayout({ children }) {
                 {/* Mobile brand */}
                 <div className="mb-8 w-full max-w-md lg:hidden">
                     <Link href="/" className="inline-flex items-center gap-3">
-                        <Seal size="h-10 w-10" />
+                        <img src="/images/CPDO_LOGO.jpg" alt="City Planning and Development Office" className="h-11 w-auto shrink-0 rounded border border-[#d4a017]/40 object-contain" />
                         <span className="leading-tight">
                             <span className="block text-[11px] font-black uppercase tracking-[0.15em] text-[#0d1f5c]">Republic of the Philippines</span>
                             <span className="block text-base font-black tracking-wide text-[#d4a017]">CPDO LC</span>

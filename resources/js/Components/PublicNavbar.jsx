@@ -31,13 +31,11 @@ export default function PublicNavbar() {
                         transition: "all .7s ease",
                     }}
                 >
-                    <div className="w-10 h-10 rounded-full border-2 border-[#d4a017]/40 overflow-hidden shrink-0">
-                        <img
-                            src="/images/ilagan1.png"
-                            alt="City of Ilagan"
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
+                    <img
+                        src="/images/CPDO_LOGO.jpg"
+                        alt="City Planning and Development Office"
+                        className="h-11 w-auto shrink-0 rounded border border-[#d4a017]/40 object-contain"
+                    />
                     <div className="leading-tight">
                         <p className="text-white font-black text-xs tracking-[0.15em] uppercase">
                             Republic of the Philippines

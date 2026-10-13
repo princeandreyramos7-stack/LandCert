@@ -166,4 +166,34 @@ class SignatoryTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('users.0.position', fn ($v) => $v !== null || true));
     }
+
+    public function test_the_officers_positions_from_the_office_are_set_with_their_history(): void
+    {
+        // As the live database has them: each with the placeholder title on
+        // file since history began; Jeffrey only findable by surname; Kay
+        // with a change the office already recorded.
+        $april = $this->userOf('admin', ['name' => 'April V. Cuntapay', 'email' => 'april@cpdo.com']);
+        $maryJane = $this->userOf('admin', ['name' => 'Mary Jane P. Bulauan', 'email' => 'maryjane@cpdo.com']);
+        $kay = $this->userOf('admin', ['name' => 'Kay B. Aggarao', 'email' => 'kay@cpdo.com']);
+        $jeffrey = $this->userOf('admin', ['name' => 'Jeffrey C. Pauig', 'email' => 'jeffrey.pauig@example.test']);
+        foreach ([$april, $maryJane, $kay, $jeffrey] as $officer) {
+            Signatories::backfill($officer);
+        }
+        Signatories::set($kay, null, 'Zoning Officer II', Carbon::parse('2026-03-01'));
+
+        (require database_path('migrations/2026_10_13_110000_set_zoning_officer_positions.php'))->up();
+
+        $lastYear = Carbon::parse('2025-06-01');
+        // The placeholder is corrected from the start: old documents too.
+        $this->assertSame('Bookbinder I', Signatories::signer($april->fresh())['position']);
+        $this->assertSame('Bookbinder I', Signatories::signer($april->fresh(), $lastYear)['position']);
+        $this->assertSame('Zoning Officer IV', Signatories::signer($maryJane->fresh())['position']);
+        $this->assertSame('Zoning Officer III', Signatories::signer($jeffrey->fresh())['position'], 'found by surname');
+        $this->assertSame('Zoning Officer III', $jeffrey->fresh()->position);
+
+        // Kay's recorded history stands; the new title applies from today.
+        $this->assertSame('Zoning Officer I', Signatories::signer($kay->fresh())['position']);
+        $this->assertSame('Zoning Officer II', Signatories::signer($kay->fresh(), Carbon::parse('2026-05-01'))['position']);
+        $this->assertSame('Zoning Officer I', $kay->fresh()->position);
+    }
 }

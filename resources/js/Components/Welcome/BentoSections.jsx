@@ -107,7 +107,7 @@ export default function BentoSections() {
                             Why use <span className="text-[#f5c842]">CPDO LC</span>?
                         </h2>
                         <p className="mt-3 max-w-xl text-base text-blue-100/80">
-                            Your one-stop digital platform for all city planning and land use services in Ilagan City.
+                            Your one-stop digital platform for all city planning and development office services in Ilagan City.
                         </p>
                     </Reveal>
                     <div className="grid auto-rows-[minmax(180px,auto)] grid-cols-1 gap-4 md:grid-cols-4">

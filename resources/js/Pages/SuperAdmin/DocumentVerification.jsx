@@ -611,6 +611,9 @@ export default function DocumentVerification({ request }) {
                                                 ? `₱${formatAmountForDisplay(request.payment_amount)}`
                                                 : <span className="text-sm font-normal text-gray-500 italic">Not set by the officer</span>}
                                         </p>
+                                        {request.payment_amount && Number(request.sms_fee) > 0 && (
+                                            <p className="text-xs text-gray-500">Includes the ₱{Number(request.sms_fee).toFixed(2)} SMS automated processing fee</p>
+                                        )}
                                         <p className="text-xs text-gray-500 mt-1">
                                             Set by the Zoning Officer when the application was reviewed.
                                         </p>

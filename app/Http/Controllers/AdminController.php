@@ -450,6 +450,12 @@ class AdminController extends Controller
             'decision_number' => $request->decision_number,
             'rejection_reason' => $report?->evaluation === 'rejected' ? $report?->description : null,
             'payment_amount' => $report?->payment_amount,
+            // The SMS automated processing fee inside payment_amount, and the
+            // Treasury fee without it - what the officer's form opens on.
+            'sms_fee' => (float) ($report?->sms_fee ?? 0),
+            'treasury_fee' => \App\Support\SmsProcessingFee::treasuryFee($report?->payment_amount, $report?->sms_fee),
+            // What a new review adds, for the breakdown under the amount.
+            'sms_processing_fee' => \App\Support\SmsProcessingFee::amount(),
             // The 2013 Schedule of Fees, priced for this project cost under
             // every category - the decision card only shows the one picked.
             'fee_category' => $report?->fee_category,
@@ -802,6 +808,12 @@ class AdminController extends Controller
             $feeCategory = $quote['category'] ?? null;
             $computedFee = $quote['amount'] ?? null;
 
+            // What the applicant pays: the Treasury fee the officer set plus
+            // the SMS automated processing fee. Added here, once, whichever
+            // screen the review came from; payment_amount is the total that
+            // the Order of Payment, the cashier and the receipt all use.
+            $due = \App\Support\SmsProcessingFee::addTo((float) ($validated['payment_amount'] ?? 0));
+
             // Create or update report with review details including payment info
             $report = Report::updateOrCreate(
                 ['request_id' => $requestModel->id],
@@ -813,9 +825,10 @@ class AdminController extends Controller
                     'reviewed_by' => auth()->id(),
                     'date_reported' => now(),
                     'description' => 'Application reviewed by ' . auth()->user()->name . '. Pending SuperAdmin approval.',
-                    'payment_amount' => $validated['payment_amount'] ?? null,
+                    'payment_amount' => $due['payment_amount'],
                     'fee_category' => $feeCategory,
                     'computed_fee' => $computedFee,
+                    'sms_fee' => $due['sms_fee'],
                     'admin_notes' => $validated['admin_notes'] ?? null,
                 ]
             );
@@ -845,7 +858,7 @@ class AdminController extends Controller
                         'request_id' => $requestModel->id,
                         'applicant_name' => $requestModel->applicant->applicant_name ?? 'N/A',
                         'project_type' => $requestModel->project->project_type ?? 'N/A',
-                        'payment_amount' => $validated['payment_amount'] ?? null,
+                        'payment_amount' => $due['payment_amount'],
                     ]
                 );
             }
@@ -3059,6 +3072,10 @@ class AdminController extends Controller
         return \Inertia\Inertia::render('Admin/GenerateOrderOfPayment', [
             'application' => $applicationData,
             'payment' => $payment,
+            // The amount due the officer set at review (Treasury fee plus the
+            // SMS processing fee). Without it an order printed before payment
+            // had a blank sum - the applicant's own copy already passed it.
+            'paymentAmount' => $payment?->amount ?? $report?->payment_amount,
             // Signed as of the issue date: an old certificate keeps the
             // signatures and titles it was issued with (App\Support\Signatories).
             ...\App\Services\ApplicationDocuments::signers($request),

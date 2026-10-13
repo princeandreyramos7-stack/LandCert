@@ -615,7 +615,7 @@ export default function DocumentVerification({ request }) {
                                                 />
                                             </div>
                                             <p className="text-xs text-gray-500 mt-1">
-                                                Enter the amount the applicant needs to pay at the Treasury Office.
+                                                Enter the Treasury fee. A ₱{Number(request.sms_processing_fee ?? 10).toFixed(2)} SMS automated processing fee is added on top of it to what the applicant pays.
                                             </p>
                                         </div>
 

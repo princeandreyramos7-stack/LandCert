@@ -19,11 +19,11 @@ export default function Welcome() {
 
     return (
         <>
-            <Head title="CPDO LC — City of Ilagan" />
+            <Head title="CPDO LC - City of Ilagan" />
 
             <PublicNavbar />
 
-            {/* Landmark slideshow with the call to apply */}
+            {/* Landmark slideshow behind the office's brand headline */}
             <HeroSlideshow />
 
             {/* Why use CPDO LC, How to apply, Mission & Vision */}

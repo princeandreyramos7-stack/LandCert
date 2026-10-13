@@ -141,6 +141,13 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
     const feeDisplay = feeAmount !== null && feeAmount !== ""
         ? `${pesoInWords(feeAmount)} (₱ ${Number(feeAmount).toLocaleString("en-PH", { minimumFractionDigits: 2 })})`
         : "____________________________ (₱ __________)";
+    // The SMS automated processing fee included in the sum, itemised under it.
+    // Applications priced before the fee existed have none, and show none.
+    const smsFee = Number(application?.sms_fee || 0);
+    const pesoFigure = (n) => Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const feeBreakdown = smsFee > 0 && feeAmount !== null && feeAmount !== ""
+        ? `Treasury fee ₱ ${pesoFigure(Number(feeAmount) - smsFee)} + SMS automated processing fee ₱ ${pesoFigure(smsFee)}`
+        : null;
 
     const projectType = application?.project_type || 'N/A';
 
@@ -211,6 +218,9 @@ const OrderOfPaymentSheet = forwardRef(function OrderOfPaymentSheet(
                         <span style={{ borderBottom: '1px solid #000', display: 'inline-block', minWidth: '500pt', fontWeight: 'bold', textAlign: 'center' }}>
                             {feeDisplay}
                         </span>
+                        {feeBreakdown && (
+                            <div style={{ fontSize: '8pt', textAlign: 'center', marginTop: '2pt' }}>({feeBreakdown})</div>
+                        )}
                     </div>
 
                     <div style={{ marginBottom: '6pt' }}>

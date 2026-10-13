@@ -69,7 +69,9 @@ class ReviewWorkflowTest extends TestCase
         $this->assertSame('reviewed', $request->fresh()->status);
         $report = Report::where('request_id', $request->id)->first();
         $this->assertSame('reviewed', $report->evaluation);
-        $this->assertSame('1250.50', $report->payment_amount);
+        // The Treasury fee the officer set, plus the P10 SMS processing fee.
+        $this->assertSame('1260.50', $report->payment_amount);
+        $this->assertSame('10.00', $report->sms_fee);
         $this->assertSame($officer->id, $report->reviewed_by);
 
         $notice = Notification::where('user_id', $administrator->id)->where('type', 'application_pending_approval')->first();
@@ -103,9 +105,80 @@ class ReviewWorkflowTest extends TestCase
         ])->assertSessionHas('success');
 
         $report = Report::where('request_id', $request->id)->first();
-        $this->assertSame('3000.00', $report->payment_amount);
+        $this->assertSame('3010.00', $report->payment_amount);
         $this->assertSame('A', $report->fee_category);
         $this->assertSame('2520.00', $report->computed_fee);
+    }
+
+    public function test_the_sms_processing_fee_is_added_once_to_what_the_applicant_pays(): void
+    {
+        $officer = $this->userOf('admin');
+        $request = $this->application($this->userOf('applicant'), 'ZC', 'pending');
+
+        $review = fn () => $this->actingAs($officer)->post('/admin/review-application', [
+            'request_id' => $request->id,
+            'action' => 'reviewed',
+            'payment_amount' => '720',
+            'fee_category' => 'ZC',
+        ])->assertSessionHas('success');
+
+        $review();
+        $report = Report::where('request_id', $request->id)->first();
+        $this->assertSame('730.00', $report->payment_amount, 'Treasury fee + SMS processing fee');
+        $this->assertSame('10.00', $report->sms_fee);
+        $this->assertSame('720.00', $report->computed_fee, 'the schedule fee is the Treasury part only');
+
+        // The officer's form reopens on the Treasury fee, so a second review
+        // (after a return, say) does not add the SMS fee on top of itself.
+        $this->actingAs($officer)->get("/admin/requests/{$request->id}/view-application");
+        $this->actingAs($officer)->get('/view-application')
+            ->assertInertia(fn ($page) => $page
+                ->where('request.payment_amount', '730.00')
+                ->where('request.treasury_fee', 720)
+                ->where('request.sms_fee', 10)
+                ->where('request.sms_processing_fee', 10)
+                ->etc());
+
+        $review();
+        $this->assertSame('730.00', $report->fresh()->payment_amount);
+    }
+
+    public function test_the_staff_order_of_payment_carries_the_amount_and_its_breakdown(): void
+    {
+        $officer = $this->userOf('admin');
+        $administrator = $this->userOf('super_admin');
+        $request = $this->application($this->userOf('applicant'), 'CZC', 'approved', $officer);
+        Report::where('request_id', $request->id)->update(['payment_amount' => 2530, 'computed_fee' => 2520, 'sms_fee' => 10]);
+        // Not paid yet: with a payment on file its amount is what prints.
+        \App\Models\Payment::where('request_id', $request->id)->delete();
+
+        // Before payment the sum used to print blank on the staff copy.
+        foreach ([[$officer, 'admin'], [$administrator, 'super-admin']] as [$user, $prefix]) {
+            $this->actingAs($user)->get("/{$prefix}/requests/{$request->id}/generate-order-of-payment")
+                ->assertRedirect('/order-of-payment');
+            $this->actingAs($user)->get('/order-of-payment')
+                ->assertOk()
+                ->assertInertia(fn ($page) => $page
+                    ->component('Admin/GenerateOrderOfPayment')
+                    ->where('paymentAmount', '2530.00')
+                    ->where('application.sms_fee', '10.00')
+                    ->etc());
+        }
+    }
+
+    public function test_the_sms_processing_fee_follows_the_setting(): void
+    {
+        config(['services.sms.processing_fee' => 15]);
+        $officer = $this->userOf('admin');
+        $request = $this->application($this->userOf('applicant'), 'CZC', 'pending');
+
+        $this->actingAs($officer)->post('/admin/review-application', [
+            'request_id' => $request->id, 'action' => 'reviewed', 'payment_amount' => '500',
+        ])->assertSessionHas('success');
+
+        $report = Report::where('request_id', $request->id)->first();
+        $this->assertSame('515.00', $report->payment_amount);
+        $this->assertSame('15.00', $report->sms_fee);
     }
 
     public function test_temporary_and_special_use_permits_are_priced_by_the_schedule_too(): void
@@ -227,6 +300,15 @@ class ReviewWorkflowTest extends TestCase
 
         $request = $this->application($applicant, 'CZC', 'reviewed', $officer);
         $report = Report::where('request_id', $request->id)->first();
+        // The two auto-increment counters can still line up depending on what
+        // ran before (rolled-back tests do not rewind them); re-saving the
+        // report gives it the next id, which then cannot match.
+        if ($report->report_id === $request->id) {
+            $copy = $report->replicate();
+            $report->delete();
+            $copy->save();
+            $report = $copy;
+        }
         $this->assertNotSame($request->id, $report->report_id);
         Mail::fake();
 

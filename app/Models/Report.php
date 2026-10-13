@@ -21,6 +21,7 @@ class Report extends Model
         'payment_amount',
         'fee_category',
         'computed_fee',
+        'sms_fee',
         'requirements',
         'admin_notes',
         'approved_by',
@@ -32,6 +33,7 @@ class Report extends Model
         'date_reported' => 'datetime',
         'amount' => 'decimal:2',
         'computed_fee' => 'decimal:2',
+        'sms_fee' => 'decimal:2',
         'requirements' => 'array',
         'approved_at' => 'datetime',
     ];

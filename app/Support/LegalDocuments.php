@@ -41,8 +41,8 @@ class LegalDocuments
     public const CONTACT = [
         'office' => 'City Planning and Development Office (CPDO)',
         'unit' => 'City Government of Ilagan',
-        'address' => 'Ground Floor, City Hall Building, City of Ilagan, Isabela',
-        'email' => 'cpdo@cityofilagan.gov.ph',
+        'address' => 'Ground Floor, City Hall Building, San Vicente, City of Ilagan, Isabela',
+        'email' => 'cpdoilagan@gmail.com',
         'phone' => '624-0009',
         'hours' => 'Monday to Friday, 8:00 AM - 5:00 PM (excluding public holidays)',
     ];

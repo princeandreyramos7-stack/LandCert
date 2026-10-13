@@ -13,8 +13,10 @@
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
         <!-- Favicon -->
-        <link rel="icon" type="image/png" href="{{ asset('images/Ilagan-64.png') }}">
-        <link rel="shortcut icon" type="image/png" href="{{ asset('images/Ilagan-64.png') }}">
+        {{-- The CPDO logo, set square on its own blue so the whole mark shows. --}}
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/cpdo-favicon-32.png') }}">
+        <link rel="icon" type="image/png" sizes="64x64" href="{{ asset('images/cpdo-favicon-64.png') }}">
+        <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
         <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
 
         <!-- PWA: installable app shell. The service worker itself is
@@ -33,6 +35,11 @@
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        @if (($page['component'] ?? null) === 'Welcome')
+            {{-- The welcome hero's small-line face (Welcome/HeroBrands.jsx), fetched
+                 with the page so it never flashes in a stand-in font. --}}
+            <link href="https://fonts.bunny.net/css?family=josefin-sans:600,700&display=swap" rel="stylesheet" />
+        @endif
 
         {{-- Leaflet used to be pulled from unpkg.com here. Nothing in
              the application draws a map: no component references L or

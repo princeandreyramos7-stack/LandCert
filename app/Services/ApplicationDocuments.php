@@ -68,6 +68,9 @@ class ApplicationDocuments
             'project_type' => $request->project?->project_type,
             'project_nature' => $request->project?->project_nature,
             'project_cost' => $request->project?->project_cost,
+            // The SMS automated processing fee inside the amount due, for the
+            // breakdown on the Order of Payment (App\Support\SmsProcessingFee).
+            'sms_fee' => (string) ($request->report?->sms_fee ?? '0.00'),
             'project_location_street' => $request->location?->street_address ?: $fallback['street'],
             'project_location_barangay' => $request->location?->barangay ?: $fallback['barangay'],
             'project_location_municipality' => $request->location?->city_municipality ?: $fallback['city'],

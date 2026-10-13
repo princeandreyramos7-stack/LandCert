@@ -417,6 +417,11 @@ export default function ApplicationDetails({ application, requirements = [], doc
                                     <div>
                                         <p className="text-sm font-semibold text-amber-900">Amount to Pay at the Treasury</p>
                                         <p className="text-sm text-amber-800 mt-1">{formatPeso(application.payment_amount)}</p>
+                                        {Number(application.sms_fee) > 0 && (
+                                            <p className="text-xs text-amber-700 mt-0.5">
+                                                Includes the {formatPeso(application.sms_fee)} SMS automated processing fee for the text updates on your application.
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             )}

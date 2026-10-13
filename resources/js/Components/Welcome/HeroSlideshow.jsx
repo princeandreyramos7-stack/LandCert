@@ -1,10 +1,12 @@
-import { Link } from "@inertiajs/react";
 import { useEffect, useState } from "react";
-import { Eye, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
+import { HeroCrest } from "./HeroBrands";
 
 /*
  * The landing page hero: photographs of City of Ilagan landmarks
- * (public/images/hero) crossfading behind the call to apply online.
+ * (public/images/hero) crossfading behind the office's brand headline -
+ * its logo, the city seal and the Ilagan 2030 mark (HeroBrands' Crest), with
+ * the three actions under it.
  */
 
 const SLIDES = [
@@ -23,8 +25,6 @@ const SLIDES = [
     },
 ];
 const SLIDE_MS = 6000;
-
-const fadeUp = (ms) => ({ animation: `hero-fade-up .8s ease ${ms}ms both` });
 
 export default function HeroSlideshow() {
     const [active, setActive] = useState(0);
@@ -53,60 +53,7 @@ export default function HeroSlideshow() {
             <div className="absolute inset-0 -z-10 bg-[#0d1f5c]/75" />
             <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(13,31,92,.7)_75%)]" />
 
-            <div className="mx-auto w-full max-w-4xl px-6 py-20 text-center">
-                <div style={fadeUp(100)} className="mb-6 flex justify-center">
-                    <span className="inline-block h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-[#d4a017]/60 bg-white">
-                        <img
-                            src="/images/ilagan1.png"
-                            alt="City of Ilagan seal"
-                            className="h-full w-full object-cover"
-                        />
-                    </span>
-                </div>
-                <p
-                    style={fadeUp(200)}
-                    className="text-xs font-bold uppercase tracking-[0.3em] text-[#f5c842]"
-                >
-                    CPDO · City of Ilagan, Isabela
-                </p>
-                <h1
-                    style={fadeUp(300)}
-                    className="mt-4 text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-6xl"
-                >
-                    Apply for Your Locational Clearance Online
-                </h1>
-                <p
-                    style={fadeUp(450)}
-                    className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-blue-50/90 lg:text-lg"
-                >
-                    Zoning Certification, Zoning Compliance, Temporary and
-                    Special Use Permits - filed, tracked and released without
-                    the trip to City Hall.
-                </p>
-                <div
-                    style={fadeUp(600)}
-                    className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center"
-                >
-                    <Link
-                        href={route("register")}
-                        className="rounded-md bg-[#d4a017] px-6 py-3 text-center text-sm font-bold text-white shadow-lg transition-colors hover:bg-[#b8880d]"
-                    >
-                        APPLY ONLINE NOW
-                    </Link>
-                    <Link
-                        href={route("login")}
-                        className="rounded-md border border-white/40 px-6 py-3 text-center text-sm font-bold text-white transition-colors hover:bg-white/10"
-                    >
-                        Already Registered?
-                    </Link>
-                    <Link
-                        href={route("verify.index")}
-                        className="flex items-center justify-center gap-1.5 rounded-md border border-white/40 px-5 py-3 text-center text-sm font-bold text-white transition-colors hover:bg-white/10"
-                    >
-                        <Eye className="h-4 w-4" /> Verify Document
-                    </Link>
-                </div>
-            </div>
+            <HeroCrest />
 
             <div className="absolute inset-x-0 bottom-6 flex flex-col items-center gap-2">
                 <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-widest text-white/80">

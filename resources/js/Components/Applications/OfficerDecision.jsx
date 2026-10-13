@@ -66,10 +66,12 @@ export default function OfficerDecision({
     const [action, setAction] = useState(previousAction);
     const [formData, setFormData] = useState({
         rejection_reason: request.rejection_reason || "Lacking of Requirements",
-        payment_amount:
-            request.payment_amount === null || request.payment_amount === undefined
-                ? ""
-                : String(request.payment_amount),
+        // The Treasury fee the officer set - the stored amount due also holds
+        // the SMS processing fee, which the server adds on top every time.
+        payment_amount: (() => {
+            const fee = request.treasury_fee ?? request.payment_amount;
+            return fee === null || fee === undefined ? "" : String(fee);
+        })(),
         // A note the Administrator left when returning the application is for
         // the officer, not the applicant — it is shown in its own banner.
         admin_notes: request.returned_reason ? "" : request.admin_notes || "",
@@ -230,7 +232,11 @@ export default function OfficerDecision({
         }
     };
 
-    const reviewedAmount = formData.payment_amount ? `₱${formatAmountForDisplay(formData.payment_amount)}` : "₱0.00";
+    // The SMS automated processing fee the server adds to the Treasury fee
+    // (App\Support\SmsProcessingFee), and what the applicant pays in all.
+    const smsFee = Number(request.sms_processing_fee ?? 10);
+    const totalDue = formData.payment_amount !== "" ? Number(formData.payment_amount) + smsFee : null;
+    const reviewedAmount = totalDue !== null ? `₱${peso(totalDue)}` : "₱0.00";
 
     const confirmAllowResubmission = async () => {
         setShowAllowConfirm(false);
@@ -548,7 +554,7 @@ export default function OfficerDecision({
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-gray-700">
-                                    Amount to Pay at the Treasury <span className="text-red-500">*</span>
+                                    Treasury Fee <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
@@ -581,9 +587,23 @@ export default function OfficerDecision({
                                     </p>
                                 ) : (
                                     <p className="mt-1 text-xs text-gray-500">
-                                        The fee the applicant pays at the Treasury Office once the Administrator approves.
+                                        The fee from the Schedule of Fees, paid at the Treasury Office once the Administrator approves.
                                     </p>
                                 )}
+                                <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/60 px-3 py-2 text-sm">
+                                    <div className="flex justify-between gap-3 text-gray-700">
+                                        <span>Treasury fee</span>
+                                        <span>₱{peso(Number(formData.payment_amount || 0))}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-3 text-gray-700">
+                                        <span>SMS automated processing fee</span>
+                                        <span>₱{peso(smsFee)}</span>
+                                    </div>
+                                    <div className="mt-1 flex justify-between gap-3 border-t border-blue-100 pt-1 font-semibold text-blue-900">
+                                        <span>Total the applicant pays</span>
+                                        <span>{reviewedAmount}</span>
+                                    </div>
+                                </div>
                             </div>
 
                             <div>
@@ -736,8 +756,11 @@ export default function OfficerDecision({
                             send it to the Zoning Administrator for approval?
                         </p>
                         <div className="mt-3 rounded bg-blue-50 p-3">
-                            <p className="text-sm font-medium text-gray-700">Amount to Pay at the Treasury</p>
+                            <p className="text-sm font-medium text-gray-700">Total the applicant pays</p>
                             <p className="text-xl font-bold text-blue-900">{reviewedAmount}</p>
+                            <p className="text-xs text-gray-600">
+                                Treasury fee ₱{peso(Number(formData.payment_amount || 0))} + SMS automated processing fee ₱{peso(smsFee)}
+                            </p>
                             {feeScheduleApplies && selectedQuote && (
                                 <p className="mt-1 text-xs text-gray-600">
                                     {selectedQuote.category === "ZC" ? "Zoning Certification" : `Category ${selectedQuote.category}`}:{" "}

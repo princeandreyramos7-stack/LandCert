@@ -42,6 +42,7 @@ class AdminUserSeeder extends Seeder
             'JEFF' => ['jeff@cpdo.com', [
                 'name' => 'Jeffrey C. Pauig',
                 'user_type' => 'admin',
+                'position' => 'Zoning Officer III',
                 'contact_number' => '09707112132',
                 'address' => 'CPDO Office, City of Ilagan',
                 // Signature printed on certificates and clearances he evaluated.
@@ -51,6 +52,7 @@ class AdminUserSeeder extends Seeder
             'KAY' => ['kay@cpdo.com', [
                 'name' => 'Kay B. Aggarao',
                 'user_type' => 'admin',
+                'position' => 'Zoning Officer I',
                 'contact_number' => '09123456789',
                 'address' => 'CPDO Office, City of Ilagan',
             ]],
@@ -58,12 +60,14 @@ class AdminUserSeeder extends Seeder
             'APRIL' => ['april@cpdo.com', [
                 'name' => 'April V. Cuntapay',
                 'user_type' => 'admin',
+                'position' => 'Bookbinder I',
                 'contact_number' => '09123456789',
                 'address' => 'CPDO Office, City of Ilagan',
             ]],
             'MARYJANE' => ['maryjane@cpdo.com', [
                 'name' => 'Mary Jane P. Bulauan',
                 'user_type' => 'admin',
+                'position' => 'Zoning Officer IV',
                 'contact_number' => '09123456789',
                 'address' => 'CPDO Office, City of Ilagan',
             ]],
@@ -92,7 +96,15 @@ class AdminUserSeeder extends Seeder
         $created = [];
         foreach ($this->accounts() as $key => [$email, $attributes]) {
             $user = User::firstOrNew(['email' => $email]);
+            // A printed position is set on a new account only: an existing
+            // one keeps its own, which has a dated history (Signatories) that
+            // is changed under User Management -> Signatory settings.
+            $position = $attributes['position'] ?? null;
+            unset($attributes['position']);
             $user->fill($attributes);
+            if ($position && (! $user->exists || blank($user->position))) {
+                $user->position = $position;
+            }
 
             if (!$user->exists) {
                 $fromEnv = env("SEED_PASSWORD_{$key}");

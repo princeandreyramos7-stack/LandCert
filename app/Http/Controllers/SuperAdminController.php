@@ -582,6 +582,7 @@ class SuperAdminController extends Controller
             'report_id' => $report?->report_id,
             'evaluation' => $report?->evaluation,
             'payment_amount' => $report?->payment_amount,
+            'sms_fee' => (float) ($report?->sms_fee ?? 0),
             'rejection_reason' => $report?->description,
             'admin_notes' => $report?->admin_notes,
             'application_id' => $request->id,
@@ -737,6 +738,7 @@ class SuperAdminController extends Controller
             'decision_number' => $request->decision_number,
             'rejection_reason' => $report?->evaluation === 'rejected' ? $report?->description : null,
             'payment_amount' => $report?->payment_amount,
+            'sms_fee' => (float) ($report?->sms_fee ?? 0),
             'admin_notes' => $report?->admin_notes,
             'application_id' => $request->id,
 
@@ -818,8 +820,10 @@ class SuperAdminController extends Controller
             // Review/denial info
             'rejection_reason' => $report?->description ?? null,
             'admin_notes' => $report?->admin_notes ?? null,
-            // Fee the Zoning Officer set when marking the application reviewed.
+            // Fee the Zoning Officer set when marking the application reviewed,
+            // with the SMS processing fee it includes.
             'payment_amount' => $report?->payment_amount,
+            'sms_fee' => (float) ($report?->sms_fee ?? 0),
 
             // Report info
             'report_id' => $report?->report_id,
@@ -2048,6 +2052,10 @@ class SuperAdminController extends Controller
         return \Inertia\Inertia::render('Admin/GenerateOrderOfPayment', [
             'application' => $applicationData,
             'payment' => $payment,
+            // The amount due the officer set at review (Treasury fee plus the
+            // SMS processing fee). Without it an order printed before payment
+            // had a blank sum - the applicant's own copy already passed it.
+            'paymentAmount' => $payment?->amount ?? $report?->payment_amount,
             // Signed as of the issue date: an old certificate keeps the
             // signatures and titles it was issued with (App\Support\Signatories).
             ...\App\Services\ApplicationDocuments::signers($request),

@@ -15,6 +15,9 @@ For CZC, TUP and SUP the Zoning Officer picks the category and the system
 works out the fee from the project cost. Every ZC is ₱720. Either way the
 amount is filled in automatically, and the officer can still change it.
 
+On top of that fee, every applicant pays a **₱10 SMS automated processing
+fee** (see [SMS automated processing fee](#sms-automated-processing-fee)).
+
 ---
 
 ## The key rule: "1/10 of 1%"
@@ -146,6 +149,28 @@ office charges the same fixed ₱720 whatever the lot size.
 
 ---
 
+## SMS automated processing fee
+
+Every application pays a fixed **₱10** for the text messages the system sends
+the applicant about it. It is added to the Treasury fee, whatever the
+application type:
+
+| | Example: single house, ₱2,000,000 |
+|---|---|
+| Treasury fee (Schedule of Fees) | ₱2,520.00 |
+| SMS automated processing fee | ₱10.00 |
+| **Total the applicant pays** | **₱2,530.00** |
+
+- The officer still enters only the Treasury fee; the system adds the ₱10 when
+  the review is saved, and shows the total under the amount.
+- The Order of Payment shows the total, with the breakdown underneath. The
+  Administrator's approval screen and the applicant's page say it is included.
+- Applications reviewed before the fee was introduced keep the amount they were
+  given - their Order of Payment was already issued without it.
+- The amount is the `SMS_PROCESSING_FEE` setting in `.env` (default 10).
+
+---
+
 ## Using it (Zoning Officer)
 
 On **View Application → Review & Decision**:
@@ -166,8 +191,9 @@ On **View Application → Review & Decision**:
    not the project. Always confirm the category fits the actual project.
    *(ZC)* There is no category and nothing to enter; the box shows the fixed
    ₱720.
-3. The box shows the working and the **schedule fee**. The **Amount to Pay at
-   the Treasury** is filled in with that fee.
+3. The box shows the working and the **schedule fee**. The **Treasury Fee** is
+   filled in with that fee, and below it the ₱10 SMS processing fee and the
+   **total the applicant pays**.
 4. If a different amount is needed, type it in. The screen warns "Differs from
    the schedule fee". **Use the schedule fee** puts the computed fee back.
 5. Submit the review as usual. The confirmation dialog shows the amount, the
@@ -191,12 +217,13 @@ Each review stores three values on the application's report:
 
 | Field | Meaning |
 |---|---|
-| `payment_amount` | The amount the applicant actually pays (what the officer submitted). |
+| `payment_amount` | The total the applicant pays: the officer's Treasury fee plus the SMS processing fee. |
 | `fee_category` | The category (A–F) the officer chose, or `ZC` for a Zoning Certification. |
 | `computed_fee` | What the schedule gives: for A–F, from the category and project cost; for `ZC`, always ₱720. |
+| `sms_fee` | The SMS automated processing fee included in `payment_amount` (₱10; 0 for applications reviewed before it existed). |
 
-When `payment_amount` and `computed_fee` differ, the officer overrode the
-schedule. The review is also written to the audit log, as before.
+When `payment_amount − sms_fee` and `computed_fee` differ, the officer
+overrode the schedule. The review is also written to the audit log, as before.
 
 `computed_fee` is always recomputed by the server from what is on file. A
 figure sent from the browser is never trusted. If a CZC, TUP or SUP review is

@@ -47,6 +47,10 @@ export default function AdministratorDecision({ request, verifiedRequirements = 
         missingRequirementsText(request.requirements_reference, uploadedRequirements, verifiedRequirements);
 
     const fee = request.payment_amount ? `₱${formatAmountForDisplay(request.payment_amount)}` : null;
+    // The SMS automated processing fee inside that amount (0 for applications
+    // priced before it existed).
+    const smsFee = Number(request.sms_fee || 0);
+    const feeNote = fee && smsFee > 0 ? `Includes the ₱${smsFee.toFixed(2)} SMS automated processing fee` : null;
 
     const handleActionChange = (next) => {
         setAction(next);
@@ -193,6 +197,7 @@ export default function AdministratorDecision({ request, verifiedRequirements = 
                                 <dt className="text-xs uppercase tracking-wide text-gray-500">Amount to Pay at the Treasury</dt>
                                 <dd className="text-lg font-semibold text-gray-900">
                                     {fee || <span className="text-sm font-normal italic text-gray-500">Not set by the officer</span>}
+                                    {feeNote && <span className="block text-xs font-normal text-gray-500">{feeNote}</span>}
                                 </dd>
                             </div>
                             {request.admin_notes && (
@@ -367,6 +372,7 @@ export default function AdministratorDecision({ request, verifiedRequirements = 
                         <div className="mt-3 rounded bg-blue-50 p-3">
                             <p className="text-sm font-medium text-gray-700">Amount to Pay at the Treasury</p>
                             <p className="text-xl font-bold text-blue-900">{fee || "₱0.00"}</p>
+                            {feeNote && <p className="text-xs text-gray-600">{feeNote}</p>}
                         </div>
                     </>
                 ) : (

@@ -86,6 +86,7 @@ the server - it is git-ignored for that reason.
 - `APP_ENV=production`, `APP_DEBUG=false` (set it directly; `php artisan optimize` fails otherwise)
 - `APP_URL=https://cityofilaganzoningadministration.online`, `SESSION_SECURE_COOKIE=true`
 - `QUEUE_CONNECTION=database`, `MAIL_*`, `SMS_ENABLED=true` and the SMS key
+- `SMS_PROCESSING_FEE` - the SMS automated processing fee added to every payment (default ₱10)
 - `DB_*`, and `DB_DUMP_PATH` pointing at the server's `mysqldump` directory (backups)
 - Push notifications: generate a fresh key pair on the host with `php artisan webpush:vapid` - never reuse the development keys
 - Optional off-site backups: `AWS_*` and/or `GOOGLE_CLOUD_*`
