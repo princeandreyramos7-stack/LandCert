@@ -48,11 +48,15 @@ export default defineConfig({
                 display: 'standalone',
                 background_color: '#ffffff',
                 theme_color: '#0d1f5c',
+                // The CPDO logo on its own blue. New file names (not the old
+                // icon-*.png, which were the city seal) so an installed app
+                // and the browser's cache pick the new icon up rather than
+                // keeping the one they already have.
                 icons: [
-                    { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-                    { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-                    { src: '/icons/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-                    { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+                    { src: '/icons/cpdo-icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+                    { src: '/icons/cpdo-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+                    { src: '/icons/cpdo-icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+                    { src: '/icons/cpdo-icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
                 ],
             },
             workbox: {

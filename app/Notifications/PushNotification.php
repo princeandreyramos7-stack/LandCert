@@ -38,8 +38,8 @@ class PushNotification extends Notification implements ShouldQueue
         return (new WebPushMessage())
             ->title($this->title)
             ->body($this->body)
-            ->icon('/icons/icon-192.png')
-            ->badge('/icons/icon-192.png')
+            ->icon('/icons/cpdo-icon-192.png')
+            ->badge('/icons/cpdo-icon-192.png')
             ->data($this->url ?: '/');
     }
 }

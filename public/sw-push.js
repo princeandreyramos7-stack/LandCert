@@ -27,8 +27,8 @@ self.addEventListener("push", (event) => {
     event.waitUntil(
         self.registration.showNotification(title, {
             body: payload.body || "",
-            icon: payload.icon || "/icons/icon-192.png",
-            badge: payload.badge || "/icons/icon-192.png",
+            icon: payload.icon || "/icons/cpdo-icon-192.png",
+            badge: payload.badge || "/icons/cpdo-icon-192.png",
             tag: payload.tag,
             data: { url },
         })

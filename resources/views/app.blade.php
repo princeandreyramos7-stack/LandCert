@@ -17,7 +17,7 @@
         <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/cpdo-favicon-32.png') }}">
         <link rel="icon" type="image/png" sizes="64x64" href="{{ asset('images/cpdo-favicon-64.png') }}">
         <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
-        <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('icons/cpdo-apple-touch-icon.png') }}">
 
         <!-- PWA: installable app shell. The service worker itself is
              registered from resources/js/Components/PwaUpdatePrompt.jsx,
