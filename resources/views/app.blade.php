@@ -54,7 +54,10 @@
              (it is already in package.json) rather than from a CDN. --}}
 
         <!-- Scripts -->
-        @routes
+        {{-- An inline script, so it needs the nonce the Content-Security-Policy
+             allows (App\Http\Middleware\NoCacheHeaders); null, and no nonce
+             attribute, in local development where no policy is sent. --}}
+        @routes(nonce: Vite::cspNonce())
         @viteReactRefresh
         @vite(['resources/js/app.jsx', "resources/js/Pages/{$page['component']}.jsx"])
         @inertiaHead

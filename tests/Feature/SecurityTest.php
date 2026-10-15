@@ -253,6 +253,46 @@ class SecurityTest extends TestCase
         $this->assertArrayNotHasKey('visibility', config('filesystems.disks.local'));
     }
 
+    /**
+     * The Content-Security-Policy refuses any inline script but the one
+     * carrying its nonce. Ziggy's @routes once went out without it, so in
+     * production route() was never defined and every page that called it
+     * failed to render - and nothing here noticed, since no test runs the
+     * page's JavaScript. This is the check that would have.
+     */
+    public function test_every_inline_script_carries_the_content_security_policy_nonce(): void
+    {
+        $pages = [
+            ['/', null],
+            ['/my-applications', $this->userOf('applicant')],
+        ];
+
+        $nonces = [];
+        foreach ($pages as [$page, $user]) {
+            $response = ($user ? $this->actingAs($user) : $this)->get($page)->assertOk();
+
+            $csp = (string) $response->headers->get('content-security-policy');
+            $this->assertMatchesRegularExpression("/script-src 'self' 'nonce-([A-Za-z0-9]+)'/", $csp, "$page sends a script nonce");
+            preg_match("/'nonce-([A-Za-z0-9]+)'/", $csp, $match);
+            $nonces[] = $nonce = $match[1];
+
+            // Every <script> the browser would execute inline: no src, and
+            // not a JSON data block (which a policy does not govern).
+            preg_match_all('/<script\b([^>]*)>/i', $response->getContent(), $tags);
+            $inline = array_filter($tags[1], fn ($attributes) => !preg_match('/\bsrc=|type="application\/json"/i', $attributes));
+
+            $this->assertNotEmpty($inline, "$page has Ziggy's inline route script");
+            foreach ($inline as $attributes) {
+                $this->assertStringContainsString("nonce=\"{$nonce}\"", $attributes, "an inline script on $page would be blocked");
+            }
+
+            // A picture chosen for upload is previewed from a blob: URL.
+            $this->assertMatchesRegularExpression("/img-src [^;]*\bblob:/", $csp);
+        }
+
+        $this->assertNotSame($nonces[0], $nonces[1], 'a nonce must be fresh for every response');
+    }
+
     public function test_the_session_cookie_is_http_only_and_the_id_changes_at_login(): void
     {
         $user = $this->userOf('applicant', ['password' => 'a-plain-password-2026']);

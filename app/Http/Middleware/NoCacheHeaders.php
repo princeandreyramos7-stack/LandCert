@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 class NoCacheHeaders
@@ -19,6 +20,14 @@ class NoCacheHeaders
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Decided before the page renders, not after: the nonce the policy
+        // below allows has to be written into the page's own <script> tags
+        // too (see app.blade.php), and those are rendered inside $next.
+        $enforceCsp = !app()->environment('local');
+        if ($enforceCsp) {
+            Vite::useCspNonce();
+        }
+
         $response = $next($request);
 
         // Add comprehensive no-cache headers to prevent browser caching -
@@ -86,17 +95,26 @@ class NoCacheHeaders
          * actually runs under. Everything this app itself loads - the built
          * JS, its own API calls, and the one external font stylesheet - is
          * covered below in every other environment.
+         *
+         * The one inline <script> the app does have is Ziggy's @routes,
+         * which defines route() for every page. It is let through by a
+         * fresh per-response nonce rather than 'unsafe-inline' (which would
+         * undo the point of the policy) or a hash (which would change with
+         * every route added). Without it route() is undefined and every
+         * page that calls it fails to render.
          */
-        if (!app()->environment('local')) {
+        if ($enforceCsp) {
             $response->headers->set('Content-Security-Policy', implode('; ', [
                 "default-src 'self'",
-                "script-src 'self'",
+                "script-src 'self' 'nonce-" . Vite::cspNonce() . "'",
                 // Tailwind/React inline style attributes and the chart
-                // library's own inline <style>/style= output need this;
-                // there is no inline <script> anywhere in the app to match it.
+                // library's own inline <style>/style= output need this.
                 "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
                 "font-src 'self' https://fonts.bunny.net",
-                "img-src 'self' data:",
+                // blob: for the picture previewed before it is uploaded - a
+                // new avatar, e-signature or signatory signature is shown
+                // from URL.createObjectURL() until it is saved.
+                "img-src 'self' data: blob:",
                 "connect-src 'self'",
                 "object-src 'none'",
                 "base-uri 'self'",
