@@ -8,7 +8,6 @@
 # keys and passwords were once committed in documentation files. Only the
 # template with empty values belongs in git.
 .env.*
-!.env.example
 .phpactor.json
 .phpunit.result.cache
 /.fleet

@@ -47,7 +47,7 @@ limits, and closed applications are archived automatically.
 ```bash
 composer install
 npm install
-cp .env.example .env
+# create .env yourself (no template is kept in the repo)
 php artisan key:generate
 php artisan migrate
 php artisan db:seed          # roles, staff accounts, PSGC address list
