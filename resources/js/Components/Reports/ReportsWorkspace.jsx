@@ -16,9 +16,10 @@ import ApplicationFormSheet from "@/Components/ApplicationFormSheet";
 import {
     FileBarChart, User, CalendarDays, UserCheck,
     FileDown, FileSpreadsheet, Search, Printer, Eye, Loader2,
-    FileText, Receipt, Banknote, Paperclip, Award, X, FolderOpen,
+    FileText, Banknote, Paperclip, Award, X, FolderOpen,
     ArrowUpRight, ChevronDown, ChevronUp, Timer,
 } from "lucide-react";
+import PesoReceipt from "@/Components/icons/PesoReceipt";
 import {
     PieChart, Pie, Cell, BarChart, Bar,
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -533,7 +534,7 @@ function ApplicationDetail({ app, total, onZoom }) {
             </Section>
 
             <Section
-                icon={Receipt}
+                icon={PesoReceipt}
                 title="Order of Payment"
                 action={order.available ? <DocLink href={order.url}>Open order</DocLink> : null}
             >
@@ -800,7 +801,7 @@ function PrintPack({ app, total, generatedOn, mode = "print" }) {
                     <OrderSheet order={order} />
                 </PrintSheet>
             ) : (
-                <PrintPage icon={Receipt} title="Order of Payment" subtitle={who} mode={mode}>
+                <PrintPage icon={PesoReceipt} title="Order of Payment" subtitle={who} mode={mode}>
                     <p className="text-[11px] italic text-gray-500">{order.note || "Not yet issued."}</p>
                 </PrintPage>
             )}

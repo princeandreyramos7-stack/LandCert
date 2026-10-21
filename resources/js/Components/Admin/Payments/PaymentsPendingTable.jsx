@@ -17,7 +17,7 @@ import {
     ArrowUpDown, 
     ArrowUp, 
     ArrowDown,
-    DollarSign,
+    PhilippinePeso,
     Clock
 } from "lucide-react";
 import { formatCurrency, formatDate } from "./utils.jsx";
@@ -171,7 +171,7 @@ export function PaymentsPendingTable({ pendingPayments = [], onRecordPayment }) 
                     <div className="text-center py-12">
                         <div className="flex justify-center mb-4">
                             <div className="p-4 bg-gray-100 rounded-full">
-                                <DollarSign className="h-12 w-12 text-gray-400" />
+                                <PhilippinePeso className="h-12 w-12 text-gray-400" />
                             </div>
                         </div>
                         <h3 className="text-lg font-semibold text-gray-700 mb-2">
@@ -293,7 +293,7 @@ export function PaymentsPendingTable({ pendingPayments = [], onRecordPayment }) 
                                                     size="sm"
                                                     className="bg-blue-600 hover:bg-blue-700 text-white"
                                                 >
-                                                    <DollarSign className="h-4 w-4 mr-1" />
+                                                    <PhilippinePeso className="h-4 w-4 mr-1" />
                                                     Record Payment
                                                 </Button>
                                             </TableCell>

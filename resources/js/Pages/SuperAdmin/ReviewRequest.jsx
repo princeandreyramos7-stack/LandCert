@@ -20,7 +20,6 @@ import {
     User,
     Building2,
     MapPin,
-    DollarSign,
     Home,
     FileText,
     CalendarDays,

@@ -8,7 +8,7 @@ import {
 } from "@/Components/ui/dialog";
 import { Input } from "@/Components/ui/input";
 import { Button } from "@/Components/ui/button";
-import { Search, User, FileText, DollarSign, ChevronRight } from "lucide-react";
+import { Search, User, FileText, PhilippinePeso, ChevronRight } from "lucide-react";
 
 /**
  * AddPaymentPickerModal
@@ -100,7 +100,7 @@ export function AddPaymentPickerModal({ isOpen, onClose, requests = [], onSelect
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-1 text-sm font-semibold text-[#0d1f5c] shrink-0">
-                                    <DollarSign className="h-3.5 w-3.5" />
+                                    <PhilippinePeso className="h-3.5 w-3.5" />
                                     {parseFloat(request.expected_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </div>
                                 <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />

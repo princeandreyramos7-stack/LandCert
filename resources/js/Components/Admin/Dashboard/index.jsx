@@ -71,13 +71,11 @@ export function AdminDashboard({
 
                 <div className="relative z-10 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
                     <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                        <div className="w-16 h-16 rounded-full border-2 border-[#d4a017]/50 bg-white overflow-hidden flex items-center justify-center shrink-0 shadow-lg">
-                            <img
-                                src="/images/ilagan1-192.png"
-                                alt="City of Ilagan"
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
+                        <img
+                            src="/images/CPDO_LOGO.jpg"
+                            alt="City Planning and Development Office"
+                            className="h-16 w-auto shrink-0 rounded-lg border-2 border-[#d4a017]/50 shadow-lg"
+                        />
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                                 <div className="w-1 h-4 rounded-full bg-[#d4a017]" />
@@ -116,11 +114,14 @@ export function AdminDashboard({
             )}
 
             {/* What needs the officer now, beside what the Zoning Administrator
-                has sent them - shown whether or not the analytics are. */}
-            <div className="grid items-start gap-4 lg:grid-cols-3">
-                <OfficerActionQueue queue={actionQueue} className="lg:col-span-2" />
-                <AdministratorNotices notices={adminNotices} />
-            </div>
+                has sent them - part of the full view, so Hide Analytics hides
+                them too and leaves only the welcome panel. */}
+            {showAnalytics && (
+                <div className="grid items-start gap-4 animate-in fade-in slide-in-from-bottom duration-500 lg:grid-cols-3">
+                    <OfficerActionQueue queue={actionQueue} className="lg:col-span-2" />
+                    <AdministratorNotices notices={adminNotices} />
+                </div>
+            )}
 
             {/* Analytics (its stat cards are already at the top) */}
             {showAnalytics && analytics && (
@@ -137,14 +138,12 @@ export function AdminDashboard({
                     <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
                         <div className="p-6 sm:p-10">
                             <div className="flex flex-col md:flex-row items-center gap-8">
-                                {/* Seal */}
-                                <div className="w-32 h-32 rounded-full border-4 border-[#d4a017]/30 overflow-hidden shrink-0 shadow-lg">
-                                    <img
-                                        src="/images/ilagan1-192.png"
-                                        alt="City of Ilagan"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
+                                {/* CPDO logo */}
+                                <img
+                                    src="/images/CPDO_LOGO.jpg"
+                                    alt="City Planning and Development Office"
+                                    className="h-36 w-auto shrink-0 rounded-xl border-4 border-[#d4a017]/30 shadow-lg"
+                                />
 
                                 {/* Copy */}
                                 <div className="flex-1 text-center md:text-left space-y-3">

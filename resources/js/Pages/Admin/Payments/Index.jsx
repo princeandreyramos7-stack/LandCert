@@ -4,7 +4,7 @@ import AdminLayout from "@/Layouts/AdminLayout";
 import { PaymentsPendingTable } from "@/Components/Admin/Payments/PaymentsPendingTable";
 import { RecordPaymentModal } from "@/Components/Admin/Payments/RecordPaymentModal";
 import { Card, CardContent } from "@/Components/ui/card";
-import { DollarSign, Clock, AlertCircle, CreditCard } from "lucide-react";
+import { PhilippinePeso, Clock, AlertCircle, CreditCard } from "lucide-react";
 
 export default function Index({ pendingPayments = [] }) {
     const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
@@ -59,7 +59,7 @@ export default function Index({ pendingPayments = [] }) {
                                     <p className="text-2xl font-black text-[#0d1f5c]">{stats.total}</p>
                                     <p className="text-xs text-gray-400 mt-0.5">Awaiting payment</p>
                                 </div>
-                                <div className="p-2 bg-[#0d1f5c] rounded-lg"><DollarSign className="h-5 w-5 text-white"/></div>
+                                <div className="p-2 bg-[#0d1f5c] rounded-lg"><PhilippinePeso className="h-5 w-5 text-white"/></div>
                             </div>
                         </CardContent>
                     </Card>
@@ -73,7 +73,7 @@ export default function Index({ pendingPayments = [] }) {
                                     </p>
                                     <p className="text-xs text-emerald-600 mt-0.5">Total to collect</p>
                                 </div>
-                                <div className="p-2 bg-emerald-500 rounded-lg"><DollarSign className="h-5 w-5 text-white"/></div>
+                                <div className="p-2 bg-emerald-500 rounded-lg"><PhilippinePeso className="h-5 w-5 text-white"/></div>
                             </div>
                         </CardContent>
                     </Card>

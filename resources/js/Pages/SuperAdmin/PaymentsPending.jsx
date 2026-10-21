@@ -4,7 +4,7 @@ import SuperAdminLayout from "@/Layouts/SuperAdminLayout";
 import { PaymentsPendingTable } from "@/Components/Admin/Payments/PaymentsPendingTable";
 import { RecordPaymentModal } from "@/Components/Admin/Payments/RecordPaymentModal";
 import { Card, CardContent } from "@/Components/ui/card";
-import { DollarSign, Clock, AlertCircle, CreditCard, TrendingUp } from "lucide-react";
+import { PhilippinePeso, Clock, AlertCircle, CreditCard, TrendingUp } from "lucide-react";
 
 export default function PaymentsPending({ pendingPayments = [] }) {
     const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
@@ -53,7 +53,7 @@ export default function PaymentsPending({ pendingPayments = [] }) {
                                     <p className="text-2xl font-black text-[#0d1f5c]">{stats.total}</p>
                                     <p className="text-xs text-gray-400 mt-0.5">Awaiting payment</p>
                                 </div>
-                                <div className="p-2 bg-[#0d1f5c] rounded-lg"><DollarSign className="h-5 w-5 text-white"/></div>
+                                <div className="p-2 bg-[#0d1f5c] rounded-lg"><PhilippinePeso className="h-5 w-5 text-white"/></div>
                             </div>
                         </CardContent>
                     </Card>

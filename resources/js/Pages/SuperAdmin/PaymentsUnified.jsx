@@ -6,8 +6,7 @@ import { PaymentStats } from "@/Components/Admin/Payments/PaymentStats";
 import { PaymentDetailsCard } from "@/Components/Admin/Payments/PaymentDetailsCard";
 import { AddReceiptModal } from "@/Components/Admin/Payments/AddReceiptModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
-import {
-    DollarSign, Clock, AlertCircle, CreditCard,
+import { Clock, AlertCircle, CreditCard,
     CheckCircle2, XCircle
 } from "lucide-react";
 import { LiveRefresh } from "@/Components/LiveRefresh";

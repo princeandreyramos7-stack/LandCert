@@ -14,11 +14,9 @@ function urlBase64ToUint8Array(base64String) {
 
 /**
  * Push notifications need three things to be possible at all: the API
- * itself, a registered service worker to receive the push event, and a key
- * to subscribe with. All three are already true in production once the PWA
- * is installed - this only fails in an environment that never registered
- * the service worker (e.g. a browser lacking the API, or the key missing
- * because VAPID was never generated on this deployment).
+ * itself, a service worker to receive the push event (see
+ * ensurePushRegistration below) and a VAPID key to subscribe with (missing
+ * if `php artisan webpush:vapid` was never run on this deployment).
  */
 export function isPushSupported() {
     return (
@@ -29,10 +27,46 @@ export function isPushSupported() {
     );
 }
 
+/**
+ * The service worker that receives pushes. Normally that is the app's own
+ * (/build/sw.js, registered by PwaUpdatePrompt, which imports sw-push.js).
+ * It is not always there: the Vite dev server never registers it, and
+ * `php artisan serve` ignores .htaccess, so /build/sw.js never gets the
+ * Service-Worker-Allowed header it needs for scope "/". Waiting on
+ * `serviceWorker.ready` then never resolves and the toggle hangs.
+ *
+ * So: use whatever already controls "/", give the app's own worker a moment
+ * to arrive, and otherwise register sw-push.js by itself. It sits at the site
+ * root, so "/" is its natural scope and no header is needed. If the app's
+ * worker registers later it takes the same scope over, imports sw-push.js,
+ * and the subscription (which belongs to the registration) carries on.
+ */
+const APP_WORKER_GRACE_MS = 3000;
+
+async function findPushRegistration() {
+    return (await navigator.serviceWorker.getRegistration("/")) || null;
+}
+
+async function ensurePushRegistration() {
+    const existing = await findPushRegistration();
+    if (existing?.active) return existing;
+
+    const ready = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((resolve) => setTimeout(() => resolve(null), APP_WORKER_GRACE_MS)),
+    ]);
+    if (ready) return ready;
+
+    await navigator.serviceWorker.register("/sw-push.js", { scope: "/" });
+    // subscribe() needs an active worker, not just a registration.
+    return navigator.serviceWorker.ready;
+}
+
 export async function getExistingPushSubscription() {
     if (!isPushSupported()) return null;
-    const registration = await navigator.serviceWorker.ready;
-    return registration.pushManager.getSubscription();
+    // Only looks: checking the toggle's state should never install anything.
+    const registration = await findPushRegistration();
+    return registration ? registration.pushManager.getSubscription() : null;
 }
 
 /**
@@ -57,7 +91,7 @@ export async function subscribeToPush(vapidPublicKey) {
         throw new Error("Notification permission was not granted.");
     }
 
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await ensurePushRegistration();
     const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),

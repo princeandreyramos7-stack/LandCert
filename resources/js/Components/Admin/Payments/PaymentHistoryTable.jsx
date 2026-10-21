@@ -22,9 +22,9 @@ import {
     MoreVertical,
     ThumbsUp,
     ThumbsDown,
-    Receipt,
     Archive,
 } from "lucide-react";
+import PesoReceipt from "@/Components/icons/PesoReceipt";
 import {
     formatDate,
     formatCurrency,
@@ -94,7 +94,7 @@ function PaymentRowActions({
                     }}
                     className="cursor-pointer"
                 >
-                    <Receipt className="h-4 w-4 mr-2 text-[#d4a017]" />
+                    <PesoReceipt className="h-4 w-4 mr-2 text-[#d4a017]" />
                     <span>Order of Payment</span>
                 </DropdownMenuItem>
 

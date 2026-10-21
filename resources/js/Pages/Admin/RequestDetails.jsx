@@ -19,7 +19,7 @@ import {
     User,
     Building2,
     MapPin,
-    DollarSign,
+    PhilippinePeso,
     Home,
     FileText,
     CalendarDays,
@@ -417,7 +417,7 @@ function Step2Content({ request }) {
 
             <div className="pt-4 border-t">
                 <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
+                    <PhilippinePeso className="h-4 w-4" />
                     Project Nature & Cost
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

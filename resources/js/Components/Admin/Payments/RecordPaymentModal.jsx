@@ -24,16 +24,16 @@ import { Badge } from "@/Components/ui/badge";
 import { useToast } from "@/Components/ui/use-toast";
 import { router } from "@inertiajs/react";
 import {
-    Receipt,
     Upload,
     X,
     AlertCircle,
     FileText,
     Calendar,
-    DollarSign,
+    PhilippinePeso,
     User,
     AlertTriangle,
 } from "lucide-react";
+import PesoReceipt from "@/Components/icons/PesoReceipt";
 import { format } from "date-fns";
 
 /**
@@ -412,7 +412,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
                     <DialogHeader>
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-blue-100 rounded-full">
-                                <Receipt className="h-6 w-6 text-blue-600" />
+                                <PesoReceipt className="h-6 w-6 text-blue-600" />
                             </div>
                             <div>
                                 <DialogTitle>
@@ -453,7 +453,7 @@ export function RecordPaymentModal({ isOpen, onClose, requestData }) {
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-3">
-                                        <DollarSign className="h-5 w-5 text-gray-500 mt-0.5" />
+                                        <PhilippinePeso className="h-5 w-5 text-gray-500 mt-0.5" />
                                         <div>
                                             <p className="text-sm text-gray-500">
                                                 Expected Amount

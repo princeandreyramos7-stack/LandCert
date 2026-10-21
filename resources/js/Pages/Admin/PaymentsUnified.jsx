@@ -8,8 +8,7 @@ import { PaymentDetailsCard } from "@/Components/Admin/Payments/PaymentDetailsCa
 import { AddReceiptModal } from "@/Components/Admin/Payments/AddReceiptModal";
 import { AddPaymentPickerModal } from "@/Components/Admin/Payments/AddPaymentPickerModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
-import {
-    DollarSign, Clock, AlertCircle, CreditCard,
+import { Clock, AlertCircle, CreditCard,
     CheckCircle2, XCircle
 } from "lucide-react";
 import { LiveRefresh } from "@/Components/LiveRefresh";

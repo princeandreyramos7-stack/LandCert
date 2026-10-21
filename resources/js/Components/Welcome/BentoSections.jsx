@@ -10,10 +10,10 @@ import {
     Landmark,
     MapPin,
     MonitorSmartphone,
-    Receipt,
     Upload,
     UserPlus,
 } from "lucide-react";
+import PesoReceipt from "@/Components/icons/PesoReceipt";
 import { MISSION, VISION } from "@/lib/officeInfo";
 
 /*
@@ -50,7 +50,7 @@ const STEPS = [
     { icon: FileText, label: "Fill out the application form" },
     { icon: Upload, label: "Submit your requirements" },
     { icon: BadgeCheck, label: "Officer review & Administrator approval" },
-    { icon: Receipt, label: "Pay the fee & upload your receipt" },
+    { icon: PesoReceipt, label: "Pay the fee & upload your receipt" },
     { icon: Download, label: "Download your Certificate" },
 ];
 

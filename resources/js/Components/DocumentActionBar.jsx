@@ -16,6 +16,7 @@ import { Download, FileText, Printer } from "lucide-react";
  * @param {string} printLabel   Text on the gold button.
  * @param {function} onPrint    Opens the browser print dialog.
  * @param {function} onDownload Saves the document as a PDF.
+ * @param {string} downloadLabel Text on the white button. Defaults to "Download PDF".
  * @param {Component} icon      Lucide icon for the tile. Defaults to FileText.
  */
 export default function DocumentActionBar({
@@ -25,6 +26,7 @@ export default function DocumentActionBar({
     printLabel = "Print",
     onPrint,
     onDownload,
+    downloadLabel = "Download PDF",
     icon: Icon = FileText,
 }) {
     return (
@@ -68,12 +70,12 @@ export default function DocumentActionBar({
                     </Button>
                     <Button
                         onClick={onDownload}
-                        title="Download PDF — a fixed copy of this page, laid out exactly like this in any program that opens it"
-                        aria-label="Download PDF"
+                        title={`${downloadLabel} — a fixed PDF copy of this page, laid out exactly like this in any program that opens it`}
+                        aria-label={downloadLabel}
                         className="flex-1 border-white bg-white px-3 text-[#0d1f5c] hover:bg-gray-100 sm:flex-none sm:px-4"
                     >
                         <Download className="h-4 w-4 shrink-0 sm:mr-2" />
-                        <span className="hidden sm:inline">Download PDF</span>
+                        <span className="hidden sm:inline">{downloadLabel}</span>
                     </Button>
                 </div>
             </div>

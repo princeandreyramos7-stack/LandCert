@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, Clock, DollarSign, FileCheck, Stamp } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, PhilippinePeso, FileCheck, Stamp } from "lucide-react";
 
 /**
  * Get status badge color classes based on status
@@ -48,7 +48,7 @@ export const getStatusIcon = (status) => {
             return <Stamp className="h-4 w-4" />;
         case "for_payment":
         case "pending_payment":
-            return <DollarSign className="h-4 w-4" />;
+            return <PhilippinePeso className="h-4 w-4" />;
         case "for_verification":
             return <FileCheck className="h-4 w-4" />;
         default:

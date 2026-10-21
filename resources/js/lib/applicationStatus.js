@@ -2,7 +2,7 @@ import {
     AlertCircle,
     CheckCircle2,
     Clock,
-    DollarSign,
+    PhilippinePeso,
     Stamp,
     XCircle,
 } from "lucide-react";
@@ -58,12 +58,12 @@ const STATUS_CONFIGS = {
         label: "Returned to Applicant",
     },
     for_payment: {
-        icon: DollarSign,
+        icon: PhilippinePeso,
         color: "bg-amber-100 text-amber-800 border-amber-200",
         label: "Approved — For Payment",
     },
     pending_payment: {
-        icon: DollarSign,
+        icon: PhilippinePeso,
         color: "bg-amber-100 text-amber-800 border-amber-200",
         label: "Approved — For Payment",
     },

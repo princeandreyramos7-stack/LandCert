@@ -14,11 +14,11 @@ import {
     CheckCircle2, 
     Loader2,
     AlertCircle,
-    DollarSign,
+    PhilippinePeso,
     X,
-    Eye,
-    Receipt
+    Eye
 } from 'lucide-react';
+import PesoReceipt from '@/Components/icons/PesoReceipt';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
 import {
     Dialog,
@@ -256,7 +256,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                         <CardHeader>
                             <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
                                 <div className="flex items-center gap-2">
-                                    <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 shrink-0" />
+                                    <PesoReceipt className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 shrink-0" />
                                     <span className="text-sm sm:text-base">
                                         Application {application.application_number}
                                         <span className="hidden sm:inline"> - Payment Receipt</span>
@@ -336,7 +336,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                     {/* Upload Instructions */}
                     {application.status?.toLowerCase() === 'approved' && (!existingPayment || existingPayment.payment_status === 'rejected') && (
                         <Alert>
-                            <DollarSign className="h-4 w-4" />
+                            <PhilippinePeso className="h-4 w-4" />
                             <AlertDescription>
                                 <strong>Instructions:</strong>
                                 <ul className="mt-2 space-y-1 text-sm list-disc list-inside">
@@ -361,7 +361,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                     {/* Payment Amount */}
                                     <div className="space-y-2 min-w-0">
                                         <Label htmlFor="amount" className="flex items-center gap-2">
-                                            <DollarSign className="h-4 w-4 text-blue-600 shrink-0" />
+                                            <PhilippinePeso className="h-4 w-4 text-blue-600 shrink-0" />
                                             Payment Amount <span className="text-red-500">*</span>
                                         </Label>
 
@@ -443,7 +443,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                 {/* OR Number */}
                                 <div className="space-y-2">
                                     <Label htmlFor="or_number" className="flex items-center gap-2">
-                                        <Receipt className="h-4 w-4 text-blue-600 shrink-0" />
+                                        <PesoReceipt className="h-4 w-4 text-blue-600 shrink-0" />
                                         Official Receipt (OR) Number <span className="text-red-500">*</span>
                                     </Label>
                                     <Input
@@ -463,7 +463,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                                 {/* File Upload */}
                                 <div className="space-y-2">
                                     <Label className="flex items-center gap-2">
-                                        <Receipt className="h-4 w-4 text-blue-600" />
+                                        <PesoReceipt className="h-4 w-4 text-blue-600" />
                                         Receipt File <span className="text-red-500">*</span>
                                     </Label>
                                     
@@ -574,7 +574,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                             <CardContent>
                                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded border">
                                     <div className="flex items-center gap-3">
-                                        <Receipt className="h-8 w-8 text-blue-600" />
+                                        <PesoReceipt className="h-8 w-8 text-blue-600" />
                                         <div>
                                             <p className="font-semibold">Payment Receipt</p>
                                             <p className="text-sm text-gray-600">
@@ -613,7 +613,7 @@ export default function UploadReceipt({ application, existingPayment }) {
                             <DialogHeader className="space-y-1.5 text-left">
                                 <DialogTitle className="flex items-center gap-2.5 pr-8 text-gray-900 text-base sm:gap-3 sm:text-lg">
                                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 sm:h-10 sm:w-10">
-                                        <Receipt className="h-4 w-4 text-[#0d1f5c] sm:h-5 sm:w-5" />
+                                        <PesoReceipt className="h-4 w-4 text-[#0d1f5c] sm:h-5 sm:w-5" />
                                     </div>
                                     Confirm Payment Receipt
                                 </DialogTitle>
@@ -637,7 +637,7 @@ export default function UploadReceipt({ application, existingPayment }) {
 
                             {/* OR number */}
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-gray-50 px-3 py-2">
-                                <Receipt className="h-4 w-4 shrink-0 text-gray-400" />
+                                <PesoReceipt className="h-4 w-4 shrink-0 text-gray-400" />
                                 <p className="min-w-0 break-words text-xs text-gray-600">
                                     OR Number{' '}
                                     <span className="font-semibold text-gray-900">{orNumber}</span>

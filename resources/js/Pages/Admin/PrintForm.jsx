@@ -198,6 +198,7 @@ export default function PrintForm({ application: a, auth }) {
                 printLabel="Print Form"
                 onPrint={() => window.print()}
                 onDownload={handleSaveForm}
+                downloadLabel="Save Application Form"
             />
 
             {/* ═══════════════════════════════════════════

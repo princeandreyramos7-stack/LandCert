@@ -7,6 +7,7 @@ import {
     ArrowRight,
     Calendar,
     CheckCircle2,
+    Download,
     ExternalLink,
     Eye,
     FilePlus,
@@ -158,7 +159,7 @@ function Badges({ journey }) {
     );
 }
 
-/** The card's buttons: secondary (Order of Payment), main action, print form, details. */
+/** The card's buttons: secondary (Order of Payment), main action, print / save form, details. */
 function Actions({ app, journey, withIcons = true, compact = false }) {
     const f = facts(app);
     return (
@@ -178,10 +179,17 @@ function Actions({ app, journey, withIcons = true, compact = false }) {
                     {journey.action.newTab ? <ExternalLink className="h-3.5 w-3.5" /> : <ArrowRight className="h-3.5 w-3.5" />}
                 </button>
             )}
+            {/* Both open the form page in this tab. Save adds ?download=1,
+                which has the page download the PDF as soon as it is drawn. */}
             {withIcons && journey.stage < 5 && (
-                <button type="button" onClick={() => window.open(route("my-applications.print", app.id), "_blank")} title="Print application form" className="rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 hover:text-[#0d1f5c]">
-                    <Printer className="h-4 w-4" />
-                </button>
+                <>
+                    <button type="button" onClick={() => router.visit(route("my-applications.print", app.id))} title="Print application form" aria-label="Print application form" className="rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 hover:text-[#0d1f5c]">
+                        <Printer className="h-4 w-4" />
+                    </button>
+                    <button type="button" onClick={() => router.visit(route("my-applications.print", { id: app.id, download: 1 }))} title="Save application form (PDF)" aria-label="Save application form" className="rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 hover:text-[#0d1f5c]">
+                        <Download className="h-4 w-4" />
+                    </button>
+                </>
             )}
             {withIcons && !compact && (
                 <Link href={f.details} title="View details" className="rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 hover:text-[#0d1f5c]">

@@ -1,5 +1,5 @@
 import React from "react";
-import { DollarSign, Clock, CheckCircle2, XCircle, Wallet, Plus } from "lucide-react";
+import { PhilippinePeso, Clock, CheckCircle2, XCircle, Wallet, Plus } from "lucide-react";
 import { PAYMENT_STATUS } from "./utils.jsx";
 
 /**
@@ -16,7 +16,7 @@ export function PaymentStats({ payments = [], awaiting = 0, active = "all", onSe
     const count = (status) => payments.filter((p) => p.payment_status === status).length;
 
     const tiles = [
-        { key: "all",      label: "Total payments",  value: payments.length,   sub: "all records",      icon: DollarSign,   tone: "text-[#0d1f5c]",   wash: "bg-[#0d1f5c]/5",  chip: "bg-[#0d1f5c] text-white",   ring: "ring-[#0d1f5c]" },
+        { key: "all",      label: "Total payments",  value: payments.length,   sub: "all records",      icon: PhilippinePeso,   tone: "text-[#0d1f5c]",   wash: "bg-[#0d1f5c]/5",  chip: "bg-[#0d1f5c] text-white",   ring: "ring-[#0d1f5c]" },
         { key: "pending",  label: PAYMENT_STATUS.pending.label,  value: count("pending"),  sub: "receipts to check", icon: Clock,        tone: "text-amber-800",   wash: "bg-amber-50",     chip: "bg-amber-500 text-white",   ring: "ring-amber-500" },
         { key: "verified", label: PAYMENT_STATUS.verified.label, value: count("verified"), sub: "confirmed",        icon: CheckCircle2, tone: "text-emerald-800", wash: "bg-emerald-50",   chip: "bg-emerald-500 text-white", ring: "ring-emerald-500" },
         { key: "rejected", label: PAYMENT_STATUS.rejected.label, value: count("rejected"), sub: "declined",         icon: XCircle,      tone: "text-rose-800",    wash: "bg-rose-50",      chip: "bg-rose-500 text-white",    ring: "ring-rose-500" },
