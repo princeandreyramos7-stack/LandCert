@@ -1,0 +1,104 @@
+# =====================================================================
+# LOCAL / XAMPP ENVIRONMENT — for testing before deployment
+# Activate with:  cp .env.local .env
+# Restore live:   cp .env.production .env
+# Always run:     php artisan config:clear  (after swapping)
+# =====================================================================
+
+APP_NAME=CPDO
+APP_ENV=local
+APP_KEY=base64:joUfRqkAQhAVtAOu8+uYa9JReNxPFVAxfwOINTBJoPI=
+APP_DEBUG=true
+# Using `php artisan serve`. If you browse via http://localhost/cpdo_project/public
+# instead, change this to that URL.
+APP_URL=http://localhost:8000
+
+# Maps
+GOOGLE_MAPS_API_KEY=your_api_key_here
+
+APP_LOCALE=en
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=en_US
+
+APP_MAINTENANCE_DRIVER=file
+# APP_MAINTENANCE_STORE=database
+
+PHP_CLI_SERVER_WORKERS=4
+
+BCRYPT_ROUNDS=12
+
+LOG_CHANNEL=daily
+LOG_STACK=single
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=debug
+
+# --- Local XAMPP MySQL (default root user, no password) ---
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=cpdo_lc
+DB_USERNAME=root
+DB_PASSWORD=
+# Path to mysql/bin so spatie/laravel-backup can find mysqldump.exe on XAMPP
+DB_DUMP_PATH=C:\xampp\mysql\bin
+
+SESSION_DRIVER=file
+SESSION_LIFETIME=30
+# Session dies with the browser, so a closed browser means a fresh sign-in.
+SESSION_EXPIRE_ON_CLOSE=true
+SESSION_ENCRYPT=false
+SESSION_PATH=/
+SESSION_DOMAIN=null
+# Must stay false locally — localhost is plain HTTP, a secure cookie would never be sent.
+SESSION_SECURE_COOKIE=false
+
+BROADCAST_CONNECTION=log
+FILESYSTEM_DISK=local
+# `sync` runs jobs immediately so you don't need a queue worker open while testing.
+# Set to `database` (and run `php artisan queue:work`) to mirror production.
+QUEUE_CONNECTION=sync
+
+CACHE_STORE=database
+CACHE_PREFIX=landcert_
+
+MEMCACHED_HOST=127.0.0.1
+
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+# Real SMTP so email flows (OTP, password reset) can be tested end to end.
+# Switch MAIL_MAILER to `log` to write mail into storage/logs instead of sending.
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=princeandreyramos7@gmail.com
+MAIL_PASSWORD=cjagxagpmixojcie
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=princeandreyramos7@gmail.com
+MAIL_FROM_NAME="LandCert (Local)"
+
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=
+AWS_USE_PATH_STYLE_ENDPOINT=false
+
+VITE_APP_NAME="${APP_NAME}"
+
+# Xendit Payment Gateway (Development/Test Mode)
+XENDIT_PUBLIC_KEY=xnd_public_development_fNJ5HT8zOlRgpmJhVLWBsUo85WzJ7An6EkU8h0m4W_8ER82tkGNhi71axnz7d38
+XENDIT_SECRET_KEY=xnd_development_Y40b3vfSgPWtr42PHi4Zle3dyKXIQSAEeHOmPC5l4DTwG7iC8ppeQxZ6Sc553
+XENDIT_WEBHOOK_TOKEN=
+
+# SMS off locally so testing doesn't burn Semaphore credits or text real numbers.
+SMS_ENABLED=true
+SMS_PROVIDER=semaphore
+SEMAPHORE_API_KEY=d5cc0339446fa332d2b9facb1688686b
+SEMAPHORE_SENDER_NAME=Matcare
+
+
+VAPID_SUBJECT="${APP_URL}"
+VAPID_PUBLIC_KEY=BDxBdkeC8-P1EdQetRuDpzvrzqUy_28I0ASWmrUFcwXnCJEgWcrl3L7G7mHQpMD1HrmZVuxjDDQPHmZh2BvxfnI
+VAPID_PRIVATE_KEY=1-8WaK4_cQGjMK-sXcFVBvJTTeSntRer7HiKFbKc0JY
